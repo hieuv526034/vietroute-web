@@ -1,15 +1,29 @@
 package vn.vietroute;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.time.*;
-import java.util.*;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.Locale;
+import java.util.Map;
+import java.util.ResourceBundle;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.jwt.JwtException;
-import vn.vietroute.auth.entity.*;
+import vn.vietroute.auth.entity.Role;
+import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.common.config.AppSettings;
-import vn.vietroute.common.constant.*;
+import vn.vietroute.common.constant.Constants;
+import vn.vietroute.common.constant.ErrorCode;
+import vn.vietroute.common.constant.SuccessCode;
+import vn.vietroute.common.constant.ValidationCode;
+import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.util.CodeGenerator;
 import vn.vietroute.common.validation.StrongPasswordValidator;
 
@@ -21,15 +35,23 @@ class FoundationRulesTest {
         var vi = ResourceBundle.getBundle("i18n.messages", Locale.forLanguageTag("vi"));
         var en = ResourceBundle.getBundle("i18n.messages", Locale.ENGLISH);
         assertEquals(vi.keySet(), en.keySet());
-        for (ErrorCode code : ErrorCode.values()) assertTrue(vi.containsKey(code.getMessageKey()));
-        for (SuccessCode code : SuccessCode.values()) assertTrue(vi.containsKey(code.getMessageKey()));
-        for (ValidationCode code : ValidationCode.values()) assertTrue(vi.containsKey(code.getMessageKey()));
+        for (ErrorCode code : ErrorCode.values()) {
+            assertTrue(vi.containsKey(code.getMessageKey()));
+        }
+        for (SuccessCode code : SuccessCode.values()) {
+            assertTrue(vi.containsKey(code.getMessageKey()));
+        }
+        for (ValidationCode code : ValidationCode.values()) {
+            assertTrue(vi.containsKey(code.getMessageKey()));
+        }
     }
 
     @Test
     void codeAndPasswordRulesPreserveVietnameseTextAndBcryptByteLimit() {
-        for (int i = 0; i < 50; i++) assertTrue(CodeGenerator.generate("CAT").matches(Constants.CODE_PATTERN));
-        assertThrows(vn.vietroute.common.exception.BusinessException.class, () -> CodeGenerator.generate("bad!"));
+        for (int i = 0; i < 50; i++) {
+            assertTrue(CodeGenerator.generate("CAT").matches(Constants.CODE_PATTERN));
+        }
+        assertThrows(BusinessException.class, () -> CodeGenerator.generate("bad!"));
         assertTrue(StrongPasswordValidator.valid("Valid-Password-2026"));
         assertFalse(StrongPasswordValidator.valid("weak"));
         assertFalse(StrongPasswordValidator.valid("Ab1!" + "ệ".repeat(30)));

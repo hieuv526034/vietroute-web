@@ -4,9 +4,21 @@ import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
-import org.springframework.security.oauth2.core.*;
+import java.util.UUID;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.oauth2.jwt.BadJwtException;
+import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.stereotype.Service;
 import vn.vietroute.auth.dto.response.AuthResponse;
 import vn.vietroute.auth.dto.response.UserResponse;
@@ -34,6 +46,7 @@ public class JwtService {
             token.getAudience().contains(settings.getJwtAudience())
                 ? OAuth2TokenValidatorResult.success()
                 : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token"));
+        // Nimbus kiểm chữ ký/thời hạn; bộ validator bổ sung issuer và audience đúng ứng dụng.
         decoder.setJwtValidator(
             new DelegatingOAuth2TokenValidator<>(
                 JwtValidators.createDefaultWithIssuer(settings.getJwtIssuer()),
@@ -44,8 +57,8 @@ public class JwtService {
 
     /** Vai trò trong JWT phục vụ mô tả; filter vẫn đọc DB để áp dụng khóa/thu hồi quyền ngay. */
     public AuthResponse issue(UserAccount user) {
-        Instant now = Instant.now(clock),
-            expires = now.plus(settings.getAccessTokenLifetime());
+        Instant now = Instant.now(clock);
+        Instant expires = now.plus(settings.getAccessTokenLifetime());
         JwtClaimsSet claims = JwtClaimsSet.builder()
             .issuer(settings.getJwtIssuer())
             .subject(user.getId().toString())
@@ -53,7 +66,7 @@ public class JwtService {
             .issuedAt(now)
             .notBefore(now)
             .expiresAt(expires)
-            .id(java.util.UUID.randomUUID().toString())
+            .id(UUID.randomUUID().toString())
             .claim("username", user.getUsername())
             .claim("roles", user.getRoles().stream().map(Enum::name).sorted().toList())
             .claim("tokenVersion", user.getTokenVersion())
@@ -64,6 +77,7 @@ public class JwtService {
         return new AuthResponse(token, "Bearer", expires, UserResponse.from(user));
     }
 
+    /** Chặn token quá dài, xác minh bằng Nimbus rồi bắt buộc đủ exp/iat/jti trước khi filter đọc tài khoản. */
     public Jwt decode(String token) {
         if (token.length() > 8192) {
             throw new BadJwtException("Token exceeds the supported size");

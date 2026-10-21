@@ -18,10 +18,11 @@ for attempt in {1..30}; do
   sleep 1
 done
 start_app() {
+  local database="${3:-vietroute_ci}"
   docker run --detach --name "$1" --network vietroute-auth-net --memory 512m \
     -e PORT=10001 -p "127.0.0.1:$2:10001" \
     -e VIETROUTE_ENV=production -e VIETROUTE_COOKIE_SECURE=false -e VIETROUTE_DB_INIT_ENABLED=true \
-    -e VIETROUTE_DB_URL=jdbc:postgresql://vietroute-db-ci:5432/vietroute_ci \
+    -e VIETROUTE_DB_URL="jdbc:postgresql://vietroute-db-ci:5432/$database" \
     -e VIETROUTE_DB_USER=vietroute_ci -e VIETROUTE_DB_PASSWORD="$db_password" \
     -e VIETROUTE_JWT_SECRET="$jwt_secret" -e VIETROUTE_BOOTSTRAP_ADMIN_USERNAME=admin \
     -e VIETROUTE_BOOTSTRAP_ADMIN_PASSWORD="$admin_password" vietroute-web:ci >/dev/null
@@ -33,10 +34,12 @@ for port in 18080 18081; do
   curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
     --retry-connrefused --max-time 5 "http://127.0.0.1:$port/health" > /dev/null
 done
-sql() { docker exec vietroute-db-ci psql -U vietroute_ci -d vietroute_ci -Atc "$1"; }
+sql() { docker exec -e PGOPTIONS=-csearch_path=vietroute vietroute-db-ci psql -U vietroute_ci -d vietroute_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
 [[ "$(sql "SELECT count(*) FROM auth_users WHERE username='admin'")" == 1 ]]
-[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 1 ]]
+[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 2 ]]
 [[ "$(sql 'SELECT count(*) FROM catalog_items')" == 5 ]]
+[[ "$(sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','catalog_items','vietroute_schema_history')")" == 0 ]]
+[[ "$(sql "SELECT count(*) FROM pg_indexes WHERE schemaname='vietroute' AND indexname IN ('idx_auth_users_created_by','idx_auth_users_updated_by','idx_auth_user_roles_role_code','idx_catalog_created_by','idx_catalog_updated_by')")" == 5 ]]
 docker rm --force vietroute-auth-ci2 >/dev/null
 base=http://127.0.0.1:18080
 result="$work/response.json"
@@ -160,5 +163,40 @@ sql "UPDATE auth_users SET locked_until=CURRENT_TIMESTAMP-INTERVAL '1 minute' WH
 call 200 POST /api/v1/auth/login "$work/login.json" cookie
 [[ "$(sql "SELECT failed_login_attempts FROM auth_users WHERE username='customer'")" == 0 ]]
 call 200 GET /v3/api-docs
-python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert isinstance(d,dict), "OpenAPI must be a JSON object"; assert "/api/v1/auth/change-password" in d["paths"]; assert "bearerAuth" in d["components"]["securitySchemes"]; assert "CatalogResponse" in d["components"]["schemas"]' "$result"
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert isinstance(d,dict), "OpenAPI must be a JSON object"; assert "/api/v1/auth/change-password" in d["paths"]; assert "bearerAuth" in d["components"]["securitySchemes"]; assert "CatalogResponse" in d["components"]["schemas"]; assert "201" in d["paths"]["/api/v1/admin/catalogs"]["post"]["responses"]' "$result"
+
+# Tạo DB cũ riêng từ đúng V001 để kiểm tra nâng cấp public -> vietroute, không sửa DB ứng dụng đang test.
+printf 'Schema stage: upgrade legacy public data without resetting admin password\n'
+docker exec vietroute-db-ci psql -U vietroute_ci -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE vietroute_legacy_ci' >/dev/null
+docker exec -i vietroute-db-ci psql -U vietroute_ci -d vietroute_legacy_ci -v ON_ERROR_STOP=1 \
+  < src/main/resources/db/migration/V001__auth_and_catalog.sql >/dev/null
+legacy_checksum=$(sha256sum src/main/resources/db/migration/V001__auth_and_catalog.sql | cut -d ' ' -f 1)
+legacy_hash=$(cat "$work/hash-before")
+docker exec -i vietroute-db-ci psql -U vietroute_ci -d vietroute_legacy_ci -v ON_ERROR_STOP=1 >/dev/null <<SQL
+CREATE TABLE public.vietroute_schema_history(version VARCHAR(40) PRIMARY KEY, checksum VARCHAR(64) NOT NULL, installed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP);
+INSERT INTO public.vietroute_schema_history(version,checksum) VALUES ('V001__auth_and_catalog.sql','$legacy_checksum');
+INSERT INTO public.auth_roles(code,name_vi,name_en) VALUES ('ADMIN','Quản trị viên','Administrator');
+INSERT INTO public.auth_users(username,password_hash,display_name,must_change_password) VALUES ('admin','$legacy_hash','Legacy admin retained',false);
+INSERT INTO public.auth_user_roles(user_id,role_code) SELECT id,'ADMIN' FROM public.auth_users WHERE username='admin';
+INSERT INTO public.catalog_items(type,code,name_vi,name_en) VALUES ('VEHICLE_TYPE','LEGACY','Danh mục cũ','Legacy catalog');
+SQL
+start_app vietroute-auth-ci2 18081 vietroute_legacy_ci
+curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
+  --retry-connrefused --max-time 5 http://127.0.0.1:18081/health >/dev/null
+legacy_sql() { docker exec -e PGOPTIONS=-csearch_path=vietroute vietroute-db-ci psql -U vietroute_ci -d vietroute_legacy_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
+[[ "$(legacy_sql 'SELECT count(*) FROM vietroute_schema_history')" == 2 ]]
+[[ "$(legacy_sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','catalog_items','vietroute_schema_history')")" == 0 ]]
+[[ "$(legacy_sql "SELECT display_name FROM auth_users WHERE id=1 AND username='admin'")" == 'Legacy admin retained' ]]
+[[ "$(legacy_sql "SELECT code FROM catalog_items WHERE id=1")" == LEGACY ]]
+legacy_sql "SELECT password_hash FROM auth_users WHERE username='admin'" > "$work/legacy-hash"
+cmp --silent "$work/hash-before" "$work/legacy-hash"
+base=http://127.0.0.1:18081
+rm -f "$work/cookies"
+refresh_csrf
+login_body admin "$next_password"
+call 200 POST /api/v1/auth/login "$work/login.json" cookie
+[[ "$(field data.user.mustChangePassword)" == False ]]
+token=$(field data.accessToken)
+call 201 POST /api/v1/admin/catalogs "$work/catalog.json" bearer
+[[ "$(field data.id)" -gt 6 ]]
 printf 'PostgreSQL bootstrap, JWT, CSRF, roles, catalogs, password change, revocation and account lock checks passed.\n'

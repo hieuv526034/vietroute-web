@@ -1,24 +1,42 @@
 package vn.vietroute.common.web;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.v3.core.converter.AnnotatedType;
 import io.swagger.v3.core.converter.ModelConverters;
 import io.swagger.v3.core.util.Json;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.models.*;
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.PathItem;
+import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.media.*;
+import io.swagger.v3.oas.models.media.IntegerSchema;
+import io.swagger.v3.oas.models.media.ObjectSchema;
+import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.parameters.Parameter;
-import io.swagger.v3.oas.models.responses.ApiResponses;
-import io.swagger.v3.oas.models.security.*;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 import jakarta.servlet.http.HttpServletRequest;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.*;
+import java.math.BigDecimal;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.constant.ErrorCode;
@@ -35,7 +53,7 @@ public class OpenApiController {
 
     @GetMapping(value = "/v3/api-docs", produces = "application/json;charset=UTF-8")
     @Operation(hidden = true, summary = "Cung cấp tài liệu OpenAPI")
-    public com.fasterxml.jackson.databind.JsonNode document(HttpServletRequest request) {
+    public JsonNode document(HttpServletRequest request) {
         OpenAPI api = new OpenAPI()
             .openapi("3.0.3")
             .info(
@@ -77,11 +95,12 @@ public class OpenApiController {
                     continue;
                 }
                 for (RequestMethod verb : mapping.getMethodsCondition().getMethods()) {
-                    var operation = new io.swagger.v3.oas.models.Operation()
-                        .summary(description.summary())
-                        .description(description.description())
-                        .operationId(handler.getBeanType().getSimpleName() + "_" + method.getName())
-                        .tags(List.of(tag == null ? "API" : tag.name()));
+                    var operation = OpenApiModels.operation(
+                        description.summary(),
+                        description.description(),
+                        handler.getBeanType().getSimpleName() + "_" + method.getName(),
+                        tag == null ? "API" : tag.name()
+                    );
                     operation.addParametersItem(
                         new Parameter()
                             .name("lang")
@@ -96,12 +115,13 @@ public class OpenApiController {
                             .description("Ngôn ngữ nếu không có lang")
                             .schema(new StringSchema()._enum(List.of("vi", "en")))
                     );
-                    for (java.lang.reflect.Parameter parameter : method.getParameters()) {
+                    // var giữ đúng kiểu reflection Parameter, tránh trùng tên với model Parameter của Swagger.
+                    for (var parameter : method.getParameters()) {
                         if (parameter.isAnnotationPresent(RequestBody.class)) {
-                            operation.requestBody(
-                                new io.swagger.v3.oas.models.parameters.RequestBody()
-                                    .required(parameter.getAnnotation(RequestBody.class).required())
-                                    .content(json(schema(parameter.getParameterizedType(), api)))
+                            OpenApiModels.jsonBody(
+                                operation,
+                                parameter.getAnnotation(RequestBody.class).required(),
+                                schema(parameter.getParameterizedType(), api)
                             );
                         } else if (
                             parameter.isAnnotationPresent(PathVariable.class) ||
@@ -129,8 +149,8 @@ public class OpenApiController {
                                     .schema(
                                         new IntegerSchema()
                                             ._default(0)
-                                            .minimum(java.math.BigDecimal.ZERO)
-                                            .maximum(java.math.BigDecimal.valueOf(1000000))
+                                            .minimum(BigDecimal.ZERO)
+                                            .maximum(BigDecimal.valueOf(1000000))
                                     )
                             );
                             operation.addParametersItem(
@@ -141,8 +161,8 @@ public class OpenApiController {
                                     .schema(
                                         new IntegerSchema()
                                             ._default(20)
-                                            .minimum(java.math.BigDecimal.ONE)
-                                            .maximum(java.math.BigDecimal.valueOf(100))
+                                            .minimum(BigDecimal.ONE)
+                                            .maximum(BigDecimal.valueOf(100))
                                     )
                             );
                         }
@@ -161,14 +181,10 @@ public class OpenApiController {
                     if (returnType instanceof ParameterizedType type && type.getRawType() == ResponseEntity.class) {
                         returnType = type.getActualTypeArguments()[0];
                     }
-                    var created = method.getAnnotation(io.swagger.v3.oas.annotations.responses.ApiResponse.class);
-                    String status = created == null ? "200" : created.responseCode();
-                    ApiResponses responses = new ApiResponses().addApiResponse(
-                        status,
-                        new io.swagger.v3.oas.models.responses.ApiResponse()
-                            .description(created == null ? "Thành công" : created.description())
-                            .content(json(schema(returnType, api)))
-                    );
+                    // @ResponseStatus mô tả HTTP thành công; ResponseEntity của base vẫn quyết định status khi lỗi.
+                    ResponseStatus declared = AnnotatedElementUtils.findMergedAnnotation(method, ResponseStatus.class);
+                    String status = declared == null ? "200" : Integer.toString(declared.value().value());
+                    OpenApiModels.response(operation, status, "Thành công", schema(returnType, api), null);
                     Map<String, String> failures = Map.ofEntries(
                         Map.entry("400", "Dữ liệu/locale không hợp lệ"),
                         Map.entry("401", "Chưa đăng nhập hoặc token/credentials sai"),
@@ -183,21 +199,14 @@ public class OpenApiController {
                         Map.entry("503", "Database chưa sẵn sàng")
                     );
                     failures.forEach((code, text) ->
-                        responses.addApiResponse(
+                        OpenApiModels.response(
+                            operation,
                             code,
-                            new io.swagger.v3.oas.models.responses.ApiResponse()
-                                .description(text)
-                                .content(
-                                    new Content().addMediaType(
-                                        "application/json",
-                                        new MediaType()
-                                            .schema(errorSchema)
-                                            .example(errorExample(Integer.parseInt(code), path))
-                                    )
-                                )
+                            text,
+                            errorSchema,
+                            errorExample(Integer.parseInt(code), path)
                         )
                     );
-                    operation.responses(responses);
                     PathItem item = api.getPaths().computeIfAbsent(path, ignored -> new PathItem());
                     item.operation(PathItem.HttpMethod.valueOf(verb.name()), operation);
                 }
@@ -205,10 +214,6 @@ public class OpenApiController {
         });
         // Swagger dùng mapper riêng để serialize đúng $ref/schema của đặc tả OpenAPI.
         return Json.mapper().valueToTree(api);
-    }
-
-    private static Content json(Schema<?> schema) {
-        return new Content().addMediaType("application/json", new MediaType().schema(schema));
     }
 
     /** Ví dụ lỗi phải đúng mã/status và success=false, tránh để Swagger tự sinh giá trị thành công cho schema chung. */

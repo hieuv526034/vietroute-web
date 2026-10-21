@@ -12,6 +12,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -48,7 +49,7 @@ public class RootConfig {
     }
 
     @Bean
-    @org.springframework.context.annotation.Primary
+    @Primary
     public SupportedLocaleResolver supportedLocaleResolver() {
         return new SupportedLocaleResolver();
     }

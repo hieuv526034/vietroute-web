@@ -2,7 +2,11 @@ package vn.vietroute.common.validation;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /** Giới hạn theo byte UTF-8 để tránh mật khẩu bị BCrypt cắt sau 72 byte. */
 @Target({ ElementType.FIELD, ElementType.PARAMETER })

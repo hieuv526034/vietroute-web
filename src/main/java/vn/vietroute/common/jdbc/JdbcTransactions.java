@@ -12,6 +12,7 @@ public class JdbcTransactions {
 
     private final JdbcConnectionFactory connections;
 
+    /** Mở một connection, tắt autocommit, chạy callback rồi commit; lỗi SQL/nghiệp vụ đều rollback và đóng. */
     public <T> T execute(BaseRepository.SqlWork<T> work) {
         try (Connection connection = connections.open()) {
             connection.setAutoCommit(false);
@@ -23,6 +24,7 @@ public class JdbcTransactions {
                 try {
                     connection.rollback();
                 } catch (SQLException rollback) {
+                    // Giữ lỗi gốc làm nguyên nhân chính; lỗi rollback chỉ đính kèm để điều tra phía server.
                     exception.addSuppressed(rollback);
                 }
                 throw exception;

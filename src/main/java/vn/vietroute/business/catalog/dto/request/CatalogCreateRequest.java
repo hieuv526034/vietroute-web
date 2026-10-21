@@ -1,10 +1,15 @@
 package vn.vietroute.business.catalog.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 import vn.vietroute.common.base.BaseRequest;
+import vn.vietroute.common.constant.Constants;
 import vn.vietroute.common.constant.Constants.CatalogType;
 import vn.vietroute.common.validation.BusinessCode;
 
@@ -22,7 +27,7 @@ public class CatalogCreateRequest extends BaseRequest {
     @Schema(
         description = "Mã chữ hoa/số 3–40 ký tự, null để tự sinh",
         example = "SEATVIP",
-        pattern = vn.vietroute.common.constant.Constants.CODE_PATTERN,
+        pattern = Constants.CODE_PATTERN,
         minLength = 3,
         maxLength = 40
     )

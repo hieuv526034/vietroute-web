@@ -22,19 +22,23 @@ public class ApiResponses {
 
     private final Clock clock;
 
+    /** Dịch bằng key ổn định; args chỉ chứa dữ liệu được phép xuất hiện trong thông báo công khai. */
     public String message(String key, Object[] args, Locale locale) {
         return messages.getMessage(key, args, key, locale);
     }
 
+    /** Dùng cùng thứ tự ưu tiên lang/header với MVC và filter để không lệch ngôn ngữ. */
     public Locale locale(HttpServletRequest request) {
         return localeResolver.resolveLocale(request);
     }
 
+    /** Bọc DTO thành công; dữ liệu audit/thời gian luôn do server cung cấp. */
     public <T> ApiResponse<T> success(SuccessCode code, T data, HttpServletRequest request) {
         return envelope(true, code.getCode(), code.getMessageKey(), new Object[0], data, List.of(), request);
     }
 
-    public ApiResponse<Void> error(
+    /** Generic T giữ hợp đồng của endpoint, nhưng data luôn null khi thất bại và không cần ép kiểu. */
+    public <T> ApiResponse<T> error(
         ErrorCode code,
         Object[] args,
         List<FieldViolation> errors,

@@ -38,6 +38,8 @@ vn.vietroute
 
 Controller chỉ nhận/validate input và gọi service. Service giữ transaction và quy tắc nghiệp vụ; repository dùng PreparedStatement/ResultSet. Entity không trả thẳng ra API; response thực hiện mapping rõ ràng, không kéo password hash hoặc token version ra client. Không tạo generic CRUD bỏ qua quyền và tenant.
 
+API auth/nghiệp vụ kế thừa `BaseApiController`, dùng `execute(...)` có try/catch chung và `ApiExceptionMapper`. Advice dùng cùng mapper cho lỗi trước controller. Đọc [luồng xử lý và cách học base](LUONG_XU_LY_BASE.md) trước khi thêm module.
+
 ## Hợp đồng API và locale
 
 API có tiền tố `/api/v1`. Envelope gồm `success`, `code`, `messageKey`, `message`, `data`, `errors`, `timestamp`, `path`, `traceId`, `locale`. HTTP status phải đúng ý nghĩa; không trả HTTP 200 cho lỗi. Không đưa stacktrace, SQL, thông tin kết nối hoặc rejected password vào response.
@@ -56,6 +58,8 @@ Mọi thời điểm trong entity, DTO, request/response và hợp đồng servi
 
 Thụt lề 4 dấu cách, không dùng tab; mỗi lệnh và annotation một dòng. Có dòng trống giữa các field, các method và các khối xử lý có ý nghĩa. CSS mỗi thuộc tính một dòng, các selector tách nhau; HTML xuống dòng rõ theo cấu trúc. Giới hạn dòng khoảng 120 ký tự, không ép cắt chuỗi SQL/URL gây đổi giá trị.
 
+Import class tường minh ở đầu file, không dùng wildcard hoặc tên package đầy đủ trong thân code. Nếu trùng tên thư viện, tách trách nhiệm sang class riêng như `OpenApiModels`. Dùng method reference khi lambda chỉ gọi chuyển tiếp; giữ callback nhiều bước/có tham số capture để người đọc hiểu luồng. Không tắt inspection để giấu cảnh báo.
+
 Cài Node.js khi cần dùng bộ format ở máy phát triển:
 
 ```powershell
@@ -69,6 +73,8 @@ Phiên bản Prettier cùng plugin Java/XML được khóa trong `package-lock.j
 ## Kế thừa, audit và validation
 
 Entity kế thừa BaseEntity; response có audit kế thừa BaseResponse. BaseRequest không cho client ghi các trường audit. ID dùng Long; `createdAt`, `updatedAt`, `createdBy`, `updatedBy`, `version` do server quản lý. `version` dùng optimistic locking khi sửa dữ liệu; user ID hệ thống có thể null trong lúc bootstrap.
+
+Schema cố định `vietroute`. Entity JDBC khai báo `@JdbcTable` với schema/name/primaryKey và `@JdbcIndex` cho tên, thứ tự cột, unique của index. DDL tạo qua migration SQL, không dùng JPA/ORM hay tự sinh bảng từ annotation. Runner kiểm chứng metadata sau migration trước seed; class mới được thêm vào danh sách kiểm chứng. Không sửa V001 đã có checksum, nâng cấp schema `public` qua V002 và giữ dữ liệu.
 
 PageRequest dùng page từ 0, size 1–100; repository chỉ nhận sort đã qua whitelist, không nối tên cột do client gửi vào SQL. PageResponse có tổng bản ghi/số trang và cờ trang trước/sau. API collection không tự trả entity.
 

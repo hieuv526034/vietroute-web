@@ -1,13 +1,18 @@
 package vn.vietroute.business.catalog.repository;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import org.springframework.stereotype.Repository;
 import vn.vietroute.business.catalog.dto.request.CatalogCreateRequest;
 import vn.vietroute.business.catalog.entity.CatalogItem;
-import vn.vietroute.common.base.*;
+import vn.vietroute.common.base.PageRequest;
+import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.Constants.CatalogType;
-import vn.vietroute.common.jdbc.*;
+import vn.vietroute.common.jdbc.BaseRepository;
+import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 
 /** Repository mẫu cho module nghiệp vụ; mọi giá trị SQL đều được bind bằng PreparedStatement. */
 @Repository
@@ -17,12 +22,13 @@ public class CatalogRepository extends BaseRepository {
         super(connections);
     }
 
+    /** Đếm tổng và lấy trang theo ORDER BY cố định, bind LIMIT/OFFSET, rồi map entity trước khi đóng connection. */
     public PageResponse<CatalogItem> page(CatalogType type, PageRequest page) {
         return read(connection -> {
             long total;
             try (
                 PreparedStatement query = connection.prepareStatement(
-                    "SELECT COUNT(*) FROM catalog_items WHERE type=? AND active=true"
+                    "SELECT COUNT(*) FROM vietroute.catalog_items WHERE type=? AND active=true"
                 )
             ) {
                 query.setString(1, type.name());
@@ -35,7 +41,7 @@ public class CatalogRepository extends BaseRepository {
             // ORDER BY cố định: không nối trực tiếp sort từ request vào SQL.
             try (
                 PreparedStatement query = connection.prepareStatement(
-                    "SELECT * FROM catalog_items WHERE type=? AND active=true ORDER BY sort_order,id LIMIT ? OFFSET ?"
+                    "SELECT * FROM vietroute.catalog_items WHERE type=? AND active=true ORDER BY sort_order,id LIMIT ? OFFSET ?"
                 )
             ) {
                 query.setString(1, type.name());
@@ -51,11 +57,12 @@ public class CatalogRepository extends BaseRepository {
         });
     }
 
+    /** Insert nhận actor từ server và trả lại audit do SQL tạo; không tự commit connection của service. */
     public CatalogItem insert(Connection connection, CatalogCreateRequest request, String code, long actor)
         throws SQLException {
         try (
             PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO catalog_items(type,code,name_vi,name_en,sort_order,created_by,updated_by) VALUES (?,?,?,?,?,?,?) RETURNING *"
+                "INSERT INTO vietroute.catalog_items(type,code,name_vi,name_en,sort_order,created_by,updated_by) VALUES (?,?,?,?,?,?,?) RETURNING *"
             )
         ) {
             insert.setString(1, request.getType().name());

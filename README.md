@@ -22,6 +22,7 @@ Website quản lý nhà xe, tuyến/chuyến, đặt chỗ và theo dõi hành t
 5. [Docker/Render và biến môi trường](docs/DEPLOY_RENDER.md).
 6. [Quy trình Git và ghi nhận đóng góp](CONTRIBUTING.md).
 7. [Đặc tả nghiệp vụ và bộ ca nghiệm thu](docs/DAC_TA_HE_THONG_XE_KHACH.md).
+8. [Luồng xử lý base để thành viên học và mở rộng](docs/LUONG_XU_LY_BASE.md).
 
 ## Chạy dự án
 
@@ -45,6 +46,8 @@ docker run --rm --env-file .env -p 10000:10000 vietroute-web
 Docker: mở http://localhost:10000; `/login`, `/account`, `/admin`, `/docs`, `/v3/api-docs`. WAR thủ công: deploy `target/vietroute.war` lên Tomcat 10.1 và thêm context `/vietroute` vào các đường dẫn. Linux/macOS dùng `sh ./mvnw` hoặc `./mvnw`.
 
 Cần DB đã migrate để đăng nhập/tra danh mục. Trang chủ, trang đăng nhập, Swagger và `/health` có thể render khi initializer tắt; `/health` chỉ xác nhận web availability, không xác nhận DB sẵn sàng. Bootstrap username mặc định `admin`, mật khẩu lấy từ `VIETROUTE_BOOTSTRAP_ADMIN_PASSWORD` trong `.env` local/Environment; không có mật khẩu production trong source.
+
+Schema ứng dụng cố định là `vietroute` trong database `neondb`. Khi initializer được bật, DB mới tự tạo schema/bảng/index và seed; DB cũ đã chạy V001 ở `public` được V002 chuyển sang `vietroute`, giữ dữ liệu và mật khẩu hiện tại. Entity có metadata table/index và được kiểm chứng lúc startup; chi tiết ở tài liệu database.
 
 ## Cấu trúc
 
