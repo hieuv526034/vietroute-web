@@ -43,6 +43,8 @@ csrf_token=''
 token=''
 call() {
   local expected="$1" method="$2" path="$3" payload="${4:-}" mode="${5:-none}"
+  # Mô phỏng client Axios: lấy lại token hiện hành trước mỗi mutation bằng cookie.
+  if [[ "$mode" == cookie && "$method" != GET && "$method" != HEAD && "$method" != OPTIONS ]]; then refresh_csrf; fi
   local args=(--silent --show-error --max-time 30 --output "$result" --dump-header "$work/headers" --write-out '%{http_code}' -X "$method" -H 'X-Locale: en')
   if [[ "$mode" == cookie* ]]; then args+=(-b "$work/cookies" -c "$work/cookies"); fi
   if [[ "$mode" == cookie ]]; then args+=(-H "X-XSRF-TOKEN: $csrf_token"); fi
@@ -52,6 +54,7 @@ call() {
   actual=$(curl "${args[@]}" "$base$path")
   if [[ "$actual" != "$expected" ]]; then
     printf 'Unexpected HTTP status: %s %s expected=%s actual=%s\n' "$method" "$path" "$expected" "$actual" >&2
+    python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print("Error code:", d.get("code"), "key:", d.get("messageKey"))' "$result" >&2 || true
     exit 1 # Không in response/token/password ra log kể cả khi assertion thất bại.
   fi
 }
