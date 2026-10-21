@@ -30,7 +30,7 @@ View Thymeleaf: `/`, `/login`, `/account` (đăng nhập), `/admin` (ADMIN). Tr�
   "data": null,
   "errors": [{
     "field": "code",
-    "code": "VAL001",
+    "code": "VAL003",
     "messageKey": "validation.code",
     "message": "Mã phải bắt đầu bằng chữ in hoa, chỉ chứa chữ in hoa và số, dài 3–40 ký tự."
   }],
@@ -56,7 +56,7 @@ View Thymeleaf: `/`, `/login`, `/account` (đăng nhập), `/admin` (ADMIN). Tr�
 | COM007 | 503 | Dữ liệu không sẵn sàng hoặc thao tác DB không hoàn thành |
 | COM008 | 409 | Phiên bản audit đã cũ |
 | COM009 / COM010 / COM011 | 405 / 415 / 406 | Method/media type/Accept không hỗ trợ |
-| VAL001 | 400 | Định dạng mã; cũng dùng làm nhóm field violation có messageKey cụ thể |
+| VAL001–VAL010 | 400 | Mã field validation trong ValidationCode: bắt buộc, không hợp lệ, mã, username, password, độ dài, page, size, thứ tự |
 | AUTH001 | 401 | Credentials sai |
 | AUTH002 | 401 | Chưa đăng nhập |
 | AUTH003 | 403 | Không có quyền |

@@ -20,6 +20,7 @@ class FoundationRulesTest {
         assertEquals(vi.keySet(), en.keySet());
         for (ErrorCode code : ErrorCode.values()) assertTrue(vi.containsKey(code.getMessageKey()));
         for (SuccessCode code : SuccessCode.values()) assertTrue(vi.containsKey(code.getMessageKey()));
+        for (ValidationCode code : ValidationCode.values()) assertTrue(vi.containsKey(code.getMessageKey()));
     }
     @Test void codeAndPasswordRulesPreserveVietnameseTextAndBcryptByteLimit() {
         for (int i = 0; i < 50; i++) assertTrue(CodeGenerator.generate("CAT").matches(Constants.CODE_PATTERN));

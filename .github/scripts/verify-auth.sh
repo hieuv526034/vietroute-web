@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Kiểm tra tích hợp bằng PostgreSQL tạm; không đọc secrets hoặc kết nối Neon production.
-set -euo pipefail
+set -Eeuo pipefail
+trap 'printf "Auth verification failed near line %s\n" "$LINENO" >&2' ERR
 work="${RUNNER_TEMP:?}/vietroute-auth"
 mkdir -p "$work"
 db_password="$(openssl rand -hex 24)"
@@ -70,6 +71,7 @@ login_body() {
   CI_USERNAME="$1" CI_PASSWORD="$2" python3 -c 'import json,os,sys; json.dump({"username":os.environ["CI_USERNAME"],"password":os.environ["CI_PASSWORD"]},sys.stdout)' > "$work/login.json"
 }
 refresh_csrf
+printf 'Auth stage: initial login, cookies and public catalog\n'
 login_body admin "$admin_password"
 call 200 POST /api/v1/auth/login "$work/login.json" cookie
 token=$(field data.accessToken)
@@ -93,6 +95,7 @@ cat > "$work/catalog.json" <<'JSON'
 JSON
 call 403 POST /api/v1/admin/catalogs "$work/catalog.json" cookie-no-csrf
 assert_code AUTH006
+printf 'Auth stage: catalog validation, audit and duplicate constraints\n'
 call 201 POST /api/v1/admin/catalogs "$work/catalog.json" bearer
 [[ "$(field data.code)" == CITEST ]]
 [[ "$(field data.createdBy)" == 1 ]]
@@ -105,6 +108,7 @@ python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); del d["code"]; json
 call 201 POST /api/v1/admin/catalogs "$work/generated.json" bearer
 python3 -c 'import json,re,sys; d=json.load(open(sys.argv[1])); assert re.fullmatch(r"[A-Z][A-Z0-9]{2,39}",d["data"]["code"])' "$result"
 CI_OLD="$admin_password" CI_NEW="$next_password" python3 -c 'import json,os,sys; json.dump({"currentPassword":os.environ["CI_OLD"],"newPassword":os.environ["CI_NEW"]},sys.stdout)' > "$work/password.json"
+printf 'Auth stage: password change and token revocation\n'
 call 200 POST /api/v1/auth/change-password "$work/password.json" cookie
 new_token=$(field data.accessToken)
 [[ "$(field data.user.mustChangePassword)" == False ]]
@@ -118,6 +122,7 @@ call 401 GET /api/v1/auth/me '' bearer
 assert_code AUTH004
 # Restart giữ nguyên hash đã đổi; không lấy mật khẩu bootstrap ghi đè lên tài khoản có sẵn.
 sql "SELECT password_hash FROM auth_users WHERE username='admin'" > "$work/hash-before"
+printf 'Auth stage: restart does not reset password\n'
 docker restart vietroute-auth-ci >/dev/null
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 "$base/health" >/dev/null
@@ -133,6 +138,7 @@ call 200 POST /api/v1/auth/login "$work/login.json" cookie
 call 200 POST /api/v1/auth/logout '' cookie
 # Tạo user CUSTOMER trong DB test riêng để kiểm tra quyền, khóa user và bộ đếm sai phải được commit.
 sql "INSERT INTO auth_users(username,password_hash,display_name,must_change_password) SELECT 'customer',password_hash,'CI customer',false FROM auth_users WHERE username='admin'" >/dev/null
+printf 'Auth stage: role checks and account lock\n'
 sql "INSERT INTO auth_user_roles(user_id,role_code) SELECT id,'CUSTOMER' FROM auth_users WHERE username='customer'" >/dev/null
 login_body customer "$next_password"
 call 200 POST /api/v1/auth/login "$work/login.json" cookie

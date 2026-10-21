@@ -85,7 +85,9 @@ public class GlobalExceptionHandler {
         return result(ErrorCode.INTERNAL_ERROR, new Object[0], List.of(), request);
     }
     private FieldViolation violation(String field, String key, HttpServletRequest request) {
-        return new FieldViolation(field, "VAL001", key, responses.message(key, new Object[0], responses.locale(request)));
+        var code = vn.vietroute.common.constant.ValidationCode.fromKey(key);
+        return new FieldViolation(field, code.getCode(), code.getMessageKey(),
+                responses.message(code.getMessageKey(), new Object[0], responses.locale(request)));
     }
     private static String key(String template) {
         return template != null && template.matches("\\{[A-Za-z0-9.]+}")

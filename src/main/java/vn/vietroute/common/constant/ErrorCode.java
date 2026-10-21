@@ -13,7 +13,7 @@ public enum ErrorCode {
     CONFLICT("COM005", "error.conflict", HttpStatus.CONFLICT),
     INTERNAL_ERROR("COM006", "error.internal", HttpStatus.INTERNAL_SERVER_ERROR),
     DATABASE_UNAVAILABLE("COM007", "error.database", HttpStatus.SERVICE_UNAVAILABLE),
-    INVALID_CODE("VAL001", "validation.code", HttpStatus.BAD_REQUEST),
+    INVALID_CODE("VAL003", "validation.code", HttpStatus.BAD_REQUEST),
     INVALID_CREDENTIALS("AUTH001", "auth.invalidCredentials", HttpStatus.UNAUTHORIZED),
     UNAUTHENTICATED("AUTH002", "auth.unauthenticated", HttpStatus.UNAUTHORIZED),
     ACCESS_DENIED("AUTH003", "auth.denied", HttpStatus.FORBIDDEN),
