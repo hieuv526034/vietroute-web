@@ -28,18 +28,23 @@ Ví dụ thành viên phụ trách tracking làm màn hình theo dõi:
 ```powershell
 git switch main
 git pull --ff-only origin main
-git switch -c feat/tracking-trip-progress
+git switch -c hieuv526034/tracking-trip-progress
 # Code và kiểm tra chức năng của mình.
+npm ci
+npm run format
+npm run format:check
 .\mvnw.cmd verify
 git status
 git add src/main/java/vn/vietroute/business/tracking src/main/webapp/WEB-INF/views/tracking
 git commit -m "feat(tracking): add trip progress page"
-git push -u origin feat/tracking-trip-progress
+git push -u origin hieuv526034/tracking-trip-progress
 ```
 
 Lệnh `git add` trên minh họa các thư mục sẽ được tạo khi có chức năng; chỉ thêm đường dẫn đã tồn tại và đúng thay đổi của mình. CSS/JS/SQL/tài liệu liên quan cũng được thêm rõ ràng. Không thêm `target/`, mật khẩu hoặc file IDE.
 
-Sau đó mở Pull request vào `main`, mô tả Issue, chức năng, cách kiểm tra và hình ảnh nếu có giao diện. Một thành viên khác review. Chỉ merge khi build và luồng liên quan chạy được. Nhánh nên gắn với chức năng nhỏ, không giữ một nhánh khổng lồ suốt 2 tuần.
+Sau đó mở Pull request vào `main`, mô tả Issue, chức năng, cách kiểm tra và hình ảnh nếu có giao diện. Một thành viên khác review. Chỉ merge khi build và luồng liên quan chạy được. Nhánh theo mẫu `<người-phụ-trách>/<chức-năng>`, dùng đúng tiền tố trong `docs/PHAN_CONG.md`, không dùng `codex/`. Không commit source trực tiếp lên `main`. Nhánh nên gắn với chức năng nhỏ, không giữ một nhánh khổng lồ suốt 2 tuần.
+
+`npm ci` chỉ cần khi cài môi trường hoặc lockfile thay đổi. Format chạy ở máy phát triển; Docker/Render không cài npm. Giữ khoảng cách giữa field/method/khối nghiệp vụ; tên lớp dùng `DTO` viết hoa, các thời điểm Java dùng `Instant`, theo quy ước trong `docs/QUY_UOC_PHAT_TRIEN.md`.
 
 Nếu `git pull --ff-only` báo lịch sử khác nhau, dừng và đọc tình trạng; không dùng force push hoặc reset để bỏ thay đổi chưa hiểu. Trước khi bắt đầu chức năng mới, lấy `main` mới nhất.
 

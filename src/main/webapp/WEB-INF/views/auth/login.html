@@ -1,19 +1,98 @@
 <!doctype html>
-<html th:lang="${currentLocale}" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head(#{ui.login})}"></head>
-<body>
-<header th:replace="~{fragments/layout :: header}"></header>
-<main class="container-xl auth-page">
-    <section class="auth-story"><p class="eyebrow">VIETROUTE / WORKSPACE</p><h1 th:text="#{ui.secureAccess}">Không gian vận hành của bạn</h1><p th:text="#{ui.secureDescription}"></p><div class="story-route" aria-hidden="true"><span>01</span><div></div><span>02</span><div></div><span>03 ↗</span></div><span class="story-bottom" th:text="#{ui.tagline}"></span></section>
-    <section class="auth-card">
-        <p class="eyebrow" th:text="#{ui.login}">Đăng nhập</p><h2 th:text="#{ui.loginTitle}">Chào mừng trở lại</h2><p class="muted" th:text="#{ui.loginDescription}"></p>
-        <div id="form-feedback" class="feedback" role="alert" hidden></div>
-        <form id="login-form" novalidate>
-            <label for="username" th:text="#{ui.username}">Tên đăng nhập</label><input class="form-control" id="username" name="username" autocomplete="username" maxlength="32" required>
-            <label for="password" th:text="#{ui.password}">Mật khẩu</label><input class="form-control" id="password" name="password" type="password" autocomplete="current-password" maxlength="72" required>
-            <button class="button full-width" type="submit" th:text="#{ui.signIn}" th:attr="data-loading=#{ui.signingIn}">Đăng nhập</button>
-        </form><p class="form-help" th:text="#{ui.loginHelp}"></p>
-    </section>
-</main>
-<footer th:replace="~{fragments/layout :: footer}"></footer><th:block th:replace="~{fragments/layout :: scripts}"></th:block>
-</body></html>
+<html
+    th:lang="${currentLocale}"
+    xmlns:th="http://www.thymeleaf.org"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.login})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main class="container-xl auth-page">
+            <section class="auth-story">
+                <p class="eyebrow">VIETROUTE / WORKSPACE</p>
+                <h1 th:text="#{ui.secureAccess}">Không gian vận hành của bạn</h1>
+                <p th:text="#{ui.secureDescription}"></p>
+                <div
+                    class="story-route"
+                    aria-hidden="true"
+                >
+                    <span>01</span>
+                    <div></div>
+                    <span>02</span>
+                    <div></div>
+                    <span>03 ↗</span>
+                </div>
+                <span
+                    class="story-bottom"
+                    th:text="#{ui.tagline}"
+                ></span>
+            </section>
+            <section class="auth-card">
+                <p
+                    class="eyebrow"
+                    th:text="#{ui.login}"
+                >
+                    Đăng nhập
+                </p>
+                <h2 th:text="#{ui.loginTitle}">Chào mừng trở lại</h2>
+                <p
+                    class="muted"
+                    th:text="#{ui.loginDescription}"
+                ></p>
+                <div
+                    id="form-feedback"
+                    class="feedback"
+                    role="alert"
+                    hidden
+                ></div>
+                <form
+                    id="login-form"
+                    novalidate
+                >
+                    <label
+                        for="username"
+                        th:text="#{ui.username}"
+                    >
+                        Tên đăng nhập
+                    </label>
+                    <input
+                        class="form-control"
+                        id="username"
+                        name="username"
+                        autocomplete="username"
+                        maxlength="32"
+                        required
+                    />
+                    <label
+                        for="password"
+                        th:text="#{ui.password}"
+                    >
+                        Mật khẩu
+                    </label>
+                    <input
+                        class="form-control"
+                        id="password"
+                        name="password"
+                        type="password"
+                        autocomplete="current-password"
+                        maxlength="72"
+                        required
+                    />
+                    <button
+                        class="button full-width"
+                        type="submit"
+                        th:text="#{ui.signIn}"
+                        th:attr="data-loading=#{ui.signingIn}"
+                    >
+                        Đăng nhập
+                    </button>
+                </form>
+                <p
+                    class="form-help"
+                    th:text="#{ui.loginHelp}"
+                ></p>
+            </section>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+    </body>
+</html>

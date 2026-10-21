@@ -19,6 +19,26 @@ Các module nghiệp vụ bên dưới là kế hoạch triển khai tiếp, ch�
 
 Tuyến đi và về là hai bản ghi riêng. Mọi người viết UI Thymeleaf, API, request/response, SQL và kiểm thử liên quan cho phần mình. Phạm vi nhà xe lấy từ principal/server; không tin companyId do client gửi. Không để hai người cùng sửa một migration đã áp dụng.
 
+## Nhánh theo người phụ trách
+
+| Người phụ trách | Nhánh chuẩn bị | Phần việc |
+|---|---|---|
+| hieuv526034 | `hieuv526034/application-foundation` | Base/common/auth/schema/CI và tích hợp nền tảng |
+| bangpham.it | `bangpham.it/trip-booking` | TRIP01 và BOOKING01, theo thứ tự phụ thuộc |
+| anhhoang104 | `anhhoang104/carrier-catalog` | CAT01/CARRIER01: danh mục, nhà xe, xe, tài xế |
+| hiencoi250404-design | `hiencoi250404-design/route-search-ui` | ROUTE01/SEARCH01: tuyến, điểm dừng và giao diện tra cứu |
+
+Tiền tố nhánh là nhãn phân công đã thống nhất từ định danh thành viên; không phải xác nhận username GitHub hoặc tác giả commit. Ba nhánh nghiệp vụ được chuẩn bị từ cùng commit nền tảng đã kiểm tra, chưa thể hiện thành viên đã viết code. Nhánh `hieuv526034/neon-render-cicd` giữ lịch sử phần CI đã merge.
+
+Mọi thay đổi đi từ nhánh phụ trách → PR → CI/review → merge commit vào `main`. Không dùng nhánh `codex/`, không commit source trực tiếp lên `main`. Sau khi base được merge, cập nhật `main` vào nhánh chuẩn bị trước khi code. Với mục nhỏ tiếp theo, tạo nhánh mới từ `main` mới nhất theo mẫu `<tiền-tố-thành-viên>/<mã-việc>-<mô-tả>` rồi tạo PR riêng; không dồn toàn bộ nghiệp vụ vào một PR lớn.
+
+```powershell
+git fetch origin
+git switch bangpham.it/trip-booking
+git merge origin/main
+# Chỉ bắt đầu phần việc khi các API/schema phụ thuộc đã sẵn sàng.
+```
+
 ## Thứ tự làm từng mục
 
 | Giai đoạn | Mã việc | Chủ trì | Điều kiện nghiệm thu |

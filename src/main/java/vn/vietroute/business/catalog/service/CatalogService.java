@@ -14,19 +14,37 @@ import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.util.CodeGenerator;
 
 /** Service mẫu thể hiện quyền, transaction, audit và mapping; không chứa HTTP hoặc template. */
-@Service @RequiredArgsConstructor
+@Service
+@RequiredArgsConstructor
 public class CatalogService {
+
     private final CatalogRepository catalogs;
+
     private final JdbcTransactions transactions;
+
     public PageResponse<CatalogResponse> page(CatalogType type, PageRequest page, Locale locale) {
         var result = catalogs.page(type, page);
-        return new PageResponse<>(result.content().stream().map(item -> CatalogResponse.from(item, locale)).toList(),
-                result.page(), result.size(), result.totalElements(), result.totalPages(), result.hasNext(), result.hasPrevious());
+        return new PageResponse<>(
+            result
+                .content()
+                .stream()
+                .map(item -> CatalogResponse.from(item, locale))
+                .toList(),
+            result.page(),
+            result.size(),
+            result.totalElements(),
+            result.totalPages(),
+            result.hasNext(),
+            result.hasPrevious()
+        );
     }
+
     /** Danh mục dùng chung chỉ ADMIN tạo; actor lấy từ JWT đã kiểm tra lại với DB. */
     @PreAuthorize("hasRole('ADMIN')")
     public CatalogResponse create(CatalogCreateRequest request, UserPrincipal actor, Locale locale) {
         String code = request.getCode() == null ? CodeGenerator.generate("CAT") : request.getCode();
-        return transactions.execute(connection -> CatalogResponse.from(catalogs.insert(connection, request, code, actor.id()), locale));
+        return transactions.execute(connection ->
+            CatalogResponse.from(catalogs.insert(connection, request, code, actor.id()), locale)
+        );
     }
 }

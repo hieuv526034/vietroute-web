@@ -10,10 +10,14 @@ import org.springframework.stereotype.Component;
 import vn.vietroute.common.constant.ErrorCode;
 
 /** Lỗi ở filter không đi qua ControllerAdvice; dùng cùng factory để giữ nguyên hợp đồng. */
-@Component @RequiredArgsConstructor
+@Component
+@RequiredArgsConstructor
 public class ApiErrorWriter {
+
     private final ObjectMapper mapper;
+
     private final ApiResponses responses;
+
     public void write(HttpServletRequest request, HttpServletResponse response, ErrorCode code) throws IOException {
         RequestTraceFilter.ensure(request, response);
         response.setStatus(code.getStatus().value());

@@ -1,0 +1,14 @@
+{
+  "name": "vietroute-formatting",
+  "private": true,
+  "description": "Cong cu format code khi phat trien, khong tham gia build WAR/Docker.",
+  "scripts": {
+    "format": "prettier --write \"src/**/*.java\" \"src/main/webapp/**/*.{html,css,js}\" pom.xml package.json .prettierrc.json",
+    "format:check": "prettier --check \"src/**/*.java\" \"src/main/webapp/**/*.{html,css,js}\" pom.xml package.json .prettierrc.json"
+  },
+  "devDependencies": {
+    "@prettier/plugin-xml": "3.4.2",
+    "prettier": "3.9.10",
+    "prettier-plugin-java": "2.11.0"
+  }
+}

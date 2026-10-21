@@ -9,8 +9,11 @@ import java.util.Properties;
 
 /** Tạo connection JDBC mới; service phải chia sẻ cùng connection cho các DAO trong một transaction. */
 public final class JdbcConnectionFactory {
+
     private final String url;
+
     private final String username;
+
     private final String password;
 
     public JdbcConnectionFactory(String url, String username, String password) {
@@ -29,9 +32,10 @@ public final class JdbcConnectionFactory {
             throw new IllegalStateException("Cannot read database configuration", exception);
         }
         return new JdbcConnectionFactory(
-                setting("VIETROUTE_DB_URL", defaults.getProperty("db.url")),
-                setting("VIETROUTE_DB_USER", defaults.getProperty("db.username")),
-                setting("VIETROUTE_DB_PASSWORD", ""));
+            setting("VIETROUTE_DB_URL", defaults.getProperty("db.url")),
+            setting("VIETROUTE_DB_USER", defaults.getProperty("db.username")),
+            setting("VIETROUTE_DB_PASSWORD", "")
+        );
     }
 
     private static String setting(String key, String fallback) {

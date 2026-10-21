@@ -2,6 +2,7 @@
 /target/
 /.tools/
 /.m2/
+/node_modules/
 *.log
 
 # IDE and operating system

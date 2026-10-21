@@ -3,15 +3,16 @@ package vn.vietroute.common.web;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.ui.Model;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.UserPrincipal;
 
 /** Model layout dùng chung: base path, locale và thông tin principal an toàn, không chứa token/hash. */
 @ControllerAdvice
 public class PageModelAdvice {
+
     @ModelAttribute
     public void common(Model model, HttpServletRequest request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

@@ -1,0 +1,19 @@
+{
+  "plugins": ["prettier-plugin-java", "@prettier/plugin-xml"],
+  "printWidth": 120,
+  "tabWidth": 4,
+  "useTabs": false,
+  "endOfLine": "lf",
+  "singleQuote": true,
+  "singleAttributePerLine": true,
+  "htmlWhitespaceSensitivity": "ignore",
+  "xmlWhitespaceSensitivity": "ignore",
+  "overrides": [
+    {
+      "files": "*.json",
+      "options": {
+        "tabWidth": 2
+      }
+    }
+  ]
+}

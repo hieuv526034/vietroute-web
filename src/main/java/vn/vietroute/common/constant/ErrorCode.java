@@ -28,9 +28,14 @@ public enum ErrorCode {
     NOT_ACCEPTABLE("COM011", "error.accept", HttpStatus.NOT_ACCEPTABLE);
 
     private final String code;
+
     private final String messageKey;
+
     private final HttpStatus status;
+
     ErrorCode(String code, String messageKey, HttpStatus status) {
-        this.code = code; this.messageKey = messageKey; this.status = status;
+        this.code = code;
+        this.messageKey = messageKey;
+        this.status = status;
     }
 }

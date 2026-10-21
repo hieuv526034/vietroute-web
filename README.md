@@ -27,6 +27,8 @@ Website quản lý nhà xe, tuyến/chuyến, đặt chỗ và theo dõi hành t
 
 Cài JDK 17/21, đặt JAVA_HOME đúng thư mục JDK. Import pom.xml vào IDE. Java không tự đọc `.env`: đặt biến môi trường trong Tomcat/IDE hoặc dùng Docker `--env-file`.
 
+Khi phát triển, cài Node.js để chạy `npm ci`, `npm run format` và `npm run format:check`. Bộ format Java/HTML/CSS/JS/XML chỉ dùng ở máy phát triển; production Docker không cài Node. Tên lớp dùng `DTO` viết hoa, thời điểm Java dùng `Instant`. Mỗi người làm nhánh theo bảng [phân công](docs/PHAN_CONG.md), mở PR rồi mới merge vào `main`.
+
 ```powershell
 # Kiểm tra phát triển, bao gồm test local không dùng Neon
 .\mvnw.cmd verify

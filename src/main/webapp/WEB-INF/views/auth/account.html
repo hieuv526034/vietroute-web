@@ -1,13 +1,96 @@
 <!doctype html>
-<html th:lang="${currentLocale}" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head(#{ui.account})}"></head>
-<body>
-<header th:replace="~{fragments/layout :: header}"></header>
-<main class="container-xl workspace-page"><div class="page-heading"><p class="eyebrow">WORKSPACE / ACCOUNT</p><h1 th:text="#{ui.accountTitle}"></h1><p class="muted" th:text="#{ui.accountDescription}"></p></div>
-    <div class="workspace-grid"><section class="panel"><h2 id="account-name" th:text="#{ui.loading}"></h2><dl><dt th:text="#{ui.username}"></dt><dd id="account-username">—</dd><dt th:text="#{ui.roles}"></dt><dd id="account-roles">—</dd><dt th:text="#{ui.createdAt}"></dt><dd id="account-created">—</dd></dl></section>
-    <section class="panel"><h2 th:text="#{ui.changePassword}"></h2><p class="initial-password" id="initial-password" hidden th:text="#{ui.initialPassword}"></p><div id="form-feedback" class="feedback" role="alert" hidden></div>
-        <form id="password-form" novalidate><label for="current-password" th:text="#{ui.currentPassword}"></label><input class="form-control" type="password" id="current-password" name="currentPassword" autocomplete="current-password" maxlength="72" required>
-            <label for="new-password" th:text="#{ui.newPassword}"></label><input class="form-control" type="password" id="new-password" name="newPassword" autocomplete="new-password" minlength="8" maxlength="72" aria-describedby="password-hint" required><p class="form-help" id="password-hint" th:text="#{ui.passwordHint}"></p><button class="button" type="submit" th:text="#{ui.savePassword}"></button></form>
-    </section></div>
-</main><footer th:replace="~{fragments/layout :: footer}"></footer><th:block th:replace="~{fragments/layout :: scripts}"></th:block>
-</body></html>
+<html
+    th:lang="${currentLocale}"
+    xmlns:th="http://www.thymeleaf.org"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.account})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main class="container-xl workspace-page">
+            <div class="page-heading">
+                <p class="eyebrow">WORKSPACE / ACCOUNT</p>
+                <h1 th:text="#{ui.accountTitle}"></h1>
+                <p
+                    class="muted"
+                    th:text="#{ui.accountDescription}"
+                ></p>
+            </div>
+            <div class="workspace-grid">
+                <section class="panel">
+                    <h2
+                        id="account-name"
+                        th:text="#{ui.loading}"
+                    ></h2>
+                    <dl>
+                        <dt th:text="#{ui.username}"></dt>
+                        <dd id="account-username">—</dd>
+                        <dt th:text="#{ui.roles}"></dt>
+                        <dd id="account-roles">—</dd>
+                        <dt th:text="#{ui.createdAt}"></dt>
+                        <dd id="account-created">—</dd>
+                    </dl>
+                </section>
+                <section class="panel">
+                    <h2 th:text="#{ui.changePassword}"></h2>
+                    <p
+                        class="initial-password"
+                        id="initial-password"
+                        hidden
+                        th:text="#{ui.initialPassword}"
+                    ></p>
+                    <div
+                        id="form-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></div>
+                    <form
+                        id="password-form"
+                        novalidate
+                    >
+                        <label
+                            for="current-password"
+                            th:text="#{ui.currentPassword}"
+                        ></label>
+                        <input
+                            class="form-control"
+                            type="password"
+                            id="current-password"
+                            name="currentPassword"
+                            autocomplete="current-password"
+                            maxlength="72"
+                            required
+                        />
+                        <label
+                            for="new-password"
+                            th:text="#{ui.newPassword}"
+                        ></label>
+                        <input
+                            class="form-control"
+                            type="password"
+                            id="new-password"
+                            name="newPassword"
+                            autocomplete="new-password"
+                            minlength="8"
+                            maxlength="72"
+                            aria-describedby="password-hint"
+                            required
+                        />
+                        <p
+                            class="form-help"
+                            id="password-hint"
+                            th:text="#{ui.passwordHint}"
+                        ></p>
+                        <button
+                            class="button"
+                            type="submit"
+                            th:text="#{ui.savePassword}"
+                        ></button>
+                    </form>
+                </section>
+            </div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+    </body>
+</html>
