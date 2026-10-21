@@ -21,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import vn.vietroute.common.base.PageRequest;
+import vn.vietroute.common.constant.ErrorCode;
 
 /** Tạo OpenAPI từ mapping Spring MVC và @Operation/@Schema, không đưa Spring Boot vào WAR. */
 @RestController
@@ -93,7 +94,9 @@ public class OpenApiController {
                             Map.entry("415", "Media type không được hỗ trợ"), Map.entry("429", "Tài khoản tạm khóa"),
                             Map.entry("500", "Lỗi nội bộ có traceId"), Map.entry("503", "Database chưa sẵn sàng"));
                     failures.forEach((code, text) -> responses.addApiResponse(code,
-                            new io.swagger.v3.oas.models.responses.ApiResponse().description(text).content(json(errorSchema))));
+                            new io.swagger.v3.oas.models.responses.ApiResponse().description(text)
+                                    .content(new Content().addMediaType("application/json", new MediaType().schema(errorSchema)
+                                            .example(errorExample(Integer.parseInt(code), path))))));
                     operation.responses(responses);
                     PathItem item = api.getPaths().computeIfAbsent(path, ignored -> new PathItem());
                     item.operation(PathItem.HttpMethod.valueOf(verb.name()), operation);
@@ -104,6 +107,29 @@ public class OpenApiController {
         return Json.mapper().valueToTree(api);
     }
     private static Content json(Schema<?> schema) { return new Content().addMediaType("application/json", new MediaType().schema(schema)); }
+    /** Ví dụ lỗi phải đúng mã/status và success=false, tránh để Swagger tự sinh giá trị thành công cho schema chung. */
+    private static Map<String, Object> errorExample(int status, String path) {
+        ErrorCode code = switch (status) {
+            case 400 -> ErrorCode.VALIDATION_FAILED;
+            case 401 -> ErrorCode.UNAUTHENTICATED;
+            case 403 -> ErrorCode.ACCESS_DENIED;
+            case 404 -> ErrorCode.NOT_FOUND;
+            case 405 -> ErrorCode.METHOD_NOT_ALLOWED;
+            case 406 -> ErrorCode.NOT_ACCEPTABLE;
+            case 409 -> ErrorCode.CONFLICT;
+            case 415 -> ErrorCode.UNSUPPORTED_MEDIA;
+            case 429 -> ErrorCode.ACCOUNT_LOCKED;
+            case 503 -> ErrorCode.DATABASE_UNAVAILABLE;
+            default -> ErrorCode.INTERNAL_ERROR;
+        };
+        Map<String, Object> example = new LinkedHashMap<>();
+        example.put("success", false); example.put("code", code.getCode()); example.put("messageKey", code.getMessageKey());
+        example.put("message", "Thông báo tương ứng messageKey theo locale đã chọn");
+        example.put("data", null); example.put("errors", List.of());
+        example.put("timestamp", "2026-10-21T10:00:00Z"); example.put("path", path);
+        example.put("traceId", "caeae4ef-f5a4-4b16-9a34-06e50d6be073"); example.put("locale", "vi");
+        return example;
+    }
     private static Schema<?> schema(Type type, OpenAPI api) {
         var resolved = ModelConverters.getInstance().resolveAsResolvedSchema(new AnnotatedType(type).resolveAsRef(true));
         if (resolved.referencedSchemas != null) { resolved.referencedSchemas.forEach(api.getComponents()::addSchemas); }

@@ -11,7 +11,9 @@
         requestInterceptor(request) {
             request.credentials = 'same-origin';
             request.headers['X-Locale'] = locale;
-            if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method.toUpperCase())) {
+            // Request tải đặc tả có thể không chứa method; Swagger mặc định dùng GET.
+            const method = (request.method || 'GET').toUpperCase();
+            if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
                 request.headers[csrf.headerName] = csrf.token;
             }
             return request;

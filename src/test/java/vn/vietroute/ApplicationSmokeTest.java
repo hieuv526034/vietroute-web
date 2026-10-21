@@ -51,6 +51,9 @@ class ApplicationSmokeTest {
             assertTrue(document.isObject(), "OpenAPI phải trả JSON object, không encode thành JSON string");
             assertTrue(document.get("paths").has("/api/v1/auth/change-password"));
             assertTrue(document.get("components").get("schemas").has("CatalogResponse"));
+            var errorExample = document.at("/paths/~1api~1v1~1auth~1login/post/responses/401/content/application~1json/example");
+            assertFalse(errorExample.get("success").asBoolean());
+            assertEquals("AUTH002", errorExample.get("code").asText());
             assertTrue(spec.contains("/api/v1/auth/login"));
             assertTrue(spec.contains("/api/v1/admin/catalogs"));
             assertTrue(spec.contains("createdAt"));
