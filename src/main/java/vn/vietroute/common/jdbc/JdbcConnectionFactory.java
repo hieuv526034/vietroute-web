@@ -40,6 +40,12 @@ public final class JdbcConnectionFactory {
     }
 
     public Connection open() throws SQLException {
+        // Tomcat initializes DriverManager before it can see WEB-INF/lib drivers.
+        try {
+            Class.forName("org.postgresql.Driver");
+        } catch (ClassNotFoundException exception) {
+            throw new SQLException("PostgreSQL JDBC driver is missing from the runtime", exception);
+        }
         return DriverManager.getConnection(url, username, password);
     }
 }

@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: vietroute-web
+    runtime: docker
+    plan: free
+    region: ohio
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - src/main/**
+        - pom.xml
+        - mvnw
+        - .mvn/**
+        - Dockerfile
+        - .dockerignore
+        - docker/**
+        - render.yaml
+        - .github/workflows/build.yml
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: VIETROUTE_DB_URL
+        sync: false
+      - key: VIETROUTE_DB_USER
+        sync: false
+      - key: VIETROUTE_DB_PASSWORD
+        sync: false

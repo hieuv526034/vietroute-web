@@ -1,0 +1,14 @@
+# Allow only inputs needed to build/run production; credentials and tests stay out.
+**
+!pom.xml
+!mvnw
+!.mvn/
+!.mvn/wrapper/
+!.mvn/wrapper/maven-wrapper.properties
+!src/
+!src/main/
+!src/main/**
+!docker/
+!docker/entrypoint.sh
+!Dockerfile
+!.dockerignore
