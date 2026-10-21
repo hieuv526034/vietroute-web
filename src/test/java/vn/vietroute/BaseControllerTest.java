@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.dto.request.LoginRequest;
-import vn.vietroute.common.base.BaseApiController;
+import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.constant.SuccessCode;
@@ -44,7 +44,7 @@ import vn.vietroute.common.web.RequestTraceFilter;
 import vn.vietroute.common.web.SupportedLocaleResolver;
 
 /** Kiểm tra hợp đồng HTTP thực tế của base và advice bằng controller test, không cần database. */
-class BaseApiControllerTest {
+class BaseControllerTest {
 
     private MockMvc mvc;
 
@@ -158,7 +158,7 @@ class BaseApiControllerTest {
 
     @RestController
     @RequestMapping("/api/test")
-    static class ExampleController extends BaseApiController {
+    static class ExampleController extends BaseController {
 
         ExampleController(ApiResponses responses, ApiExceptionMapper exceptions) {
             super(responses, exceptions);

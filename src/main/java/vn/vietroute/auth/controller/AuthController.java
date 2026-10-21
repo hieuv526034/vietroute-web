@@ -22,7 +22,7 @@ import vn.vietroute.auth.dto.response.UserResponse;
 import vn.vietroute.auth.security.AuthCookies;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.AuthService;
-import vn.vietroute.common.base.BaseApiController;
+import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
 import vn.vietroute.common.web.ApiResponse;
@@ -32,7 +32,7 @@ import vn.vietroute.common.web.ApiResponses;
 @RestController
 @RequestMapping("/api/v1/auth")
 @Tag(name = "Auth", description = "Đăng nhập JWT, tài khoản hiện tại, CSRF, đổi mật khẩu và logout")
-public class AuthController extends BaseApiController {
+public class AuthController extends BaseController {
 
     private final AuthService auth;
 

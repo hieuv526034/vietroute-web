@@ -18,7 +18,7 @@ import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.catalog.dto.request.CatalogCreateRequest;
 import vn.vietroute.business.catalog.dto.response.CatalogResponse;
 import vn.vietroute.business.catalog.service.CatalogService;
-import vn.vietroute.common.base.BaseApiController;
+import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.Constants.CatalogType;
@@ -30,7 +30,7 @@ import vn.vietroute.common.web.ApiResponses;
 /** Controller danh mục làm ví dụ hoàn chỉnh để các thành viên triển khai module sau theo cùng chuẩn. */
 @RestController
 @Tag(name = "Catalog", description = "Danh mục vi/en, phân trang và audit")
-public class CatalogController extends BaseApiController {
+public class CatalogController extends BaseController {
 
     private final CatalogService catalogs;
 
