@@ -8,7 +8,8 @@ import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.catalog.dto.request.CatalogCreateRequest;
 import vn.vietroute.business.catalog.dto.response.CatalogResponse;
 import vn.vietroute.business.catalog.repository.CatalogRepository;
-import vn.vietroute.common.base.*;
+import vn.vietroute.common.base.PageRequest;
+import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.Constants.CatalogType;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.util.CodeGenerator;
@@ -22,6 +23,7 @@ public class CatalogService {
 
     private final JdbcTransactions transactions;
 
+    /** Đọc trang dữ liệu rồi map tên theo locale, giữ tổng bản ghi và audit của kết quả repository. */
     public PageResponse<CatalogResponse> page(CatalogType type, PageRequest page, Locale locale) {
         var result = catalogs.page(type, page);
         return new PageResponse<>(

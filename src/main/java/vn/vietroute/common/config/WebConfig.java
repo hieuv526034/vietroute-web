@@ -18,6 +18,8 @@ import org.springframework.validation.Validator;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.LocaleResolver;
+import org.springframework.web.servlet.config.annotation.DelegatingWebMvcConfiguration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.thymeleaf.spring6.SpringTemplateEngine;
@@ -26,7 +28,8 @@ import org.thymeleaf.spring6.view.ThymeleafViewResolver;
 import org.thymeleaf.templatemode.TemplateMode;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
-import vn.vietroute.common.web.*;
+import vn.vietroute.common.web.RequestTraceFilter;
+import vn.vietroute.common.web.SupportedLocaleResolver;
 
 /** Servlet context quản lý MVC, Thymeleaf, locale và Swagger; kế thừa cấu hình MVC để ghi đè locale mặc định. */
 @Configuration
@@ -38,7 +41,7 @@ import vn.vietroute.common.web.*;
         classes = { Controller.class, ControllerAdvice.class }
     )
 )
-public class WebConfig extends org.springframework.web.servlet.config.annotation.DelegatingWebMvcConfiguration {
+public class WebConfig extends DelegatingWebMvcConfiguration {
 
     private final MessageSource messages;
 
@@ -55,7 +58,7 @@ public class WebConfig extends org.springframework.web.servlet.config.annotation
     /** Ghi đè bean locale mặc định của MVC; vẫn dùng cùng resolver với security/filter ở root. */
     @Bean
     @Override
-    public org.springframework.web.servlet.LocaleResolver localeResolver() {
+    public LocaleResolver localeResolver() {
         return locales;
     }
 

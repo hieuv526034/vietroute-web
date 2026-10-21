@@ -2,7 +2,9 @@ package vn.vietroute.auth.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.*;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -54,6 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         String authorization = request.getHeader("Authorization");
+        // Bearer được ưu tiên khi có header; chỉ dùng cookie HttpOnly khi client không gửi Authorization.
         String token = null;
         if (authorization != null) {
             if (!authorization.startsWith("Bearer ") || authorization.length() <= 7) {
@@ -74,6 +77,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Object versionClaim = decoded.getClaim("tokenVersion");
                 Number version = versionClaim instanceof Number value ? value : null;
                 UserAccount user = users.findById(Long.valueOf(decoded.getSubject()));
+                // Không tin role trong JWT: trạng thái/quyền/tokenVersion hiện tại luôn lấy lại từ DB.
                 if (
                     user == null || !user.isActive() || version == null || user.getTokenVersion() != version.longValue()
                 ) {
@@ -96,6 +100,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 );
                 SecurityContextHolder.setContext(context);
             } catch (JwtException | IllegalArgumentException exception) {
+                // Token cookie cũ được xóa để trang công khai vẫn mở được; API cần đăng nhập phải trả AUTH004.
                 SecurityContextHolder.clearContext();
                 cookies.clear(request, response);
                 boolean publicPage =

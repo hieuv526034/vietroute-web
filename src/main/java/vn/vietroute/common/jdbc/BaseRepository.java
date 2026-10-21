@@ -19,6 +19,7 @@ public abstract class BaseRepository {
         T apply(Connection connection) throws SQLException;
     }
 
+    /** Truy vấn độc lập tự đóng connection; DAO đang trong transaction phải dùng connection do service truyền vào. */
     protected <T> T read(SqlWork<T> work) {
         try (Connection connection = connections.open()) {
             return work.apply(connection);

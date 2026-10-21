@@ -50,6 +50,18 @@ public final class JdbcConnectionFactory {
         } catch (ClassNotFoundException exception) {
             throw new SQLException("PostgreSQL JDBC driver is missing from the runtime", exception);
         }
-        return DriverManager.getConnection(url, username, password);
+        Connection connection = DriverManager.getConnection(url, username, password);
+        try {
+            // Cố định search_path cho mọi connection, kể cả khi JDBC URL có currentSchema khác.
+            connection.setSchema(JdbcSchema.NAME);
+            return connection;
+        } catch (SQLException exception) {
+            try {
+                connection.close();
+            } catch (SQLException closing) {
+                exception.addSuppressed(closing);
+            }
+            throw exception;
+        }
     }
 }

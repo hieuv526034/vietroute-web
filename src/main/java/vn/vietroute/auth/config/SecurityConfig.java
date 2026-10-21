@@ -6,6 +6,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,7 +17,8 @@ import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import vn.vietroute.auth.repository.UserRepository;
-import vn.vietroute.auth.security.*;
+import vn.vietroute.auth.security.AuthCookies;
+import vn.vietroute.auth.security.JwtAuthenticationFilter;
 import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.common.config.AppSettings;
 import vn.vietroute.common.constant.ErrorCode;
@@ -46,10 +48,11 @@ public class SecurityConfig {
         csrf.setCookiePath("/");
         csrf.setCookieCustomizer(builder -> builder.secure(settings.isCookieSecure()).sameSite("Lax"));
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .requestCache(cache -> cache.disable())
-            .formLogin(form -> form.disable())
-            .httpBasic(basic -> basic.disable())
-            .logout(logout -> logout.disable())
+            // Mỗi cấu hình chỉ gọi disable: dùng method reference để tránh lambda dư và cảnh báo IDE.
+            .requestCache(AbstractHttpConfigurer::disable)
+            .formLogin(AbstractHttpConfigurer::disable)
+            .httpBasic(AbstractHttpConfigurer::disable)
+            .logout(AbstractHttpConfigurer::disable)
             .csrf(config ->
                 config
                     .csrfTokenRepository(csrf)

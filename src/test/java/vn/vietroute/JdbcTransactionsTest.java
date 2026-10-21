@@ -1,14 +1,26 @@
 package vn.vietroute;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
+import java.sql.Driver;
+import java.sql.DriverManager;
+import java.sql.DriverPropertyInfo;
+import java.sql.SQLException;
+import java.util.Properties;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
-import vn.vietroute.common.jdbc.*;
+import vn.vietroute.common.jdbc.JdbcConnectionFactory;
+import vn.vietroute.common.jdbc.JdbcTransactions;
 
 /** Bảo đảm callback dùng cùng connection, commit khi thành công và rollback/đóng khi lỗi nghiệp vụ. */
 class JdbcTransactionsTest {
@@ -65,18 +77,18 @@ class JdbcTransactionsTest {
                 return null;
             }
         );
-        final String url = "jdbc:vietroute-test:" + java.util.UUID.randomUUID();
-        final java.sql.Driver driver = new java.sql.Driver() {
+        final String url = "jdbc:vietroute-test:" + UUID.randomUUID();
+        final Driver driver = new Driver() {
             public boolean acceptsURL(String candidate) {
                 return url.equals(candidate);
             }
 
-            public Connection connect(String candidate, java.util.Properties info) {
+            public Connection connect(String candidate, Properties info) {
                 return acceptsURL(candidate) ? connection : null;
             }
 
-            public java.sql.DriverPropertyInfo[] getPropertyInfo(String candidate, java.util.Properties info) {
-                return new java.sql.DriverPropertyInfo[0];
+            public DriverPropertyInfo[] getPropertyInfo(String candidate, Properties info) {
+                return new DriverPropertyInfo[0];
             }
 
             public int getMajorVersion() {
@@ -91,13 +103,13 @@ class JdbcTransactionsTest {
                 return false;
             }
 
-            public java.util.logging.Logger getParentLogger() {
-                return java.util.logging.Logger.getGlobal();
+            public Logger getParentLogger() {
+                return Logger.getGlobal();
             }
         };
 
-        State() throws java.sql.SQLException {
-            java.sql.DriverManager.registerDriver(driver);
+        State() throws SQLException {
+            DriverManager.registerDriver(driver);
         }
 
         JdbcConnectionFactory factory() {
@@ -105,8 +117,8 @@ class JdbcTransactionsTest {
         }
 
         @Override
-        public void close() throws java.sql.SQLException {
-            java.sql.DriverManager.deregisterDriver(driver);
+        public void close() throws SQLException {
+            DriverManager.deregisterDriver(driver);
         }
     }
 }

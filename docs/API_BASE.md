@@ -79,6 +79,8 @@ Quyền ADMIN/OPERATOR/DRIVER/CUSTOMER là nền. Các module đa nhà xe sau n�
 
 ## Audit, transaction và module mẫu
 
+API nghiệp vụ/auth kế thừa `common/base/BaseApiController` và dùng `execute(...)` để bọc kết quả trong `ResponseEntity<ApiResponse<T>>`. Base có try/catch tại biên HTTP; `ApiExceptionMapper` phân loại lỗi và tạo phản hồi. `GlobalExceptionHandler` dùng cùng mapper cho lỗi JSON/validation/binding xảy ra trước khi vào controller. Controller không sao chép catch hoặc đổi lỗi thành HTTP 200. Xem [luồng và ví dụ học source](LUONG_XU_LY_BASE.md).
+
 - BaseEntity: id, createdAt/updatedAt, createdBy/updatedBy, version. DTO response kế thừa BaseResponse; request kế thừa BaseRequest và không nhận audit từ client.
 - `CatalogCreateRequest` có type VEHICLE_TYPE hoặc BOOKING_SOURCE, code tùy chọn, nameVi/nameEn bắt buộc, sortOrder 0–10000. Response trả `name` theo locale cùng hai bản dịch và audit.
 - `PageRequest`: page 0–1000000, size 1–100; `PageResponse<T>` gồm content/page/size/totalElements/totalPages/hasNext/hasPrevious.
@@ -86,10 +88,13 @@ Quyền ADMIN/OPERATOR/DRIVER/CUSTOMER là nền. Các module đa nhà xe sau n�
 - `BaseRepository.read` tự đóng connection cho truy vấn đơn. Không mở connection mới giữa một luồng thay tồn chỗ/đơn cần atomic.
 - `@BusinessCode` không bắt buộc null; kết hợp @NotBlank khi trường phải có. Tên tiếng Việt không áp regex mã. Code tự sinh vẫn có UNIQUE của DB.
 - Thêm API: đặt @Operation, request/response @Schema; dùng request/response typed, không trả entity hoặc map tùy tiện. OpenAPI generator hiện hỗ trợ JSON body, PathVariable, RequestParam, PageRequest, generic envelope/PageResponse và ResponseEntity. API mới có multipart hoặc binding phức tạp cần mở rộng generator và kiểm tra schema tương ứng.
+- API tạo mới gắn `@ResponseStatus(HttpStatus.CREATED)` và gọi base với `HttpStatus.CREATED`; lỗi vẫn trả status thực tế của `ResponseEntity`, không bị ép thành 201. `OpenApiModels` tách model Swagger khỏi annotation trùng tên.
 
 ## Khởi động DB và kiểm thử
 
 `VIETROUTE_DB_INIT_ENABLED=true` bật migration trong `src/main/resources/db/migration`. Startup lấy PostgreSQL advisory transaction lock, kiểm tra checksum/history, thực thi DDL và seed trong cùng transaction. Chạy lại hoặc có hai instance cùng khởi động không tạo trùng admin/danh mục. Mật khẩu admin cũ không bị reset sau khi đổi. Chưa có seeding nghiệp vụ chuyến/đơn giả.
+
+Schema ứng dụng là `vietroute` trong database `neondb`; history nằm ở `vietroute.vietroute_schema_history`. V002 chuyển bảng đã chạy V001 ở `public` sang `vietroute`, giữ dữ liệu và checksum; DB mới tạo thẳng vào `vietroute`. Entity khai báo `@JdbcTable`/`@JdbcIndex`; initializer kiểm chứng PK/index sau migration, trước seed. Chi tiết nâng cấp và điều kiện môi trường trong `database/README.md`.
 
 Render sinh JWT secret cố định từ Blueprint, yêu cầu nhập bootstrap password qua Environment. Local `.env` của chủ dự án đã chứa admin/password được yêu cầu; nó không được commit. Việc bật initializer là thao tác runtime có thay đổi schema/dữ liệu seed, không nằm trong Maven build. Nếu schema đã có migration cùng version nhưng checksum khác, startup dừng; tạo migration mới thay vì sửa file cũ.
 

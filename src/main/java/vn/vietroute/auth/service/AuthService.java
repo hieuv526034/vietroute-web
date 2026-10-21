@@ -8,8 +8,10 @@ import java.util.Locale;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.dto.request.*;
-import vn.vietroute.auth.dto.response.*;
+import vn.vietroute.auth.dto.request.ChangePasswordRequest;
+import vn.vietroute.auth.dto.request.LoginRequest;
+import vn.vietroute.auth.dto.response.AuthResponse;
+import vn.vietroute.auth.dto.response.UserResponse;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.security.UserPrincipal;
@@ -17,6 +19,7 @@ import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.validation.BusinessRules;
+import vn.vietroute.common.validation.StrongPasswordValidator;
 
 /** Nghiệp vụ auth sở hữu transaction, không để controller cập nhật hash/phiên bản token. */
 @Service
@@ -52,9 +55,11 @@ public class AuthService {
     /** Commit số lần sai trước khi ném BusinessException; nếu ném trong transaction sẽ bị rollback bộ đếm. */
     public AuthResponse login(LoginRequest request) {
         LoginOutcome outcome = transactions.execute(connection -> {
+            // Khóa dòng user để các lần đăng nhập đồng thời không làm mất bộ đếm sai.
             UserAccount user = users.findByUsername(connection, request.getUsername().toLowerCase(Locale.ROOT), true);
             Instant now = Instant.now(clock);
             if (user == null) {
+                // Vẫn kiểm BCrypt để giảm khác biệt thời gian giữa username không tồn tại và mật khẩu sai.
                 passwords.matches(
                     request.getPassword().getBytes(StandardCharsets.UTF_8).length <= 72
                         ? request.getPassword()
@@ -70,6 +75,7 @@ public class AuthService {
                 request.getPassword().getBytes(StandardCharsets.UTF_8).length <= 72 &&
                 passwords.matches(request.getPassword(), user.getPasswordHash());
             if (!valid || !user.isActive()) {
+                // Hết khóa thì bắt đầu đếm lại; trả outcome để transaction commit trước khi báo lỗi HTTP.
                 int attempts = user.getLockedUntil() != null ? 1 : user.getFailedLoginAttempts() + 1;
                 users.recordFailure(
                     connection,
@@ -88,6 +94,7 @@ public class AuthService {
         return jwt.issue(outcome.user());
     }
 
+    /** Đọc thông tin mới nhất và map sang response an toàn, không trả hash/tokenVersion của entity. */
     @PreAuthorize("isAuthenticated()")
     public UserResponse me(UserPrincipal principal) {
         return UserResponse.from(BusinessRules.requireFound(users.findById(principal.id())));
@@ -96,11 +103,9 @@ public class AuthService {
     /** Khóa dòng tài khoản để hai yêu cầu đổi mật khẩu không cùng dùng mật khẩu cũ thành công. */
     @PreAuthorize("isAuthenticated()")
     public AuthResponse changePassword(UserPrincipal principal, ChangePasswordRequest request) {
-        BusinessRules.require(
-            vn.vietroute.common.validation.StrongPasswordValidator.valid(request.getNewPassword()),
-            ErrorCode.VALIDATION_FAILED
-        );
+        BusinessRules.require(StrongPasswordValidator.valid(request.getNewPassword()), ErrorCode.VALIDATION_FAILED);
         UserAccount changed = transactions.execute(connection -> {
+            // So khớp tokenVersion dưới khóa trước khi cập nhật, tránh dùng token vừa bị thu hồi.
             UserAccount user = BusinessRules.requireFound(users.findById(connection, principal.id(), true));
             BusinessRules.require(user.getTokenVersion() == principal.tokenVersion(), ErrorCode.TOKEN_INVALID);
             BusinessRules.require(
