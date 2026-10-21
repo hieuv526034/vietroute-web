@@ -1,0 +1,129 @@
+<!doctype html>
+<html
+    lang="vi"
+    xmlns:th="http://www.thymeleaf.org"
+>
+    <head th:fragment="head(title)">
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1"
+        />
+        <meta
+            name="app-base"
+            th:content="${basePath}"
+        />
+        <meta
+            name="app-locale"
+            th:content="${currentLocale}"
+        />
+        <meta
+            name="app-network-error"
+            th:content="#{ui.networkError}"
+        />
+        <meta
+            name="app-request-label"
+            th:content="#{ui.requestId}"
+        />
+        <title th:text="${title} + ' · VietRoute'">VietRoute</title>
+        <link
+            rel="stylesheet"
+            th:href="@{/webjars/bootstrap/5.3.8/css/bootstrap.min.css}"
+        />
+        <link
+            rel="stylesheet"
+            th:href="@{/assets/css/app.css}"
+        />
+    </head>
+    <body>
+        <header
+            th:fragment="header"
+            class="site-header"
+        >
+            <nav
+                class="site-nav container-xl"
+                aria-label="Main navigation"
+            >
+                <a
+                    class="brand"
+                    th:href="@{/(lang=${currentLocale})}"
+                >
+                    <span
+                        class="brand-symbol"
+                        aria-hidden="true"
+                    >
+                        V
+                    </span>
+                    VietRoute
+                    <span class="brand-dot">.</span>
+                </a>
+                <div class="nav-links">
+                    <a
+                        th:href="@{/docs(lang=${currentLocale})}"
+                        th:text="#{ui.docs}"
+                    >
+                        API
+                    </a>
+                    <a
+                        th:if="${adminUser}"
+                        th:href="@{/admin(lang=${currentLocale})}"
+                        th:text="#{ui.admin}"
+                    >
+                        Quản trị
+                    </a>
+                    <a
+                        th:if="${currentUser != null}"
+                        th:href="@{/account(lang=${currentLocale})}"
+                        th:text="#{ui.account}"
+                    >
+                        Tài khoản
+                    </a>
+                    <span class="language-switch">
+                        <a
+                            th:href="${currentPath + '?lang=vi'}"
+                            th:classappend="${currentLocale == 'vi'} ? 'selected'"
+                            lang="vi"
+                        >
+                            VI
+                        </a>
+                        <a
+                            th:href="${currentPath + '?lang=en'}"
+                            th:classappend="${currentLocale == 'en'} ? 'selected'"
+                            lang="en"
+                        >
+                            EN
+                        </a>
+                    </span>
+                    <a
+                        class="button button-small"
+                        th:if="${currentUser == null}"
+                        th:href="@{/login(lang=${currentLocale})}"
+                        th:text="#{ui.login}"
+                    >
+                        Đăng nhập
+                    </a>
+                    <button
+                        class="button button-outline button-small"
+                        th:if="${currentUser != null}"
+                        id="logout-button"
+                        type="button"
+                        th:text="#{ui.logout}"
+                    >
+                        Đăng xuất
+                    </button>
+                </div>
+            </nav>
+        </header>
+        <footer
+            th:fragment="footer"
+            class="site-footer container-xl"
+        >
+            <span>VietRoute © 2026</span>
+            <span th:text="#{ui.footer}">Kết nối hành trình</span>
+        </footer>
+        <th:block th:fragment="scripts">
+            <script th:src="@{/webjars/axios/1.20.0/dist/axios.min.js}"></script>
+            <script th:src="@{/assets/js/app.js}"></script>
+        </th:block>
+    </body>
+</html>

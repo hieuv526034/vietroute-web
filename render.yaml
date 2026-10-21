@@ -29,3 +29,15 @@ services:
         sync: false
       - key: VIETROUTE_DB_PASSWORD
         sync: false
+      - key: VIETROUTE_ENV
+        value: production
+      - key: VIETROUTE_DB_INIT_ENABLED
+        value: "true"
+      - key: VIETROUTE_COOKIE_SECURE
+        value: "true"
+      - key: VIETROUTE_JWT_SECRET
+        generateValue: true
+      - key: VIETROUTE_BOOTSTRAP_ADMIN_USERNAME
+        value: admin
+      - key: VIETROUTE_BOOTSTRAP_ADMIN_PASSWORD
+        sync: false

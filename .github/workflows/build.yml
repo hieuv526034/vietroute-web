@@ -67,9 +67,17 @@ jobs:
             exit 1
           fi
           grep -q 'WEB-INF/lib/postgresql-' "$RUNNER_TEMP/war-contents.txt"
+      - name: Verify bootstrap and JWT flows with isolated PostgreSQL
+        shell: bash
+        run: bash .github/scripts/verify-auth.sh
       - name: Show container logs on failure
         if: failure()
-        run: docker logs vietroute-ci || true
+        run: |
+          for container in vietroute-ci vietroute-auth-ci vietroute-auth-ci2 vietroute-db-ci; do
+            docker logs "$container" || true
+          done
       - name: Remove CI container
         if: always()
-        run: docker rm --force vietroute-ci || true
+        run: |
+          docker rm --force vietroute-ci vietroute-auth-ci vietroute-auth-ci2 vietroute-db-ci || true
+          docker network rm vietroute-auth-net || true

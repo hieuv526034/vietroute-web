@@ -1,0 +1,9 @@
+# Chi format source tuong ung voi cac lenh trong package.json.
+.git/
+.tools/
+.m2/
+target/
+node_modules/
+.env*
+# Migration da ap dung co checksum, khong tu dong chinh sua.
+src/main/resources/db/migration/

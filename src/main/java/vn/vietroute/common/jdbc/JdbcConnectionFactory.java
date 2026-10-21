@@ -7,10 +7,13 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
-/** Creates a new JDBC connection. Transaction callers must share that connection across DAOs. */
+/** Tạo connection JDBC mới; service phải chia sẻ cùng connection cho các DAO trong một transaction. */
 public final class JdbcConnectionFactory {
+
     private final String url;
+
     private final String username;
+
     private final String password;
 
     public JdbcConnectionFactory(String url, String username, String password) {
@@ -29,9 +32,10 @@ public final class JdbcConnectionFactory {
             throw new IllegalStateException("Cannot read database configuration", exception);
         }
         return new JdbcConnectionFactory(
-                setting("VIETROUTE_DB_URL", defaults.getProperty("db.url")),
-                setting("VIETROUTE_DB_USER", defaults.getProperty("db.username")),
-                setting("VIETROUTE_DB_PASSWORD", ""));
+            setting("VIETROUTE_DB_URL", defaults.getProperty("db.url")),
+            setting("VIETROUTE_DB_USER", defaults.getProperty("db.username")),
+            setting("VIETROUTE_DB_PASSWORD", "")
+        );
     }
 
     private static String setting(String key, String fallback) {
@@ -40,7 +44,7 @@ public final class JdbcConnectionFactory {
     }
 
     public Connection open() throws SQLException {
-        // Tomcat initializes DriverManager before it can see WEB-INF/lib drivers.
+        // Tomcat khởi tạo DriverManager trước khi nhìn thấy driver trong WEB-INF/lib của ứng dụng.
         try {
             Class.forName("org.postgresql.Driver");
         } catch (ClassNotFoundException exception) {

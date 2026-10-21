@@ -1,7 +1,7 @@
 ## Chức năng
 
 Issue: <!-- ví dụ Closes #12 -->
-Module: <!-- identity / network / booking / tracking / integration -->
+Module: <!-- common / auth / catalog / carrier / network / booking / tracking / integration -->
 
 <!-- Nêu vấn đề và hành vi sau thay đổi. -->
 

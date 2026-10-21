@@ -1,28 +1,93 @@
 <!doctype html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="${applicationName} + ' | Xe khách liên tỉnh'">VietRoute</title>
-    <link rel="stylesheet" th:href="@{/assets/css/app.css}" href="../../assets/css/app.css">
-</head>
-<body>
-<header class="header">
-    <a class="brand" th:href="@{/}" href="/" th:text="${applicationName}">VietRoute</a>
-    <span class="badge">Đồ án Java Web</span>
-</header>
-<main class="page">
-    <p class="eyebrow">Kết nối những hành trình</p>
-    <h1>Quản lý nhà xe.<br>Kết nối chuyến đi.</h1>
-    <p class="intro">Website quản lý nhà xe, tuyến và chuyến xe khách liên tỉnh,
-        hỗ trợ đặt chỗ và theo dõi hành trình.</p>
-    <section class="features" aria-label="Phạm vi hệ thống">
-        <article><span>01</span><h2>Nhiều nhà xe</h2><p>Thông tin nhà xe, phương tiện và tài xế trong cùng hệ thống.</p></article>
-        <article><span>02</span><h2>Tuyến hai chiều</h2><p>Các điểm đón, trả và lịch trình riêng cho mỗi chuyến.</p></article>
-        <article><span>03</span><h2>Theo dõi hành trình</h2><p>Lộ trình trên bản đồ và thông tin cập nhật của chuyến xe.</p></article>
-    </section>
-    <p class="notice">Bản khởi tạo dự án. Các chức năng nghiệp vụ đang được phát triển.</p>
-</main>
-<footer>VietRoute · Spring MVC · Thymeleaf · JDBC</footer>
-</body>
+<html
+    th:lang="${currentLocale}"
+    xmlns:th="http://www.thymeleaf.org"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.home})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main class="container-xl page">
+            <section class="hero">
+                <div class="hero-copy">
+                    <p class="eyebrow">
+                        <span class="status-dot"></span>
+                        <span th:text="#{ui.heroLabel}">Một nền tảng. Nhiều hành trình.</span>
+                    </p>
+                    <h1>
+                        <span th:text="#{ui.heroTitle}">Quản lý nhà xe.</span>
+                        <br />
+                        <em th:text="#{ui.heroSubtitle}">Kết nối chuyến đi.</em>
+                    </h1>
+                    <p
+                        class="intro"
+                        th:text="#{ui.heroDescription}"
+                    >
+                        Quản lý hành trình liên tỉnh.
+                    </p>
+                    <div class="hero-actions">
+                        <a
+                            class="button"
+                            th:href="@{/login(lang=${currentLocale})}"
+                        >
+                            <span th:text="#{ui.getStarted}">Vào hệ thống</span>
+                            <span aria-hidden="true">↗</span>
+                        </a>
+                        <a
+                            class="text-link"
+                            th:href="@{/docs(lang=${currentLocale})}"
+                            th:text="#{ui.exploreApi}"
+                        >
+                            Khám phá API
+                        </a>
+                    </div>
+                </div>
+                <div
+                    class="journey-art"
+                    aria-hidden="true"
+                >
+                    <div class="art-grid"></div>
+                    <div class="route-line"></div>
+                    <span class="route-point point-one"></span>
+                    <span class="route-point point-two"></span>
+                    <span class="route-point point-three"></span>
+                    <span class="route-label label-one">HÀ NỘI</span>
+                    <span class="route-label label-two">ĐÀ NẴNG</span>
+                    <span class="route-label label-three">TP. HỒ CHÍ MINH</span>
+                    <div class="route-caption">VIETNAM / CONNECTED</div>
+                    <div class="route-mark">
+                        V
+                        <span>↗</span>
+                    </div>
+                </div>
+            </section>
+            <section
+                class="features"
+                aria-label="VietRoute"
+            >
+                <article>
+                    <span class="feature-number">01 /</span>
+                    <h2 th:text="#{ui.featureCarrier}">Nhiều nhà xe</h2>
+                    <p th:text="#{ui.featureCarrierDesc}">Nhà xe, phương tiện và tài xế.</p>
+                </article>
+                <article>
+                    <span class="feature-number">02 /</span>
+                    <h2 th:text="#{ui.featureRoutes}">Tuyến đường</h2>
+                    <p th:text="#{ui.featureRoutesDesc}">Tuyến hai chiều.</p>
+                </article>
+                <article>
+                    <span class="feature-number">03 /</span>
+                    <h2 th:text="#{ui.featureTracking}">Theo dõi hành trình</h2>
+                    <p th:text="#{ui.featureTrackingDesc}">Thông tin chuyến xe.</p>
+                </article>
+            </section>
+            <p
+                class="notice"
+                th:text="#{ui.foundationNotice}"
+            >
+                Các nghiệp vụ đang phát triển.
+            </p>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+    </body>
 </html>
