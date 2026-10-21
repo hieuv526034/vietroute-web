@@ -11,7 +11,7 @@ Giữ Spring MVC 6, Thymeleaf, JDBC thuần, PostgreSQL và WAR/Tomcat 10.1. Spr
 ```text
 vn.vietroute
   common/
-    base/          BaseEntity, BaseDTO, BaseRequest, BaseResponse, PageRequest/PageResponse
+    base/          BaseController, BaseEntity, BaseDTO, BaseRequest, BaseResponse, PageRequest/PageResponse
     constant/      Constants, ErrorCode, SuccessCode: mã ổn định và key dịch
     exception/     BusinessException, xử lý exception và trả lỗi thống nhất
     validation/    Annotation và quy tắc dùng chung
@@ -38,7 +38,7 @@ vn.vietroute
 
 Controller chỉ nhận/validate input và gọi service. Service giữ transaction và quy tắc nghiệp vụ; repository dùng PreparedStatement/ResultSet. Entity không trả thẳng ra API; response thực hiện mapping rõ ràng, không kéo password hash hoặc token version ra client. Không tạo generic CRUD bỏ qua quyền và tenant.
 
-API auth/nghiệp vụ kế thừa `BaseApiController`, dùng `execute(...)` có try/catch chung và `ApiExceptionMapper`. Advice dùng cùng mapper cho lỗi trước controller. Đọc [luồng xử lý và cách học base](LUONG_XU_LY_BASE.md) trước khi thêm module.
+API auth/nghiệp vụ kế thừa `BaseController`, dùng `execute(...)` có try/catch chung và `ApiExceptionMapper`. Advice dùng cùng mapper cho lỗi trước controller. Đọc [luồng xử lý và cách học base](LUONG_XU_LY_BASE.md) trước khi thêm module.
 
 ## Hợp đồng API và locale
 

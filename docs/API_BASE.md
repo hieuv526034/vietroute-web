@@ -79,7 +79,7 @@ Quyền ADMIN/OPERATOR/DRIVER/CUSTOMER là nền. Các module đa nhà xe sau n�
 
 ## Audit, transaction và module mẫu
 
-API nghiệp vụ/auth kế thừa `common/base/BaseApiController` và dùng `execute(...)` để bọc kết quả trong `ResponseEntity<ApiResponse<T>>`. Base có try/catch tại biên HTTP; `ApiExceptionMapper` phân loại lỗi và tạo phản hồi. `GlobalExceptionHandler` dùng cùng mapper cho lỗi JSON/validation/binding xảy ra trước khi vào controller. Controller không sao chép catch hoặc đổi lỗi thành HTTP 200. Xem [luồng và ví dụ học source](LUONG_XU_LY_BASE.md).
+API nghiệp vụ/auth kế thừa `common/base/BaseController` và dùng `execute(...)` để bọc kết quả trong `ResponseEntity<ApiResponse<T>>`. Base có try/catch tại biên HTTP; `ApiExceptionMapper` phân loại lỗi và tạo phản hồi. `GlobalExceptionHandler` dùng cùng mapper cho lỗi JSON/validation/binding xảy ra trước khi vào controller. Controller không sao chép catch hoặc đổi lỗi thành HTTP 200. Xem [luồng và ví dụ học source](LUONG_XU_LY_BASE.md).
 
 - BaseEntity: id, createdAt/updatedAt, createdBy/updatedBy, version. DTO response kế thừa BaseResponse; request kế thừa BaseRequest và không nhận audit từ client.
 - `CatalogCreateRequest` có type VEHICLE_TYPE hoặc BOOKING_SOURCE, code tùy chọn, nameVi/nameEn bắt buộc, sortOrder 0–10000. Response trả `name` theo locale cùng hai bản dịch và audit.

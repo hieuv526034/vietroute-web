@@ -14,13 +14,13 @@ import vn.vietroute.common.web.ApiResponses;
  * Khung xử lý cho API nghiệp vụ: nhận kết quả service, bọc response và bắt lỗi tại biên HTTP.
  * Controller con không mở transaction, không tự tạo mã lỗi và không sao chép try/catch.
  */
-public abstract class BaseApiController {
+public abstract class BaseController {
 
     private final ApiResponses responses;
 
     private final ApiExceptionMapper exceptions;
 
-    protected BaseApiController(ApiResponses responses, ApiExceptionMapper exceptions) {
+    protected BaseController(ApiResponses responses, ApiExceptionMapper exceptions) {
         this.responses = responses;
         this.exceptions = exceptions;
     }

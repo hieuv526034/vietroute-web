@@ -5,7 +5,7 @@
 1. `RequestTraceFilter` gắn `X-Request-ID` để đối chiếu response với log.
 2. Spring Security kiểm CSRF, JWT và quyền truy cập. `JwtAuthenticationFilter` ưu tiên Bearer; nếu không có header mới lấy cookie. Sau xác minh chữ ký/thời hạn, filter đọc lại user/role/tokenVersion từ DB.
 3. Spring MVC đọc JSON, chuyển enum/kiểu dữ liệu và chạy `@Valid` trước khi gọi controller. Lỗi bước này đi vào `GlobalExceptionHandler`.
-4. Controller auth/catalog kế thừa `BaseApiController`, gọi `execute(...)` và truyền phần việc dưới dạng `Supplier<T>`. Base gọi callback đúng một lần trong cùng thread, tạo envelope thành công hoặc bắt `Exception` và chuyển qua `ApiExceptionMapper`.
+4. Controller auth/catalog kế thừa `BaseController`, gọi `execute(...)` và truyền phần việc dưới dạng `Supplier<T>`. Base gọi callback đúng một lần trong cùng thread, tạo envelope thành công hoặc bắt `Exception` và chuyển qua `ApiExceptionMapper`.
 5. Service kiểm tra nghiệp vụ/quyền và quyết định transaction. Repository chỉ bind tham số SQL, thực hiện câu lệnh rồi map dữ liệu; mọi bảng ứng dụng nằm trong `vietroute`.
 6. `ApiExceptionMapper` là nơi duy nhất phân loại lỗi MVC/nghiệp vụ thành HTTP status, code, key dịch và lỗi field. Response luôn dùng factory `ApiResponses`.
 
@@ -13,7 +13,7 @@ Lỗi từ filter xảy ra trước MVC nên được ghi bằng `ApiErrorWriter
 
 ## Base API và try/catch
 
-Xem `common/base/BaseApiController.java`, `auth/controller/AuthController.java` và `business/catalog/controller/CatalogController.java` làm mẫu thực tế.
+Xem `common/base/BaseController.java`, `auth/controller/AuthController.java` và `business/catalog/controller/CatalogController.java` làm mẫu thực tế.
 
 - API đọc/cập nhật: `execute(SuccessCode.OK, request, callback)` trả HTTP 200 khi thành công.
 - API tạo mới: `execute(HttpStatus.CREATED, SuccessCode.CREATED, request, callback)` trả HTTP 201 khi thành công. Gắn `@ResponseStatus(HttpStatus.CREATED)` để Swagger ghi đúng status; `ResponseEntity` vẫn mang status lỗi 400/403/409/500 khi callback thất bại.

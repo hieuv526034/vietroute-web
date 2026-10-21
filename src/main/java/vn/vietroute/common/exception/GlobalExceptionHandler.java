@@ -9,7 +9,7 @@ import vn.vietroute.common.web.ApiResponse;
 
 /**
  * Bắt lỗi MVC xảy ra trước/sau thân controller, ví dụ JSON sai, @Valid hoặc endpoint không tồn tại.
- * Dùng cùng mapper với BaseApiController để mã lỗi không phụ thuộc điểm phát sinh exception.
+ * Dùng cùng mapper với BaseController để mã lỗi không phụ thuộc điểm phát sinh exception.
  */
 @RestControllerAdvice
 @RequiredArgsConstructor
