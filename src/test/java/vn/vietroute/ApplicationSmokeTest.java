@@ -6,8 +6,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import vn.vietroute.config.RootConfig;
-import vn.vietroute.config.WebConfig;
+import vn.vietroute.common.config.RootConfig;
+import vn.vietroute.common.config.WebConfig;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,9 +25,10 @@ class ApplicationSmokeTest {
 
             MvcResult home = mvc.perform(get("/")).andReturn();
             assertEquals(200, home.getResponse().getStatus());
+            assertEquals("vi", org.springframework.web.servlet.support.RequestContextUtils.getLocale(home.getRequest()).getLanguage());
             String html = home.getResponse().getContentAsString();
             assertTrue(html.contains("VietRoute"));
-            assertTrue(html.contains("Quản lý nhà xe"));
+            assertTrue(html.contains("Quản lý nhà xe"), html);
             assertTrue(html.contains("href=\"/assets/css/app.css\""));
             assertTrue(!html.contains("th:text="), "Thymeleaf must render, not return the raw template");
 
@@ -38,6 +39,22 @@ class ApplicationSmokeTest {
             MvcResult health = mvc.perform(get("/health")).andReturn();
             assertEquals(200, health.getResponse().getStatus());
             assertEquals("vietroute-web: UP", health.getResponse().getContentAsString());
+
+            MvcResult english = mvc.perform(get("/").param("lang", "en")).andReturn();
+            assertTrue(english.getResponse().getContentAsString().contains("Manage your fleet"));
+            assertEquals("en", english.getResponse().getHeader("Content-Language"));
+
+            MvcResult docs = mvc.perform(get("/v3/api-docs")).andReturn();
+            assertEquals(200, docs.getResponse().getStatus());
+            String spec = docs.getResponse().getContentAsString();
+            assertTrue(spec.contains("/api/v1/auth/login"));
+            assertTrue(spec.contains("/api/v1/admin/catalogs"));
+            assertTrue(spec.contains("createdAt"));
+            assertTrue(spec.contains("PageResponseCatalogResponse"));
+
+            assertEquals(200, mvc.perform(get("/login")).andReturn().getResponse().getStatus());
+            assertEquals(200, mvc.perform(get("/docs")).andReturn().getResponse().getStatus());
+            assertEquals(200, mvc.perform(get("/webjars/axios/1.20.0/dist/axios.min.js")).andReturn().getResponse().getStatus());
         }
     }
 }

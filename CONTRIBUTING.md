@@ -32,7 +32,7 @@ git switch -c feat/tracking-trip-progress
 # Code và kiểm tra chức năng của mình.
 .\mvnw.cmd verify
 git status
-git add src/main/java/vn/vietroute/tracking src/main/java/vn/vietroute/web/tracking src/main/webapp/WEB-INF/views/tracking
+git add src/main/java/vn/vietroute/business/tracking src/main/webapp/WEB-INF/views/tracking
 git commit -m "feat(tracking): add trip progress page"
 git push -u origin feat/tracking-trip-progress
 ```
@@ -53,7 +53,7 @@ Commit trên nhánh chức năng đã có tác giả, nhưng để được tín
 
 ## 5. Ghi nhận theo phân công
 
-Mỗi nhiệm vụ có một GitHub Issue với mã module, người thực hiện thực tế, điều kiện nghiệm thu và PR liên quan. Dùng tiền tố `identity`, `network`, `booking`, `tracking` trong Issue/nhánh/commit để truy vết, không dùng tiền tố để giả định tác giả.
+Mỗi nhiệm vụ có một GitHub Issue với mã module, người thực hiện thực tế, điều kiện nghiệm thu và PR liên quan. Dùng tiền tố `common`, `auth`, `catalog`, `carrier`, `network`, `booking`, `tracking` trong Issue/nhánh/commit để truy vết, không dùng tiền tố để giả định tác giả. Đọc quy ước base và phân công mới trong `docs/` trước khi code.
 
 - Issue thể hiện phần được giao.
 - PR và diff thể hiện kết quả thực hiện.

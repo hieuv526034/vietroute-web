@@ -1,0 +1,9 @@
+<!doctype html>
+<html th:lang="${currentLocale}" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(#{ui.swaggerTitle})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="container-xl workspace-page"><p class="eyebrow">DEVELOPER / OPENAPI</p><h1 class="docs-heading" th:text="#{ui.swaggerTitle}"></h1><p class="muted" th:text="#{ui.swaggerDescription}"></p><div id="swagger-ui"></div></main>
+<link rel="stylesheet" th:href="@{/webjars/swagger-ui/5.34.0/swagger-ui.css}">
+<script th:src="@{/webjars/swagger-ui/5.34.0/swagger-ui-bundle.js}"></script><script th:src="@{/assets/js/swagger.js}"></script>
+</body></html>
