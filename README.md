@@ -6,7 +6,7 @@
 - Maven: `vn.vietroute:vietroute-web:0.1.0-SNAPSHOT`.
 - Java package: `vn.vietroute`.
 - Sản phẩm: website; giao diện và xử lý server trong cùng source.
-- Stack: Spring MVC, Thymeleaf, JDBC thuần, MySQL, Maven WAR và Tomcat 10.1.
+- Stack: Spring MVC, Thymeleaf, JDBC thuần, PostgreSQL (Neon), Maven WAR và Tomcat 10.1.
 - Java 17 trở lên; khung source được kiểm tra bằng JDK 21.
 - Không dùng Spring Boot, React, JPA/Hibernate, JdbcTemplate hoặc Spring Data JDBC.
 
@@ -14,7 +14,18 @@
 
 Đây là **khung khởi tạo**, chưa phải ứng dụng nghiệp vụ hoàn chỉnh. Đã có cấu hình Spring MVC/Thymeleaf, trang chủ, static CSS, endpoint `/health`, factory mở Connection JDBC, cấu trúc module và smoke test cấu hình web. Các module tài khoản, tuyến/chuyến, đặt theo chặng và bản đồ sẽ do các thành viên triển khai theo phân công.
 
-`/health` kiểm tra ứng dụng web đang chạy, không xác nhận database hoặc Google Maps đã sẵn sàng. Trang chủ khởi tạo không cần MySQL để render.
+`/health` kiểm tra ứng dụng web đang chạy, không xác nhận database hoặc Google Maps đã sẵn sàng. Trang chủ khởi tạo không cần PostgreSQL để render.
+
+## Docker, GitHub CI/CD và Render
+
+[Hướng dẫn triển khai đầy đủ](docs/DEPLOY_RENDER.md). Docker đóng gói WAR thành `ROOT.war`, nên URL khi chạy container là `/` và `/health`, không có tiền tố `/vietroute`.
+
+```powershell
+docker build -t vietroute-web .
+docker run --rm --env-file .env -p 10000:10000 vietroute-web
+```
+
+GitHub Actions build và kiểm tra container với cache Docker/Maven. Render đọc `render.yaml`, dùng gói Free và chỉ tự deploy `main` sau khi CI thành công. Thay đổi chỉ trong test/tài liệu không kích hoạt build. Production dùng `-Pproduction`: không biên dịch/chạy test; `.dockerignore` chỉ cho phép source production vào image. Lệnh `verify` thông thường bên dưới vẫn chạy test khi phát triển local.
 
 ## Chạy dự án
 
