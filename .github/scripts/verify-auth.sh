@@ -160,5 +160,5 @@ sql "UPDATE auth_users SET locked_until=CURRENT_TIMESTAMP-INTERVAL '1 minute' WH
 call 200 POST /api/v1/auth/login "$work/login.json" cookie
 [[ "$(sql "SELECT failed_login_attempts FROM auth_users WHERE username='customer'")" == 0 ]]
 call 200 GET /v3/api-docs
-python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert "/api/v1/auth/change-password" in d["paths"]; assert "bearerAuth" in d["components"]["securitySchemes"]; assert "CatalogResponse" in d["components"]["schemas"]' "$result"
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert isinstance(d,dict), "OpenAPI must be a JSON object"; assert "/api/v1/auth/change-password" in d["paths"]; assert "bearerAuth" in d["components"]["securitySchemes"]; assert "CatalogResponse" in d["components"]["schemas"]' "$result"
 printf 'PostgreSQL bootstrap, JWT, CSRF, roles, catalogs, password change, revocation and account lock checks passed.\n'

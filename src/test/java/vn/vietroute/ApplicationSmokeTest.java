@@ -47,6 +47,10 @@ class ApplicationSmokeTest {
             MvcResult docs = mvc.perform(get("/v3/api-docs")).andReturn();
             assertEquals(200, docs.getResponse().getStatus());
             String spec = docs.getResponse().getContentAsString();
+            var document = context.getBean(com.fasterxml.jackson.databind.ObjectMapper.class).readTree(spec);
+            assertTrue(document.isObject(), "OpenAPI phải trả JSON object, không encode thành JSON string");
+            assertTrue(document.get("paths").has("/api/v1/auth/change-password"));
+            assertTrue(document.get("components").get("schemas").has("CatalogResponse"));
             assertTrue(spec.contains("/api/v1/auth/login"));
             assertTrue(spec.contains("/api/v1/admin/catalogs"));
             assertTrue(spec.contains("createdAt"));

@@ -19,6 +19,8 @@ GitHub và Render build ở hai môi trường riêng, mỗi nơi có cache riê
 
 `.env` đã bị loại khỏi Git và Docker context. Java không tự đọc file này; Render phải nhận biến môi trường trong Dashboard. `sync: false` chỉ yêu cầu nhập secret lúc tạo Blueprint, không cập nhật lại secret đã tồn tại ở những lần sync sau. Nếu đổi mật khẩu, cập nhật trực tiếp Environment trên Render và `.env` local.
 
+Nếu đã tạo service từ bản source trước khi có auth, thêm `VIETROUTE_BOOTSTRAP_ADMIN_PASSWORD`, JWT secret cố định và các cờ môi trường ở bước 5 vào Environment trước lần deploy base auth. Blueprint cập nhật không tự hỏi lại giá trị `sync: false` mới thêm. Với service tạo thủ công, `render.yaml` không tự cập nhật cấu hình Dashboard. Không xóa/thay JWT secret đang dùng ở mỗi lần deploy vì thao tác đó làm token cũ mất hiệu lực.
+
 `/health` chỉ xác nhận web chạy; không truy vấn Neon. Kiểm tra thêm login, `/api/v1/auth/me` và danh mục để xác nhận DB hoạt động. Khi initializer bật, lỗi migration/checksum/secret sẽ làm ứng dụng không khởi động thành công; xem Logs và không sửa migration đã áp dụng.
 
 ## Nếu tạo Web Service thủ công

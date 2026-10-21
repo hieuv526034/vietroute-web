@@ -1,11 +1,9 @@
 package vn.vietroute.auth.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.*;
 import jakarta.validation.Valid;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.web.csrf.CsrfToken;
@@ -27,9 +25,9 @@ public class AuthController {
     private final ApiResponses responses;
     @GetMapping("/csrf")
     @Operation(summary = "Lấy token CSRF", description = "Gọi trước login hoặc POST bằng cookie. Gửi token qua header trả về; giữ cookie XSRF-TOKEN tương ứng.")
-    public vn.vietroute.common.web.ApiResponse<Map<String, String>> csrf(CsrfToken token, HttpServletRequest request, HttpServletResponse response) {
+    public vn.vietroute.common.web.ApiResponse<CsrfResponse> csrf(CsrfToken token, HttpServletRequest request, HttpServletResponse response) {
         response.setHeader("Cache-Control", "no-store");
-        return responses.success(SuccessCode.OK, Map.of("headerName", token.getHeaderName(), "token", token.getToken()), request);
+        return responses.success(SuccessCode.OK, new CsrfResponse(token.getHeaderName(), token.getToken()), request);
     }
     @PostMapping("/login")
     @Operation(summary = "Đăng nhập", description = "JWT có hạn 30 phút. Website nhận cookie HttpOnly; API client dùng accessToken với Bearer. Sai 5 lần sẽ khóa 15 phút.")

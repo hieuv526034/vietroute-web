@@ -28,7 +28,8 @@ public class OpenApiController {
     private final RequestMappingHandlerMapping mappings;
     public OpenApiController(RequestMappingHandlerMapping mappings) { this.mappings = mappings; }
     @GetMapping(value = "/v3/api-docs", produces = "application/json;charset=UTF-8")
-    public String document(HttpServletRequest request) throws Exception {
+    @Operation(hidden = true, summary = "Cung cấp tài liệu OpenAPI")
+    public com.fasterxml.jackson.databind.JsonNode document(HttpServletRequest request) {
         OpenAPI api = new OpenAPI().openapi("3.0.3").info(new Info().title("VietRoute API").version("0.2.0")
                 .description("API vi/en. Chọn lang hoặc X-Locale. Mọi kết quả dùng envelope code/messageKey/traceId. "
                         + "Cookie mode: gọi /api/v1/auth/csrf trước POST; Bearer mode: Authorize bằng JWT."))
@@ -85,9 +86,12 @@ public class OpenApiController {
                     String status = created == null ? "200" : created.responseCode();
                     ApiResponses responses = new ApiResponses().addApiResponse(status, new io.swagger.v3.oas.models.responses.ApiResponse()
                             .description(created == null ? "Thành công" : created.description()).content(json(schema(returnType, api))));
-                    Map<String, String> failures = Map.of("400", "Dữ liệu/locale không hợp lệ", "401", "Chưa đăng nhập hoặc token/credentials sai",
-                            "403", "Không có quyền hoặc CSRF sai", "404", "Không tìm thấy", "409", "Trùng dữ liệu/phiên bản cũ",
-                            "429", "Tài khoản tạm khóa", "500", "Lỗi nội bộ có traceId", "503", "Database chưa sẵn sàng");
+                    Map<String, String> failures = Map.ofEntries(Map.entry("400", "Dữ liệu/locale không hợp lệ"),
+                            Map.entry("401", "Chưa đăng nhập hoặc token/credentials sai"), Map.entry("403", "Không có quyền hoặc CSRF sai"),
+                            Map.entry("404", "Không tìm thấy"), Map.entry("405", "HTTP method không được hỗ trợ"),
+                            Map.entry("406", "Định dạng phản hồi không được hỗ trợ"), Map.entry("409", "Trùng dữ liệu/phiên bản cũ"),
+                            Map.entry("415", "Media type không được hỗ trợ"), Map.entry("429", "Tài khoản tạm khóa"),
+                            Map.entry("500", "Lỗi nội bộ có traceId"), Map.entry("503", "Database chưa sẵn sàng"));
                     failures.forEach((code, text) -> responses.addApiResponse(code,
                             new io.swagger.v3.oas.models.responses.ApiResponse().description(text).content(json(errorSchema))));
                     operation.responses(responses);
@@ -97,7 +101,7 @@ public class OpenApiController {
             }
         });
         // Swagger dùng mapper riêng để serialize đúng $ref/schema của đặc tả OpenAPI.
-        return Json.mapper().writeValueAsString(api);
+        return Json.mapper().valueToTree(api);
     }
     private static Content json(Schema<?> schema) { return new Content().addMediaType("application/json", new MediaType().schema(schema)); }
     private static Schema<?> schema(Type type, OpenAPI api) {

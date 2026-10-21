@@ -65,7 +65,7 @@ View Thymeleaf: `/`, `/login`, `/account` (đăng nhập), `/admin` (ADMIN). Tr�
 | AUTH006 | 403 | CSRF không hợp lệ |
 | AUTH007 / AUTH008 | 400 | Mật khẩu hiện tại sai / mật khẩu mới trùng mật khẩu cũ |
 
-Enum `ErrorCode` là nguồn chính thức. Khi thêm lỗi mới phải bổ sung cả hai bundle và Swagger nếu thêm status mới. Không viết message trực tiếp ở controller; không trả exception.getMessage() của lỗi SQL ra client.
+Enum `ErrorCode` và `ValidationCode` là nguồn chính thức. Khi thêm lỗi mới phải bổ sung cả hai bundle và Swagger nếu thêm status mới. Không viết message trực tiếp ở controller; không trả exception.getMessage() của lỗi SQL ra client.
 
 ## Dùng auth trên giao diện hoặc API client
 

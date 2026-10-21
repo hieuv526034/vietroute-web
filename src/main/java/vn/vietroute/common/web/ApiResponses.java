@@ -8,7 +8,6 @@ import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Component;
-import org.springframework.web.servlet.LocaleResolver;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.constant.SuccessCode;
 

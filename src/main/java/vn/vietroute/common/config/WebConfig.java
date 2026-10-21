@@ -22,14 +22,13 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import vn.vietroute.common.web.*;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
-import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.spring6.templateresolver.SpringResourceTemplateResolver;
 import org.thymeleaf.spring6.view.ThymeleafViewResolver;
 import org.thymeleaf.templatemode.TemplateMode;
 
+/** Servlet context quản lý MVC, Thymeleaf, locale và Swagger; kế thừa cấu hình MVC để ghi đè locale mặc định. */
 @Configuration
 @ComponentScan(basePackages = {"vn.vietroute.common", "vn.vietroute.auth", "vn.vietroute.business"},
         useDefaultFilters = false, includeFilters = @ComponentScan.Filter(type = FilterType.ANNOTATION,
@@ -82,8 +81,13 @@ public class WebConfig extends org.springframework.web.servlet.config.annotation
     }
     @Override public Validator getValidator() { return validator(); }
     @Override public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
-        converters.removeIf(MappingJackson2HttpMessageConverter.class::isInstance);
-        converters.add(0, new MappingJackson2HttpMessageConverter(mapper));
+        // Giữ thứ tự converter chuẩn để String/byte[] không bị JSON encode thêm một lớp.
+        for (int index = 0; index < converters.size(); index++) {
+            if (converters.get(index) instanceof MappingJackson2HttpMessageConverter) {
+                converters.set(index, new MappingJackson2HttpMessageConverter(mapper)); return;
+            }
+        }
+        converters.add(new MappingJackson2HttpMessageConverter(mapper));
     }
     @Override public void addInterceptors(InterceptorRegistry registry) {
         super.addInterceptors(registry);

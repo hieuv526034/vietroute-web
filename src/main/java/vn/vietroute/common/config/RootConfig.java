@@ -15,11 +15,11 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.Clock;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
-import org.springframework.web.servlet.LocaleResolver;
 import vn.vietroute.common.web.SupportedLocaleResolver;
 import vn.vietroute.auth.config.SecurityConfig;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 
+/** Root context quản lý service/repository và hạ tầng; không quét controller để tránh tạo bean hai lần. */
 @Configuration
 @ComponentScan(basePackages = {
         "vn.vietroute.common", "vn.vietroute.auth", "vn.vietroute.business"

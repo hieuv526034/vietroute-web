@@ -5,6 +5,7 @@ import org.springframework.web.filter.CharacterEncodingFilter;
 import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
 import vn.vietroute.common.web.RequestTraceFilter;
 
+/** Điểm khởi tạo WAR trong Tomcat: root hạ tầng, servlet MVC và filter encoding/trace. */
 public class WebApplicationInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
     @Override
     protected Class<?>[] getRootConfigClasses() {
