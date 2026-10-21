@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${applicationName} + ' | Xe khách liên tỉnh'">VietRoute</title>
+    <link rel="stylesheet" th:href="@{/assets/css/app.css}" href="../../assets/css/app.css">
+</head>
+<body>
+<header class="header">
+    <a class="brand" th:href="@{/}" href="/" th:text="${applicationName}">VietRoute</a>
+    <span class="badge">Đồ án Java Web</span>
+</header>
+<main class="page">
+    <p class="eyebrow">Kết nối những hành trình</p>
+    <h1>Quản lý nhà xe.<br>Kết nối chuyến đi.</h1>
+    <p class="intro">Website quản lý nhà xe, tuyến và chuyến xe khách liên tỉnh,
+        hỗ trợ đặt chỗ và theo dõi hành trình.</p>
+    <section class="features" aria-label="Phạm vi hệ thống">
+        <article><span>01</span><h2>Nhiều nhà xe</h2><p>Thông tin nhà xe, phương tiện và tài xế trong cùng hệ thống.</p></article>
+        <article><span>02</span><h2>Tuyến hai chiều</h2><p>Các điểm đón, trả và lịch trình riêng cho mỗi chuyến.</p></article>
+        <article><span>03</span><h2>Theo dõi hành trình</h2><p>Lộ trình trên bản đồ và thông tin cập nhật của chuyến xe.</p></article>
+    </section>
+    <p class="notice">Bản khởi tạo dự án. Các chức năng nghiệp vụ đang được phát triển.</p>
+</main>
+<footer>VietRoute · Spring MVC · Thymeleaf · JDBC</footer>
+</body>
+</html>

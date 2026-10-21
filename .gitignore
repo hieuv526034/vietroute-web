@@ -1,0 +1,23 @@
+# Build and local tooling
+/target/
+/.tools/
+/.m2/
+*.log
+
+# IDE and operating system
+/.idea/
+*.iml
+/.classpath
+/.project
+/.settings/
+/.vscode/
+.DS_Store
+Thumbs.db
+
+# Local credentials and configuration
+.env
+.env.*
+!.env.example
+src/main/resources/database-local.properties
+*.p12
+*.jks
