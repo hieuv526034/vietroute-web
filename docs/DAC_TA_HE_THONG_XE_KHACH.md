@@ -213,11 +213,11 @@ Một Maven project WAR với controller, service, dao, model/dto, config, filte
 
 ## 12. Chia công việc cho 4 thành viên
 
-Các tên dưới đây là định danh người dùng cung cấp, không phải kết luận về kỹ năng hoặc username GitHub đã xác minh.
+Username/email hiện hành và phân công triển khai theo độ khó nằm trong [PHAN_CONG.md](PHAN_CONG.md). Bảng bên dưới là phương án ban đầu của đặc tả; khi giao việc thực tế dùng phân công hiện hành. Username của Bang là `BangPhamIT` theo thông tin chủ dự án cung cấp ngày 22/10/2026.
 
 | Thành viên | Phần chính | Kết quả tự trình bày khi bảo vệ |
 |---|---|---|
-| bangpham.it | Tài khoản, phân quyền; nhà xe; xe, loại xe và tài xế; F01–F04. | CRUD và đăng nhập hoạt động; tách quyền nhà xe; kiểm tra dữ liệu và lịch sử khi khóa. |
+| BangPhamIT | Tài khoản, phân quyền; nhà xe; xe, loại xe và tài xế; F01–F04. | CRUD và đăng nhập hoạt động; tách quyền nhà xe; kiểm tra dữ liệu và lịch sử khi khóa. |
 | anhhoang104 | Danh mục địa điểm cùng nền tảng tuyến/chuyến; điểm dừng, lịch, phân xe/tài xế; F05–F06, phần dữ liệu F03. | Hai chiều độc lập, chuyến qua ngày, sao chép dữ liệu tuyến, không trùng lịch xe/tài xế. |
 | hiencoi250404-design | Tìm chuyến, đặt/xác nhận/từ chối/hủy đơn; chỗ theo chặng; F07, F09–F12, F17. | Query tìm đúng chiều/ngày; transaction giữ và trả chỗ; chống xác nhận trùng. |
 | hieuv526034 | Chi tiết chuyến, Google Maps, giao diện tài xế, cập nhật chặng, báo cáo; F08, F13–F15, F18. | Bản đồ, tiến độ, khách cần đón/trả, phân quyền tài xế, báo cáo theo nhà xe. |
