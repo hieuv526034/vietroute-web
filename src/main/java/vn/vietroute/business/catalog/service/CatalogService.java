@@ -41,8 +41,8 @@ public class CatalogService {
         );
     }
 
-    /** Danh mục dùng chung chỉ ADMIN tạo; actor lấy từ JWT đã kiểm tra lại với DB. */
-    @PreAuthorize("hasRole('ADMIN')")
+    /** Tạo danh mục cần quyền chức năng; actor lấy từ JWT đã kiểm tra lại với DB. */
+    @PreAuthorize("hasAuthority('CATALOG_WRITE')")
     public CatalogResponse create(CatalogCreateRequest request, UserPrincipal actor, Locale locale) {
         String code = request.getCode() == null ? CodeGenerator.generate("CAT") : request.getCode();
         return transactions.execute(connection ->

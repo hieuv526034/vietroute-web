@@ -7,7 +7,9 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.zaxxer.hikari.HikariDataSource;
+import java.net.http.HttpClient;
 import java.time.Clock;
+import java.time.Duration;
 import javax.sql.DataSource;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
@@ -21,6 +23,14 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import vn.vietroute.auth.config.SecurityConfig;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
+import vn.vietroute.common.mail.GmailTransport;
+import vn.vietroute.common.mail.MailTransport;
+import vn.vietroute.common.mail.SmtpTransport;
+import vn.vietroute.common.traffic.MemoryRateLimitStore;
+import vn.vietroute.common.traffic.RateLimitStore;
+import vn.vietroute.common.traffic.RedisRateLimitStore;
+import vn.vietroute.common.traffic.TrafficGuardFilter;
+import vn.vietroute.common.web.ApiErrorWriter;
 import vn.vietroute.common.web.SupportedLocaleResolver;
 
 /** Root context quản lý service/repository và hạ tầng; không quét controller để tránh tạo bean hai lần. */
@@ -34,6 +44,52 @@ import vn.vietroute.common.web.SupportedLocaleResolver;
 )
 @Import(SecurityConfig.class)
 public class RootConfig {
+
+    @Bean
+    public JobSettings jobSettings() {
+        return new JobSettings(System::getenv);
+    }
+
+    @Bean
+    public MailSettings mailSettings() {
+        return new MailSettings(System::getenv);
+    }
+
+    @Bean
+    public MailTransport mailTransport(MailSettings settings, ObjectMapper json, Clock clock) {
+        return settings.getProvider().equals("smtp")
+            ? new SmtpTransport(settings)
+            : new GmailTransport(
+                  settings,
+                  json,
+                  HttpClient.newBuilder()
+                      .connectTimeout(Duration.ofSeconds(10))
+                      .followRedirects(HttpClient.Redirect.NEVER)
+                      .build(),
+                  clock
+              );
+    }
+
+    @Bean
+    public TrafficSettings trafficSettings() {
+        return new TrafficSettings(System::getenv);
+    }
+
+    @Bean(destroyMethod = "close")
+    public RateLimitStore rateLimitStore(TrafficSettings settings, Clock clock) {
+        return settings.getRedisUrl().isBlank()
+            ? new MemoryRateLimitStore(clock, settings.getMaxKeys())
+            : new RedisRateLimitStore(settings.getRedisUrl());
+    }
+
+    @Bean
+    public TrafficGuardFilter trafficGuardFilter(
+        TrafficSettings settings,
+        RateLimitStore store,
+        ApiErrorWriter errors
+    ) {
+        return new TrafficGuardFilter(settings, store, errors);
+    }
 
     @Bean
     public DatabaseSettings databaseSettings(AppSettings settings) {

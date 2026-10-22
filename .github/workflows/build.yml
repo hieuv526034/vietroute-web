@@ -74,11 +74,11 @@ jobs:
       - name: Show container logs on failure
         if: failure()
         run: |
-          for container in vietroute-ci vietroute-auth-ci vietroute-auth-ci2 vietroute-db-ci; do
+          for container in vietroute-ci vietroute-auth-ci vietroute-auth-ci2 vietroute-db-ci vietroute-redis-ci; do
             docker logs "$container" || true
           done
       - name: Remove CI container
         if: always()
         run: |
-          docker rm --force vietroute-ci vietroute-auth-ci vietroute-auth-ci2 vietroute-db-ci || true
+          docker rm --force vietroute-ci vietroute-auth-ci vietroute-auth-ci2 vietroute-db-ci vietroute-redis-ci || true
           docker network rm vietroute-auth-net || true

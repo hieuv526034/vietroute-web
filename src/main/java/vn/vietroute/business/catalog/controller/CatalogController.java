@@ -56,7 +56,7 @@ public class CatalogController extends BaseController {
     @PostMapping("/api/v1/admin/catalogs")
     @Operation(
         summary = "Tạo mục danh mục",
-        description = "Chỉ ADMIN. Server tự sinh mã nếu null; tên vi/en bắt buộc; code trùng trả HTTP 409; audit lấy từ principal."
+        description = "Yêu cầu CATALOG_WRITE. Server tự sinh mã nếu null; tên vi/en bắt buộc; code trùng trả HTTP 409; audit lấy từ principal."
     )
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<ApiResponse<CatalogResponse>> create(

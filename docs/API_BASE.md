@@ -11,11 +11,13 @@
 | POST | `/api/v1/auth/change-password` | Đăng nhập | Nhận currentPassword/newPassword; thu hồi token cũ, phát token mới |
 | POST | `/api/v1/auth/logout` | Cookie/Bearer; anonymous vẫn được xóa cookie | Thu hồi mọi token của tài khoản nếu còn xác thực hợp lệ |
 | GET | `/api/v1/catalogs/{type}` | Công khai | Danh mục đang hoạt động theo locale; page/size |
-| POST | `/api/v1/admin/catalogs` | ADMIN | Tạo mục danh mục, HTTP 201; code null sẽ tự sinh |
+| POST | `/api/v1/admin/catalogs` | CATALOG_WRITE | Tạo mục danh mục, HTTP 201; code null sẽ tự sinh |
 | GET | `/v3/api-docs` | Công khai | OpenAPI JSON tạo từ Spring mapping và Swagger annotations |
 | GET | `/docs` | Công khai | Swagger UI được đóng gói cùng WAR |
 
 View Thymeleaf: `/`, `/login`, `/account` (đăng nhập), `/admin` (ADMIN). Trên Tomcat deploy WAR theo tên, thêm context `/vietroute`; Docker deploy `ROOT.war` nên dùng đường dẫn ở bảng trực tiếp.
+
+API mở rộng: quản lý `/api/v1/admin/access/**`, theo dõi/retry `/api/v1/admin/jobs/**`, readiness `/api/v1/admin/system/status`, mail queue `/api/v1/admin/mail` (202, cần Idempotency-Key). Mỗi API có authority tương ứng tại service; `/auth/me` trả thêm permissions. Catalog create dùng CATALOG_WRITE thay vì kiểm cứng role ADMIN. COM012/429 là quota (khác AUTH005 khóa tài khoản), COM013/503 là quá tải/Redis lỗi, COM014/413 là body lớn; MAIL001/503 là mail tắt. Đọc [hợp đồng và luồng đầy đủ](NEN_TANG_MO_RONG.md).
 
 ## Locale và envelope
 

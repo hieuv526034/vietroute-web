@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.stream.Stream;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -89,11 +90,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     user.getRoles(),
                     user.getTokenVersion()
                 );
-                var authorities = user
-                    .getRoles()
-                    .stream()
-                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role.name()))
-                    .toList();
+                // Quyền chức năng lấy từ mapping DB mỗi request; thay quyền role có hiệu lực ngay, không chờ JWT hết hạn.
+                var authorities = Stream.concat(
+                    user
+                        .getRoles()
+                        .stream()
+                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role.name())),
+                    user
+                        .getPermissions()
+                        .stream()
+                        .map(permission -> new SimpleGrantedAuthority(permission.name()))
+                ).toList();
                 var context = SecurityContextHolder.createEmptyContext();
                 context.setAuthentication(
                     UsernamePasswordAuthenticationToken.authenticated(principal, null, authorities)

@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.common.base.BaseResponse;
@@ -33,6 +34,9 @@ public class UserResponse extends BaseResponse {
     @Schema(description = "Các vai trò hệ thống")
     private Set<Role> roles;
 
+    @Schema(description = "Quyền chức năng hiện tại từ database")
+    private Set<Permission> permissions;
+
     public static UserResponse from(UserAccount user) {
         return UserResponse.builder()
             .id(user.getId())
@@ -46,6 +50,7 @@ public class UserResponse extends BaseResponse {
             .active(user.isActive())
             .mustChangePassword(user.isMustChangePassword())
             .roles(Set.copyOf(user.getRoles()))
+            .permissions(Set.copyOf(user.getPermissions()))
             .build();
     }
 }

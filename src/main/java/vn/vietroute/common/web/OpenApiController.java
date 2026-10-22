@@ -33,6 +33,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -140,6 +141,17 @@ public class OpenApiController {
                                     .required(pv != null || rp.required())
                                     .schema(schema(parameter.getParameterizedType(), api))
                             );
+                        } else if (parameter.isAnnotationPresent(RequestHeader.class)) {
+                            // Header bắt buộc như Idempotency-Key phải có ô nhập trên Swagger Try it out.
+                            RequestHeader header = parameter.getAnnotation(RequestHeader.class);
+                            String name = header.value().isBlank() ? parameter.getName() : header.value();
+                            operation.addParametersItem(
+                                new Parameter()
+                                    .name(name)
+                                    .in("header")
+                                    .required(header.required())
+                                    .schema(schema(parameter.getParameterizedType(), api))
+                            );
                         } else if (parameter.getType() == PageRequest.class) {
                             operation.addParametersItem(
                                 new Parameter()
@@ -193,10 +205,11 @@ public class OpenApiController {
                         Map.entry("405", "HTTP method không được hỗ trợ"),
                         Map.entry("406", "Định dạng phản hồi không được hỗ trợ"),
                         Map.entry("409", "Trùng dữ liệu/phiên bản cũ"),
+                        Map.entry("413", "Body vượt kích thước cho phép"),
                         Map.entry("415", "Media type không được hỗ trợ"),
-                        Map.entry("429", "Tài khoản tạm khóa"),
+                        Map.entry("429", "Vượt quota hoặc tài khoản tạm khóa; xem code và Retry-After"),
                         Map.entry("500", "Lỗi nội bộ có traceId"),
-                        Map.entry("503", "Database chưa sẵn sàng")
+                        Map.entry("503", "Database/Redis chưa sẵn sàng, hệ thống bận hoặc email chưa cấu hình")
                     );
                     failures.forEach((code, text) ->
                         OpenApiModels.response(
@@ -226,8 +239,9 @@ public class OpenApiController {
             case 405 -> ErrorCode.METHOD_NOT_ALLOWED;
             case 406 -> ErrorCode.NOT_ACCEPTABLE;
             case 409 -> ErrorCode.CONFLICT;
+            case 413 -> ErrorCode.PAYLOAD_TOO_LARGE;
             case 415 -> ErrorCode.UNSUPPORTED_MEDIA;
-            case 429 -> ErrorCode.ACCOUNT_LOCKED;
+            case 429 -> ErrorCode.RATE_LIMITED;
             case 503 -> ErrorCode.DATABASE_UNAVAILABLE;
             default -> ErrorCode.INTERNAL_ERROR;
         };

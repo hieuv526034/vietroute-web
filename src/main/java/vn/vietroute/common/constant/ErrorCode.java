@@ -25,7 +25,12 @@ public enum ErrorCode {
     STALE_VERSION("COM008", "error.staleVersion", HttpStatus.CONFLICT),
     METHOD_NOT_ALLOWED("COM009", "error.method", HttpStatus.METHOD_NOT_ALLOWED),
     UNSUPPORTED_MEDIA("COM010", "error.media", HttpStatus.UNSUPPORTED_MEDIA_TYPE),
-    NOT_ACCEPTABLE("COM011", "error.accept", HttpStatus.NOT_ACCEPTABLE);
+    NOT_ACCEPTABLE("COM011", "error.accept", HttpStatus.NOT_ACCEPTABLE),
+    RATE_LIMITED("COM012", "error.rateLimit", HttpStatus.TOO_MANY_REQUESTS),
+    SERVICE_BUSY("COM013", "error.busy", HttpStatus.SERVICE_UNAVAILABLE),
+    PAYLOAD_TOO_LARGE("COM014", "error.payload", HttpStatus.PAYLOAD_TOO_LARGE),
+    MAIL_DISABLED("MAIL001", "mail.disabled", HttpStatus.SERVICE_UNAVAILABLE),
+    JOB_NOT_RETRYABLE("JOB001", "job.notRetryable", HttpStatus.CONFLICT);
 
     private final String code;
 

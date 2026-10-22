@@ -20,6 +20,8 @@ Initializer tạo `auth_roles`, `auth_users`, `auth_user_roles`, `catalog_items`
 
 ## Schema bắt buộc và nâng cấp
 
+V003 tạo `auth_permissions`, `auth_role_permissions`, audit/version quyền trên `auth_roles` và `system_jobs` có index nhận việc/lease/retention/audit. V001/V002 giữ nguyên checksum. Seed role thường chỉ cấp mặc định một lần, không ghi đè quyền đã sửa; ADMIN là role cứu hộ cố định. `JobRepository.enqueue` nhận Connection của service để outbox commit/rollback cùng dữ liệu nghiệp vụ. Worker dùng SKIP LOCKED và lease token; xem [NEN_TANG_MO_RONG.md](../docs/NEN_TANG_MO_RONG.md).
+
 Database production vẫn là `neondb`, **schema ứng dụng là `vietroute`**. Mọi connection đặt schema `vietroute`; SQL repository chỉ rõ `vietroute.<table>`. Bật initializer cùng các biến DB/JWT/bootstrap trong cấu hình chạy để app tự chuẩn bị cấu trúc trước khi phục vụ đăng nhập.
 
 - DB mới: tạo schema và `vietroute.vietroute_schema_history`, chạy V001 trong search_path `vietroute`, chạy V002 tạo index, kiểm chứng entity rồi seed.

@@ -7,7 +7,7 @@ Website quản lý nhà xe, tuyến/chuyến, đặt chỗ và theo dõi hành t
 - Common: locale vi/en, message key/mã lỗi, BusinessException và API envelope thống nhất, validation, tạo mã, audit base, phân trang và transaction JDBC.
 - Auth: JWT HS256, BCrypt, cookie HttpOnly/CSRF hoặc Bearer, login/me/đổi mật khẩu/logout, thu hồi token, khóa đăng nhập sai và kiểm tra role/active từ DB.
 - Migration có history/checksum/transaction lock, seed admin và danh mục lặp không trùng; không reset mật khẩu đã đổi.
-- Danh mục mẫu: tra cứu vi/en có phân trang; ADMIN tạo mục có audit và kiểm tra mã; các module nghiệp vụ dùng mẫu này để triển khai tiếp.
+- Danh mục mẫu: tra cứu vi/en có phân trang; quyền CATALOG_WRITE cho tạo mục có audit và kiểm tra mã; các module nghiệp vụ dùng mẫu này để triển khai tiếp.
 - Giao diện responsive: trang chủ, đăng nhập, tài khoản/đổi mật khẩu, quản trị danh mục và Swagger UI; Bootstrap/Axios/WebJars đóng gói trong WAR.
 - Docker có cache Maven/layer, GitHub CI kiểm tra container và auth trên PostgreSQL tạm, Render Blueprint chỉ tự deploy main sau CI thành công.
 
@@ -24,6 +24,7 @@ Website quản lý nhà xe, tuyến/chuyến, đặt chỗ và theo dõi hành t
 7. [Đặc tả nghiệp vụ và bộ ca nghiệm thu](docs/DAC_TA_HE_THONG_XE_KHACH.md).
 8. [Luồng xử lý base để thành viên học và mở rộng](docs/LUONG_XU_LY_BASE.md).
 9. [Rà soát nền tảng và các điểm cần chốt trước nghiệp vụ](docs/RA_SOAT_BASE.md).
+10. [Chống spam, quyền chức năng, worker và Gmail/Workspace](docs/NEN_TANG_MO_RONG.md).
 
 ## Chạy dự án
 

@@ -8,6 +8,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.LinkedHashSet;
 import org.springframework.stereotype.Repository;
+import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.common.jdbc.BaseRepository;
@@ -65,15 +66,20 @@ public class UserRepository extends BaseRepository {
                     .updatedBy(result.getObject("updated_by", Long.class))
                     .build();
                 user.setRoles(new LinkedHashSet<>());
+                user.setPermissions(new LinkedHashSet<>());
                 try (
                     PreparedStatement roles = connection.prepareStatement(
-                        "SELECT role_code FROM vietroute.auth_user_roles WHERE user_id = ? ORDER BY role_code"
+                        "SELECT r.role_code, p.permission_code FROM vietroute.auth_user_roles r LEFT JOIN vietroute.auth_role_permissions p ON p.role_code=r.role_code WHERE r.user_id=? ORDER BY r.role_code, p.permission_code"
                     )
                 ) {
                     roles.setLong(1, user.getId());
                     try (ResultSet values = roles.executeQuery()) {
                         while (values.next()) {
                             user.getRoles().add(Role.valueOf(values.getString(1)));
+                            String permission = values.getString(2);
+                            if (permission != null) {
+                                user.getPermissions().add(Permission.valueOf(permission));
+                            }
                         }
                     }
                 }
