@@ -41,7 +41,7 @@ public class SystemStatusService {
         try (
             Connection connection = connections.open();
             PreparedStatement query = connection.prepareStatement(
-                "SELECT status,count(*) FROM vietroute.system_jobs GROUP BY status"
+                "SELECT status,count(*) FROM system_jobs GROUP BY status"
             );
             ResultSet rows = query.executeQuery()
         ) {

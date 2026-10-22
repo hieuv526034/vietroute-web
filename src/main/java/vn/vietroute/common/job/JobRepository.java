@@ -30,7 +30,7 @@ public class JobRepository extends BaseRepository {
         throws SQLException {
         try (
             PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO vietroute.system_jobs(id,type,dedup_key,payload,created_by) VALUES (?,?,?,?::jsonb,?) ON CONFLICT (dedup_key) DO NOTHING RETURNING id"
+                "INSERT INTO system_jobs(id,type,dedup_key,payload,created_by) VALUES (?,?,?,?::jsonb,?) ON CONFLICT (dedup_key) DO NOTHING RETURNING id"
             )
         ) {
             UUID id = UUID.randomUUID();
@@ -45,11 +45,7 @@ public class JobRepository extends BaseRepository {
                 }
             }
         }
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                "SELECT id FROM vietroute.system_jobs WHERE dedup_key=?"
-            )
-        ) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT id FROM system_jobs WHERE dedup_key=?")) {
             query.setString(1, dedup);
             try (ResultSet row = query.executeQuery()) {
                 if (!row.next()) {
@@ -64,7 +60,7 @@ public class JobRepository extends BaseRepository {
     public Job claim(Connection connection, int leaseSeconds) throws SQLException {
         try (
             PreparedStatement expire = connection.prepareStatement(
-                "UPDATE vietroute.system_jobs SET status='DEAD', lease_token=NULL, locked_until=NULL, last_error_code='LEASE_EXHAUSTED', finished_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP, version=version+1 WHERE status='RUNNING' AND locked_until<CURRENT_TIMESTAMP AND attempts>=max_attempts"
+                "UPDATE system_jobs SET status='DEAD', lease_token=NULL, locked_until=NULL, last_error_code='LEASE_EXHAUSTED', finished_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP, version=version+1 WHERE status='RUNNING' AND locked_until<CURRENT_TIMESTAMP AND attempts>=max_attempts"
             )
         ) {
             expire.executeUpdate();
@@ -73,12 +69,12 @@ public class JobRepository extends BaseRepository {
             PreparedStatement claim = connection.prepareStatement(
                 """
                 WITH next AS (
-                    SELECT id FROM vietroute.system_jobs
+                    SELECT id FROM system_jobs
                     WHERE attempts<max_attempts AND ((status='QUEUED' AND available_at<=CURRENT_TIMESTAMP)
                         OR (status='RUNNING' AND locked_until<CURRENT_TIMESTAMP))
                     ORDER BY available_at, created_at, id FOR UPDATE SKIP LOCKED LIMIT 1
                 )
-                UPDATE vietroute.system_jobs j SET status='RUNNING', attempts=attempts+1, lease_token=?,
+                UPDATE system_jobs j SET status='RUNNING', attempts=attempts+1, lease_token=?,
                     locked_until=CURRENT_TIMESTAMP + (? * INTERVAL '1 second'), updated_at=CURRENT_TIMESTAMP, version=version+1
                 FROM next WHERE j.id=next.id
                 RETURNING j.id,j.type,j.payload::text,j.attempts,j.max_attempts,j.lease_token,j.locked_until
@@ -111,7 +107,7 @@ public class JobRepository extends BaseRepository {
         try (
             PreparedStatement update = connection.prepareStatement(
                 """
-                UPDATE vietroute.system_jobs SET status=?,last_error_code=?,available_at=CURRENT_TIMESTAMP+(? * INTERVAL '1 second'),
+                UPDATE system_jobs SET status=?,last_error_code=?,available_at=CURRENT_TIMESTAMP+(? * INTERVAL '1 second'),
                     lease_token=NULL,locked_until=NULL,finished_at=CASE WHEN ?='QUEUED' THEN NULL ELSE CURRENT_TIMESTAMP END,
                     payload=CASE WHEN ?='SUCCEEDED' THEN '{}'::jsonb ELSE payload END,
                     updated_at=CURRENT_TIMESTAMP,version=version+1
@@ -132,9 +128,7 @@ public class JobRepository extends BaseRepository {
 
     public JobResponse find(UUID id) {
         return read(connection -> {
-            try (
-                PreparedStatement query = connection.prepareStatement("SELECT * FROM vietroute.system_jobs WHERE id=?")
-            ) {
+            try (PreparedStatement query = connection.prepareStatement("SELECT * FROM system_jobs WHERE id=?")) {
                 query.setObject(1, id);
                 try (ResultSet row = query.executeQuery()) {
                     if (!row.next()) {
@@ -150,7 +144,7 @@ public class JobRepository extends BaseRepository {
         return read(connection -> {
             long total;
             try (
-                PreparedStatement count = connection.prepareStatement("SELECT count(*) FROM vietroute.system_jobs");
+                PreparedStatement count = connection.prepareStatement("SELECT count(*) FROM system_jobs");
                 ResultSet row = count.executeQuery()
             ) {
                 row.next();
@@ -159,7 +153,7 @@ public class JobRepository extends BaseRepository {
             List<JobResponse> content = new ArrayList<>();
             try (
                 PreparedStatement query = connection.prepareStatement(
-                    "SELECT * FROM vietroute.system_jobs ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?"
+                    "SELECT * FROM system_jobs ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?"
                 )
             ) {
                 query.setInt(1, page.getSize());
@@ -178,7 +172,7 @@ public class JobRepository extends BaseRepository {
         try (
             PreparedStatement update = connection.prepareStatement(
                 """
-                UPDATE vietroute.system_jobs SET status='QUEUED',attempts=0,available_at=CURRENT_TIMESTAMP,
+                UPDATE system_jobs SET status='QUEUED',attempts=0,available_at=CURRENT_TIMESTAMP,
                     finished_at=NULL,last_error_code=NULL,updated_at=CURRENT_TIMESTAMP,version=version+1
                 WHERE id=? AND version=? AND status='DEAD'
                 """
@@ -206,8 +200,8 @@ public class JobRepository extends BaseRepository {
         try (
             PreparedStatement delete = connection.prepareStatement(
                 """
-                DELETE FROM vietroute.system_jobs WHERE id IN (
-                    SELECT id FROM vietroute.system_jobs WHERE status='SUCCEEDED'
+                DELETE FROM system_jobs WHERE id IN (
+                    SELECT id FROM system_jobs WHERE status='SUCCEEDED'
                         AND finished_at<CURRENT_TIMESTAMP-(? * INTERVAL '1 day') ORDER BY finished_at LIMIT 500
                 )
                 """

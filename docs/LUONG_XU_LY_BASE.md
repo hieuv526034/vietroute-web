@@ -32,17 +32,17 @@ Luồng đăng nhập khóa dòng user để các lần sai đồng thời khôn
 
 ## Schema, table và index trong entity
 
-Schema cố định là `vietroute`; database production vẫn là `neondb`. `JdbcConnectionFactory` đặt schema cho mỗi connection, repository dùng tên bảng đủ schema. Không dùng schema `public` cho dữ liệu mới.
+Schema cấu hình qua `VIETROUTE_DB_SCHEMA` (mặc định vietroute), database production vẫn neondb. JdbcConnectionFactory đặt lại search_path khi mượn connection; repository dùng tên bảng không gắn schema, không fallback public/$user. Xem [cấu hình schema và quyền](SCHEMA_VA_PHAN_QUYEN.md).
 
-Entity JDBC dùng `@JdbcTable(schema = JdbcSchema.NAME, name = ..., primaryKey = ..., indexes = ...)`. Mỗi `@JdbcIndex` ghi rõ tên, thứ tự cột và `unique`. `UserAccount` và `CatalogItem` khai báo cả index PK/UNIQUE có sẵn lẫn index đọc/audit. `roles` trong `UserAccount` được repository nạp từ bảng nối `vietroute.auth_user_roles`, không phải cột JSON hay ORM relationship.
+Entity JDBC dùng `@JdbcTable(name = ..., primaryKey = ..., indexes = ...)`. Mỗi `@JdbcIndex` ghi tên, thứ tự cột và unique. UserAccount/CatalogItem khai báo cả index PK/UNIQUE và index đọc/audit. Validator dùng schema thực tế trên connection; roles được repository nạp từ auth_user_roles trong schema cấu hình, không phải cột JSON/ORM relationship.
 
 Metadata này giúp đọc code và kiểm chứng cấu trúc, **không tự sinh DDL**. Migration SQL là nguồn tạo/sửa bảng. `JdbcSchemaValidator` kiểm tra primary key và index thực tế trước seed; mismatch làm startup thất bại và transaction rollback. Khi thêm entity/module, tạo migration version mới, khai báo metadata rồi đưa class vào danh sách kiểm chứng lúc startup.
 
 Startup được bật bằng `VIETROUTE_DB_INIT_ENABLED=true`:
 
 1. Lấy advisory transaction lock để hai instance không migrate/seed cùng lúc.
-2. Tạo schema `vietroute`. Nếu có history cũ ở `public`, chuyển history sang `vietroute` và giữ checksum. Hai history cùng tồn tại hoặc bảng legacy thiếu history sẽ bị chặn để tránh đoán sai dữ liệu.
-3. Kiểm tra/chạy V001 rồi V002. DB mới tạo bảng trong `vietroute`. DB đã chạy V001 ở `public` bỏ qua V001, V002 chuyển bảng sang `vietroute`, giữ ID, FK, sequence, index và dữ liệu; sau đó tạo index bổ sung. Không sửa byte của V001.
+2. SchemaBootstrap kiểm một history trong DB, tạo schema cấu hình; nếu history legacy public thì chuyển sang schema đó. History nơi khác/nhiều history hoặc legacy thiếu history bị chặn trước seed.
+3. Kiểm tra/chạy V001–V003. DB mới tạo bảng ở schema cấu hình; legacy public được V002 chuyển vào đó, giữ ID/FK/sequence/index/dữ liệu. V001–V003 nguyên byte/checksum; adapter chỉ ánh xạ schema SQL lịch sử V002/V003 trong RAM. Query/DDL mới dùng search_path cấu hình.
 4. Đối chiếu metadata entity với DB, seed role/admin/catalog theo khóa duy nhất, rồi commit. Admin có sẵn không bị reset mật khẩu.
 
 Chạy Maven build không khởi tạo DB. Muốn chạy app và có dữ liệu ngay, đặt các biến DB/JWT/bootstrap và bật initializer trong cấu hình chạy IDE/Tomcat hoặc Render; `.env` không được Java tự nạp. CI dùng PostgreSQL tạm để kiểm DB mới, khởi động đồng thời, restart và nâng cấp từ `public`.

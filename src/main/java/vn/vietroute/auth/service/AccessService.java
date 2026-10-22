@@ -3,9 +3,13 @@ package vn.vietroute.auth.service;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import vn.vietroute.auth.dto.request.RolePermissionsRequest;
 import vn.vietroute.auth.dto.request.UserRolesRequest;
@@ -41,6 +45,8 @@ public class AccessService {
             .map(permission ->
                 new PermissionResponse(
                     permission,
+                    permission.resource(),
+                    permission.actions(),
                     permission.messageKey(),
                     messages.getMessage(permission.messageKey(), null, locale)
                 )
@@ -55,10 +61,27 @@ public class AccessService {
     }
 
     /** ADMIN là role cứu hộ cố định; không cho API cấu hình làm mất khả năng quản trị hệ thống. */
-    @PreAuthorize("hasAuthority('ACCESS_WRITE')")
+    @PreAuthorize("hasAnyAuthority('ACCESS_ASSIGN','ACCESS_WRITE')")
     public RolePermissionsResponse replace(Role role, RolePermissionsRequest request, UserPrincipal actor) {
         if (role == Role.ADMIN) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+        // Người được ủy quyền chỉ được gán các quyền chính họ đang có, không tự tạo đường nâng quyền.
+        if (!actor.roles().contains(Role.ADMIN)) {
+            Set<String> granted = SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toSet());
+            if (
+                request
+                    .getPermissions()
+                    .stream()
+                    .anyMatch(permission -> !granted.contains(permission.name()))
+            ) {
+                throw new BusinessException(ErrorCode.ACCESS_DENIED);
+            }
         }
         return transactions.execute(connection -> {
             access.replacePermissions(connection, role, request.getPermissions(), request.getVersion(), actor.id());
@@ -67,9 +90,13 @@ public class AccessService {
     }
 
     /** Gán role, tăng tokenVersion trong cùng transaction để thu hồi mọi token cũ của user đích. */
-    @PreAuthorize("hasAuthority('ACCESS_WRITE')")
+    @PreAuthorize("hasAnyAuthority('ACCESS_ASSIGN','ACCESS_WRITE')")
     public UserResponse assign(long id, UserRolesRequest request, UserPrincipal actor) {
         if (actor.id() == id) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+        // Gán role cấp quyền gián tiếp; giới hạn cho ADMIN để người có quyền gán mapping không tự nâng vai trò.
+        if (!actor.roles().contains(Role.ADMIN)) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }
         return transactions.execute(connection -> {

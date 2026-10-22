@@ -9,15 +9,17 @@ public final class JdbcConnectionFactory {
 
     private final DataSource source;
 
-    public JdbcConnectionFactory(DataSource source) {
+    private final JdbcSchema schema;
+
+    public JdbcConnectionFactory(DataSource source, JdbcSchema schema) {
         this.source = source;
+        this.schema = schema;
     }
 
     public Connection open() throws SQLException {
         Connection connection = source.getConnection();
         try {
-            // Cố định search_path cho mọi connection, kể cả khi JDBC URL có currentSchema khác.
-            connection.setSchema(JdbcSchema.NAME);
+            schema.select(connection);
             return connection;
         } catch (SQLException exception) {
             try {

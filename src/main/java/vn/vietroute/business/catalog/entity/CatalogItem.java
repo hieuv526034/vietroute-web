@@ -7,7 +7,6 @@ import lombok.experimental.SuperBuilder;
 import vn.vietroute.common.base.BaseEntity;
 import vn.vietroute.common.constant.Constants.CatalogType;
 import vn.vietroute.common.jdbc.JdbcIndex;
-import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.jdbc.JdbcTable;
 
 /** Danh mục mẫu có tên vi/en và audit, không chứa logic giao diện hoặc JSON. */
@@ -16,7 +15,6 @@ import vn.vietroute.common.jdbc.JdbcTable;
 @SuperBuilder
 @NoArgsConstructor
 @JdbcTable(
-    schema = JdbcSchema.NAME,
     name = "catalog_items",
     primaryKey = { "id" },
     indexes = {

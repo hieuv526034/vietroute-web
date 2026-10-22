@@ -2,6 +2,8 @@
 
 Ngày rà soát: **22/10/2026**. Người phụ trách: **hieuv526034**. Phạm vi: common/auth/catalog mẫu, cấu hình Java/JDBC/Thymeleaf, schema, Swagger, Docker và CI/Render. Không kiểm tra hoặc sửa dữ liệu Neon production.
 
+Đây là kết quả tại PR #7. Bổ sung sau đó ở [nền tảng mở rộng](NEN_TANG_MO_RONG.md) và [schema/quyền theo hành động](SCHEMA_VA_PHAN_QUYEN.md): schema đã cấu hình tập trung, catalog đã có sửa/xóa mềm cùng optimistic version và quyền READ/CREATE/UPDATE/DELETE riêng.
+
 ## Đánh giá bộ công nghệ
 
 Bộ công nghệ hiện tại phù hợp để nhóm bắt đầu triển khai nghiệp vụ theo mẫu catalog: Java 17+ (Docker dùng 21), Spring MVC 6.2.19, Security 6.5.11/Nimbus JWT, Thymeleaf 3.1.5, JDBC PostgreSQL 42.7.14, HikariCP 7.1.0, WAR/Tomcat 10.1, Bootstrap/Axios/WebJars. Hibernate Validator chỉ phục vụ Bean Validation, không có ORM. Không cần thêm Spring Boot, JPA, Redis hoặc microservice để hoàn thiện base đồ án hiện tại.

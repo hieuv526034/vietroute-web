@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -30,7 +31,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import vn.vietroute.auth.dto.request.RolePermissionsRequest;
+import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
+import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.AccessService;
 import vn.vietroute.business.catalog.service.CatalogService;
 import vn.vietroute.common.config.RootConfig;
@@ -115,6 +118,31 @@ class FoundationSecurityTest {
         authenticate("ACCESS_WRITE");
         var error = assertThrows(BusinessException.class, () ->
             context.getBean(AccessService.class).replace(Role.ADMIN, new RolePermissionsRequest(), null)
+        );
+        assertEquals(ErrorCode.ACCESS_DENIED, error.getErrorCode());
+    }
+
+    @Test
+    void creatingDoesNotGrantReadUpdateDeleteAndLegacyWriteDoesNotGrantDelete() {
+        var catalogs = context.getBean(CatalogService.class);
+        authenticate("CATALOG_CREATE");
+        assertThrows(AccessDeniedException.class, () -> catalogs.find(1, Locale.ENGLISH));
+        assertThrows(AccessDeniedException.class, () -> catalogs.update(1, null, null, Locale.ENGLISH));
+        assertThrows(AccessDeniedException.class, () -> catalogs.delete(1, 0, null, Locale.ENGLISH));
+        authenticate("CATALOG_UPDATE");
+        assertThrows(AccessDeniedException.class, () -> catalogs.create(null, null, Locale.ENGLISH));
+        authenticate("CATALOG_WRITE");
+        assertThrows(AccessDeniedException.class, () -> catalogs.delete(1, 0, null, Locale.ENGLISH));
+    }
+
+    @Test
+    void delegatedAssignmentCannotGrantPrivilegesTheActorDoesNotHave() {
+        authenticate("ACCESS_ASSIGN");
+        var body = new RolePermissionsRequest();
+        body.setPermissions(Set.of(Permission.SYSTEM_READ));
+        var actor = new UserPrincipal(2L, "operator", Set.of(Role.OPERATOR), 0);
+        var error = assertThrows(BusinessException.class, () ->
+            context.getBean(AccessService.class).replace(Role.CUSTOMER, body, actor)
         );
         assertEquals(ErrorCode.ACCESS_DENIED, error.getErrorCode());
     }

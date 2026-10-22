@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.sql.DataSource;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
+import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 
 /** Bảo đảm callback dùng cùng connection, commit khi thành công và rollback/đóng khi lỗi nghiệp vụ. */
@@ -92,11 +94,21 @@ class JdbcTransactionsTest {
                     case "commit" -> committed.set(true);
                     case "rollback" -> rolledBack.set(true);
                     case "close" -> closed.set(true);
-                    case "setSchema" -> {
-                        assertEquals("vietroute", args[0]);
+                    case "prepareStatement" -> {
+                        assertEquals("SELECT pg_catalog.set_config('search_path', ?, false)", args[0]);
                         if (rejectSchema) {
                             throw new SQLException("test-only", "schema-test");
                         }
+                        return Proxy.newProxyInstance(
+                            getClass().getClassLoader(),
+                            new Class<?>[] { PreparedStatement.class },
+                            (statement, operation, parameters) -> {
+                                if (operation.getName().equals("setString")) {
+                                    assertEquals("\"isolated_schema\", pg_temp", parameters[1]);
+                                }
+                                return operation.getName().equals("execute") ? false : null;
+                            }
+                        );
                     }
                     default -> {
                     }
@@ -111,7 +123,7 @@ class JdbcTransactionsTest {
                 new Class<?>[] { DataSource.class },
                 (proxy, method, args) -> connection
             );
-            return new JdbcConnectionFactory(source);
+            return new JdbcConnectionFactory(source, new JdbcSchema("isolated_schema"));
         }
     }
 }

@@ -17,32 +17,35 @@ public final class JdbcSchemaValidator {
     /** Kiểm tra schema, primary key và tên/thứ tự cột/tính unique của từng index được khai báo. */
     public static void verify(Connection connection, Class<?>... entities) throws SQLException {
         DatabaseMetaData metadata = connection.getMetaData();
+        String schema = connection.getSchema();
+        JdbcSchema.validate(schema);
         for (Class<?> entity : entities) {
             JdbcTable table = entity.getAnnotation(JdbcTable.class);
-            if (table == null || !JdbcSchema.NAME.equals(table.schema())) {
-                throw new IllegalStateException("Missing vietroute table metadata: " + entity.getSimpleName());
+            if (table == null) {
+                throw new IllegalStateException("Missing application table metadata: " + entity.getSimpleName());
             }
-            verifyPrimaryKey(metadata, table);
-            verifyIndexes(metadata, table);
+            verifyPrimaryKey(metadata, schema, table);
+            verifyIndexes(metadata, schema, table);
         }
     }
 
-    private static void verifyPrimaryKey(DatabaseMetaData metadata, JdbcTable table) throws SQLException {
+    private static void verifyPrimaryKey(DatabaseMetaData metadata, String schema, JdbcTable table)
+        throws SQLException {
         Map<Short, String> columns = new TreeMap<>();
-        try (ResultSet keys = metadata.getPrimaryKeys(null, table.schema(), table.name())) {
+        try (ResultSet keys = metadata.getPrimaryKeys(null, schema, table.name())) {
             while (keys.next()) {
                 columns.put(keys.getShort("KEY_SEQ"), keys.getString("COLUMN_NAME"));
             }
         }
         if (!List.copyOf(columns.values()).equals(List.of(table.primaryKey()))) {
-            throw new IllegalStateException("Primary key mismatch: " + table.schema() + "." + table.name());
+            throw new IllegalStateException("Primary key mismatch: " + schema + "." + table.name());
         }
     }
 
-    private static void verifyIndexes(DatabaseMetaData metadata, JdbcTable table) throws SQLException {
+    private static void verifyIndexes(DatabaseMetaData metadata, String schema, JdbcTable table) throws SQLException {
         Map<String, Map<Short, String>> columns = new HashMap<>();
         Map<String, Boolean> unique = new HashMap<>();
-        try (ResultSet indexes = metadata.getIndexInfo(null, table.schema(), table.name(), false, false)) {
+        try (ResultSet indexes = metadata.getIndexInfo(null, schema, table.name(), false, false)) {
             while (indexes.next()) {
                 String name = indexes.getString("INDEX_NAME");
                 String column = indexes.getString("COLUMN_NAME");
@@ -61,7 +64,7 @@ public final class JdbcSchemaValidator {
                 !List.copyOf(actual.values()).equals(List.of(index.columns())) ||
                 !Boolean.valueOf(index.unique()).equals(unique.get(index.name()))
             ) {
-                throw new IllegalStateException("Index mismatch: " + table.schema() + "." + index.name());
+                throw new IllegalStateException("Index mismatch: " + schema + "." + index.name());
             }
         }
     }

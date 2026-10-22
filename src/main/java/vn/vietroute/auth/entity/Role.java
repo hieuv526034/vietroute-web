@@ -1,12 +1,10 @@
 package vn.vietroute.auth.entity;
 
 import vn.vietroute.common.jdbc.JdbcIndex;
-import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.jdbc.JdbcTable;
 
 /** Quyền hệ thống; phạm vi nhà xe/chuyến phải được kiểm tra thêm tại service nghiệp vụ. */
 @JdbcTable(
-    schema = JdbcSchema.NAME,
     name = "auth_roles",
     primaryKey = { "code" },
     indexes = {

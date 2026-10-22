@@ -38,17 +38,17 @@ MemoryRateLimitStore dùng một khóa đồng bộ để check/increment nguyê
 
 ## Phân quyền chức năng và dữ liệu
 
-Role gom các quyền `Permission`: CATALOG_WRITE, ACCESS_READ, ACCESS_WRITE, JOB_READ, JOB_RETRY, MAIL_SEND, SYSTEM_READ. Bảng auth_permissions là registry; auth_role_permissions gán quyền cho role. ADMIN có quyền cứu hộ cố định; các role khác ban đầu không có các quyền quản trị này. Không tự cấp quyền quản lý dữ liệu chỉ vì tên role OPERATOR.
+Role gom Permission theo resource và hành động READ/CREATE/UPDATE/DELETE/ASSIGN/RETRY/SEND; registry API trả resource/actions để dựng ma trận. CATALOG_WRITE và ACCESS_WRITE giữ tương thích giới hạn, không thành toàn quyền. Xem [ma trận quyền và schema cấu hình](SCHEMA_VA_PHAN_QUYEN.md). Bảng auth_permissions là registry; auth_role_permissions gán quyền cho role. ADMIN có quyền cứu hộ cố định; role thường không tự có các quyền quản trị mới.
 
-JWT filter kiểm chữ ký/thời hạn rồi đọc active/tokenVersion/roles/permissions từ DB mỗi request. Authorities gồm ROLE_... và mã Permission. Không cache quyền và không tin claim role/quyền từ client. Thay mapping role có hiệu lực từ request tiếp theo, kể cả JWT cũ; request đang chạy có thể đã qua kiểm quyền. Service dùng `@PreAuthorize("hasAuthority('CATALOG_WRITE')")`, nên gọi qua bean mà thiếu quyền vẫn bị chặn, không chỉ chặn URL.
+JWT filter kiểm chữ ký/thời hạn rồi đọc active/tokenVersion/roles/permissions từ DB mỗi request. Authorities gồm ROLE_... và mã Permission. Không cache quyền và không tin claim role/quyền từ client. Thay mapping role có hiệu lực từ request tiếp theo, kể cả JWT cũ; request đang chạy có thể đã qua kiểm quyền. Service dùng @PreAuthorize với authority hành động (ví dụ CATALOG_DELETE), nên gọi qua bean mà thiếu quyền vẫn bị chặn, không chỉ chặn URL.
 
 | API | Quyền | Quy tắc |
 |---|---|---|
 | GET /api/v1/admin/access/permissions | ACCESS_READ | Registry quyền có tên vi/en |
 | GET /api/v1/admin/access/roles | ACCESS_READ | Tập quyền, version và audit của từng role |
-| PUT /api/v1/admin/access/roles/{role}/permissions | ACCESS_WRITE | Body permissions + version; ADMIN không sửa được |
-| PUT /api/v1/admin/access/users/{id}/roles | ACCESS_WRITE | Body roles + version; không tự sửa role, không bỏ admin hoạt động cuối cùng |
-| POST /api/v1/admin/catalogs | CATALOG_WRITE | Quyền chức năng thay điều kiện role ADMIN cứng |
+| PUT /api/v1/admin/access/roles/{role}/permissions | ACCESS_ASSIGN hoặc ACCESS_WRITE cũ | Body permissions + version; ADMIN không sửa; người được ủy quyền không gán quyền vượt tập của mình |
+| PUT /api/v1/admin/access/users/{id}/roles | ACCESS_ASSIGN hoặc ACCESS_WRITE cũ + role ADMIN | Body roles + version; không tự sửa role, không bỏ admin cuối |
+| POST /api/v1/admin/catalogs | CATALOG_CREATE hoặc CATALOG_WRITE cũ | Tạo; đọc quản trị/sửa/xóa có permission riêng |
 
 API `/api/v1/admin/**` yêu cầu xác thực ở URL và quyền cụ thể ở service; không đồng nghĩa mọi API dưới đó chỉ chấp nhận role ADMIN. Trang `/admin` tổng quản trị vẫn dành cho ADMIN; giao diện theo quyền chi tiết của module sẽ triển khai cùng module. `/auth/me` có field permissions để UI quyết định hiển thị, còn backend luôn kiểm lại quyền.
 

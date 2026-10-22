@@ -41,7 +41,7 @@ public class UserRepository extends BaseRepository {
         // column chỉ do các hàm nội bộ chọn id/username, tuyệt đối không nhận tên cột từ HTTP.
         try (
             PreparedStatement query = connection.prepareStatement(
-                "SELECT * FROM vietroute.auth_users WHERE " + column + " = ?" + (lock ? " FOR UPDATE" : "")
+                "SELECT * FROM auth_users WHERE " + column + " = ?" + (lock ? " FOR UPDATE" : "")
             )
         ) {
             query.setObject(1, value);
@@ -69,7 +69,7 @@ public class UserRepository extends BaseRepository {
                 user.setPermissions(new LinkedHashSet<>());
                 try (
                     PreparedStatement roles = connection.prepareStatement(
-                        "SELECT r.role_code, p.permission_code FROM vietroute.auth_user_roles r LEFT JOIN vietroute.auth_role_permissions p ON p.role_code=r.role_code WHERE r.user_id=? ORDER BY r.role_code, p.permission_code"
+                        "SELECT r.role_code, p.permission_code FROM auth_user_roles r LEFT JOIN auth_role_permissions p ON p.role_code=r.role_code WHERE r.user_id=? ORDER BY r.role_code, p.permission_code"
                     )
                 ) {
                     roles.setLong(1, user.getId());
@@ -92,7 +92,7 @@ public class UserRepository extends BaseRepository {
     public void recordFailure(Connection connection, long id, int attempts, Instant lockedUntil) throws SQLException {
         try (
             PreparedStatement update = connection.prepareStatement(
-                "UPDATE vietroute.auth_users SET failed_login_attempts=?, locked_until=?, updated_at=CURRENT_TIMESTAMP, version=version+1 WHERE id=?"
+                "UPDATE auth_users SET failed_login_attempts=?, locked_until=?, updated_at=CURRENT_TIMESTAMP, version=version+1 WHERE id=?"
             )
         ) {
             update.setInt(1, attempts);
@@ -111,7 +111,7 @@ public class UserRepository extends BaseRepository {
     public void changePassword(Connection connection, long id, String hash) throws SQLException {
         try (
             PreparedStatement update = connection.prepareStatement(
-                "UPDATE vietroute.auth_users SET password_hash=?, must_change_password=false, token_version=token_version+1, failed_login_attempts=0, locked_until=NULL, updated_by=?, updated_at=CURRENT_TIMESTAMP, version=version+1 WHERE id=?"
+                "UPDATE auth_users SET password_hash=?, must_change_password=false, token_version=token_version+1, failed_login_attempts=0, locked_until=NULL, updated_by=?, updated_at=CURRENT_TIMESTAMP, version=version+1 WHERE id=?"
             )
         ) {
             update.setString(1, hash);
@@ -125,7 +125,7 @@ public class UserRepository extends BaseRepository {
     public void revokeTokens(Connection connection, long id) throws SQLException {
         try (
             PreparedStatement update = connection.prepareStatement(
-                "UPDATE vietroute.auth_users SET token_version=token_version+1, updated_by=?, updated_at=CURRENT_TIMESTAMP, version=version+1 WHERE id=?"
+                "UPDATE auth_users SET token_version=token_version+1, updated_by=?, updated_at=CURRENT_TIMESTAMP, version=version+1 WHERE id=?"
             )
         ) {
             update.setLong(1, id);
