@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariDataSource;
+import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.FileSystemResourceLoader;
 import org.springframework.mock.web.MockServletContext;
@@ -58,6 +59,18 @@ class ApplicationSmokeTest {
             assertTrue(document.get("paths").has("/api/v1/auth/change-password"));
             assertTrue(document.get("components").get("schemas").has("CatalogResponse"));
             assertTrue(document.at("/paths/~1api~1v1~1admin~1catalogs/post/responses").has("201"));
+            assertTrue(document.at("/paths/~1api~1v1~1admin~1mail/post/responses").has("202"));
+            var idempotency = StreamSupport.stream(
+                document.at("/paths/~1api~1v1~1admin~1mail/post/parameters").spliterator(),
+                false
+            )
+                .filter(parameter -> parameter.path("name").asText().equals("Idempotency-Key"))
+                .findFirst()
+                .orElseThrow();
+            assertEquals("Idempotency-Key", idempotency.get("name").asText());
+            assertEquals("header", idempotency.get("in").asText());
+            assertTrue(idempotency.get("required").asBoolean());
+            assertTrue(document.get("paths").has("/api/v1/admin/access/roles/{role}/permissions"));
             var errorExample = document.at(
                 "/paths/~1api~1v1~1auth~1login/post/responses/401/content/application~1json/example"
             );

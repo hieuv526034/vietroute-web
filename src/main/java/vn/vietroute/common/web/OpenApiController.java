@@ -33,6 +33,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -138,6 +139,17 @@ public class OpenApiController {
                                     .name(name)
                                     .in(pv != null ? "path" : "query")
                                     .required(pv != null || rp.required())
+                                    .schema(schema(parameter.getParameterizedType(), api))
+                            );
+                        } else if (parameter.isAnnotationPresent(RequestHeader.class)) {
+                            // Header bắt buộc như Idempotency-Key phải có ô nhập trên Swagger Try it out.
+                            RequestHeader header = parameter.getAnnotation(RequestHeader.class);
+                            String name = header.value().isBlank() ? parameter.getName() : header.value();
+                            operation.addParametersItem(
+                                new Parameter()
+                                    .name(name)
+                                    .in("header")
+                                    .required(header.required())
                                     .schema(schema(parameter.getParameterizedType(), api))
                             );
                         } else if (parameter.getType() == PageRequest.class) {
