@@ -59,6 +59,13 @@
                 </a>
                 <div class="nav-links">
                     <a
+                        th:if="${currentUser != null}"
+                        th:href="@{/media(lang=${currentLocale})}"
+                        th:text="#{ui.media}"
+                    >
+                        Ảnh
+                    </a>
+                    <a
                         th:href="@{/docs(lang=${currentLocale})}"
                         th:text="#{ui.docs}"
                     >

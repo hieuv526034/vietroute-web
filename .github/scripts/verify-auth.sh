@@ -40,7 +40,7 @@ for port in 18080 18081; do
 done
 sql() { docker exec -e PGOPTIONS=-csearch_path=vietroute vietroute-db-ci psql -U vietroute_ci -d vietroute_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
 [[ "$(sql "SELECT count(*) FROM auth_users WHERE username='admin'")" == 1 ]]
-[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 3 ]]
+[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 4 ]]
 [[ "$(sql 'SELECT count(*) FROM catalog_items')" == 5 ]]
 [[ "$(sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','catalog_items','vietroute_schema_history')")" == 0 ]]
 [[ "$(sql "SELECT count(*) FROM pg_indexes WHERE schemaname='vietroute' AND indexname IN ('idx_auth_users_created_by','idx_auth_users_updated_by','idx_auth_user_roles_role_code','idx_catalog_created_by','idx_catalog_updated_by')")" == 5 ]]
@@ -190,6 +190,48 @@ login_body admin "$next_password"
 call 200 POST /api/v1/auth/login "$work/login.json" cookie
 admin_token=$(field data.accessToken)
 token="$admin_token"
+printf 'Media stage: migration, owner scope, multipart limits and disabled provider\n'
+media_id=$(sql "INSERT INTO media_assets(public_id,status,url,thumbnail_url,format,bytes,width,height,created_by,updated_by) VALUES ('ci-public-image','READY','https://res.cloudinary.com/demo/image/upload/sample.png','https://res.cloudinary.com/demo/image/upload/sample.png','png',128,64,32,1,1) RETURNING id" | head -n 1)
+call 200 GET "/api/v1/media/$media_id" '' bearer
+[[ "$(field data.createdBy)" == 1 ]]
+call 200 GET /media '' cookie
+# Trang HTML kiểm bằng curl riêng vì helper field chỉ dùng JSON response.
+call 200 GET /v3/api-docs '' bearer
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert "multipart/form-data" in d["paths"]["/api/v1/media"]["post"]["requestBody"]["content"]' "$result"
+token="$customer_token"
+call 403 GET /api/v1/media '' bearer
+sql "INSERT INTO auth_role_permissions(role_code,permission_code) VALUES ('CUSTOMER','MEDIA_READ')" >/dev/null
+call 200 GET /api/v1/media '' bearer
+[[ "$(field data.totalElements)" == 0 ]]
+call 404 GET "/api/v1/media/$media_id" '' bearer
+sql "DELETE FROM auth_role_permissions WHERE role_code='CUSTOMER' AND permission_code='MEDIA_READ'" >/dev/null
+token="$admin_token"
+printf '%s\n' '{"version":0}' > "$work/media-delete.json"
+call 503 DELETE "/api/v1/media/$media_id" "$work/media-delete.json" bearer
+assert_code MEDIA001
+python3 -c 'import sys; open(sys.argv[1],"wb").write(b"X"*(5242880+1))' "$work/large-image.bin"
+actual=$(curl --silent --show-error --max-time 30 -o "$result" -w '%{http_code}' \
+  -H "Authorization: Bearer $token" -F "file=@$work/large-image.bin;type=image/png" "$base/api/v1/media")
+[[ "$actual" == 413 ]]
+assert_code COM014
+actual=$(curl --silent --show-error --max-time 30 -o "$result" -w '%{http_code}' \
+  -H "Authorization: Bearer $token" -H 'Transfer-Encoding: chunked' \
+  -F "file=@$work/large-image.bin;type=image/png" "$base/api/v1/media")
+[[ "$actual" == 413 ]]
+assert_code COM014
+printf 'not-a-real-image' > "$work/tiny-image.png"
+actual=$(curl --silent --show-error --max-time 10 -o "$result" -w '%{http_code}' \
+  -H "Authorization: Bearer $token" -F "file=@$work/tiny-image.png;type=image/png" "$base/api/v1/media")
+[[ "$actual" == 503 ]]
+assert_code MEDIA001
+# Job dọn upload cũ phải giữ nguyên READY và không gọi Cloudinary thật.
+sql "INSERT INTO system_jobs(id,type,dedup_key,payload,created_by) VALUES (gen_random_uuid(),'MEDIA_CLEANUP','ci-media-ready',jsonb_build_object('id',$media_id),1)" >/dev/null
+for attempt in {1..15}; do
+  [[ "$(sql "SELECT status FROM system_jobs WHERE dedup_key='ci-media-ready'")" == SUCCEEDED ]] && break
+  sleep 1
+done
+[[ "$(sql "SELECT status FROM system_jobs WHERE dedup_key='ci-media-ready'")" == SUCCEEDED ]]
+[[ "$(sql "SELECT status FROM media_assets WHERE id=$media_id")" == READY ]]
 call 200 GET /api/v1/admin/access/permissions '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert any(p["code"]=="CATALOG_WRITE" for p in d["data"])' "$result"
 printf '%s\n' '{"permissions":["CATALOG_CREATE"],"version":0}' > "$work/permissions.json"
@@ -266,10 +308,10 @@ sql "INSERT INTO system_jobs(id,type,dedup_key,payload) VALUES ('00000000-0000-0
 sql "INSERT INTO system_jobs(id,type,dedup_key,payload,available_at) VALUES ('00000000-0000-0000-0000-000000000022','SYSTEM_CLEANUP','ci-future','{}',CURRENT_TIMESTAMP+INTERVAL '1 hour')" >/dev/null
 sql "BEGIN; INSERT INTO system_jobs(id,type,dedup_key,payload) VALUES ('00000000-0000-0000-0000-000000000023','SYSTEM_CLEANUP','ci-rollback','{}'); ROLLBACK" >/dev/null
 for attempt in {1..40}; do
-  if [[ "$(sql "SELECT count(*) FROM system_jobs WHERE status='SUCCEEDED'")" == 13 && "$(sql "SELECT status FROM system_jobs WHERE dedup_key='ci-dead'")" == DEAD ]]; then break; fi
+  if [[ "$(sql "SELECT count(*) FROM system_jobs WHERE status='SUCCEEDED' AND (dedup_key LIKE 'ci-cleanup-%' OR dedup_key='ci-expired')")" == 13 && "$(sql "SELECT status FROM system_jobs WHERE dedup_key='ci-dead'")" == DEAD ]]; then break; fi
   sleep 1
 done
-[[ "$(sql "SELECT count(*) FROM system_jobs WHERE status='SUCCEEDED'")" == 13 ]]
+[[ "$(sql "SELECT count(*) FROM system_jobs WHERE status='SUCCEEDED' AND (dedup_key LIKE 'ci-cleanup-%' OR dedup_key='ci-expired')")" == 13 ]]
 [[ "$(sql "SELECT count(*) FROM system_jobs WHERE dedup_key LIKE 'ci-cleanup-%' AND attempts=1 AND payload='{}'::jsonb")" == 12 ]]
 [[ "$(sql "SELECT attempts FROM system_jobs WHERE dedup_key='ci-expired'")" == 2 ]]
 [[ "$(sql "SELECT attempts FROM system_jobs WHERE dedup_key='ci-future'")" == 0 ]]
@@ -308,7 +350,7 @@ start_app vietroute-auth-ci2 18081 vietroute_legacy_ci 300 '' legacy_custom
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 http://127.0.0.1:18081/health >/dev/null
 legacy_sql() { docker exec -e PGOPTIONS=-csearch_path=legacy_custom vietroute-db-ci psql -U vietroute_ci -d vietroute_legacy_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(legacy_sql 'SELECT count(*) FROM vietroute_schema_history')" == 3 ]]
+[[ "$(legacy_sql 'SELECT count(*) FROM vietroute_schema_history')" == 4 ]]
 [[ "$(legacy_sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','catalog_items','vietroute_schema_history')")" == 0 ]]
 [[ "$(legacy_sql "SELECT display_name FROM auth_users WHERE id=1 AND username='admin'")" == 'Legacy admin retained' ]]
 [[ "$(legacy_sql "SELECT code FROM catalog_items WHERE id=1")" == LEGACY ]]
@@ -333,7 +375,7 @@ start_app vietroute-auth-ci 18080 vietroute_schema_ci 300 '' select
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 http://127.0.0.1:18080/health >/dev/null
 custom_sql() { docker exec -e 'PGOPTIONS=-csearch_path="select"' vietroute-db-ci psql -U vietroute_ci -d vietroute_schema_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(custom_sql 'SELECT count(*) FROM vietroute_schema_history')" == 3 ]]
+[[ "$(custom_sql 'SELECT count(*) FROM vietroute_schema_history')" == 4 ]]
 [[ "$(custom_sql 'SELECT count(*) FROM catalog_items')" == 5 ]]
 [[ "$(custom_sql "SELECT count(*) FROM pg_namespace WHERE nspname='vietroute'")" == 0 ]]
 for migration in src/main/resources/db/migration/V00*.sql; do
@@ -371,7 +413,7 @@ start_app vietroute-auth-ci 18080 vietroute_schema_ci 300 '' renamed_app
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 "$base/health" >/dev/null
 renamed_sql() { docker exec -e PGOPTIONS=-csearch_path=renamed_app vietroute-db-ci psql -U vietroute_ci -d vietroute_schema_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(renamed_sql 'SELECT count(*) FROM vietroute_schema_history')" == 3 ]]
+[[ "$(renamed_sql 'SELECT count(*) FROM vietroute_schema_history')" == 4 ]]
 [[ "$(renamed_sql 'SELECT count(*) FROM catalog_items')" == 6 ]]
 renamed_sql "SELECT password_hash FROM auth_users WHERE username='admin'" > "$work/renamed-hash"
 cmp --silent "$work/custom-hash" "$work/renamed-hash"

@@ -34,10 +34,13 @@
         }
     };
     // CSRF lấy trước mỗi mutation; không đọc cookie auth hoặc ghi token vào storage.
-    const mutate = async (path, body) => {
+    const mutate = async (path, body, method = 'post') => {
         const csrf = (await api.get('/api/v1/auth/csrf')).data.data;
-        return api.post(path, body, { headers: { [csrf.headerName]: csrf.token } });
+        return api.request({ url: path, method, data: body, headers: { [csrf.headerName]: csrf.token } });
     };
+
+    // Các màn hình mở rộng dùng cùng HTTP client và cơ chế CSRF/lỗi, không sao chép luồng xác thực.
+    window.VietRoute = Object.freeze({ api, mutate, failure, feedback });
 
     const bindForm = (id, action) => {
         const form = document.getElementById(id);

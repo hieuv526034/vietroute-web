@@ -28,9 +28,21 @@ public class JobRepository extends BaseRepository {
     /** Dedup key duy nhất không cho HTTP retry tạo mail/job thứ hai; không ghi đè payload của job đã có. */
     public UUID enqueue(Connection connection, String type, String dedup, String payload, Long actor)
         throws SQLException {
+        return enqueueAt(connection, type, dedup, payload, actor, null);
+    }
+
+    /** Lịch một lần dùng thời điểm UTC; null nghĩa là chạy ngay theo đồng hồ PostgreSQL. */
+    public UUID enqueueAt(
+        Connection connection,
+        String type,
+        String dedup,
+        String payload,
+        Long actor,
+        Instant availableAt
+    ) throws SQLException {
         try (
             PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO system_jobs(id,type,dedup_key,payload,created_by) VALUES (?,?,?,?::jsonb,?) ON CONFLICT (dedup_key) DO NOTHING RETURNING id"
+                "INSERT INTO system_jobs(id,type,dedup_key,payload,created_by,available_at) VALUES (?,?,?,?::jsonb,?,COALESCE(?,CURRENT_TIMESTAMP)) ON CONFLICT (dedup_key) DO NOTHING RETURNING id"
             )
         ) {
             UUID id = UUID.randomUUID();
@@ -39,6 +51,7 @@ public class JobRepository extends BaseRepository {
             insert.setString(3, dedup);
             insert.setString(4, payload);
             insert.setObject(5, actor);
+            insert.setTimestamp(6, availableAt == null ? null : Timestamp.from(availableAt));
             try (ResultSet row = insert.executeQuery()) {
                 if (row.next()) {
                     return row.getObject(1, UUID.class);

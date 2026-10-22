@@ -42,6 +42,10 @@ services:
         value: "false"
       - key: VIETROUTE_MAIL_PROVIDER
         value: gmail
+      - key: VIETROUTE_MEDIA_ENABLED
+        value: "false"
+      - key: VIETROUTE_CLOUDINARY_FOLDER
+        value: vietroute
       - key: VIETROUTE_ENV
         value: production
       - key: VIETROUTE_DB_INIT_ENABLED

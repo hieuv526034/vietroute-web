@@ -27,6 +27,8 @@ import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.mail.GmailTransport;
 import vn.vietroute.common.mail.MailTransport;
 import vn.vietroute.common.mail.SmtpTransport;
+import vn.vietroute.common.media.CloudinaryMediaStorage;
+import vn.vietroute.common.media.MediaStorage;
 import vn.vietroute.common.traffic.MemoryRateLimitStore;
 import vn.vietroute.common.traffic.RateLimitStore;
 import vn.vietroute.common.traffic.RedisRateLimitStore;
@@ -45,6 +47,16 @@ import vn.vietroute.common.web.SupportedLocaleResolver;
 )
 @Import(SecurityConfig.class)
 public class RootConfig {
+
+    @Bean
+    public MediaSettings mediaSettings() {
+        return new MediaSettings(System::getenv);
+    }
+
+    @Bean
+    public MediaStorage mediaStorage(MediaSettings settings) {
+        return new CloudinaryMediaStorage(settings);
+    }
 
     @Bean
     public JobSettings jobSettings() {

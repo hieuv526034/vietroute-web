@@ -8,6 +8,7 @@ Website quản lý nhà xe, tuyến/chuyến, đặt chỗ và theo dõi hành t
 - Auth: JWT HS256, BCrypt, cookie HttpOnly/CSRF hoặc Bearer, login/me/đổi mật khẩu/logout, thu hồi token, khóa đăng nhập sai và kiểm tra role/active từ DB.
 - Migration có history/checksum/transaction lock, seed admin và danh mục lặp không trùng; không reset mật khẩu đã đổi.
 - Danh mục mẫu: tra cứu vi/en có phân trang; quyền READ/CREATE/UPDATE/DELETE riêng cho quản trị, version/audit và xóa mềm; các module nghiệp vụ dùng mẫu này để triển khai tiếp.
+- Ảnh công khai: thư viện Cloudinary, upload/xem/xóa có quyền và owner, chuẩn hóa JPEG/PNG, metadata/audit và worker dọn upload dang dở; bật sau khi cấu hình credentials.
 - Giao diện responsive: trang chủ, đăng nhập, tài khoản/đổi mật khẩu, quản trị danh mục và Swagger UI; Bootstrap/Axios/WebJars đóng gói trong WAR.
 - Docker có cache Maven/layer, GitHub CI kiểm tra container và auth trên PostgreSQL tạm, Render Blueprint chỉ tự deploy main sau CI thành công.
 
@@ -26,8 +27,11 @@ Website quản lý nhà xe, tuyến/chuyến, đặt chỗ và theo dõi hành t
 9. [Rà soát nền tảng và các điểm cần chốt trước nghiệp vụ](docs/RA_SOAT_BASE.md).
 10. [Chống spam, quyền chức năng, worker và Gmail/Workspace](docs/NEN_TANG_MO_RONG.md).
 11. [Cấu hình schema một nơi và ma trận quyền theo hành động](docs/SCHEMA_VA_PHAN_QUYEN.md).
+12. [Cloudinary và nút Run/Debug trong IntelliJ](docs/CLOUDINARY_VA_INTELLIJ.md).
 
 ## Chạy dự án
+
+**IntelliJ:** bật Maven profile `local`, Reload Maven, chọn **VietRoute Local** rồi Run/Debug. Có lớp `VietRouteApplication.main()` dùng Tomcat nhúng cho phát triển; production vẫn WAR. Hướng dẫn môi trường và phương án Tomcat Server nằm trong [Cloudinary và IntelliJ](docs/CLOUDINARY_VA_INTELLIJ.md).
 
 Cài JDK 17/21, đặt JAVA_HOME đúng thư mục JDK. Import pom.xml vào IDE. Java không tự đọc `.env`: đặt biến môi trường trong Tomcat/IDE hoặc dùng Docker `--env-file`.
 

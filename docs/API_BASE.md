@@ -113,3 +113,6 @@ Render sinh JWT secret cố định từ Blueprint, yêu cầu nhập bootstrap 
 - [Spring Security CSRF](https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html)
 - [Swagger core models/annotations](https://github.com/swagger-api/swagger-core)
 - [PostgreSQL explicit locking](https://www.postgresql.org/docs/current/explicit-locking.html)
+## Ảnh công khai và chạy local
+
+API ảnh ở `/api/v1/media` có upload multipart, đọc/phân trang và xóa qua worker; quyền MEDIA_READ/CREATE/DELETE cùng kiểm owner. Cấu hình, giới hạn file, luồng phục hồi và hướng dẫn Run/Debug IntelliJ nằm trong [Cloudinary và IntelliJ](CLOUDINARY_VA_INTELLIJ.md).

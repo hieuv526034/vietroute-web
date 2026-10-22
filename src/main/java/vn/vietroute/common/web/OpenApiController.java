@@ -31,6 +31,7 @@ import java.util.Map;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -118,7 +119,16 @@ public class OpenApiController {
                     );
                     // var giữ đúng kiểu reflection Parameter, tránh trùng tên với model Parameter của Swagger.
                     for (var parameter : method.getParameters()) {
-                        if (parameter.isAnnotationPresent(RequestBody.class)) {
+                        if (
+                            parameter.isAnnotationPresent(ModelAttribute.class) &&
+                            mapping
+                                .getConsumesCondition()
+                                .getConsumableMediaTypes()
+                                .stream()
+                                .anyMatch(media -> media.getType().equals("multipart"))
+                        ) {
+                            OpenApiModels.multipartBody(operation, schema(parameter.getParameterizedType(), api));
+                        } else if (parameter.isAnnotationPresent(RequestBody.class)) {
                             OpenApiModels.jsonBody(
                                 operation,
                                 parameter.getAnnotation(RequestBody.class).required(),

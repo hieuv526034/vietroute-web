@@ -22,6 +22,8 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import vn.vietroute.common.constant.ErrorCode;
@@ -96,6 +98,12 @@ public class ApiExceptionMapper {
 
     /** HTTP status phản ánh đúng loại lỗi; không dùng HTTP 200 cho phản hồi thất bại. */
     private ErrorCode classify(Exception error) {
+        if (error instanceof MaxUploadSizeExceededException) {
+            return ErrorCode.PAYLOAD_TOO_LARGE;
+        }
+        if (error instanceof MultipartException) {
+            return ErrorCode.INVALID_REQUEST;
+        }
         if (error instanceof NoHandlerFoundException || error instanceof NoResourceFoundException) {
             return ErrorCode.NOT_FOUND;
         }

@@ -9,8 +9,11 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.Locale;
 import java.util.concurrent.Semaphore;
+import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
+import vn.vietroute.common.config.MediaSettings;
 import vn.vietroute.common.config.TrafficSettings;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.web.ApiErrorWriter;
@@ -30,6 +33,8 @@ public final class TrafficGuardFilter extends OncePerRequestFilter {
 
     private final Semaphore logins;
 
+    private final Semaphore uploads = new Semaphore(1);
+
     public TrafficGuardFilter(TrafficSettings settings, RateLimitStore store, ApiErrorWriter errors) {
         this.settings = settings;
         this.store = store;
@@ -48,6 +53,11 @@ public final class TrafficGuardFilter extends OncePerRequestFilter {
             return;
         }
         boolean login = path.equals("/api/v1/auth/login");
+        boolean upload =
+            path.equals("/api/v1/media") &&
+            request.getMethod().equals("POST") &&
+            request.getContentType() != null &&
+            request.getContentType().toLowerCase(Locale.ROOT).startsWith(MediaType.MULTIPART_FORM_DATA_VALUE);
         try {
             String ip = hash(addresses.resolve(request));
             RateLimitStore.Decision decision = store.consume("all:" + ip, settings.getRequestsPerMinute(), 60);
@@ -71,13 +81,20 @@ public final class TrafficGuardFilter extends OncePerRequestFilter {
             return;
         }
         boolean loginSlot = !login || logins.tryAcquire();
+        boolean uploadSlot = !upload || uploads.tryAcquire();
         try {
-            if (!loginSlot) {
+            if (!loginSlot || !uploadSlot) {
                 response.setHeader("Retry-After", "1");
                 errors.write(request, response, ErrorCode.SERVICE_BUSY);
                 return;
             }
-            if (path.startsWith("/api/") && !request.getMethod().matches("GET|HEAD|OPTIONS")) {
+            // Multipart không được đọc trước/getInputStream rồi bọc lại: Tomcat cần stream gốc để parse part.
+            // Giới hạn chunked do MultipartConfigElement chốt; chỉ một upload được giải nén mỗi instance.
+            if (upload && request.getContentLengthLong() > MediaSettings.MAX_REQUEST_BYTES) {
+                errors.write(request, response, ErrorCode.PAYLOAD_TOO_LARGE);
+                return;
+            }
+            if (!upload && path.startsWith("/api/") && !request.getMethod().matches("GET|HEAD|OPTIONS")) {
                 if (request.getContentLengthLong() > settings.getMaxBodyBytes()) {
                     errors.write(request, response, ErrorCode.PAYLOAD_TOO_LARGE);
                     return;
@@ -91,6 +108,9 @@ public final class TrafficGuardFilter extends OncePerRequestFilter {
             }
             chain.doFilter(request, response);
         } finally {
+            if (upload && uploadSlot) {
+                uploads.release();
+            }
             if (login && loginSlot) {
                 logins.release();
             }

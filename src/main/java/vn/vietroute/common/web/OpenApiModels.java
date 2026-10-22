@@ -32,6 +32,15 @@ final class OpenApiModels {
         operation.requestBody(new RequestBody().required(required).content(json(schema, null)));
     }
 
+    /** Swagger hiển thị bộ chọn file thay vì ép file nhị phân thành JSON/query string. */
+    static void multipartBody(Operation operation, Schema<?> schema) {
+        operation.requestBody(
+            new RequestBody()
+                .required(true)
+                .content(new Content().addMediaType("multipart/form-data", new MediaType().schema(schema)))
+        );
+    }
+
     /** Cùng cấu trúc cho response thành công/lỗi; ví dụ lỗi được gắn riêng, không sửa schema dùng chung. */
     static void response(Operation operation, String status, String description, Schema<?> schema, Object example) {
         operation

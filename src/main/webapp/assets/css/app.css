@@ -910,3 +910,26 @@ form .button {
         scroll-behavior: auto !important;
     }
 }
+:root {
+    --media-placeholder: #f0f4f3;
+}
+
+.media-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.25rem;
+}
+
+.media-card img {
+    width: 100%;
+    height: 180px;
+    object-fit: contain;
+    background: var(--media-placeholder);
+    border-radius: 12px;
+    margin-bottom: 1rem;
+}
+
+.media-card .button {
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+}

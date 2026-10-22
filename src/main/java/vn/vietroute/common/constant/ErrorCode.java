@@ -30,7 +30,10 @@ public enum ErrorCode {
     SERVICE_BUSY("COM013", "error.busy", HttpStatus.SERVICE_UNAVAILABLE),
     PAYLOAD_TOO_LARGE("COM014", "error.payload", HttpStatus.PAYLOAD_TOO_LARGE),
     MAIL_DISABLED("MAIL001", "mail.disabled", HttpStatus.SERVICE_UNAVAILABLE),
-    JOB_NOT_RETRYABLE("JOB001", "job.notRetryable", HttpStatus.CONFLICT);
+    JOB_NOT_RETRYABLE("JOB001", "job.notRetryable", HttpStatus.CONFLICT),
+    MEDIA_DISABLED("MEDIA001", "media.disabled", HttpStatus.SERVICE_UNAVAILABLE),
+    MEDIA_INVALID("MEDIA002", "media.invalid", HttpStatus.BAD_REQUEST),
+    MEDIA_UNAVAILABLE("MEDIA003", "media.unavailable", HttpStatus.SERVICE_UNAVAILABLE);
 
     private final String code;
 

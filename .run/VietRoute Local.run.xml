@@ -1,0 +1,58 @@
+<component name="ProjectRunConfigurationManager">
+    <configuration
+        default="false"
+        name="VietRoute Local"
+        type="Application"
+        factoryName="Application"
+    >
+        <option
+            name="MAIN_CLASS_NAME"
+            value="vn.vietroute.dev.VietRouteApplication"
+        />
+        <module name="vietroute-web" />
+        <option
+            name="INCLUDE_PROVIDED_SCOPE"
+            value="true"
+        />
+        <option
+            name="WORKING_DIRECTORY"
+            value="$PROJECT_DIR$"
+        />
+        <option
+            name="VM_PARAMETERS"
+            value="-Xms64m -Xmx512m -Dfile.encoding=UTF-8 -Djava.awt.headless=true"
+        />
+        <envs>
+            <env
+                name="VIETROUTE_ENV"
+                value="development"
+            />
+            <env
+                name="VIETROUTE_COOKIE_SECURE"
+                value="false"
+            />
+            <env
+                name="VIETROUTE_DB_INIT_ENABLED"
+                value="false"
+            />
+            <env
+                name="VIETROUTE_WORKER_ENABLED"
+                value="false"
+            />
+            <env
+                name="VIETROUTE_MAIL_ENABLED"
+                value="false"
+            />
+            <env
+                name="VIETROUTE_MEDIA_ENABLED"
+                value="false"
+            />
+        </envs>
+        <method v="2">
+            <option
+                name="Make"
+                enabled="true"
+            />
+        </method>
+    </configuration>
+</component>

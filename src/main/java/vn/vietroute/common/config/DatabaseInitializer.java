@@ -20,6 +20,7 @@ import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.business.catalog.entity.CatalogItem;
+import vn.vietroute.business.media.entity.MediaAsset;
 import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.jdbc.JdbcSchemaValidator;
 import vn.vietroute.common.jdbc.JdbcTransactions;
@@ -61,10 +62,12 @@ public class DatabaseInitializer implements InitializingBean {
         migrate(connection, "V001__auth_and_catalog.sql");
         migrate(connection, "V002__vietroute_schema_and_indexes.sql");
         migrate(connection, "V003__permissions_and_jobs.sql");
+        migrate(connection, "V004__media_assets.sql");
         JdbcSchemaValidator.verify(
             connection,
             UserAccount.class,
             CatalogItem.class,
+            MediaAsset.class,
             Job.class,
             Role.class,
             Permission.class

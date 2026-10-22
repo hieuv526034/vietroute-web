@@ -24,7 +24,7 @@ V003 tạo `auth_permissions`, `auth_role_permissions`, audit/version quyền tr
 
 Database production vẫn là neondb. **Schema cấu hình bằng VIETROUTE_DB_SCHEMA**, mặc định vietroute từ db.schema trong database.properties. Mỗi connection mượn pool đặt lại search_path; query runtime chỉ ghi tên bảng, entity không ghi schema. Bật initializer để bootstrap schema cấu hình. Giữ byte V001–V003, LegacyMigrationSql render hai migration lịch sử ở RAM trước thực thi với checksum nguồn. Đọc [schema và quyền theo hành động](../docs/SCHEMA_VA_PHAN_QUYEN.md) để đổi schema mới hoặc rename schema đang có dữ liệu; startup chặn history khác nơi để tránh seed nhầm.
 
-- DB mới: tạo schema cấu hình và bảng vietroute_schema_history, chạy V001–V003 theo path/render tương thích, kiểm chứng metadata rồi seed.
+- DB mới: tạo schema cấu hình và bảng vietroute_schema_history, chạy V001–V004 theo path/render tương thích, kiểm chứng metadata rồi seed. V004 thêm metadata ảnh công khai `media_assets`, không lưu file nhị phân trong DB.
 - DB cũ V001 ở public: chuyển history sang schema cấu hình giữ checksum, bỏ qua V001; V002 chuyển bốn bảng ứng dụng theo OID, giữ ID/FK/sequence/index/dữ liệu, V003 bổ sung quyền/job. Không reset admin/hash.
 - Nếu có hai history, bảng cùng tên ở cả hai schema, checksum sai hoặc bảng legacy thiếu history, startup dừng và rollback. Cần đối chiếu dữ liệu trước khi xử lý; runner không tự xóa hay gộp bảng.
 - V001 giữ nguyên nội dung đã áp dụng. Thay đổi tiếp theo phải có migration version mới; không chạy DDL từ Maven build.
@@ -40,5 +40,6 @@ Index hiện tại:
 | `vietroute.auth_user_roles` | PK `(user_id, role_code)` | `role_code`; prefix PK phục vụ tra theo user |
 | `vietroute.catalog_items` | PK `id`; UNIQUE `(type, code)` | `(type, active, sort_order, id)`, `created_by`, `updated_by` |
 | `vietroute.vietroute_schema_history` | PK `version` | PK đủ cho kiểm checksum theo version |
+| `media_assets` trong schema cấu hình | PK `id`; UNIQUE `public_id` | `(created_by, created_at, id)`, `(status, created_at, id)`, `updated_by` |
 
 CI kiểm tra DB mới, khởi động đồng thời/restart và DB legacy tạo từ đúng V001 trên PostgreSQL tạm; không truy cập Neon production. Tham khảo [PostgreSQL ALTER TABLE SET SCHEMA](https://www.postgresql.org/docs/17/sql-altertable.html) về việc giữ index/constraint/sequence sở hữu bởi bảng khi chuyển schema.
