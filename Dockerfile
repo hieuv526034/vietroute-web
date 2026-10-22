@@ -19,6 +19,7 @@ ENV PORT=10000 \
 RUN groupadd --gid 10001 vietroute \
     && useradd --uid 10001 --gid vietroute --no-create-home --shell /usr/sbin/nologin vietroute \
     && rm -rf /usr/local/tomcat/webapps.dist \
+    && cp /usr/local/tomcat/conf/server.xml /usr/local/tomcat/conf/server.xml.template \
     && chown -R vietroute:vietroute /usr/local/tomcat
 COPY --from=build --chown=vietroute:vietroute /workspace/target/vietroute.war /usr/local/tomcat/webapps/ROOT.war
 COPY --chown=vietroute:vietroute docker/entrypoint.sh /usr/local/bin/vietroute-entrypoint.sh

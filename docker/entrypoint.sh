@@ -9,6 +9,8 @@ if [ "${PORT:-10000}" -lt 1 ] || [ "${PORT:-10000}" -gt 65535 ]; then
     echo 'PORT must be between 1 and 65535' >&2
     exit 1
 fi
+# Mỗi lần start/restart dựng lại từ template gốc để không chèn lặp thuộc tính vào file đã sửa.
+cp "$CATALINA_HOME/conf/server.xml.template" "$CATALINA_HOME/conf/server.xml"
 sed -i "s/port=\"8080\"/port=\"${PORT:-10000}\"/" "$CATALINA_HOME/conf/server.xml"
 # Giới hạn thread/backlog/header/body ở connector trước khi request vào Java; không dùng default 200 threads cho RAM 512 MB.
 # JSON còn được giới hạn stream thật trong TrafficGuardFilter (maxPostSize Tomcat không giới hạn JSON).
