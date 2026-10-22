@@ -3,12 +3,10 @@ package vn.vietroute.common.job;
 import java.time.Instant;
 import java.util.UUID;
 import vn.vietroute.common.jdbc.JdbcIndex;
-import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.jdbc.JdbcTable;
 
 /** Bản ghi hạ tầng nội bộ, payload không được xuất qua API quản trị/log. UUID riêng với ID nghiệp vụ Long. */
 @JdbcTable(
-    schema = JdbcSchema.NAME,
     name = "system_jobs",
     primaryKey = { "id" },
     indexes = {

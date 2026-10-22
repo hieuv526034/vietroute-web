@@ -76,7 +76,7 @@ Phiên bản Prettier cùng plugin Java/XML được khóa trong `package-lock.j
 
 Entity kế thừa BaseEntity; response có audit kế thừa BaseResponse. BaseRequest không cho client ghi các trường audit. ID dùng Long; `createdAt`, `updatedAt`, `createdBy`, `updatedBy`, `version` do server quản lý. `version` dùng optimistic locking khi sửa dữ liệu; user ID hệ thống có thể null trong lúc bootstrap.
 
-Schema cố định `vietroute`. Entity JDBC khai báo `@JdbcTable` với schema/name/primaryKey và `@JdbcIndex` cho tên, thứ tự cột, unique của index. DDL tạo qua migration SQL, không dùng JPA/ORM hay tự sinh bảng từ annotation. Runner kiểm chứng metadata sau migration trước seed; class mới được thêm vào danh sách kiểm chứng. Không sửa V001 đã có checksum, nâng cấp schema `public` qua V002 và giữ dữ liệu.
+Schema lấy từ `VIETROUTE_DB_SCHEMA`, fallback `db.schema` trong database.properties, mặc định vietroute. Query runtime chỉ ghi tên bảng; Factory đặt lại search_path khi mượn pool, không public/$user fallback. Entity khai báo `@JdbcTable(name,primaryKey,indexes)`; validator dùng schema connection, không có tên schema trong annotation. DDL qua migration, không sinh bằng ORM. Không sửa V001–V003; adapter chỉ render V002/V003 lịch sử trong RAM và giữ checksum nguồn. Đọc [schema và quyền theo hành động](SCHEMA_VA_PHAN_QUYEN.md) trước khi đổi môi trường hoặc thêm CRUD/quyền.
 
 PageRequest dùng page từ 0, size 1–100; repository chỉ nhận sort đã qua whitelist, không nối tên cột do client gửi vào SQL. PageResponse có tổng bản ghi/số trang và cờ trang trước/sau. API collection không tự trả entity.
 

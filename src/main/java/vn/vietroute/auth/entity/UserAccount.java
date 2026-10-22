@@ -9,7 +9,6 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietroute.common.base.BaseEntity;
 import vn.vietroute.common.jdbc.JdbcIndex;
-import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.jdbc.JdbcTable;
 
 /** Tài khoản nội bộ; hash, lần đăng nhập sai và tokenVersion không được map ra API. */
@@ -18,7 +17,6 @@ import vn.vietroute.common.jdbc.JdbcTable;
 @SuperBuilder
 @NoArgsConstructor
 @JdbcTable(
-    schema = JdbcSchema.NAME,
     name = "auth_users",
     primaryKey = { "id" },
     indexes = {

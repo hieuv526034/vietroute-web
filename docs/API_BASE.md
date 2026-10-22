@@ -11,13 +11,16 @@
 | POST | `/api/v1/auth/change-password` | Đăng nhập | Nhận currentPassword/newPassword; thu hồi token cũ, phát token mới |
 | POST | `/api/v1/auth/logout` | Cookie/Bearer; anonymous vẫn được xóa cookie | Thu hồi mọi token của tài khoản nếu còn xác thực hợp lệ |
 | GET | `/api/v1/catalogs/{type}` | Công khai | Danh mục đang hoạt động theo locale; page/size |
-| POST | `/api/v1/admin/catalogs` | CATALOG_WRITE | Tạo mục danh mục, HTTP 201; code null sẽ tự sinh |
+| POST | `/api/v1/admin/catalogs` | CATALOG_CREATE hoặc CATALOG_WRITE cũ | Tạo mục danh mục, HTTP 201; code null tự sinh |
+| GET | `/api/v1/admin/catalogs/{id}` | CATALOG_READ | Đọc cả bản đã xóa mềm |
+| PUT | `/api/v1/admin/catalogs/{id}` | CATALOG_UPDATE hoặc CATALOG_WRITE cũ | Sửa tên/thứ tự, bắt buộc version |
+| DELETE | `/api/v1/admin/catalogs/{id}` | CATALOG_DELETE | Xóa mềm, body chứa version; giữ audit |
 | GET | `/v3/api-docs` | Công khai | OpenAPI JSON tạo từ Spring mapping và Swagger annotations |
 | GET | `/docs` | Công khai | Swagger UI được đóng gói cùng WAR |
 
 View Thymeleaf: `/`, `/login`, `/account` (đăng nhập), `/admin` (ADMIN). Trên Tomcat deploy WAR theo tên, thêm context `/vietroute`; Docker deploy `ROOT.war` nên dùng đường dẫn ở bảng trực tiếp.
 
-API mở rộng: quản lý `/api/v1/admin/access/**`, theo dõi/retry `/api/v1/admin/jobs/**`, readiness `/api/v1/admin/system/status`, mail queue `/api/v1/admin/mail` (202, cần Idempotency-Key). Mỗi API có authority tương ứng tại service; `/auth/me` trả thêm permissions. Catalog create dùng CATALOG_WRITE thay vì kiểm cứng role ADMIN. COM012/429 là quota (khác AUTH005 khóa tài khoản), COM013/503 là quá tải/Redis lỗi, COM014/413 là body lớn; MAIL001/503 là mail tắt. Đọc [hợp đồng và luồng đầy đủ](NEN_TANG_MO_RONG.md).
+API mở rộng: quản lý `/api/v1/admin/access/**`, theo dõi/retry `/api/v1/admin/jobs/**`, readiness `/api/v1/admin/system/status`, mail queue `/api/v1/admin/mail` (202, cần Idempotency-Key). Mỗi API có authority tương ứng tại service; `/auth/me` trả permissions. Catalog CRUD dùng quyền hành động trong bảng trên. COM012/429 là quota (khác AUTH005 khóa tài khoản), COM013/503 là quá tải/Redis lỗi, COM014/413 là body lớn; MAIL001/503 là mail tắt. Đọc [hợp đồng và luồng đầy đủ](NEN_TANG_MO_RONG.md).
 
 ## Locale và envelope
 
@@ -98,7 +101,7 @@ API nghiệp vụ/auth kế thừa `common/base/BaseController` và dùng `execu
 
 `VIETROUTE_DB_INIT_ENABLED=true` bật migration trong `src/main/resources/db/migration`. Startup lấy PostgreSQL advisory transaction lock, kiểm tra checksum/history, thực thi DDL và seed trong cùng transaction. Chạy lại hoặc có hai instance cùng khởi động không tạo trùng admin/danh mục. Mật khẩu admin cũ không bị reset sau khi đổi. Chưa có seeding nghiệp vụ chuyến/đơn giả.
 
-Schema ứng dụng là `vietroute` trong database `neondb`; history nằm ở `vietroute.vietroute_schema_history`. V002 chuyển bảng đã chạy V001 ở `public` sang `vietroute`, giữ dữ liệu và checksum; DB mới tạo thẳng vào `vietroute`. Entity khai báo `@JdbcTable`/`@JdbcIndex`; initializer kiểm chứng PK/index sau migration, trước seed. Chi tiết nâng cấp và điều kiện môi trường trong `database/README.md`.
+Schema lấy từ VIETROUTE_DB_SCHEMA (mặc định vietroute), history là bảng vietroute_schema_history trong schema đó. Query/entity không cố định schema; raw checksum V001–V003 giữ nguyên. Registry quyền trả thêm resource/actions; ACCESS_ASSIGN là quyền gán mới, WRITE cũ chỉ tương thích trong phạm vi đã mô tả. Chi tiết [SCHEMA_VA_PHAN_QUYEN.md](SCHEMA_VA_PHAN_QUYEN.md).
 
 Render sinh JWT secret cố định từ Blueprint, yêu cầu nhập bootstrap password qua Environment. Local `.env` của chủ dự án đã chứa admin/password được yêu cầu; nó không được commit. Việc bật initializer là thao tác runtime có thay đổi schema/dữ liệu seed, không nằm trong Maven build. Nếu schema đã có migration cùng version nhưng checksum khác, startup dừng; tạo migration mới thay vì sửa file cũ.
 

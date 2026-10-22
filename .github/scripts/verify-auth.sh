@@ -25,7 +25,8 @@ start_app() {
     -e VIETROUTE_WORKER_ENABLED=true -e VIETROUTE_WORKER_POLL_SECONDS=1 \
     -e VIETROUTE_RATE_REQUESTS="${4:-300}" -e VIETROUTE_RATE_LOGINS=200 \
     -e VIETROUTE_REDIS_URL="${5:-}" \
-    -e VIETROUTE_DB_URL="jdbc:postgresql://vietroute-db-ci:5432/$database" \
+    -e VIETROUTE_DB_SCHEMA="${6:-vietroute}" \
+    -e VIETROUTE_DB_URL="jdbc:postgresql://vietroute-db-ci:5432/$database?currentSchema=public" \
     -e VIETROUTE_DB_USER=vietroute_ci -e VIETROUTE_DB_PASSWORD="$db_password" \
     -e VIETROUTE_JWT_SECRET="$jwt_secret" -e VIETROUTE_BOOTSTRAP_ADMIN_USERNAME=admin \
     -e VIETROUTE_BOOTSTRAP_ADMIN_PASSWORD="$admin_password" vietroute-web:ci >/dev/null
@@ -191,7 +192,7 @@ admin_token=$(field data.accessToken)
 token="$admin_token"
 call 200 GET /api/v1/admin/access/permissions '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert any(p["code"]=="CATALOG_WRITE" for p in d["data"])' "$result"
-printf '%s\n' '{"permissions":["CATALOG_WRITE"],"version":0}' > "$work/permissions.json"
+printf '%s\n' '{"permissions":["CATALOG_CREATE"],"version":0}' > "$work/permissions.json"
 call 200 PUT /api/v1/admin/access/roles/CUSTOMER/permissions "$work/permissions.json" bearer
 [[ "$(field data.version)" == 1 ]]
 call 409 PUT /api/v1/admin/access/roles/CUSTOMER/permissions "$work/permissions.json" bearer
@@ -200,9 +201,37 @@ call 403 PUT /api/v1/admin/access/roles/ADMIN/permissions "$work/permissions.jso
 token="$customer_token"
 sed 's/CITEST/PERMALLOW/' "$work/catalog.json" > "$work/permission-catalog.json"
 call 201 POST /api/v1/admin/catalogs "$work/permission-catalog.json" bearer
+catalog_id=$(field data.id)
+printf '%s\n' '{"nameVi":"Tên đã sửa","nameEn":"Updated name","sortOrder":12,"version":0}' > "$work/update-catalog.json"
+printf '%s\n' '{"version":0}' > "$work/delete-catalog.json"
+call 403 GET "/api/v1/admin/catalogs/$catalog_id" '' bearer
+call 403 PUT "/api/v1/admin/catalogs/$catalog_id" "$work/update-catalog.json" bearer
+call 403 DELETE "/api/v1/admin/catalogs/$catalog_id" "$work/delete-catalog.json" bearer
 call 403 GET /api/v1/admin/jobs '' bearer
 token="$admin_token"
-printf '%s\n' '{"permissions":[],"version":1}' > "$work/revoke.json"
+printf '%s\n' '{"permissions":["CATALOG_WRITE"],"version":1}' > "$work/legacy-write.json"
+call 200 PUT /api/v1/admin/access/roles/CUSTOMER/permissions "$work/legacy-write.json" bearer
+token="$customer_token"
+call 200 PUT "/api/v1/admin/catalogs/$catalog_id" "$work/update-catalog.json" bearer
+[[ "$(field data.version)" == 1 ]]
+[[ "$(field data.updatedBy)" != 1 ]]
+call 409 PUT "/api/v1/admin/catalogs/$catalog_id" "$work/update-catalog.json" bearer
+assert_code COM008
+call 403 DELETE "/api/v1/admin/catalogs/$catalog_id" "$work/delete-catalog.json" bearer
+token="$admin_token"
+printf '%s\n' '{"permissions":["CATALOG_READ","CATALOG_UPDATE","CATALOG_DELETE"],"version":2}' > "$work/crud.json"
+call 200 PUT /api/v1/admin/access/roles/CUSTOMER/permissions "$work/crud.json" bearer
+token="$customer_token"
+call 200 GET "/api/v1/admin/catalogs/$catalog_id" '' bearer
+printf '%s\n' '{"version":1}' > "$work/delete-catalog.json"
+call 200 DELETE "/api/v1/admin/catalogs/$catalog_id" "$work/delete-catalog.json" bearer
+[[ "$(field data.active)" == False ]]
+[[ "$(field data.version)" == 2 ]]
+call 409 DELETE "/api/v1/admin/catalogs/$catalog_id" "$work/delete-catalog.json" bearer
+call 200 GET '/api/v1/catalogs/VEHICLE_TYPE' '' none
+python3 -c 'import json,sys; assert not any(row["code"]=="PERMALLOW" for row in json.load(open(sys.argv[1]))["data"]["content"])' "$result"
+token="$admin_token"
+printf '%s\n' '{"permissions":[],"version":3}' > "$work/revoke.json"
 call 200 PUT /api/v1/admin/access/roles/CUSTOMER/permissions "$work/revoke.json" bearer
 token="$customer_token"
 call 403 POST /api/v1/admin/catalogs "$work/permission-catalog.json" bearer
@@ -275,10 +304,10 @@ INSERT INTO public.auth_users(username,password_hash,display_name,must_change_pa
 INSERT INTO public.auth_user_roles(user_id,role_code) SELECT id,'ADMIN' FROM public.auth_users WHERE username='admin';
 INSERT INTO public.catalog_items(type,code,name_vi,name_en) VALUES ('VEHICLE_TYPE','LEGACY','Danh mục cũ','Legacy catalog');
 SQL
-start_app vietroute-auth-ci2 18081 vietroute_legacy_ci
+start_app vietroute-auth-ci2 18081 vietroute_legacy_ci 300 '' legacy_custom
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 http://127.0.0.1:18081/health >/dev/null
-legacy_sql() { docker exec -e PGOPTIONS=-csearch_path=vietroute vietroute-db-ci psql -U vietroute_ci -d vietroute_legacy_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
+legacy_sql() { docker exec -e PGOPTIONS=-csearch_path=legacy_custom vietroute-db-ci psql -U vietroute_ci -d vietroute_legacy_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
 [[ "$(legacy_sql 'SELECT count(*) FROM vietroute_schema_history')" == 3 ]]
 [[ "$(legacy_sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','catalog_items','vietroute_schema_history')")" == 0 ]]
 [[ "$(legacy_sql "SELECT display_name FROM auth_users WHERE id=1 AND username='admin'")" == 'Legacy admin retained' ]]
@@ -295,6 +324,63 @@ token=$(field data.accessToken)
 call 201 POST /api/v1/admin/catalogs "$work/catalog.json" bearer
 [[ "$(field data.id)" -gt 6 ]]
 printf 'PostgreSQL bootstrap, JWT, CSRF, roles, catalogs, password change, revocation and account lock checks passed.\n'
+
+printf 'Schema stage: custom schema, wrong-schema guard and offline rename preserve data/checksums\n'
+docker rm --force vietroute-auth-ci vietroute-auth-ci2 >/dev/null
+docker exec vietroute-db-ci psql -U vietroute_ci -d postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE vietroute_schema_ci' >/dev/null
+# Tên trùng keyword vẫn chạy được: identifier schema luôn được quote sau whitelist.
+start_app vietroute-auth-ci 18080 vietroute_schema_ci 300 '' select
+curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
+  --retry-connrefused --max-time 5 http://127.0.0.1:18080/health >/dev/null
+custom_sql() { docker exec -e 'PGOPTIONS=-csearch_path="select"' vietroute-db-ci psql -U vietroute_ci -d vietroute_schema_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
+[[ "$(custom_sql 'SELECT count(*) FROM vietroute_schema_history')" == 3 ]]
+[[ "$(custom_sql 'SELECT count(*) FROM catalog_items')" == 5 ]]
+[[ "$(custom_sql "SELECT count(*) FROM pg_namespace WHERE nspname='vietroute'")" == 0 ]]
+for migration in src/main/resources/db/migration/V00*.sql; do
+  version=$(basename "$migration")
+  checksum=$(sha256sum "$migration" | cut -d ' ' -f 1)
+  [[ "$(custom_sql "SELECT checksum FROM vietroute_schema_history WHERE version='$version'")" == "$checksum" ]]
+done
+custom_sql "SELECT password_hash FROM auth_users WHERE username='admin'" > "$work/custom-hash"
+# URL cố tình currentSchema=public; bảng public cùng tên không được che schema cấu hình.
+custom_sql 'CREATE TABLE public.catalog_items(id BIGINT)' >/dev/null
+base=http://127.0.0.1:18080
+rm -f "$work/cookies"
+refresh_csrf
+login_body admin "$admin_password"
+call 200 POST /api/v1/auth/login "$work/login.json" cookie
+token=$(field data.accessToken)
+call 200 GET /api/v1/catalogs/VEHICLE_TYPE
+[[ "$(field data.totalElements)" == 3 ]]
+call 201 POST /api/v1/admin/catalogs "$work/catalog.json" bearer
+custom_catalog_id=$(field data.id)
+call 200 GET "/api/v1/admin/catalogs/$custom_catalog_id" '' bearer
+call 200 GET /api/v1/admin/system/status '' bearer
+start_app vietroute-auth-ci2 18081 vietroute_schema_ci 300 '' wrong_schema
+for attempt in {1..30}; do
+  docker logs vietroute-auth-ci2 > "$work/schema-guard.log" 2>&1
+  if grep -q 'Application history is in another schema' "$work/schema-guard.log"; then break; fi
+  sleep 1
+done
+grep -q 'Application history is in another schema' "$work/schema-guard.log"
+[[ "$(custom_sql "SELECT count(*) FROM pg_namespace WHERE nspname='wrong_schema'")" == 0 ]]
+docker rm --force vietroute-auth-ci vietroute-auth-ci2 >/dev/null
+# Rename chỉ chạy trong DB CI khi mọi instance đã dừng, không tự đổi schema của app đang phục vụ.
+custom_sql 'ALTER SCHEMA "select" RENAME TO renamed_app' >/dev/null
+start_app vietroute-auth-ci 18080 vietroute_schema_ci 300 '' renamed_app
+curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
+  --retry-connrefused --max-time 5 "$base/health" >/dev/null
+renamed_sql() { docker exec -e PGOPTIONS=-csearch_path=renamed_app vietroute-db-ci psql -U vietroute_ci -d vietroute_schema_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
+[[ "$(renamed_sql 'SELECT count(*) FROM vietroute_schema_history')" == 3 ]]
+[[ "$(renamed_sql 'SELECT count(*) FROM catalog_items')" == 6 ]]
+renamed_sql "SELECT password_hash FROM auth_users WHERE username='admin'" > "$work/renamed-hash"
+cmp --silent "$work/custom-hash" "$work/renamed-hash"
+rm -f "$work/cookies"
+refresh_csrf
+call 200 POST /api/v1/auth/login "$work/login.json" cookie
+token=$(field data.accessToken)
+call 200 GET "/api/v1/admin/catalogs/$custom_catalog_id" '' bearer
+[[ "$(field data.code)" == CITEST ]]
 
 printf 'Traffic stage: quota shared across two instances and fail-closed Redis outage\n'
 docker rm --force vietroute-auth-ci vietroute-auth-ci2 >/dev/null

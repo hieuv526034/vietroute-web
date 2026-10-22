@@ -23,6 +23,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import vn.vietroute.auth.config.SecurityConfig;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
+import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.mail.GmailTransport;
 import vn.vietroute.common.mail.MailTransport;
 import vn.vietroute.common.mail.SmtpTransport;
@@ -124,8 +125,13 @@ public class RootConfig {
     }
 
     @Bean
-    public JdbcConnectionFactory jdbcConnectionFactory(DataSource source) {
-        return new JdbcConnectionFactory(source);
+    public JdbcSchema jdbcSchema(DatabaseSettings settings) {
+        return new JdbcSchema(settings.getSchema());
+    }
+
+    @Bean
+    public JdbcConnectionFactory jdbcConnectionFactory(DataSource source, JdbcSchema schema) {
+        return new JdbcConnectionFactory(source, schema);
     }
 
     /** Cùng một Clock UTC cho audit, JWT và nghiệp vụ để dễ kiểm thử thời gian. */

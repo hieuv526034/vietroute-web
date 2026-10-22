@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.util.Properties;
 import java.util.function.Function;
 import lombok.Getter;
+import vn.vietroute.common.jdbc.JdbcSchema;
 
 /** Cấu hình JDBC/pool có giới hạn; không tạo toString để tránh ghi credentials ra log. */
 @Getter
@@ -15,6 +16,8 @@ public final class DatabaseSettings {
     private final String username;
 
     private final String password;
+
+    private final String schema;
 
     private final int maximumPoolSize;
 
@@ -29,6 +32,9 @@ public final class DatabaseSettings {
         url = setting(source, "VIETROUTE_DB_URL", defaults.getProperty("db.url", ""));
         username = setting(source, "VIETROUTE_DB_USER", defaults.getProperty("db.username", ""));
         password = setting(source, "VIETROUTE_DB_PASSWORD", "");
+        schema = setting(source, "VIETROUTE_DB_SCHEMA", defaults.getProperty("db.schema", ""));
+        // Schema là identifier do người vận hành cấu hình, không lấy từ HTTP hoặc ghép tùy ý vào SQL.
+        JdbcSchema.validate(schema);
         if (!url.startsWith("jdbc:postgresql://") || username.isBlank()) {
             throw new IllegalStateException("VIETROUTE_DB_URL/VIETROUTE_DB_USER are invalid");
         }

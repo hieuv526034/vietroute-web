@@ -4,18 +4,23 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.catalog.dto.request.CatalogCreateRequest;
+import vn.vietroute.business.catalog.dto.request.CatalogDeleteRequest;
+import vn.vietroute.business.catalog.dto.request.CatalogUpdateRequest;
 import vn.vietroute.business.catalog.dto.response.CatalogResponse;
 import vn.vietroute.business.catalog.service.CatalogService;
 import vn.vietroute.common.base.BaseController;
@@ -56,7 +61,7 @@ public class CatalogController extends BaseController {
     @PostMapping("/api/v1/admin/catalogs")
     @Operation(
         summary = "Tạo mục danh mục",
-        description = "Yêu cầu CATALOG_WRITE. Server tự sinh mã nếu null; tên vi/en bắt buộc; code trùng trả HTTP 409; audit lấy từ principal."
+        description = "Yêu cầu CATALOG_CREATE (hoặc CATALOG_WRITE tương thích). Server tự sinh mã nếu null; tên vi/en bắt buộc; code trùng trả 409; audit lấy từ principal."
     )
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<ApiResponse<CatalogResponse>> create(
@@ -68,5 +73,45 @@ public class CatalogController extends BaseController {
         return execute(HttpStatus.CREATED, SuccessCode.CREATED, request, () ->
             catalogs.create(body, actor, locale(request))
         );
+    }
+
+    @GetMapping("/api/v1/admin/catalogs/{id}")
+    @Operation(
+        summary = "Đọc danh mục quản trị",
+        description = "Yêu cầu CATALOG_READ; xem cả bản đã xóa mềm, không thay đổi API tra cứu công khai"
+    )
+    public ResponseEntity<ApiResponse<CatalogResponse>> find(
+        @PathVariable @Min(value = 1, message = "{validation.invalid}") long id,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () -> catalogs.find(id, locale(request)));
+    }
+
+    @PutMapping("/api/v1/admin/catalogs/{id}")
+    @Operation(
+        summary = "Sửa danh mục",
+        description = "Yêu cầu CATALOG_UPDATE (hoặc CATALOG_WRITE tương thích); version cũ trả COM008/409"
+    )
+    public ResponseEntity<ApiResponse<CatalogResponse>> update(
+        @PathVariable @Min(value = 1, message = "{validation.invalid}") long id,
+        @Valid @RequestBody CatalogUpdateRequest body,
+        @AuthenticationPrincipal UserPrincipal actor,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () -> catalogs.update(id, body, actor, locale(request)));
+    }
+
+    @DeleteMapping("/api/v1/admin/catalogs/{id}")
+    @Operation(
+        summary = "Xóa mềm danh mục",
+        description = "Yêu cầu CATALOG_DELETE, body chứa version; WRITE không có quyền xóa. Bản đã xóa biến mất khỏi tra cứu công khai, audit vẫn giữ."
+    )
+    public ResponseEntity<ApiResponse<CatalogResponse>> delete(
+        @PathVariable @Min(value = 1, message = "{validation.invalid}") long id,
+        @Valid @RequestBody CatalogDeleteRequest body,
+        @AuthenticationPrincipal UserPrincipal actor,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () -> catalogs.delete(id, body.getVersion(), actor, locale(request)));
     }
 }

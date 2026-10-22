@@ -32,6 +32,8 @@ services:
         sync: false
       - key: VIETROUTE_DB_POOL_SIZE
         value: "4"
+      - key: VIETROUTE_DB_SCHEMA
+        value: vietroute
       - key: VIETROUTE_WORKER_ENABLED
         value: "false"
       - key: VIETROUTE_WORKER_THREADS

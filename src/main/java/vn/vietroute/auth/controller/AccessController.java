@@ -59,7 +59,7 @@ public class AccessController extends BaseController {
     @PutMapping("/roles/{role}/permissions")
     @Operation(
         summary = "Thay quyền chức năng của role",
-        description = "Yêu cầu ACCESS_WRITE; không sửa role ADMIN; version cũ trả 409"
+        description = "Yêu cầu ACCESS_ASSIGN (hoặc ACCESS_WRITE tương thích); không sửa ADMIN; người được ủy quyền không gán quyền vượt tập quyền của mình; version cũ trả 409"
     )
     public ResponseEntity<ApiResponse<RolePermissionsResponse>> replace(
         @PathVariable Role role,
@@ -73,7 +73,7 @@ public class AccessController extends BaseController {
     @PutMapping("/users/{id}/roles")
     @Operation(
         summary = "Gán role cho tài khoản",
-        description = "Yêu cầu ACCESS_WRITE; thu hồi token cũ, không tự sửa role hoặc xóa admin cuối"
+        description = "Yêu cầu ACCESS_ASSIGN (hoặc ACCESS_WRITE tương thích) và role ADMIN; thu hồi token cũ, không tự sửa role hoặc xóa admin cuối"
     )
     public ResponseEntity<ApiResponse<UserResponse>> assign(
         @PathVariable long id,

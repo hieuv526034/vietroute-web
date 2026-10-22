@@ -14,6 +14,7 @@ import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.config.AppSettings;
 import vn.vietroute.common.config.DatabaseSettings;
 import vn.vietroute.common.config.RootConfig;
+import vn.vietroute.common.jdbc.JdbcSchema;
 
 /** Kiểm tra cấu hình lỗi dừng sớm và pool tạo lười; không truy cập database thật. */
 class ConfigurationTest {
@@ -107,5 +108,27 @@ class ConfigurationTest {
     void primitiveNullIsRejectedInsteadOfBecomingPageZero() {
         var json = new RootConfig().objectMapper();
         assertThrows(MismatchedInputException.class, () -> json.readValue("{\"page\":null}", PageRequest.class));
+    }
+
+    @Test
+    void schemaUsesOneConfigAndRejectsSearchPathOrSqlInjection() {
+        var settings = new DatabaseSettings(Map.of("VIETROUTE_DB_SCHEMA", "project_2026")::get, false);
+        assertEquals("project_2026", settings.getSchema());
+        assertEquals("\"project_2026\"", new JdbcSchema(settings.getSchema()).quoted());
+        for (String invalid : new String[] {
+            "",
+            "public",
+            "pg_temp",
+            "information_schema",
+            "a,b",
+            "a;drop schema public",
+            "UPPER",
+            "a\"b",
+            "a".repeat(64),
+        }) {
+            assertThrows(IllegalStateException.class, () ->
+                new DatabaseSettings(Map.of("VIETROUTE_DB_SCHEMA", invalid)::get, false)
+            );
+        }
     }
 }

@@ -4,7 +4,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.sql.Connection;
-import java.sql.Driver;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -21,8 +20,11 @@ import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.business.catalog.entity.CatalogItem;
+import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.jdbc.JdbcSchemaValidator;
 import vn.vietroute.common.jdbc.JdbcTransactions;
+import vn.vietroute.common.jdbc.LegacyMigrationSql;
+import vn.vietroute.common.jdbc.SchemaBootstrap;
 import vn.vietroute.common.job.Job;
 
 /** Migration/seed chạy theo cờ môi trường; tuyệt đối không chạy từ bước đóng gói Maven. */
@@ -37,6 +39,8 @@ public class DatabaseInitializer implements InitializingBean {
     private final JdbcTransactions transactions;
 
     private final PasswordEncoder passwords;
+
+    private final JdbcSchema schema;
 
     @Override
     public void afterPropertiesSet() {
@@ -53,7 +57,7 @@ public class DatabaseInitializer implements InitializingBean {
         try (Statement statement = connection.createStatement()) {
             statement.execute("SELECT pg_advisory_xact_lock(781205610)");
         }
-        prepareSchema(connection);
+        new SchemaBootstrap(schema).prepare(connection);
         migrate(connection, "V001__auth_and_catalog.sql");
         migrate(connection, "V002__vietroute_schema_and_indexes.sql");
         migrate(connection, "V003__permissions_and_jobs.sql");
@@ -78,7 +82,7 @@ public class DatabaseInitializer implements InitializingBean {
         var en = ResourceBundle.getBundle("i18n.messages", Locale.ENGLISH);
         try (
             PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO vietroute.auth_permissions(code,name_vi,name_en) VALUES (?,?,?) ON CONFLICT (code) DO NOTHING"
+                "INSERT INTO auth_permissions(code,name_vi,name_en) VALUES (?,?,?) ON CONFLICT (code) DO NOTHING"
             )
         ) {
             for (Permission permission : Permission.values()) {
@@ -92,7 +96,7 @@ public class DatabaseInitializer implements InitializingBean {
         for (Role role : Role.values()) {
             try (
                 PreparedStatement query = connection.prepareStatement(
-                    "SELECT permissions_initialized FROM vietroute.auth_roles WHERE code=?"
+                    "SELECT permissions_initialized FROM auth_roles WHERE code=?"
                 )
             ) {
                 query.setString(1, role.name());
@@ -105,7 +109,7 @@ public class DatabaseInitializer implements InitializingBean {
             }
             try (
                 PreparedStatement insert = connection.prepareStatement(
-                    "INSERT INTO vietroute.auth_role_permissions(role_code,permission_code) VALUES (?,?) ON CONFLICT DO NOTHING"
+                    "INSERT INTO auth_role_permissions(role_code,permission_code) VALUES (?,?) ON CONFLICT DO NOTHING"
                 )
             ) {
                 for (Permission permission : Permission.values()) {
@@ -119,47 +123,12 @@ public class DatabaseInitializer implements InitializingBean {
             }
             try (
                 PreparedStatement update = connection.prepareStatement(
-                    "UPDATE vietroute.auth_roles SET permissions_initialized=true WHERE code=?"
+                    "UPDATE auth_roles SET permissions_initialized=true WHERE code=?"
                 )
             ) {
                 update.setString(1, role.name());
                 update.executeUpdate();
             }
-        }
-    }
-
-    /**
-     * Chuyển duy nhất history cũ để tiếp tục kiểm tra checksum V001, không chạy lại trên dữ liệu cũ.
-     * Nếu tồn tại hai history hoặc bảng cũ không rõ nguồn gốc, dừng thay vì đoán và tạo dữ liệu song song.
-     */
-    private void prepareSchema(Connection connection) throws SQLException {
-        try (Statement statement = connection.createStatement()) {
-            statement.execute("CREATE SCHEMA IF NOT EXISTS vietroute");
-            statement.execute(
-                """
-                DO $history$
-                BEGIN
-                    IF to_regclass('public.vietroute_schema_history') IS NOT NULL THEN
-                        IF to_regclass('vietroute.vietroute_schema_history') IS NOT NULL THEN
-                            RAISE EXCEPTION 'Application migration history exists in both schemas';
-                        END IF;
-                        ALTER TABLE public.vietroute_schema_history SET SCHEMA vietroute;
-                    ELSIF to_regclass('vietroute.vietroute_schema_history') IS NULL
-                        AND (to_regclass('public.auth_users') IS NOT NULL
-                            OR to_regclass('public.auth_roles') IS NOT NULL
-                            OR to_regclass('public.auth_user_roles') IS NOT NULL
-                            OR to_regclass('public.catalog_items') IS NOT NULL) THEN
-                        RAISE EXCEPTION 'Legacy application tables are missing migration history';
-                    END IF;
-                END
-                $history$;
-                """
-            );
-            statement.execute(
-                "CREATE TABLE IF NOT EXISTS vietroute.vietroute_schema_history (version VARCHAR(40) PRIMARY KEY, checksum VARCHAR(64) NOT NULL, installed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)"
-            );
-            // V001 giữ nguyên byte/checksum; trên DB mới, các tên chưa có schema sẽ được tạo vào vietroute.
-            statement.execute("SET LOCAL search_path TO vietroute");
         }
     }
 
@@ -178,7 +147,7 @@ public class DatabaseInitializer implements InitializingBean {
         }
         try (
             PreparedStatement query = connection.prepareStatement(
-                "SELECT checksum FROM vietroute.vietroute_schema_history WHERE version=?"
+                "SELECT checksum FROM vietroute_schema_history WHERE version=?"
             )
         ) {
             query.setString(1, version);
@@ -192,11 +161,11 @@ public class DatabaseInitializer implements InitializingBean {
             }
         }
         try (Statement statement = connection.createStatement()) {
-            statement.execute(new String(script, StandardCharsets.UTF_8));
+            statement.execute(LegacyMigrationSql.render(version, new String(script, StandardCharsets.UTF_8), schema));
         }
         try (
             PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO vietroute.vietroute_schema_history(version, checksum) VALUES (?,?)"
+                "INSERT INTO vietroute_schema_history(version, checksum) VALUES (?,?)"
             )
         ) {
             insert.setString(1, version);
@@ -215,7 +184,7 @@ public class DatabaseInitializer implements InitializingBean {
         };
         try (
             PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO vietroute.auth_roles(code,name_vi,name_en) VALUES (?,?,?) ON CONFLICT (code) DO NOTHING"
+                "INSERT INTO auth_roles(code,name_vi,name_en) VALUES (?,?,?) ON CONFLICT (code) DO NOTHING"
             )
         ) {
             for (String[] role : roles) {
@@ -231,11 +200,7 @@ public class DatabaseInitializer implements InitializingBean {
     /** Chỉ tạo tài khoản khi chưa có; không reset hash, trạng thái hay gán thêm quyền vào user đã tồn tại. */
     private void seedAdmin(Connection connection) throws SQLException {
         String username = settings.getBootstrapUsername().toLowerCase(Locale.ROOT);
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                "SELECT id FROM vietroute.auth_users WHERE username=?"
-            )
-        ) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT id FROM auth_users WHERE username=?")) {
             query.setString(1, username);
             try (ResultSet result = query.executeQuery()) {
                 if (result.next()) {
@@ -245,7 +210,7 @@ public class DatabaseInitializer implements InitializingBean {
         }
         try (
             PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO vietroute.auth_users(username,password_hash,display_name) VALUES (?,?,?) RETURNING id"
+                "INSERT INTO auth_users(username,password_hash,display_name) VALUES (?,?,?) RETURNING id"
             )
         ) {
             insert.setString(1, username);
@@ -255,7 +220,7 @@ public class DatabaseInitializer implements InitializingBean {
                 result.next();
                 try (
                     PreparedStatement role = connection.prepareStatement(
-                        "INSERT INTO vietroute.auth_user_roles(user_id,role_code) VALUES (?, 'ADMIN')"
+                        "INSERT INTO auth_user_roles(user_id,role_code) VALUES (?, 'ADMIN')"
                     )
                 ) {
                     role.setLong(1, result.getLong(1));
@@ -276,7 +241,7 @@ public class DatabaseInitializer implements InitializingBean {
         };
         try (
             PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO vietroute.catalog_items(type,code,name_vi,name_en,sort_order) VALUES (?,?,?,?,?) ON CONFLICT (type,code) DO NOTHING"
+                "INSERT INTO catalog_items(type,code,name_vi,name_en,sort_order) VALUES (?,?,?,?,?) ON CONFLICT (type,code) DO NOTHING"
             )
         ) {
             for (int i = 0; i < values.length; i++) {

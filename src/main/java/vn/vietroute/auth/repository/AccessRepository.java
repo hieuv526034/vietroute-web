@@ -30,7 +30,7 @@ public class AccessRepository extends BaseRepository {
     public RolePermissionsResponse role(Connection connection, Role role) throws SQLException {
         try (
             PreparedStatement query = connection.prepareStatement(
-                "SELECT permission_version, updated_at, updated_by FROM vietroute.auth_roles WHERE code=?"
+                "SELECT permission_version, updated_at, updated_by FROM auth_roles WHERE code=?"
             )
         ) {
             query.setString(1, role.name());
@@ -41,7 +41,7 @@ public class AccessRepository extends BaseRepository {
                 Set<Permission> permissions = new LinkedHashSet<>();
                 try (
                     PreparedStatement items = connection.prepareStatement(
-                        "SELECT permission_code FROM vietroute.auth_role_permissions WHERE role_code=? ORDER BY permission_code"
+                        "SELECT permission_code FROM auth_role_permissions WHERE role_code=? ORDER BY permission_code"
                     )
                 ) {
                     items.setString(1, role.name());
@@ -72,7 +72,7 @@ public class AccessRepository extends BaseRepository {
     ) throws SQLException {
         try (
             PreparedStatement update = connection.prepareStatement(
-                "UPDATE vietroute.auth_roles SET permission_version=permission_version+1, updated_at=CURRENT_TIMESTAMP, updated_by=? WHERE code=? AND permission_version=?"
+                "UPDATE auth_roles SET permission_version=permission_version+1, updated_at=CURRENT_TIMESTAMP, updated_by=? WHERE code=? AND permission_version=?"
             )
         ) {
             update.setLong(1, actor);
@@ -84,7 +84,7 @@ public class AccessRepository extends BaseRepository {
         }
         try (
             PreparedStatement delete = connection.prepareStatement(
-                "DELETE FROM vietroute.auth_role_permissions WHERE role_code=?"
+                "DELETE FROM auth_role_permissions WHERE role_code=?"
             )
         ) {
             delete.setString(1, role.name());
@@ -92,7 +92,7 @@ public class AccessRepository extends BaseRepository {
         }
         try (
             PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO vietroute.auth_role_permissions(role_code,permission_code) VALUES (?,?)"
+                "INSERT INTO auth_role_permissions(role_code,permission_code) VALUES (?,?)"
             )
         ) {
             for (Permission permission : permissions) {
@@ -114,7 +114,7 @@ public class AccessRepository extends BaseRepository {
     public boolean onlyActiveAdmin(Connection connection, long userId) throws SQLException {
         try (
             PreparedStatement query = connection.prepareStatement(
-                "SELECT count(*) FROM vietroute.auth_users u JOIN vietroute.auth_user_roles r ON r.user_id=u.id WHERE u.active AND r.role_code='ADMIN' AND u.id<>?"
+                "SELECT count(*) FROM auth_users u JOIN auth_user_roles r ON r.user_id=u.id WHERE u.active AND r.role_code='ADMIN' AND u.id<>?"
             )
         ) {
             query.setLong(1, userId);
@@ -129,7 +129,7 @@ public class AccessRepository extends BaseRepository {
         throws SQLException {
         try (
             PreparedStatement update = connection.prepareStatement(
-                "UPDATE vietroute.auth_users SET version=version+1, token_version=token_version+1, updated_by=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND version=?"
+                "UPDATE auth_users SET version=version+1, token_version=token_version+1, updated_by=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND version=?"
             )
         ) {
             update.setLong(1, actor);
@@ -139,17 +139,13 @@ public class AccessRepository extends BaseRepository {
                 throw new BusinessException(ErrorCode.STALE_VERSION);
             }
         }
-        try (
-            PreparedStatement delete = connection.prepareStatement(
-                "DELETE FROM vietroute.auth_user_roles WHERE user_id=?"
-            )
-        ) {
+        try (PreparedStatement delete = connection.prepareStatement("DELETE FROM auth_user_roles WHERE user_id=?")) {
             delete.setLong(1, id);
             delete.executeUpdate();
         }
         try (
             PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO vietroute.auth_user_roles(user_id,role_code) VALUES (?,?)"
+                "INSERT INTO auth_user_roles(user_id,role_code) VALUES (?,?)"
             )
         ) {
             for (Role role : roles) {
