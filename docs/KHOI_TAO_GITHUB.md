@@ -12,12 +12,7 @@ Không cần chia thành bốn repo. Một repository chung và các nhánh ch�
 
 Repository → Settings → Collaborators → Add people. Dùng username GitHub thật của từng người hoặc email có thể mời được; họ phải nhận lời mời. Người tạo repo đã là owner, không cần mời lại chính mình.
 
-Nhóm cung cấp:
-
-- bangpham.it@gmail.com
-- anhhoang104@gmail.com
-- hiencoi250404-design@gmail.com
-- hieuv526034@gmail.com (người đang chuẩn bị source trên máy này)
+Username GitHub do chủ dự án cung cấp: `anhhoang104`, `BangPhamIT`, `hiencoi250404-design`, `hieuv526034` (owner). Email tương ứng được lưu tại [Thông tin thành viên](PHAN_CONG.md#thông-tin-thành-viên); dùng bảng này để tránh lấy nhầm email từ username.
 
 Mời vào repo cấp quyền cộng tác; chưa tạo commit hoặc ghi nhận một chức năng đã hoàn thành cho người đó. Không cần và không chia sẻ mật khẩu GitHub giữa các thành viên.
 
@@ -56,7 +51,7 @@ Xác minh email đó trong GitHub Settings → Emails, rồi làm theo CONTRIBUT
 - Dùng PR vào main; ưu tiên Create a merge commit để giữ lịch sử commit gốc dễ theo dõi.
 - Nếu gói GitHub và loại repo cho phép ruleset/branch protection, chặn force push và yêu cầu review/build thành công. Dù không có tính năng này, nhóm vẫn có thể thống nhất quy trình PR.
 - Workflow build có sẵn trong `.github/workflows/build.yml`; GitHub Actions có thể cần bật/được cho phép theo thiết lập tài khoản hoặc tổ chức.
-- Chưa thêm CODEOWNERS tự động vì chưa có username GitHub thật của cả 4; bảng phân công và Issue vẫn dùng được.
+- Username/email đã có trong `docs/PHAN_CONG.md`; chưa cấu hình CODEOWNERS tự động. Khi thiết lập quyền review, dùng đúng username và kiểm tra thành viên đã có quyền cộng tác.
 
 ## Nguồn
 

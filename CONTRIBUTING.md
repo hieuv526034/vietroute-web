@@ -6,7 +6,7 @@ Git lưu Author (tác giả) và Committer (người tạo commit). GitHub liên
 
 Mỗi người thêm và xác minh email của mình trong GitHub → Settings → Emails. Nếu dùng chế độ ẩn email, lấy đúng địa chỉ `noreply` từ trang Settings của chính tài khoản đó; không tự đoán địa chỉ.
 
-Các định danh như `bangpham.it` trong phân công được lấy từ email người dùng cung cấp; không mặc định đó là username GitHub. Khi mời người hoặc assign Issue/PR, dùng đúng username tài khoản đã xác nhận.
+Username GitHub và email của bốn thành viên được chủ dự án cung cấp ngày 22/10/2026 và lưu tại [Thông tin thành viên](docs/PHAN_CONG.md#thông-tin-thành-viên). Dùng đúng bảng này khi cấu hình Git hoặc tham chiếu thành viên trong Issue/PR. Tài khoản của Bang là `BangPhamIT`, email `bangpham.it@gmail.com`; tiền tố nhánh cũ `bangpham.it/` là nhãn đã có, không phải username.
 
 ## 2. Cấu hình một lần sau khi clone, trên máy từng người
 
