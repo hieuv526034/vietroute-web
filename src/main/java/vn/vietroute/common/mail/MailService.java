@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import vn.vietroute.common.config.MailSettings;
+import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.JdbcTransactions;
@@ -70,7 +71,7 @@ public class MailService {
             payload.text().isBlank() ||
             payload.text().length() > 8000 ||
             dedup == null ||
-            !dedup.matches("[A-Za-z0-9:_-]{8,128}")
+            !dedup.matches(Regex.JOB_DEDUP_KEY)
         ) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }

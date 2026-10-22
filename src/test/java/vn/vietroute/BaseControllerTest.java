@@ -38,10 +38,10 @@ import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.exception.GlobalExceptionHandler;
-import vn.vietroute.common.web.ApiResponse;
-import vn.vietroute.common.web.ApiResponses;
-import vn.vietroute.common.web.RequestTraceFilter;
-import vn.vietroute.common.web.SupportedLocaleResolver;
+import vn.vietroute.common.web.filter.RequestTraceFilter;
+import vn.vietroute.common.web.locale.SupportedLocaleResolver;
+import vn.vietroute.common.web.response.ApiResponse;
+import vn.vietroute.common.web.response.ApiResponses;
 
 /** Kiểm tra hợp đồng HTTP thực tế của base và advice bằng controller test, không cần database. */
 class BaseControllerTest {

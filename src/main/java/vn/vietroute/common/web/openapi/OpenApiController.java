@@ -1,4 +1,4 @@
-package vn.vietroute.common.web;
+package vn.vietroute.common.web.openapi;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -26,7 +26,6 @@ import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.http.ResponseEntity;
@@ -41,7 +40,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import vn.vietroute.common.base.PageRequest;
+import vn.vietroute.common.constant.ApplicationConstants.Http;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
+import vn.vietroute.common.web.response.ApiResponse;
+import vn.vietroute.common.web.routing.WebRoutePolicy;
 
 /** Tạo OpenAPI từ mapping Spring MVC và @Operation/@Schema, không đưa Spring Boot vào WAR. */
 @RestController
@@ -53,7 +56,7 @@ public class OpenApiController {
         this.mappings = mappings;
     }
 
-    @GetMapping(value = "/v3/api-docs", produces = "application/json;charset=UTF-8")
+    @GetMapping(value = Routes.OPENAPI, produces = Http.JSON_UTF8)
     @Operation(hidden = true, summary = "Cung cấp tài liệu OpenAPI")
     public JsonNode document(HttpServletRequest request) {
         OpenAPI api = new OpenAPI()
@@ -64,10 +67,14 @@ public class OpenApiController {
                     .version("0.2.0")
                     .description(
                         "API vi/en. Chọn lang hoặc X-Locale. Mọi kết quả dùng envelope code/messageKey/traceId. " +
-                            "Cookie mode: gọi /api/v1/auth/csrf trước POST; Bearer mode: Authorize bằng JWT."
+                            "Cookie mode: gọi " +
+                            Routes.AUTH_CSRF +
+                            " trước POST; Bearer mode: Authorize bằng JWT."
                     )
             )
-            .servers(List.of(new Server().url(request.getContextPath().isEmpty() ? "/" : request.getContextPath())))
+            .servers(
+                List.of(new Server().url(request.getContextPath().isEmpty() ? Routes.HOME : request.getContextPath()))
+            )
             .components(
                 new Components()
                     .addSecuritySchemes(
@@ -79,7 +86,7 @@ public class OpenApiController {
                         new SecurityScheme()
                             .type(SecurityScheme.Type.APIKEY)
                             .in(SecurityScheme.In.COOKIE)
-                            .name("VIETROUTE_ACCESS")
+                            .name(Http.AUTH_COOKIE)
                     )
             )
             .paths(new Paths());
@@ -93,7 +100,7 @@ public class OpenApiController {
             }
             Tag tag = handler.getBeanType().getAnnotation(Tag.class);
             for (String path : mapping.getPatternValues()) {
-                if (!path.startsWith("/api/")) {
+                if (!path.startsWith(Routes.API_ROOT)) {
                     continue;
                 }
                 for (RequestMethod verb : mapping.getMethodsCondition().getMethods()) {
@@ -105,14 +112,14 @@ public class OpenApiController {
                     );
                     operation.addParametersItem(
                         new Parameter()
-                            .name("lang")
+                            .name(Http.LANGUAGE_PARAMETER)
                             .in("query")
                             .description("Ngôn ngữ, ưu tiên cao nhất")
                             .schema(new StringSchema()._enum(List.of("vi", "en")))
                     );
                     operation.addParametersItem(
                         new Parameter()
-                            .name("X-Locale")
+                            .name(Http.LOCALE_HEADER)
                             .in("header")
                             .description("Ngôn ngữ nếu không có lang")
                             .schema(new StringSchema()._enum(List.of("vi", "en")))
@@ -189,11 +196,7 @@ public class OpenApiController {
                             );
                         }
                     }
-                    boolean publicRoute =
-                        path.equals("/api/v1/auth/login") ||
-                        path.equals("/api/v1/auth/csrf") ||
-                        path.equals("/api/v1/auth/logout") ||
-                        (verb == RequestMethod.GET && path.startsWith("/api/v1/catalogs/"));
+                    boolean publicRoute = WebRoutePolicy.publicApi(path, verb.name());
                     if (!publicRoute) {
                         operation
                             .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))

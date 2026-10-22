@@ -16,14 +16,17 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.base.BaseController;
+import vn.vietroute.common.constant.ApplicationConstants.Http;
+import vn.vietroute.common.constant.ApplicationConstants.Regex;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
 import vn.vietroute.common.job.JobResponse;
-import vn.vietroute.common.web.ApiResponse;
-import vn.vietroute.common.web.ApiResponses;
+import vn.vietroute.common.web.response.ApiResponse;
+import vn.vietroute.common.web.response.ApiResponses;
 
 @RestController
-@RequestMapping("/api/v1/admin/mail")
+@RequestMapping(Routes.MAIL)
 @Tag(name = "Email", description = "Gửi mail qua outbox; không phải endpoint gửi thư công khai")
 public class MailController extends BaseController {
 
@@ -42,8 +45,8 @@ public class MailController extends BaseController {
     )
     public ResponseEntity<ApiResponse<JobResponse>> queue(
         @Valid @RequestBody MailRequest body,
-        @RequestHeader("Idempotency-Key") @Pattern(
-            regexp = "[A-Za-z0-9_-]{8,64}",
+        @RequestHeader(Http.IDEMPOTENCY_HEADER) @Pattern(
+            regexp = Regex.IDEMPOTENCY_KEY,
             message = "{validation.invalid}"
         ) String key,
         @AuthenticationPrincipal UserPrincipal actor,

@@ -26,12 +26,14 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import vn.vietroute.common.constant.ApplicationConstants.Http;
+import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.constant.ValidationCode;
-import vn.vietroute.common.web.ApiResponse;
-import vn.vietroute.common.web.ApiResponses;
-import vn.vietroute.common.web.FieldViolation;
-import vn.vietroute.common.web.RequestTraceFilter;
+import vn.vietroute.common.web.filter.RequestTraceFilter;
+import vn.vietroute.common.web.response.ApiResponse;
+import vn.vietroute.common.web.response.ApiResponses;
+import vn.vietroute.common.web.response.FieldViolation;
 
 /** Đổi exception thành HTTP/mã lỗi/key dịch; base API và MVC advice dùng cùng một quy tắc. */
 @Component
@@ -149,7 +151,7 @@ public class ApiExceptionMapper {
     }
 
     private static String key(String template) {
-        return template != null && template.matches("\\{[A-Za-z0-9.]+}")
+        return template != null && template.matches(Regex.MESSAGE_TEMPLATE)
             ? template.substring(1, template.length() - 1)
             : "validation.invalid";
     }
@@ -164,8 +166,8 @@ public class ApiExceptionMapper {
         return ResponseEntity.status(code.getStatus())
             // Lỗi vẫn có envelope JSON kể cả khi client yêu cầu định dạng không hỗ trợ (HTTP 406).
             .contentType(MediaType.APPLICATION_JSON)
-            .header("Content-Language", responses.locale(request).getLanguage())
-            .header("Cache-Control", "no-store")
+            .header(HttpHeaders.CONTENT_LANGUAGE, responses.locale(request).getLanguage())
+            .header(HttpHeaders.CACHE_CONTROL, Http.NO_STORE)
             .body(responses.error(code, args, fields, request));
     }
 }

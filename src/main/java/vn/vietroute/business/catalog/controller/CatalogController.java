@@ -26,11 +26,12 @@ import vn.vietroute.business.catalog.service.CatalogService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
-import vn.vietroute.common.constant.Constants.CatalogType;
+import vn.vietroute.common.constant.ApplicationConstants.CatalogType;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
-import vn.vietroute.common.web.ApiResponse;
-import vn.vietroute.common.web.ApiResponses;
+import vn.vietroute.common.web.response.ApiResponse;
+import vn.vietroute.common.web.response.ApiResponses;
 
 /** Controller danh mục làm ví dụ hoàn chỉnh để các thành viên triển khai module sau theo cùng chuẩn. */
 @RestController
@@ -44,7 +45,7 @@ public class CatalogController extends BaseController {
         this.catalogs = catalogs;
     }
 
-    @GetMapping("/api/v1/catalogs/{type}")
+    @GetMapping(Routes.CATALOG_BY_TYPE)
     @Operation(
         summary = "Tra cứu danh mục",
         description = "Công khai, chỉ trả mục đang hoạt động. page bắt đầu từ 0, size tối đa 100. Tên trả theo locale."
@@ -58,7 +59,7 @@ public class CatalogController extends BaseController {
         return execute(SuccessCode.OK, request, () -> catalogs.page(type, page, locale(request)));
     }
 
-    @PostMapping("/api/v1/admin/catalogs")
+    @PostMapping(Routes.ADMIN_CATALOGS)
     @Operation(
         summary = "Tạo mục danh mục",
         description = "Yêu cầu CATALOG_CREATE (hoặc CATALOG_WRITE tương thích). Server tự sinh mã nếu null; tên vi/en bắt buộc; code trùng trả 409; audit lấy từ principal."
@@ -75,7 +76,7 @@ public class CatalogController extends BaseController {
         );
     }
 
-    @GetMapping("/api/v1/admin/catalogs/{id}")
+    @GetMapping(Routes.ADMIN_CATALOG_BY_ID)
     @Operation(
         summary = "Đọc danh mục quản trị",
         description = "Yêu cầu CATALOG_READ; xem cả bản đã xóa mềm, không thay đổi API tra cứu công khai"
@@ -87,7 +88,7 @@ public class CatalogController extends BaseController {
         return execute(SuccessCode.OK, request, () -> catalogs.find(id, locale(request)));
     }
 
-    @PutMapping("/api/v1/admin/catalogs/{id}")
+    @PutMapping(Routes.ADMIN_CATALOG_BY_ID)
     @Operation(
         summary = "Sửa danh mục",
         description = "Yêu cầu CATALOG_UPDATE (hoặc CATALOG_WRITE tương thích); version cũ trả COM008/409"
@@ -101,7 +102,7 @@ public class CatalogController extends BaseController {
         return execute(SuccessCode.OK, request, () -> catalogs.update(id, body, actor, locale(request)));
     }
 
-    @DeleteMapping("/api/v1/admin/catalogs/{id}")
+    @DeleteMapping(Routes.ADMIN_CATALOG_BY_ID)
     @Operation(
         summary = "Xóa mềm danh mục",
         description = "Yêu cầu CATALOG_DELETE, body chứa version; WRITE không có quyền xóa. Bản đã xóa biến mất khỏi tra cứu công khai, audit vẫn giữ."

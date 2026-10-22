@@ -5,7 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietroute.common.base.BaseEntity;
-import vn.vietroute.common.constant.Constants.CatalogType;
+import vn.vietroute.common.constant.ApplicationConstants.CatalogType;
 import vn.vietroute.common.jdbc.JdbcIndex;
 import vn.vietroute.common.jdbc.JdbcTable;
 

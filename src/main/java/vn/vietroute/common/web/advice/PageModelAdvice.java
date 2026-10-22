@@ -1,4 +1,4 @@
-package vn.vietroute.common.web;
+package vn.vietroute.common.web.advice;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.Authentication;
@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.UserPrincipal;
+import vn.vietroute.common.web.locale.SupportedLocaleResolver;
 
 /** Model layout dùng chung: base path, locale và thông tin principal an toàn, không chứa token/hash. */
 @ControllerAdvice

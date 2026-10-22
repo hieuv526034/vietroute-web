@@ -9,7 +9,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import vn.vietroute.common.constant.Constants;
+import vn.vietroute.common.constant.ApplicationConstants.Regex;
 
 /** Mã không dấu/khoảng trắng/ký tự đặc biệt; dùng thêm @NotBlank nếu trường bắt buộc. */
 @Target({ ElementType.FIELD, ElementType.PARAMETER, ElementType.ANNOTATION_TYPE })
@@ -17,7 +17,7 @@ import vn.vietroute.common.constant.Constants;
 @Documented
 @Constraint(validatedBy = {})
 @ReportAsSingleViolation
-@Pattern(regexp = Constants.CODE_PATTERN)
+@Pattern(regexp = Regex.BUSINESS_CODE)
 public @interface BusinessCode {
     String message() default "{validation.code}";
 

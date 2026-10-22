@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.stereotype.Controller;
@@ -27,10 +28,11 @@ import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.spring6.templateresolver.SpringResourceTemplateResolver;
 import org.thymeleaf.spring6.view.ThymeleafViewResolver;
 import org.thymeleaf.templatemode.TemplateMode;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
-import vn.vietroute.common.web.RequestTraceFilter;
-import vn.vietroute.common.web.SupportedLocaleResolver;
+import vn.vietroute.common.web.filter.RequestTraceFilter;
+import vn.vietroute.common.web.locale.SupportedLocaleResolver;
 
 /** Servlet context quản lý MVC, Thymeleaf, locale và Swagger; kế thừa cấu hình MVC để ghi đè locale mặc định. */
 @Configuration
@@ -44,14 +46,6 @@ import vn.vietroute.common.web.SupportedLocaleResolver;
 )
 public class WebConfig extends DelegatingWebMvcConfiguration {
 
-    /** Chỉ parse multipart/form-data; giới hạn byte do Servlet registration áp dụng trước controller. */
-    @Bean
-    public StandardServletMultipartResolver multipartResolver() {
-        StandardServletMultipartResolver resolver = new StandardServletMultipartResolver();
-        resolver.setStrictServletCompliance(true);
-        return resolver;
-    }
-
     private final MessageSource messages;
 
     private final ObjectMapper mapper;
@@ -62,6 +56,14 @@ public class WebConfig extends DelegatingWebMvcConfiguration {
         this.messages = messages;
         this.mapper = mapper;
         this.locales = locales;
+    }
+
+    /** Chỉ parse multipart/form-data; giới hạn byte do Servlet registration áp dụng trước controller. */
+    @Bean
+    public StandardServletMultipartResolver multipartResolver() {
+        StandardServletMultipartResolver resolver = new StandardServletMultipartResolver();
+        resolver.setStrictServletCompliance(true);
+        return resolver;
     }
 
     /** Ghi đè bean locale mặc định của MVC; vẫn dùng cùng resolver với security/filter ở root. */
@@ -102,8 +104,10 @@ public class WebConfig extends DelegatingWebMvcConfiguration {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/assets/**").addResourceLocations("/assets/");
-        registry.addResourceHandler("/webjars/**").addResourceLocations("classpath:/META-INF/resources/webjars/");
+        registry.addResourceHandler(Routes.ASSET_MATCHER).addResourceLocations(Routes.ASSETS);
+        registry
+            .addResourceHandler(Routes.WEBJAR_MATCHER)
+            .addResourceLocations("classpath:/META-INF/resources/webjars/");
     }
 
     @Bean
@@ -143,7 +147,7 @@ public class WebConfig extends DelegatingWebMvcConfiguration {
                         throw new BusinessException(ErrorCode.LOCALE_UNSUPPORTED);
                     }
                     response.setHeader(
-                        "Content-Language",
+                        HttpHeaders.CONTENT_LANGUAGE,
                         new SupportedLocaleResolver().resolveLocale(request).getLanguage()
                     );
                     return true;

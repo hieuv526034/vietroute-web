@@ -5,6 +5,9 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import vn.vietroute.common.constant.ApplicationConstants.Env;
+import vn.vietroute.common.constant.ApplicationConstants.Http;
+import vn.vietroute.common.constant.ApplicationConstants.Regex;
 
 /** Chỉ đọc X-Forwarded-For khi peer thực sự thuộc CIDR proxy được cấu hình; chống tự giả IP để né quota. */
 public final class ClientAddressResolver {
@@ -20,7 +23,7 @@ public final class ClientAddressResolver {
             byte[] address = literal(parts[0]);
             int bits = parts.length == 2 ? Integer.parseInt(parts[1]) : address.length * 8;
             if (parts.length > 2 || bits < 0 || bits > address.length * 8) {
-                throw new IllegalStateException("VIETROUTE_TRUSTED_PROXY_CIDRS is invalid");
+                throw new IllegalStateException(Env.TRUSTED_PROXY_CIDRS.key() + " is invalid");
             }
             networks.add(new Network(address, bits));
         }
@@ -28,7 +31,7 @@ public final class ClientAddressResolver {
 
     public String resolve(HttpServletRequest request) {
         String current = request.getRemoteAddr();
-        String forwarded = request.getHeader("X-Forwarded-For");
+        String forwarded = request.getHeader(Http.FORWARDED_FOR);
         if (forwarded == null || forwarded.length() > 1024) {
             return current;
         }
@@ -58,7 +61,7 @@ public final class ClientAddressResolver {
     }
 
     private static byte[] literal(String value) {
-        if (value == null || value.length() > 45 || !value.matches("[0-9a-fA-F:.]+")) {
+        if (value == null || value.length() > 45 || !value.matches(Regex.IP_LITERAL)) {
             throw new IllegalArgumentException("Invalid IP literal");
         }
         try {

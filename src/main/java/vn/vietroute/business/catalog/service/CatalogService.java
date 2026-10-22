@@ -11,7 +11,7 @@ import vn.vietroute.business.catalog.dto.response.CatalogResponse;
 import vn.vietroute.business.catalog.repository.CatalogRepository;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
-import vn.vietroute.common.constant.Constants.CatalogType;
+import vn.vietroute.common.constant.ApplicationConstants.CatalogType;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.util.CodeGenerator;
 

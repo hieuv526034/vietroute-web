@@ -2,6 +2,7 @@ package vn.vietroute.auth.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -22,9 +23,12 @@ import vn.vietroute.auth.security.AuthCookies;
 import vn.vietroute.auth.security.JwtAuthenticationFilter;
 import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.common.config.AppSettings;
+import vn.vietroute.common.constant.ApplicationConstants.Http;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.traffic.TrafficGuardFilter;
-import vn.vietroute.common.web.ApiErrorWriter;
+import vn.vietroute.common.web.response.ApiErrorWriter;
+import vn.vietroute.common.web.routing.WebRoutePolicy;
 
 /** Security chạy ở root context, dùng matcher tường minh và không tạo HTTP session đăng nhập. */
 @Configuration
@@ -48,8 +52,8 @@ public class SecurityConfig {
         TrafficGuardFilter traffic
     ) throws Exception {
         CookieCsrfTokenRepository csrf = CookieCsrfTokenRepository.withHttpOnlyFalse();
-        csrf.setCookiePath("/");
-        csrf.setCookieCustomizer(builder -> builder.secure(settings.isCookieSecure()).sameSite("Lax"));
+        csrf.setCookiePath(Routes.HOME);
+        csrf.setCookieCustomizer(builder -> builder.secure(settings.isCookieSecure()).sameSite(Http.SAME_SITE_LAX));
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             // Mỗi cấu hình chỉ gọi disable: dùng method reference để tránh lambda dư và cảnh báo IDE.
             .requestCache(AbstractHttpConfigurer::disable)
@@ -62,34 +66,27 @@ public class SecurityConfig {
                     .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
                     // Bearer không tự được trình duyệt gửi như cookie nên không cần CSRF token.
                     .ignoringRequestMatchers(request -> {
-                        String value = request.getHeader("Authorization");
-                        return value != null && value.startsWith("Bearer ");
+                        String value = request.getHeader(HttpHeaders.AUTHORIZATION);
+                        return value != null && value.startsWith(Http.BEARER_PREFIX);
                     })
             )
             .authorizeHttpRequests(auth ->
                 auth
                     .requestMatchers(
-                        matcher("/"),
-                        matcher("/health"),
-                        matcher("/login"),
-                        matcher("/assets/**"),
-                        matcher("/webjars/**"),
-                        matcher("/docs"),
-                        matcher("/docs/**"),
-                        matcher("/v3/api-docs"),
-                        matcher("/api/v1/auth/login"),
-                        matcher("/api/v1/auth/csrf"),
-                        matcher("/api/v1/auth/logout")
+                        WebRoutePolicy.publicMatchers()
+                            .stream()
+                            .map(SecurityConfig::matcher)
+                            .toArray(PathPatternRequestMatcher[]::new)
                     )
                     .permitAll()
                     .requestMatchers(
-                        PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, "/api/v1/catalogs/**")
+                        PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, Routes.CATALOG_MATCHER)
                     )
                     .permitAll()
                     // API quản trị kiểm quyền hành động ở service; giao diện tổng quản trị vẫn dành cho ADMIN.
-                    .requestMatchers(matcher("/api/v1/admin/**"))
+                    .requestMatchers(matcher(Routes.ADMIN_API_MATCHER))
                     .authenticated()
-                    .requestMatchers(matcher("/admin/**"))
+                    .requestMatchers(matcher(Routes.ADMIN_MATCHER))
                     .hasRole("ADMIN")
                     .anyRequest()
                     .authenticated()
@@ -97,10 +94,15 @@ public class SecurityConfig {
             .exceptionHandling(config ->
                 config
                     .authenticationEntryPoint((request, response, exception) -> {
-                        if (request.getRequestURI().substring(request.getContextPath().length()).startsWith("/api/")) {
+                        if (
+                            request
+                                .getRequestURI()
+                                .substring(request.getContextPath().length())
+                                .startsWith(Routes.API_ROOT)
+                        ) {
                             errors.write(request, response, ErrorCode.UNAUTHENTICATED);
                         } else {
-                            response.sendRedirect(request.getContextPath() + "/login");
+                            response.sendRedirect(request.getContextPath() + Routes.LOGIN);
                         }
                     })
                     .accessDeniedHandler((request, response, exception) ->

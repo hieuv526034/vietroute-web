@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 import vn.vietroute.common.base.BaseRequest;
+import vn.vietroute.common.constant.ApplicationConstants.Regex;
 
 @Getter
 @Setter
@@ -20,7 +21,7 @@ public class MailRequest extends BaseRequest {
 
     @NotBlank(message = "{validation.required}")
     @Size(max = 160, message = "{validation.length}")
-    @Pattern(regexp = "[^\\r\\n]+", message = "{validation.invalid}")
+    @Pattern(regexp = Regex.SINGLE_LINE, message = "{validation.invalid}")
     @Schema(description = "Tiêu đề không chứa xuống dòng", example = "Thông báo VietRoute")
     private String subject;
 

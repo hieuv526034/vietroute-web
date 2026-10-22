@@ -1,4 +1,4 @@
-package vn.vietroute.common.web;
+package vn.vietroute.common.web.openapi;
 
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.media.Content;

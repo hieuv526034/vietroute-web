@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 import vn.vietroute.common.base.BaseRequest;
-import vn.vietroute.common.constant.Constants;
+import vn.vietroute.common.constant.ApplicationConstants.Regex;
 
 /** Mật khẩu chỉ được nhận vào, không serialize ngược hoặc thêm vào toString. */
 @Getter
@@ -17,7 +17,7 @@ import vn.vietroute.common.constant.Constants;
 public class LoginRequest extends BaseRequest {
 
     @NotBlank(message = "{validation.required}")
-    @Pattern(regexp = Constants.USERNAME_PATTERN, message = "{validation.username}")
+    @Pattern(regexp = Regex.USERNAME, message = "{validation.username}")
     @Schema(
         description = "Tên đăng nhập gồm chữ/số, 3–32 ký tự",
         example = "admin",

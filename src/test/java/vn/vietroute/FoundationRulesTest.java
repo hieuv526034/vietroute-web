@@ -21,7 +21,7 @@ import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.common.config.AppSettings;
-import vn.vietroute.common.constant.Constants;
+import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.constant.ValidationCode;
@@ -65,7 +65,7 @@ class FoundationRulesTest {
     @Test
     void codeAndPasswordRulesPreserveVietnameseTextAndBcryptByteLimit() {
         for (int i = 0; i < 50; i++) {
-            assertTrue(CodeGenerator.generate("CAT").matches(Constants.CODE_PATTERN));
+            assertTrue(CodeGenerator.generate("CAT").matches(Regex.BUSINESS_CODE));
         }
         assertThrows(BusinessException.class, () -> CodeGenerator.generate("bad!"));
         assertTrue(StrongPasswordValidator.valid("Valid-Password-2026"));

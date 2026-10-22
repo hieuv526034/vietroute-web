@@ -26,14 +26,15 @@ import vn.vietroute.business.media.service.MediaService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
-import vn.vietroute.common.web.ApiResponse;
-import vn.vietroute.common.web.ApiResponses;
+import vn.vietroute.common.web.response.ApiResponse;
+import vn.vietroute.common.web.response.ApiResponses;
 
 /** API chỉ nhận file/version; owner và audit lấy từ principal đã được xác minh. */
 @RestController
-@RequestMapping("/api/v1/media")
+@RequestMapping(Routes.MEDIA)
 @Tag(name = "Ảnh công khai", description = "Upload/xem/xóa ảnh xe, logo, avatar; không dùng cho giấy tờ nhạy cảm")
 public class MediaController extends BaseController {
 
@@ -63,7 +64,7 @@ public class MediaController extends BaseController {
         return execute(SuccessCode.OK, request, () -> media.page(page, actor));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping(Routes.BY_ID)
     @Operation(
         summary = "Đọc metadata ảnh",
         description = "MEDIA_READ và kiểm owner/ADMIN. URL là ảnh công khai trên CDN."
@@ -90,7 +91,7 @@ public class MediaController extends BaseController {
         return execute(HttpStatus.CREATED, SuccessCode.CREATED, request, () -> media.upload(body.getFile(), actor));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping(Routes.BY_ID)
     @ResponseStatus(HttpStatus.ACCEPTED)
     @Operation(
         summary = "Yêu cầu xóa ảnh",

@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Set;
+import vn.vietroute.common.constant.ApplicationConstants.Env;
 
 /** Chuẩn bị schema/history dưới advisory lock của initializer, tuyệt đối không tự đổi tên schema đang phục vụ. */
 public final class SchemaBootstrap {
@@ -55,7 +56,8 @@ public final class SchemaBootstrap {
         }
         if (installed != null && !installed.equals(schema.name()) && !installed.equals("public")) {
             throw new IllegalStateException(
-                "Application history is in another schema; stop all instances and rename the existing schema before changing VIETROUTE_DB_SCHEMA"
+                "Application history is in another schema; stop all instances and rename the existing schema before changing " +
+                    Env.DB_SCHEMA.key()
             );
         }
         if (installed == null && hasLegacyTables(connection)) {

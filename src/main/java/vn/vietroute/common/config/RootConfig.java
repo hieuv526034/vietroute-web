@@ -33,8 +33,8 @@ import vn.vietroute.common.traffic.MemoryRateLimitStore;
 import vn.vietroute.common.traffic.RateLimitStore;
 import vn.vietroute.common.traffic.RedisRateLimitStore;
 import vn.vietroute.common.traffic.TrafficGuardFilter;
-import vn.vietroute.common.web.ApiErrorWriter;
-import vn.vietroute.common.web.SupportedLocaleResolver;
+import vn.vietroute.common.web.locale.SupportedLocaleResolver;
+import vn.vietroute.common.web.response.ApiErrorWriter;
 
 /** Root context quản lý service/repository và hạ tầng; không quét controller để tránh tạo bean hai lần. */
 @Configuration

@@ -11,12 +11,16 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.Locale;
 import java.util.concurrent.Semaphore;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
 import vn.vietroute.common.config.MediaSettings;
 import vn.vietroute.common.config.TrafficSettings;
+import vn.vietroute.common.constant.ApplicationConstants.Regex;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
-import vn.vietroute.common.web.ApiErrorWriter;
+import vn.vietroute.common.web.response.ApiErrorWriter;
+import vn.vietroute.common.web.routing.WebRoutePolicy;
 
 /** Bảo vệ trước CSRF/JWT/DB: quota IP, giới hạn request/BCrypt đồng thời và kích thước JSON. */
 public final class TrafficGuardFilter extends OncePerRequestFilter {
@@ -48,13 +52,13 @@ public final class TrafficGuardFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
         throws ServletException, IOException {
         String path = request.getRequestURI().substring(request.getContextPath().length());
-        if (path.equals("/health") || path.startsWith("/assets/") || path.startsWith("/webjars/")) {
+        if (WebRoutePolicy.skipsTrafficGuard(path)) {
             chain.doFilter(request, response);
             return;
         }
-        boolean login = path.equals("/api/v1/auth/login");
+        boolean login = path.equals(Routes.AUTH_LOGIN);
         boolean upload =
-            path.equals("/api/v1/media") &&
+            path.equals(Routes.MEDIA) &&
             request.getMethod().equals("POST") &&
             request.getContentType() != null &&
             request.getContentType().toLowerCase(Locale.ROOT).startsWith(MediaType.MULTIPART_FORM_DATA_VALUE);
@@ -65,18 +69,18 @@ public final class TrafficGuardFilter extends OncePerRequestFilter {
                 decision = store.consume("login:" + ip, settings.getLoginsPerMinute(), 60);
             }
             if (!decision.allowed()) {
-                response.setHeader("Retry-After", Integer.toString(decision.retryAfterSeconds()));
+                response.setHeader(HttpHeaders.RETRY_AFTER, Integer.toString(decision.retryAfterSeconds()));
                 errors.write(request, response, ErrorCode.RATE_LIMITED);
                 return;
             }
         } catch (RuntimeException exception) {
             // Không log exception Redis vì thông báo driver có thể chứa URL credentials.
-            response.setHeader("Retry-After", "2");
+            response.setHeader(HttpHeaders.RETRY_AFTER, "2");
             errors.write(request, response, ErrorCode.SERVICE_BUSY);
             return;
         }
         if (!concurrent.tryAcquire()) {
-            response.setHeader("Retry-After", "1");
+            response.setHeader(HttpHeaders.RETRY_AFTER, "1");
             errors.write(request, response, ErrorCode.SERVICE_BUSY);
             return;
         }
@@ -84,7 +88,7 @@ public final class TrafficGuardFilter extends OncePerRequestFilter {
         boolean uploadSlot = !upload || uploads.tryAcquire();
         try {
             if (!loginSlot || !uploadSlot) {
-                response.setHeader("Retry-After", "1");
+                response.setHeader(HttpHeaders.RETRY_AFTER, "1");
                 errors.write(request, response, ErrorCode.SERVICE_BUSY);
                 return;
             }
@@ -94,7 +98,7 @@ public final class TrafficGuardFilter extends OncePerRequestFilter {
                 errors.write(request, response, ErrorCode.PAYLOAD_TOO_LARGE);
                 return;
             }
-            if (!upload && path.startsWith("/api/") && !request.getMethod().matches("GET|HEAD|OPTIONS")) {
+            if (!upload && path.startsWith(Routes.API_ROOT) && !request.getMethod().matches(Regex.SAFE_HTTP_METHOD)) {
                 if (request.getContentLengthLong() > settings.getMaxBodyBytes()) {
                     errors.write(request, response, ErrorCode.PAYLOAD_TOO_LARGE);
                     return;

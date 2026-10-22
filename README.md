@@ -28,6 +28,7 @@ Website quản lý nhà xe, tuyến/chuyến, đặt chỗ và theo dõi hành t
 10. [Chống spam, quyền chức năng, worker và Gmail/Workspace](docs/NEN_TANG_MO_RONG.md).
 11. [Cấu hình schema một nơi và ma trận quyền theo hành động](docs/SCHEMA_VA_PHAN_QUYEN.md).
 12. [Cloudinary và nút Run/Debug trong IntelliJ](docs/CLOUDINARY_VA_INTELLIJ.md).
+13. [ApplicationConstants và quy hoạch package web](docs/CONSTANTS_VA_CAU_TRUC_WEB.md).
 
 ## Chạy dự án
 
@@ -63,7 +64,7 @@ Schema ứng dụng cấu hình bằng `VIETROUTE_DB_SCHEMA` (mặc định `vie
 
 ```text
 src/main/java/vn/vietroute/
-  common/     base, constant, exception, validation, util, jdbc, config, web
+  common/     base, constant, exception, validation, util, jdbc, config, web, monitoring, job, mail, media, traffic
   auth/       config, security, controller, dto/request, dto/response, entity, repository, service
   business/
     catalog/  controller, dto/request, dto/response, entity, repository, service

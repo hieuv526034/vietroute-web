@@ -5,7 +5,8 @@ import jakarta.servlet.MultipartConfigElement;
 import jakarta.servlet.ServletRegistration;
 import org.springframework.web.filter.CharacterEncodingFilter;
 import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
-import vn.vietroute.common.web.RequestTraceFilter;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
+import vn.vietroute.common.web.filter.RequestTraceFilter;
 
 /** Điểm khởi tạo WAR trong Tomcat: root hạ tầng, servlet MVC và filter encoding/trace. */
 public class WebApplicationInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
@@ -30,7 +31,7 @@ public class WebApplicationInitializer extends AbstractAnnotationConfigDispatche
 
     @Override
     protected String[] getServletMappings() {
-        return new String[] { "/" };
+        return new String[] { Routes.HOME };
     }
 
     @Override

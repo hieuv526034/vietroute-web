@@ -11,6 +11,7 @@ import javax.imageio.ImageReader;
 import javax.imageio.stream.MemoryCacheImageInputStream;
 import org.springframework.web.multipart.MultipartFile;
 import vn.vietroute.common.config.MediaSettings;
+import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 
@@ -44,7 +45,7 @@ public final class ImageValidator {
                     int height = reader.getHeight(0);
                     // Đọc header trước khi giải nén để chặn ảnh nhỏ theo byte nhưng khổng lồ theo pixel.
                     if (
-                        !format.matches("jpeg|png") ||
+                        !format.matches(Regex.IMAGE_READER_FORMAT) ||
                         width < 1 ||
                         height < 1 ||
                         width > 4096 ||
