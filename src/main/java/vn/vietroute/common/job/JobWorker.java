@@ -84,7 +84,7 @@ public class JobWorker implements SmartLifecycle {
         try {
             for (int index = 0; running && index < settings.getThreads() && slots.tryAcquire(); index++) {
                 try {
-                    executor.execute(this::runOne);
+                    executor.execute(this::runBatch);
                 } catch (TaskRejectedException exception) {
                     slots.release();
                     break;
@@ -101,12 +101,25 @@ public class JobWorker implements SmartLifecycle {
         }
     }
 
+    /** Rút tối đa 32 việc liên tiếp mỗi slot, tránh để backlog chờ hết poll delay sau từng email nhanh. */
+    private void runBatch() {
+        try {
+            for (int index = 0; running && index < 32; index++) {
+                if (!runOne()) {
+                    break;
+                }
+            }
+        } finally {
+            slots.release();
+        }
+    }
+
     /** Claim/ACK dùng transaction ngắn riêng; gửi mạng nằm ngoài transaction và không mang SecurityContext HTTP. */
-    private void runOne() {
+    private boolean runOne() {
         try {
             Job job = transactions.execute(connection -> jobs.claim(connection, settings.getLeaseSeconds()));
             if (job == null) {
-                return;
+                return false;
             }
             String error = null;
             boolean retry = true;
@@ -138,10 +151,10 @@ public class JobWorker implements SmartLifecycle {
                 failed.incrementAndGet();
                 LOG.warning("Job failed id=" + job.id() + " code=" + error);
             }
+            return true;
         } catch (RuntimeException exception) {
             LOG.warning("Job transaction unavailable; lease expiry permits recovery");
-        } finally {
-            slots.release();
+            return false;
         }
     }
 
