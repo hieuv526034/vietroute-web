@@ -18,6 +18,8 @@ Website quản lý nhà xe, tuyến/chuyến, đặt chỗ và theo dõi hành t
 
 Bắt đầu từ [Tổng quan hệ thống cho thành viên mới](docs/TONG_QUAN_HE_THONG.md), sau đó đọc [Giám sát và vận hành](docs/GIAM_SAT_VA_VAN_HANH.md). Hai tài liệu phân biệt phần đã có trong source, cấu hình cần bật và dịch vụ ngoài app chưa được kết nối.
 
+Theo dõi công việc tại [Tiến độ và kế hoạch của bốn thành viên](docs/TIEN_DO_VA_KE_HOACH_NHOM.md): đã làm/chưa làm, phần có API nhưng thiếu UI, người chủ trì, phụ thuộc và tiêu chí nghiệm thu. Đây là bảng cập nhật theo PR, không suy diễn đóng góp từ nhánh được chuẩn bị.
+
 1. [Quy ước phát triển và cấu trúc module](docs/QUY_UOC_PHAT_TRIEN.md).
 2. [Hợp đồng API/base/auth](docs/API_BASE.md).
 3. [Phân công theo độ khó và thứ tự triển khai](docs/PHAN_CONG.md).
