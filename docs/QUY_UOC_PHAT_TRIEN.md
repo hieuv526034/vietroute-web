@@ -104,4 +104,6 @@ Hạ tầng/common/auth/schema và tích hợp khó hiện do hieuv526034 thực
 
 Nhánh theo mẫu `<người-phụ-trách>/<mã-việc-hoặc-chức-năng>` trong `PHAN_CONG.md`, không dùng tiền tố `codex/`. Người thực hiện commit trên nhánh được giao, tạo PR vào `main`, kiểm tra và review trước khi merge. Nhánh `main` chỉ nhận thay đổi qua PR. Dùng merge commit để giữ tác giả và ranh giới phần việc.
 
+Tiêu đề và nội dung commit mới, merge commit và PR viết bằng tiếng Việt có dấu. Nêu rõ phần thay đổi, lý do và kết quả kiểm tra thực tế; giữ nguyên định danh kỹ thuật. Mẫu và hướng dẫn nằm trong [quy ước đóng góp](../CONTRIBUTING.md#viết-commit-và-pr-bằng-tiếng-việt).
+
 Test Java nằm trong src/test. Production dùng `-Pproduction` và chỉ copy src/main, không biên dịch/chạy/đóng gói test. `mvnw verify` local vẫn chạy các test hữu ích. CI kiểm tra container và auth bằng DB tạm; không seed hoặc sửa Neon khi build. Thay đổi schema chạy qua migration có phiên bản, không sửa SQL đã áp dụng.

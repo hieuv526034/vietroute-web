@@ -36,7 +36,7 @@ npm run format:check
 .\mvnw.cmd verify
 git status
 git add src/main/java/vn/vietroute/business/tracking src/main/webapp/WEB-INF/views/tracking
-git commit -m "feat(tracking): add trip progress page"
+git commit -m "Bổ sung trang theo dõi tiến độ chuyến đi (tracking)" -m "Hiển thị trạng thái chuyến và điểm dừng hiện tại để điều hành theo dõi tiến độ." -m "Kiểm tra: ghi đúng lệnh đã chạy, kết quả và luồng đã kiểm tra trước khi commit."
 git push -u origin hieuv526034/tracking-trip-progress
 ```
 
@@ -47,6 +47,34 @@ Sau đó mở Pull request vào `main`, mô tả Issue, chức năng, cách ki�
 `npm ci` chỉ cần khi cài môi trường hoặc lockfile thay đổi. Format chạy ở máy phát triển; Docker/Render không cài npm. Giữ khoảng cách giữa field/method/khối nghiệp vụ; tên lớp dùng `DTO` viết hoa, các thời điểm Java dùng `Instant`, theo quy ước trong `docs/QUY_UOC_PHAT_TRIEN.md`.
 
 Nếu `git pull --ff-only` báo lịch sử khác nhau, dừng và đọc tình trạng; không dùng force push hoặc reset để bỏ thay đổi chưa hiểu. Trước khi bắt đầu chức năng mới, lấy `main` mới nhất.
+
+### Viết commit và PR bằng tiếng Việt
+
+Từ các thay đổi mới, tiêu đề và nội dung commit dùng **tiếng Việt có dấu**, kể cả commit do công cụ hỗ trợ tạo và merge commit. Tiêu đề PR và mô tả PR cũng dùng tiếng Việt để cả nhóm dễ đọc và tra cứu. Giữ nguyên tên class, module, API, biến môi trường, mã lỗi và lệnh kỹ thuật khi cần tham chiếu.
+
+Tiêu đề commit nêu hành động cụ thể và phần bị ảnh hưởng, chẳng hạn `Sửa kiểm tra quyền xóa danh mục (catalog)` hoặc `Cấu hình schema cơ sở dữ liệu từ biến môi trường (common)`. Tránh tiêu đề chỉ có `update`, `fix`, `sửa code` hoặc `hoàn thiện`. Nội dung bên dưới giải thích đủ để người không đọc hội thoại vẫn hiểu:
+
+- **Thay đổi:** chức năng hoặc cấu hình nào được bổ sung/sửa, hành vi trước và sau nếu cần.
+- **Lý do:** vấn đề cần giải quyết hoặc mục đích của thay đổi.
+- **Kiểm tra:** lệnh và luồng thực sự đã kiểm tra, kết quả, phần chưa kiểm tra hoặc giới hạn còn lại nếu có.
+
+Mẫu sau dùng khi soạn nội dung commit; thay các phần trong ngoặc vuông bằng thông tin thực tế:
+
+```text
+[Hành động cụ thể] [phần bị ảnh hưởng] ([module nếu cần])
+
+Thay đổi:
+- [Mô tả thay đổi và kết quả đối với người dùng hoặc hệ thống.]
+
+Lý do:
+- [Vấn đề hoặc yêu cầu dẫn đến thay đổi.]
+
+Kiểm tra:
+- [Lệnh/luồng đã chạy và kết quả thực tế.]
+- [Giới hạn hoặc phần chưa kiểm tra, nếu có.]
+```
+
+Lệnh commit ở ví dụ tracking phía trên chỉ minh họa cách dùng nhiều tham số `-m` để tách các đoạn; phải thay phần kiểm tra bằng kết quả thực tế, không commit nguyên câu hướng dẫn. Với mô tả dài, soạn thông điệp vào file UTF-8 rồi dùng `git commit --file <đường-dẫn-file>`. Không ghi mật khẩu, token hoặc chuỗi kết nối có thông tin đăng nhập vào commit/PR. Không sửa lịch sử đã chia sẻ chỉ để đổi các thông điệp cũ sang tiếng Việt.
 
 ## 4. Merge để giữ nguyên tác giả
 
