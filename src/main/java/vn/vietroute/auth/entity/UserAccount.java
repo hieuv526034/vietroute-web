@@ -2,6 +2,7 @@ package vn.vietroute.auth.entity;
 
 import java.time.Instant;
 import java.util.Set;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -46,4 +47,7 @@ public class UserAccount extends BaseEntity {
     private long tokenVersion;
 
     private Set<Role> roles;
+
+    @Builder.Default
+    private Set<Permission> permissions = Set.of();
 }

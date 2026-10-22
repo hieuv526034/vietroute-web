@@ -11,15 +11,19 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HexFormat;
 import java.util.Locale;
+import java.util.ResourceBundle;
 import java.util.logging.Logger;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import vn.vietroute.auth.entity.Permission;
+import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.business.catalog.entity.CatalogItem;
 import vn.vietroute.common.jdbc.JdbcSchemaValidator;
 import vn.vietroute.common.jdbc.JdbcTransactions;
+import vn.vietroute.common.job.Job;
 
 /** Migration/seed chạy theo cờ môi trường; tuyệt đối không chạy từ bước đóng gói Maven. */
 @Component
@@ -52,11 +56,76 @@ public class DatabaseInitializer implements InitializingBean {
         prepareSchema(connection);
         migrate(connection, "V001__auth_and_catalog.sql");
         migrate(connection, "V002__vietroute_schema_and_indexes.sql");
-        JdbcSchemaValidator.verify(connection, UserAccount.class, CatalogItem.class);
+        migrate(connection, "V003__permissions_and_jobs.sql");
+        JdbcSchemaValidator.verify(
+            connection,
+            UserAccount.class,
+            CatalogItem.class,
+            Job.class,
+            Role.class,
+            Permission.class
+        );
         seedRoles(connection);
+        seedPermissions(connection);
         seedAdmin(connection);
         seedCatalogs(connection);
         return null;
+    }
+
+    /** Seed registry quyền; role thường chỉ nhận mặc định một lần, không phục hồi quyền quản trị đã thu hồi. */
+    private void seedPermissions(Connection connection) throws SQLException {
+        var vi = ResourceBundle.getBundle("i18n.messages", Locale.forLanguageTag("vi"));
+        var en = ResourceBundle.getBundle("i18n.messages", Locale.ENGLISH);
+        try (
+            PreparedStatement insert = connection.prepareStatement(
+                "INSERT INTO vietroute.auth_permissions(code,name_vi,name_en) VALUES (?,?,?) ON CONFLICT (code) DO NOTHING"
+            )
+        ) {
+            for (Permission permission : Permission.values()) {
+                insert.setString(1, permission.name());
+                insert.setString(2, vi.getString(permission.messageKey()));
+                insert.setString(3, en.getString(permission.messageKey()));
+                insert.addBatch();
+            }
+            insert.executeBatch();
+        }
+        for (Role role : Role.values()) {
+            try (
+                PreparedStatement query = connection.prepareStatement(
+                    "SELECT permissions_initialized FROM vietroute.auth_roles WHERE code=?"
+                )
+            ) {
+                query.setString(1, role.name());
+                try (ResultSet row = query.executeQuery()) {
+                    row.next();
+                    if (row.getBoolean(1) && role != Role.ADMIN) {
+                        continue;
+                    }
+                }
+            }
+            try (
+                PreparedStatement insert = connection.prepareStatement(
+                    "INSERT INTO vietroute.auth_role_permissions(role_code,permission_code) VALUES (?,?) ON CONFLICT DO NOTHING"
+                )
+            ) {
+                for (Permission permission : Permission.values()) {
+                    if (permission.grantedInitially(role)) {
+                        insert.setString(1, role.name());
+                        insert.setString(2, permission.name());
+                        insert.addBatch();
+                    }
+                }
+                insert.executeBatch();
+            }
+            try (
+                PreparedStatement update = connection.prepareStatement(
+                    "UPDATE vietroute.auth_roles SET permissions_initialized=true WHERE code=?"
+                )
+            ) {
+                update.setString(1, role.name());
+                update.executeUpdate();
+            }
+        }
     }
 
     /**

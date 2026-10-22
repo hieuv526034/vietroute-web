@@ -193,10 +193,11 @@ public class OpenApiController {
                         Map.entry("405", "HTTP method không được hỗ trợ"),
                         Map.entry("406", "Định dạng phản hồi không được hỗ trợ"),
                         Map.entry("409", "Trùng dữ liệu/phiên bản cũ"),
+                        Map.entry("413", "Body vượt kích thước cho phép"),
                         Map.entry("415", "Media type không được hỗ trợ"),
-                        Map.entry("429", "Tài khoản tạm khóa"),
+                        Map.entry("429", "Vượt quota hoặc tài khoản tạm khóa; xem code và Retry-After"),
                         Map.entry("500", "Lỗi nội bộ có traceId"),
-                        Map.entry("503", "Database chưa sẵn sàng")
+                        Map.entry("503", "Database/Redis chưa sẵn sàng, hệ thống bận hoặc email chưa cấu hình")
                     );
                     failures.forEach((code, text) ->
                         OpenApiModels.response(
@@ -226,8 +227,9 @@ public class OpenApiController {
             case 405 -> ErrorCode.METHOD_NOT_ALLOWED;
             case 406 -> ErrorCode.NOT_ACCEPTABLE;
             case 409 -> ErrorCode.CONFLICT;
+            case 413 -> ErrorCode.PAYLOAD_TOO_LARGE;
             case 415 -> ErrorCode.UNSUPPORTED_MEDIA;
-            case 429 -> ErrorCode.ACCOUNT_LOCKED;
+            case 429 -> ErrorCode.RATE_LIMITED;
             case 503 -> ErrorCode.DATABASE_UNAVAILABLE;
             default -> ErrorCode.INTERNAL_ERROR;
         };

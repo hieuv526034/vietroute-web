@@ -47,6 +47,7 @@ public abstract class BaseController {
         try {
             T data = action.get();
             return ResponseEntity.status(status)
+                .header("Cache-Control", "no-store")
                 .header("Content-Language", locale(request).getLanguage())
                 .body(responses.success(code, data, request));
         } catch (Exception error) {

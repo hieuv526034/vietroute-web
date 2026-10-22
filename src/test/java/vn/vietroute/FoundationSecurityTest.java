@@ -3,6 +3,7 @@ package vn.vietroute;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -12,17 +13,30 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Locale;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.core.io.FileSystemResourceLoader;
 import org.springframework.mock.web.MockServletContext;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
+import vn.vietroute.auth.dto.request.RolePermissionsRequest;
+import vn.vietroute.auth.entity.Role;
+import vn.vietroute.auth.service.AccessService;
+import vn.vietroute.business.catalog.service.CatalogService;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.WebConfig;
+import vn.vietroute.common.constant.ErrorCode;
+import vn.vietroute.common.exception.BusinessException;
 
 /** Kiểm tra biên bảo mật/locale mà không kết nối DB; nghiệp vụ SQL kiểm tra bằng PostgreSQL tạm ở CI. */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -75,6 +89,49 @@ class FoundationSecurityTest {
             .getResponse();
         assertEquals(403, result.getStatus());
         assertEquals("AUTH006", json.readTree(result.getContentAsString()).get("code").asText());
+    }
+
+    @Test
+    void roleAloneDoesNotBypassFunctionPermissionAtServiceBoundary() {
+        authenticate("ROLE_ADMIN");
+        assertThrows(AccessDeniedException.class, () ->
+            context.getBean(CatalogService.class).create(null, null, Locale.ENGLISH)
+        );
+        assertThrows(AccessDeniedException.class, () -> context.getBean(AccessService.class).roles());
+    }
+
+    @Test
+    void permissionRegistryIsLocalizedWithoutDatabase() {
+        authenticate("ACCESS_READ");
+        var access = context.getBean(AccessService.class);
+        assertNotEquals(
+            access.permissions(Locale.ENGLISH).get(0).name(),
+            access.permissions(Locale.forLanguageTag("vi")).get(0).name()
+        );
+    }
+
+    @Test
+    void administrativeRecoveryRoleCannotBeModified() {
+        authenticate("ACCESS_WRITE");
+        var error = assertThrows(BusinessException.class, () ->
+            context.getBean(AccessService.class).replace(Role.ADMIN, new RolePermissionsRequest(), null)
+        );
+        assertEquals(ErrorCode.ACCESS_DENIED, error.getErrorCode());
+    }
+
+    private void authenticate(String authority) {
+        SecurityContextHolder.getContext().setAuthentication(
+            UsernamePasswordAuthenticationToken.authenticated(
+                "test-user",
+                null,
+                List.of(new SimpleGrantedAuthority(authority))
+            )
+        );
+    }
+
+    @AfterEach
+    void clearAuthentication() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test

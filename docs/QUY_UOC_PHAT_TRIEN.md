@@ -6,6 +6,8 @@ Lượt nền tảng: common → auth/JWT/bootstrap → danh mục mẫu → lay
 
 Giữ Spring MVC 6, Thymeleaf, JDBC thuần, PostgreSQL và WAR/Tomcat 10.1. Spring Security xử lý bảo mật; Hibernate Validator chỉ dùng Bean Validation, không sử dụng Hibernate ORM/JPA. Không chuyển sang Spring Boot.
 
+Đọc [nền tảng mở rộng](NEN_TANG_MO_RONG.md) trước khi thêm permission, job hoặc email. Quyền chức năng kiểm ở service bằng authority; scope nhà xe/owner kiểm riêng ở SQL/service khi module có dữ liệu. Email đi qua outbox cùng transaction nghiệp vụ; worker chỉ nhận việc khi có slot, không tự tạo thread cho từng request. Giữ stack theo quy ước hiện tại, không tự đổi major để lấy nhãn mới nhất.
+
 ## Cấu trúc module
 
 ```text

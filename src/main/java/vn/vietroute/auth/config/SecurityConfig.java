@@ -14,6 +14,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfException;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import vn.vietroute.auth.repository.UserRepository;
@@ -22,6 +23,7 @@ import vn.vietroute.auth.security.JwtAuthenticationFilter;
 import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.common.config.AppSettings;
 import vn.vietroute.common.constant.ErrorCode;
+import vn.vietroute.common.traffic.TrafficGuardFilter;
 import vn.vietroute.common.web.ApiErrorWriter;
 
 /** Security chạy ở root context, dùng matcher tường minh và không tạo HTTP session đăng nhập. */
@@ -42,7 +44,8 @@ public class SecurityConfig {
         UserRepository users,
         ApiErrorWriter errors,
         AuthCookies cookies,
-        AppSettings settings
+        AppSettings settings,
+        TrafficGuardFilter traffic
     ) throws Exception {
         CookieCsrfTokenRepository csrf = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrf.setCookiePath("/");
@@ -83,7 +86,10 @@ public class SecurityConfig {
                         PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, "/api/v1/catalogs/**")
                     )
                     .permitAll()
-                    .requestMatchers(matcher("/api/v1/admin/**"), matcher("/admin/**"))
+                    // API quản trị kiểm quyền hành động ở service; giao diện tổng quản trị vẫn dành cho ADMIN.
+                    .requestMatchers(matcher("/api/v1/admin/**"))
+                    .authenticated()
+                    .requestMatchers(matcher("/admin/**"))
                     .hasRole("ADMIN")
                     .anyRequest()
                     .authenticated()
@@ -113,6 +119,7 @@ public class SecurityConfig {
                     )
                 )
             )
+            .addFilterBefore(traffic, CsrfFilter.class)
             .addFilterBefore(
                 new JwtAuthenticationFilter(jwt, users, errors, cookies),
                 UsernamePasswordAuthenticationFilter.class

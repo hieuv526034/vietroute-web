@@ -32,6 +32,14 @@ services:
         sync: false
       - key: VIETROUTE_DB_POOL_SIZE
         value: "4"
+      - key: VIETROUTE_WORKER_ENABLED
+        value: "false"
+      - key: VIETROUTE_WORKER_THREADS
+        value: "2"
+      - key: VIETROUTE_MAIL_ENABLED
+        value: "false"
+      - key: VIETROUTE_MAIL_PROVIDER
+        value: gmail
       - key: VIETROUTE_ENV
         value: production
       - key: VIETROUTE_DB_INIT_ENABLED

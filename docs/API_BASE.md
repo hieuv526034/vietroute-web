@@ -17,6 +17,8 @@
 
 View Thymeleaf: `/`, `/login`, `/account` (đăng nhập), `/admin` (ADMIN). Trên Tomcat deploy WAR theo tên, thêm context `/vietroute`; Docker deploy `ROOT.war` nên dùng đường dẫn ở bảng trực tiếp.
 
+API mở rộng: quản lý `/api/v1/admin/access/**`, theo dõi/retry `/api/v1/admin/jobs/**`, readiness `/api/v1/admin/system/status`, mail queue `/api/v1/admin/mail` (202, cần Idempotency-Key). Mỗi API có authority tương ứng tại service; `/auth/me` trả thêm permissions. Catalog create dùng CATALOG_WRITE thay vì kiểm cứng role ADMIN. COM012/429 là quota (khác AUTH005 khóa tài khoản), COM013/503 là quá tải/Redis lỗi, COM014/413 là body lớn; MAIL001/503 là mail tắt. Đọc [hợp đồng và luồng đầy đủ](NEN_TANG_MO_RONG.md).
+
 ## Locale và envelope
 
 Ưu tiên: `?lang=vi|en` → `X-Locale` → `Accept-Language` → vi. Accept-Language en-US/vi-VN được chọn về en/vi; locale tường minh khác trả HTTP 400. Header Content-Language và field locale thể hiện ngôn ngữ đã dùng.

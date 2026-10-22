@@ -24,6 +24,7 @@ Website quản lý nhà xe, tuyến/chuyến, đặt chỗ và theo dõi hành t
 7. [Đặc tả nghiệp vụ và bộ ca nghiệm thu](docs/DAC_TA_HE_THONG_XE_KHACH.md).
 8. [Luồng xử lý base để thành viên học và mở rộng](docs/LUONG_XU_LY_BASE.md).
 9. [Rà soát nền tảng và các điểm cần chốt trước nghiệp vụ](docs/RA_SOAT_BASE.md).
+10. [Chống spam, quyền chức năng, worker và Gmail/Workspace](docs/NEN_TANG_MO_RONG.md).
 
 ## Chạy dự án
 
