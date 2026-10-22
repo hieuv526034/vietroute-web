@@ -1,4 +1,4 @@
-package vn.vietroute.common.web;
+package vn.vietroute.common.monitoring.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;

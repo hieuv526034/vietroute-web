@@ -2,10 +2,10 @@ package vn.vietroute.auth.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.web.csrf.CsrfToken;
@@ -23,14 +23,16 @@ import vn.vietroute.auth.security.AuthCookies;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.AuthService;
 import vn.vietroute.common.base.BaseController;
+import vn.vietroute.common.constant.ApplicationConstants.Http;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
-import vn.vietroute.common.web.ApiResponse;
-import vn.vietroute.common.web.ApiResponses;
+import vn.vietroute.common.web.response.ApiResponse;
+import vn.vietroute.common.web.response.ApiResponses;
 
 /** Controller không tự xác minh JWT/password hoặc thực hiện SQL. */
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping(Routes.AUTH)
 @Tag(name = "Auth", description = "Đăng nhập JWT, tài khoản hiện tại, CSRF, đổi mật khẩu và logout")
 public class AuthController extends BaseController {
 
@@ -49,7 +51,7 @@ public class AuthController extends BaseController {
         this.cookies = cookies;
     }
 
-    @GetMapping("/csrf")
+    @GetMapping(Routes.CSRF_ACTION)
     @Operation(
         summary = "Lấy token CSRF",
         description = "Gọi trước login hoặc POST bằng cookie. Gửi token qua header trả về; giữ cookie XSRF-TOKEN tương ứng."
@@ -61,12 +63,12 @@ public class AuthController extends BaseController {
     ) {
         // Truy cập token kích hoạt phát cookie CSRF; base bọc lỗi nếu việc tạo token không hoàn tất.
         return execute(SuccessCode.OK, request, () -> {
-            response.setHeader("Cache-Control", "no-store");
+            response.setHeader(HttpHeaders.CACHE_CONTROL, Http.NO_STORE);
             return new CsrfResponse(token.getHeaderName(), token.getToken());
         });
     }
 
-    @PostMapping("/login")
+    @PostMapping(Routes.LOGIN_ACTION)
     @Operation(
         summary = "Đăng nhập",
         description = "JWT có hạn 30 phút. Website nhận cookie HttpOnly; API client dùng accessToken với Bearer. Sai 5 lần sẽ khóa 15 phút."
@@ -80,12 +82,12 @@ public class AuthController extends BaseController {
         return execute(SuccessCode.LOGIN, request, () -> {
             AuthResponse result = auth.login(body);
             cookies.set(request, response, result.accessToken());
-            response.setHeader("Cache-Control", "no-store");
+            response.setHeader(HttpHeaders.CACHE_CONTROL, Http.NO_STORE);
             return result;
         });
     }
 
-    @GetMapping("/me")
+    @GetMapping(Routes.ME_ACTION)
     @Operation(
         summary = "Xem tài khoản đang đăng nhập",
         description = "Yêu cầu Bearer JWT hoặc cookie auth hợp lệ; response không chứa password hash."
@@ -95,12 +97,12 @@ public class AuthController extends BaseController {
         HttpServletRequest request,
         HttpServletResponse response
     ) {
-        response.setHeader("Cache-Control", "no-store");
+        response.setHeader(HttpHeaders.CACHE_CONTROL, Http.NO_STORE);
         // Principal đã qua filter; service đọc lại dữ liệu và chỉ trả các field được công bố.
         return execute(SuccessCode.OK, request, () -> auth.me(user));
     }
 
-    @PostMapping("/change-password")
+    @PostMapping(Routes.PASSWORD_ACTION)
     @Operation(
         summary = "Đổi mật khẩu",
         description = "Xác minh mật khẩu hiện tại, thu hồi mọi token cũ và phát token mới cho phiên hiện tại."
@@ -115,12 +117,12 @@ public class AuthController extends BaseController {
         return execute(SuccessCode.PASSWORD_CHANGED, request, () -> {
             AuthResponse result = auth.changePassword(user, body);
             cookies.set(request, response, result.accessToken());
-            response.setHeader("Cache-Control", "no-store");
+            response.setHeader(HttpHeaders.CACHE_CONTROL, Http.NO_STORE);
             return result;
         });
     }
 
-    @PostMapping("/logout")
+    @PostMapping(Routes.LOGOUT_ACTION)
     @Operation(
         summary = "Đăng xuất",
         description = "Xóa cookie và tăng tokenVersion để thu hồi mọi token của tài khoản. Cookie mode yêu cầu CSRF."
@@ -134,7 +136,7 @@ public class AuthController extends BaseController {
         return execute(SuccessCode.LOGOUT, request, () -> {
             auth.logout(user);
             cookies.clear(request, response);
-            response.setHeader("Cache-Control", "no-store");
+            response.setHeader(HttpHeaders.CACHE_CONTROL, Http.NO_STORE);
             return null;
         });
     }

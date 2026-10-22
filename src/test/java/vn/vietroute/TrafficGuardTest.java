@@ -27,9 +27,9 @@ import vn.vietroute.common.traffic.ClientAddressResolver;
 import vn.vietroute.common.traffic.MemoryRateLimitStore;
 import vn.vietroute.common.traffic.RateLimitStore;
 import vn.vietroute.common.traffic.TrafficGuardFilter;
-import vn.vietroute.common.web.ApiErrorWriter;
-import vn.vietroute.common.web.ApiResponses;
-import vn.vietroute.common.web.SupportedLocaleResolver;
+import vn.vietroute.common.web.locale.SupportedLocaleResolver;
+import vn.vietroute.common.web.response.ApiErrorWriter;
+import vn.vietroute.common.web.response.ApiResponses;
 
 /** Kiểm quota nguyên tử và chống giả proxy trước khi JWT/DAO được gọi; không cần database. */
 class TrafficGuardTest {

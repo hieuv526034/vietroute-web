@@ -14,13 +14,14 @@ Giữ Spring MVC 6, Thymeleaf, JDBC thuần, PostgreSQL và WAR/Tomcat 10.1. Spr
 vn.vietroute
   common/
     base/          BaseController, BaseEntity, BaseDTO, BaseRequest, BaseResponse, PageRequest/PageResponse
-    constant/      Constants, ErrorCode, SuccessCode: mã ổn định và key dịch
+    constant/      ApplicationConstants, ErrorCode, SuccessCode: key, route, regex và mã ổn định
     exception/     BusinessException, xử lý exception và trả lỗi thống nhất
     validation/    Annotation và quy tắc dùng chung
     util/          Tạo mã, chuẩn hóa dữ liệu dùng chung
     jdbc/          Connection, transaction và repository JDBC cơ sở
     config/        Cấu hình root/web, locale, JSON, bootstrap và OpenAPI
-    web/           Envelope, locale, trace ID và controller hạ tầng
+    web/           controller, response, filter, locale, advice, openapi, routing
+    monitoring/    controller, dto/response, service: trạng thái DB/pool/worker
   auth/
     config/        Spring Security và JWT
     controller/    API auth và trang đăng nhập/tài khoản
@@ -53,6 +54,8 @@ Thêm lỗi vào `ErrorCode`, thêm key ở cả `messages_vi.properties` và `m
 Mỗi request có `X-Request-ID` và `traceId` trong response để tra log. Thời gian audit lưu UTC bằng Instant/TIMESTAMPTZ; giao diện hiển thị theo múi giờ Việt Nam. Tiền dùng BigDecimal/NUMERIC, không dùng float/double.
 
 ## Đặt tên và format source
+
+Key Environment dùng `ApplicationConstants.Env` qua `ConfigValues`; URL/matcher dùng `ApplicationConstants.Routes`; regex dùng `ApplicationConstants.Regex`. Header chuẩn dùng `HttpHeaders`, header/cookie riêng dùng `ApplicationConstants.Http`. Không gõ lại các literal này ở Settings/controller/filter. `WebRoutePolicy` gom chính sách public/JWT/quota, không tự cấp quyền chỉ vì có route mới. Đọc [quy hoạch constants và web](CONSTANTS_VA_CAU_TRUC_WEB.md) trước khi thêm key hoặc endpoint.
 
 Tên lớp có chữ viết tắt DTO phải viết hoa đầy đủ: `BaseDTO`, `CustomerDTO`; không viết `BaseDto` hoặc `CustomerDto`. Package Java vẫn viết thường `dto/request`, `dto/response`. Các tên thể hiện hợp đồng như `LoginRequest`, `UserResponse`, `PageResponse` giữ nguyên, không cần thêm hậu tố DTO lặp nghĩa.
 

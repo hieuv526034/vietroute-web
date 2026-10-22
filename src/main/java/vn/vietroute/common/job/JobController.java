@@ -15,13 +15,14 @@ import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
-import vn.vietroute.common.web.ApiResponse;
-import vn.vietroute.common.web.ApiResponses;
+import vn.vietroute.common.web.response.ApiResponse;
+import vn.vietroute.common.web.response.ApiResponses;
 
 @RestController
-@RequestMapping("/api/v1/admin/jobs")
+@RequestMapping(Routes.JOBS)
 @Tag(name = "Worker", description = "Theo dõi và retry công việc nền có quyền chức năng")
 public class JobController extends BaseController {
 
@@ -41,13 +42,13 @@ public class JobController extends BaseController {
         return execute(SuccessCode.OK, request, () -> jobs.page(page));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping(Routes.BY_ID)
     @Operation(summary = "Xem trạng thái job", description = "Yêu cầu JOB_READ")
     public ResponseEntity<ApiResponse<JobResponse>> find(@PathVariable UUID id, HttpServletRequest request) {
         return execute(SuccessCode.OK, request, () -> jobs.find(id));
     }
 
-    @PostMapping("/{id}/retry")
+    @PostMapping(Routes.JOB_RETRY_ACTION)
     @Operation(summary = "Chạy lại job DEAD", description = "Yêu cầu JOB_RETRY và version hiện hành")
     public ResponseEntity<ApiResponse<JobResponse>> retry(
         @PathVariable UUID id,

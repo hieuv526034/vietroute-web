@@ -9,7 +9,8 @@ import java.util.function.Function;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import lombok.Getter;
-import vn.vietroute.common.constant.Constants;
+import vn.vietroute.common.constant.ApplicationConstants.Env;
+import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.validation.StrongPasswordValidator;
 
 /** Đọc cấu hình một lần; không có toString để tránh vô tình ghi secrets ra log. */
@@ -35,25 +36,26 @@ public final class AppSettings {
     private final Duration accessTokenLifetime = Duration.ofMinutes(30);
 
     public AppSettings(Function<String, String> source) {
-        String environment = value(source, "VIETROUTE_ENV", "development").toLowerCase(Locale.ROOT);
+        ConfigValues values = new ConfigValues(source);
+        String environment = values.text(Env.ENV, "development").toLowerCase(Locale.ROOT);
         if (!environment.equals("development") && !environment.equals("production")) {
-            throw new IllegalStateException("VIETROUTE_ENV must be development or production");
+            throw new IllegalStateException(Env.ENV.key() + " must be development or production");
         }
         production = environment.equals("production");
-        databaseInitEnabled = flag(source, "VIETROUTE_DB_INIT_ENABLED", false);
-        cookieSecure = flag(source, "VIETROUTE_COOKIE_SECURE", production);
-        bootstrapUsername = value(source, "VIETROUTE_BOOTSTRAP_ADMIN_USERNAME", "admin");
-        bootstrapPassword = value(source, "VIETROUTE_BOOTSTRAP_ADMIN_PASSWORD", "");
-        if (!bootstrapUsername.matches(Constants.USERNAME_PATTERN)) {
-            throw new IllegalStateException("VIETROUTE_BOOTSTRAP_ADMIN_USERNAME is invalid");
+        databaseInitEnabled = values.flag(Env.DB_INIT_ENABLED, false);
+        cookieSecure = values.flag(Env.COOKIE_SECURE, production);
+        bootstrapUsername = values.text(Env.BOOTSTRAP_ADMIN_USERNAME, "admin");
+        bootstrapPassword = values.text(Env.BOOTSTRAP_ADMIN_PASSWORD, "");
+        if (!bootstrapUsername.matches(Regex.USERNAME)) {
+            throw new IllegalStateException(Env.BOOTSTRAP_ADMIN_USERNAME.key() + " is invalid");
         }
         if (databaseInitEnabled && !StrongPasswordValidator.valid(bootstrapPassword)) {
-            throw new IllegalStateException("VIETROUTE_BOOTSTRAP_ADMIN_PASSWORD must satisfy the password policy");
+            throw new IllegalStateException(Env.BOOTSTRAP_ADMIN_PASSWORD.key() + " must satisfy the password policy");
         }
-        String secret = source.apply("VIETROUTE_JWT_SECRET");
+        String secret = values.raw(Env.JWT_SECRET);
         if (secret == null || secret.isBlank()) {
             if (production) {
-                throw new IllegalStateException("VIETROUTE_JWT_SECRET is required in production");
+                throw new IllegalStateException(Env.JWT_SECRET.key() + " is required in production");
             }
             // Chỉ development không cấu hình mới dùng khóa tạm, token mất hiệu lực sau restart.
             byte[] random = new byte[48];
@@ -61,27 +63,13 @@ public final class AppSettings {
             secret = Base64.getEncoder().encodeToString(random);
         }
         if (secret.getBytes(StandardCharsets.UTF_8).length < 32) {
-            throw new IllegalStateException("VIETROUTE_JWT_SECRET must contain at least 32 UTF-8 bytes");
+            throw new IllegalStateException(Env.JWT_SECRET.key() + " must contain at least 32 UTF-8 bytes");
         }
         if (production && secret.startsWith("replace_with_")) {
-            throw new IllegalStateException("VIETROUTE_JWT_SECRET must not use the example placeholder in production");
+            throw new IllegalStateException(
+                Env.JWT_SECRET.key() + " must not use the example placeholder in production"
+            );
         }
         jwtKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-    }
-
-    private static String value(Function<String, String> source, String key, String fallback) {
-        String value = source.apply(key);
-        return value == null ? fallback : value;
-    }
-
-    private static boolean flag(Function<String, String> source, String key, boolean fallback) {
-        String value = source.apply(key);
-        if (value == null) {
-            return fallback;
-        }
-        if (!"true".equalsIgnoreCase(value) && !"false".equalsIgnoreCase(value)) {
-            throw new IllegalStateException(key + " must be true or false");
-        }
-        return Boolean.parseBoolean(value);
     }
 }

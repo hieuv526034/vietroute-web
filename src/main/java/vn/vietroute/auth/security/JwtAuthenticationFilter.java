@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.stream.Stream;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,10 +18,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.service.JwtService;
-import vn.vietroute.common.constant.Constants;
+import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
-import vn.vietroute.common.web.ApiErrorWriter;
+import vn.vietroute.common.web.response.ApiErrorWriter;
+import vn.vietroute.common.web.routing.WebRoutePolicy;
 
 /** Xác minh JWT rồi đọc lại tài khoản/quyền để khóa user hoặc logout có hiệu lực ngay. */
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -44,30 +46,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
         throws ServletException, IOException {
         String path = request.getRequestURI().substring(request.getContextPath().length());
-        if (
-            path.equals("/health") ||
-            path.equals("/api/v1/auth/login") ||
-            path.equals("/api/v1/auth/csrf") ||
-            path.startsWith("/assets/") ||
-            path.startsWith("/webjars/") ||
-            path.startsWith("/docs") ||
-            path.equals("/v3/api-docs")
-        ) {
+        if (WebRoutePolicy.skipsJwt(path)) {
             chain.doFilter(request, response);
             return;
         }
-        String authorization = request.getHeader("Authorization");
+        String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
         // Bearer được ưu tiên khi có header; chỉ dùng cookie HttpOnly khi client không gửi Authorization.
         String token = null;
         if (authorization != null) {
-            if (!authorization.startsWith("Bearer ") || authorization.length() <= 7) {
+            if (
+                !authorization.startsWith(Http.BEARER_PREFIX) || authorization.length() <= Http.BEARER_PREFIX.length()
+            ) {
                 errors.write(request, response, ErrorCode.TOKEN_INVALID);
                 return;
             }
-            token = authorization.substring(7);
+            token = authorization.substring(Http.BEARER_PREFIX.length());
         } else if (request.getCookies() != null) {
             token = Arrays.stream(request.getCookies())
-                .filter(value -> Constants.AUTH_COOKIE.equals(value.getName()))
+                .filter(value -> Http.AUTH_COOKIE.equals(value.getName()))
                 .map(Cookie::getValue)
                 .findFirst()
                 .orElse(null);
@@ -110,11 +106,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // Token cookie cũ được xóa để trang công khai vẫn mở được; API cần đăng nhập phải trả AUTH004.
                 SecurityContextHolder.clearContext();
                 cookies.clear(request, response);
-                boolean publicPage =
-                    path.equals("/") ||
-                    path.equals("/login") ||
-                    path.equals("/api/v1/auth/logout") ||
-                    ("GET".equals(request.getMethod()) && path.startsWith("/api/v1/catalogs/"));
+                boolean publicPage = WebRoutePolicy.recoversInvalidCookie(path, request.getMethod());
                 if (authorization != null || !publicPage) {
                     errors.write(request, response, ErrorCode.TOKEN_INVALID);
                     return;

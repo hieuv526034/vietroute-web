@@ -17,7 +17,9 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
+import org.springframework.http.HttpHeaders;
 import vn.vietroute.common.config.MailSettings;
+import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.job.JobFailure;
 
 /** Gmail OAuth2 qua HTTPS: chỉ scope gmail.send, cache access token trong RAM, refresh token ở Environment. */
@@ -52,8 +54,8 @@ public final class GmailTransport implements MailTransport {
             URI.create("https://gmail.googleapis.com/gmail/v1/users/me/messages/send")
         )
             .timeout(Duration.ofSeconds(20))
-            .header("Authorization", "Bearer " + accessToken())
-            .header("Content-Type", "application/json")
+            .header(HttpHeaders.AUTHORIZATION, Http.BEARER_PREFIX + accessToken())
+            .header(HttpHeaders.CONTENT_TYPE, "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(Map.of("raw", raw))))
             .build();
         HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
@@ -105,7 +107,7 @@ public final class GmailTransport implements MailTransport {
             encode(settings.getRefreshToken());
         HttpRequest request = HttpRequest.newBuilder(URI.create("https://oauth2.googleapis.com/token"))
             .timeout(Duration.ofSeconds(20))
-            .header("Content-Type", "application/x-www-form-urlencoded")
+            .header(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded")
             .POST(HttpRequest.BodyPublishers.ofString(form))
             .build();
         HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());

@@ -3,12 +3,14 @@ package vn.vietroute.common.base;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Locale;
 import java.util.function.Supplier;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
-import vn.vietroute.common.web.ApiResponse;
-import vn.vietroute.common.web.ApiResponses;
+import vn.vietroute.common.web.response.ApiResponse;
+import vn.vietroute.common.web.response.ApiResponses;
 
 /**
  * Khung xử lý cho API nghiệp vụ: nhận kết quả service, bọc response và bắt lỗi tại biên HTTP.
@@ -47,8 +49,8 @@ public abstract class BaseController {
         try {
             T data = action.get();
             return ResponseEntity.status(status)
-                .header("Cache-Control", "no-store")
-                .header("Content-Language", locale(request).getLanguage())
+                .header(HttpHeaders.CACHE_CONTROL, Http.NO_STORE)
+                .header(HttpHeaders.CONTENT_LANGUAGE, locale(request).getLanguage())
                 .body(responses.success(code, data, request));
         } catch (Exception error) {
             return exceptions.toResponse(error, request);

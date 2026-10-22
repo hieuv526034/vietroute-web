@@ -8,7 +8,10 @@ import org.apache.catalina.startup.Tomcat;
 import org.apache.catalina.webresources.DirResourceSet;
 import org.apache.catalina.webresources.StandardRoot;
 import org.apache.tomcat.util.scan.StandardJarScanner;
+import vn.vietroute.common.config.ConfigValues;
 import vn.vietroute.common.config.WebApplicationInitializer;
+import vn.vietroute.common.constant.ApplicationConstants.Env;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
 
 /**
  * Điểm Run/Debug cho IntelliJ bằng Tomcat nhúng, vẫn khởi tạo đúng Spring MVC/Security của WAR.
@@ -19,7 +22,7 @@ public final class VietRouteApplication {
     private VietRouteApplication() {}
 
     public static void main(String[] args) throws Exception {
-        if ("production".equalsIgnoreCase(System.getenv("VIETROUTE_ENV"))) {
+        if ("production".equalsIgnoreCase(new ConfigValues(System::getenv).raw(Env.ENV))) {
             throw new IllegalStateException("Launcher chỉ dùng local; production triển khai bằng WAR/Docker.");
         }
         Path root = Path.of("").toAbsolutePath().normalize();
@@ -31,9 +34,9 @@ public final class VietRouteApplication {
         if (!Files.isDirectory(web) || !Files.isDirectory(classes)) {
             throw new IllegalStateException("Chọn working directory là thư mục dự án và bật Build trước khi Run.");
         }
-        int port = Integer.parseInt(System.getenv().getOrDefault("VIETROUTE_HTTP_PORT", "8080"));
+        int port = new ConfigValues(System::getenv).number(Env.HTTP_PORT, 8080, 1, 65535);
         if (port < 1 || port > 65535) {
-            throw new IllegalStateException("VIETROUTE_HTTP_PORT phải từ 1 đến 65535.");
+            throw new IllegalStateException(Env.HTTP_PORT.key() + " phải từ 1 đến 65535.");
         }
         Tomcat tomcat = new Tomcat();
         tomcat.setBaseDir(root.resolve("target/tomcat-local").toString());
@@ -48,7 +51,7 @@ public final class VietRouteApplication {
         Tomcat.addDefaultMimeTypeMappings(context);
         context.setParentClassLoader(VietRouteApplication.class.getClassLoader());
         StandardRoot resources = new StandardRoot(context);
-        resources.addPreResources(new DirResourceSet(resources, "/WEB-INF/classes", classes.toString(), "/"));
+        resources.addPreResources(new DirResourceSet(resources, "/WEB-INF/classes", classes.toString(), Routes.HOME));
         context.setResources(resources);
         // Tomcat tìm initializer trong WEB-INF/classes; không đăng ký lại vì sẽ tạo dispatcher hai lần.
         StandardJarScanner scanner = new StandardJarScanner();
@@ -60,7 +63,7 @@ public final class VietRouteApplication {
             shutdown(tomcat);
             throw new IllegalStateException("Ứng dụng chưa khởi động; xem lỗi cấu hình phía trên.");
         }
-        System.out.println("VietRoute đã chạy: http://localhost:" + port + "/login?lang=vi");
+        System.out.println("VietRoute đã chạy: http://localhost:" + port + Routes.LOGIN + "?lang=vi");
         tomcat.getServer().await();
     }
 

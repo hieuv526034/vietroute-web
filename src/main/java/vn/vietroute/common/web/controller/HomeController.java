@@ -1,22 +1,25 @@
-package vn.vietroute.common.web;
+package vn.vietroute.common.web.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
+import vn.vietroute.common.constant.ApplicationConstants;
+import vn.vietroute.common.constant.ApplicationConstants.Http;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
 
 @Controller
 public class HomeController {
 
-    @GetMapping("/")
+    @GetMapping(Routes.HOME)
     public String home(Model model) {
-        model.addAttribute("applicationName", "VietRoute");
+        model.addAttribute("applicationName", ApplicationConstants.NAME);
         return "home";
     }
 
     /** Kiểm tra web đang chạy; không thực hiện truy vấn hoặc ghi vào database. */
-    @GetMapping(value = "/health", produces = "text/plain;charset=UTF-8")
+    @GetMapping(value = Routes.HEALTH, produces = Http.TEXT_UTF8)
     @ResponseBody
     @Operation(summary = "Kiểm tra ứng dụng web", description = "Availability probe; không truy vấn database.")
     public String health() {

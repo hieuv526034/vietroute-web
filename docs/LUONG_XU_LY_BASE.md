@@ -51,6 +51,8 @@ Chạy Maven build không khởi tạo DB. Muốn chạy app và có dữ liệu
 
 Nếu lambda chỉ chuyển tiếp nguyên lời gọi, dùng method reference: `cache -> cache.disable()` đổi thành `AbstractHttpConfigurer::disable`. Giữ lambda khi cần truyền thêm tham số hoặc có nhiều bước nghiệp vụ, ví dụ `() -> auth.me(user)`; không tách hàm vô nghĩa chỉ để xóa mọi dấu `->`.
 
-Class được import tường minh ở đầu file. Không viết `vn.vietroute.common.web.ApiResponse` hoặc `java.util.UUID` trong thân hàm; dùng `ApiResponse`, `UUID` sau khi import. Khi hai thư viện trùng tên, tách phần trách nhiệm sang class riêng; `OpenApiModels` minh họa cách tách Swagger model khỏi annotation mà không viết tên package dài trong code. Chuỗi package cấu hình component scan hoặc tên driver dùng reflection vẫn là chuỗi cấu hình hợp lệ.
+Class được import tường minh ở đầu file. Không viết `vn.vietroute.common.web.response.ApiResponse` hoặc `java.util.UUID` trong thân hàm; dùng `ApiResponse`, `UUID` sau khi import. Khi hai thư viện trùng tên, tách phần trách nhiệm sang class riêng; `OpenApiModels` minh họa cách tách Swagger model khỏi annotation mà không viết tên package dài trong code. Chuỗi package cấu hình component scan hoặc tên driver dùng reflection vẫn là chuỗi cấu hình hợp lệ.
+
+`common.web` được chia theo trách nhiệm: `controller`, `response`, `filter`, `locale`, `advice`, `openapi`, `routing`. Phần trạng thái hệ thống có cả service và DTO nằm ở `common.monitoring`. Xem [quy hoạch constants và web](CONSTANTS_VA_CAU_TRUC_WEB.md) để tìm class sau khi di chuyển.
 
 Comment/Javadoc tiếng Việt mô tả mục đích, thứ tự, điều kiện và lý do transaction/quyền; không chỉ diễn đạt lại từng lệnh hiển nhiên. Dùng format 4 spaces, mỗi lệnh/annotation một dòng, có dòng trống giữa method/field và các khối xử lý. Chạy `npm run format`, `npm run format:check`, rồi `mvnw verify` trước khi mở PR; production Docker vẫn bỏ compile/chạy/đóng gói test.

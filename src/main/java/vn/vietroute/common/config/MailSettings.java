@@ -4,6 +4,7 @@ import jakarta.mail.internet.AddressException;
 import jakarta.mail.internet.InternetAddress;
 import java.util.function.Function;
 import lombok.Getter;
+import vn.vietroute.common.constant.ApplicationConstants.Env;
 
 /** Credentials chỉ trong Environment, không có toString. Gmail API dùng HTTPS nên phù hợp Render Free. */
 @Getter
@@ -31,21 +32,21 @@ public final class MailSettings {
 
     public MailSettings(Function<String, String> source) {
         ConfigValues values = new ConfigValues(source);
-        enabled = values.flag("VIETROUTE_MAIL_ENABLED", false);
-        provider = values.text("VIETROUTE_MAIL_PROVIDER", "gmail");
+        enabled = values.flag(Env.MAIL_ENABLED, false);
+        provider = values.text(Env.MAIL_PROVIDER, "gmail");
         if (!provider.equals("gmail") && !provider.equals("smtp")) {
-            throw new IllegalStateException("Invalid VIETROUTE_MAIL_PROVIDER");
+            throw new IllegalStateException("Invalid " + Env.MAIL_PROVIDER.key());
         }
-        from = values.text("VIETROUTE_MAIL_FROM", "");
-        clientId = values.text("VIETROUTE_GMAIL_CLIENT_ID", "");
-        clientSecret = values.text("VIETROUTE_GMAIL_CLIENT_SECRET", "");
-        refreshToken = values.text("VIETROUTE_GMAIL_REFRESH_TOKEN", "");
-        smtpHost = values.text("VIETROUTE_SMTP_HOST", "smtp.gmail.com");
-        smtpPort = values.number("VIETROUTE_SMTP_PORT", 587, 1, 65535);
-        smtpUser = values.text("VIETROUTE_SMTP_USER", "");
-        smtpPassword = values.text("VIETROUTE_SMTP_PASSWORD", "");
+        from = values.text(Env.MAIL_FROM, "");
+        clientId = values.text(Env.GMAIL_CLIENT_ID, "");
+        clientSecret = values.text(Env.GMAIL_CLIENT_SECRET, "");
+        refreshToken = values.text(Env.GMAIL_REFRESH_TOKEN, "");
+        smtpHost = values.text(Env.SMTP_HOST, "smtp.gmail.com");
+        smtpPort = values.number(Env.SMTP_PORT, 587, 1, 65535);
+        smtpUser = values.text(Env.SMTP_USER, "");
+        smtpPassword = values.text(Env.SMTP_PASSWORD, "");
         if (enabled && !validAddress(from)) {
-            throw new IllegalStateException("VIETROUTE_MAIL_FROM must be one email address");
+            throw new IllegalStateException(Env.MAIL_FROM.key() + " must be one email address");
         }
         if (
             enabled &&

@@ -9,8 +9,8 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 import vn.vietroute.common.base.BaseRequest;
-import vn.vietroute.common.constant.Constants;
-import vn.vietroute.common.constant.Constants.CatalogType;
+import vn.vietroute.common.constant.ApplicationConstants.CatalogType;
+import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.validation.BusinessCode;
 
 /** Ví dụ request nghiệp vụ: audit lấy từ principal; code không truyền thì service tự sinh. */
@@ -27,7 +27,7 @@ public class CatalogCreateRequest extends BaseRequest {
     @Schema(
         description = "Mã chữ hoa/số 3–40 ký tự, null để tự sinh",
         example = "SEATVIP",
-        pattern = Constants.CODE_PATTERN,
+        pattern = Regex.BUSINESS_CODE,
         minLength = 3,
         maxLength = 40
     )

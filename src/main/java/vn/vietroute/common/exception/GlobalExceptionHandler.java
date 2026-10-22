@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import vn.vietroute.common.web.ApiResponse;
+import vn.vietroute.common.web.response.ApiResponse;
 
 /**
  * Bắt lỗi MVC xảy ra trước/sau thân controller, ví dụ JSON sai, @Valid hoặc endpoint không tồn tại.

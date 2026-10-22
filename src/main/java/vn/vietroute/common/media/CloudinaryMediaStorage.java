@@ -4,6 +4,7 @@ import com.cloudinary.Cloudinary;
 import java.io.IOException;
 import java.util.Map;
 import vn.vietroute.common.config.MediaSettings;
+import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 
@@ -63,7 +64,9 @@ public final class CloudinaryMediaStorage implements MediaStorage {
                 );
             String format = String.valueOf(result.get("format"));
             long version = ((Number) result.get("version")).longValue();
-            if (!publicId.equals(result.get("public_id")) || !format.matches("jpg|png") || version < 1) {
+            if (
+                !publicId.equals(result.get("public_id")) || !format.matches(Regex.IMAGE_STORAGE_FORMAT) || version < 1
+            ) {
                 throw new BusinessException(ErrorCode.MEDIA_UNAVAILABLE);
             }
             // Tự dựng URL trên host cố định; không nhận URL tùy ý từ HTTP/client để lưu vào DB.

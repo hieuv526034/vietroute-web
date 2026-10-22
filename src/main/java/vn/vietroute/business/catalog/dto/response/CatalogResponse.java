@@ -8,7 +8,7 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietroute.business.catalog.entity.CatalogItem;
 import vn.vietroute.common.base.BaseResponse;
-import vn.vietroute.common.constant.Constants.CatalogType;
+import vn.vietroute.common.constant.ApplicationConstants.CatalogType;
 
 /** Mapping bằng builder kế thừa, lựa chọn tên theo locale tại lớp response. */
 @Getter

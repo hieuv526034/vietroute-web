@@ -3,6 +3,8 @@ package vn.vietroute.common.jdbc;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import vn.vietroute.common.constant.ApplicationConstants.Env;
+import vn.vietroute.common.constant.ApplicationConstants.Regex;
 
 /** Schema ứng dụng từ cấu hình; không có biến static toàn cục hoặc tên schema trong repository/entity. */
 public final class JdbcSchema {
@@ -26,13 +28,13 @@ public final class JdbcSchema {
     public static void validate(String name) {
         if (
             name == null ||
-            !name.matches("[a-z][a-z0-9_]{0,62}") ||
+            !name.matches(Regex.SCHEMA) ||
             name.startsWith("pg_") ||
             name.equals("public") ||
             name.equals("information_schema")
         ) {
             throw new IllegalStateException(
-                "VIETROUTE_DB_SCHEMA must be a private lowercase PostgreSQL identifier (1-63 characters)"
+                Env.DB_SCHEMA.key() + " must be a private lowercase PostgreSQL identifier (1-63 characters)"
             );
         }
     }
