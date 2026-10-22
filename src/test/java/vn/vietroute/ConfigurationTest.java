@@ -12,7 +12,9 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.config.AppSettings;
+import vn.vietroute.common.config.DatabaseConfig;
 import vn.vietroute.common.config.DatabaseSettings;
+import vn.vietroute.common.config.MonitoringConfig;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.jdbc.JdbcSchema;
 
@@ -91,7 +93,8 @@ class ConfigurationTest {
             )::get,
             false
         );
-        HikariDataSource pool = new RootConfig().dataSource(settings);
+        var registry = new MonitoringConfig().meterRegistry();
+        HikariDataSource pool = new DatabaseConfig().dataSource(settings, registry);
         try (pool) {
             assertNull(pool.getHikariPoolMXBean(), "Chưa tạo pool runtime hoặc mở kết nối ở bước cấu hình");
             assertEquals(2, pool.getMaximumPoolSize());
@@ -100,6 +103,8 @@ class ConfigurationTest {
             assertEquals(0, pool.getKeepaliveTime());
             assertEquals(15, pool.getDataSourceProperties().get("connectTimeout"));
             assertEquals(30, pool.getDataSourceProperties().get("socketTimeout"));
+        } finally {
+            registry.close();
         }
         assertTrue(pool.isClosed());
     }

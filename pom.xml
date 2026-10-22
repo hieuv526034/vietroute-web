@@ -23,11 +23,19 @@
         <jackson.version>2.22.4</jackson.version>
         <swagger.version>2.2.55</swagger.version>
         <swagger-ui.version>5.34.0</swagger-ui.version>
+        <micrometer.version>1.17.2</micrometer.version>
         <maven.compiler.parameters>true</maven.compiler.parameters>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-bom</artifactId>
+                <version>${micrometer.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>org.springframework</groupId>
                 <artifactId>spring-framework-bom</artifactId>
@@ -53,6 +61,10 @@
     </dependencyManagement>
 
     <dependencies>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.cloudinary</groupId>
             <artifactId>cloudinary-http5</artifactId>

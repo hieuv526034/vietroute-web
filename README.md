@@ -16,6 +16,8 @@ Website quản lý nhà xe, tuyến/chuyến, đặt chỗ và theo dõi hành t
 
 ## Tài liệu phải đọc
 
+Bắt đầu từ [Tổng quan hệ thống cho thành viên mới](docs/TONG_QUAN_HE_THONG.md), sau đó đọc [Giám sát và vận hành](docs/GIAM_SAT_VA_VAN_HANH.md). Hai tài liệu phân biệt phần đã có trong source, cấu hình cần bật và dịch vụ ngoài app chưa được kết nối.
+
 1. [Quy ước phát triển và cấu trúc module](docs/QUY_UOC_PHAT_TRIEN.md).
 2. [Hợp đồng API/base/auth](docs/API_BASE.md).
 3. [Phân công theo độ khó và thứ tự triển khai](docs/PHAN_CONG.md).

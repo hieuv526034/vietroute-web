@@ -33,11 +33,11 @@ import javax.net.ssl.SSLSession;
 import org.junit.jupiter.api.Test;
 import vn.vietroute.common.config.MailSettings;
 import vn.vietroute.common.config.RootConfig;
-import vn.vietroute.common.job.JobFailure;
-import vn.vietroute.common.job.JobWorker;
-import vn.vietroute.common.mail.GmailTransport;
-import vn.vietroute.common.mail.MailMessages;
-import vn.vietroute.common.mail.MailPayload;
+import vn.vietroute.common.job.model.JobFailure;
+import vn.vietroute.common.job.worker.JobWorker;
+import vn.vietroute.common.mail.model.MailPayload;
+import vn.vietroute.common.mail.transport.GmailTransport;
+import vn.vietroute.common.mail.transport.MailMessages;
 
 /** Giả HttpClient thay vì gửi mail thật; kiểm OAuth/token cache/retry classification và MIME tiếng Việt. */
 class MailFoundationTest {

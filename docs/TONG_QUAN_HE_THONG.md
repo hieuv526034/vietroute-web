@@ -1,0 +1,86 @@
+# Tổng quan VietRoute cho thành viên mới
+
+Cập nhật 22/10/2026. Đọc tài liệu này trước, sau đó mở các tài liệu theo liên kết. Đây là bản đồ source đang có, không phải tuyên bố đã hoàn thành các nghiệp vụ đặt vé.
+
+## 1. Hệ thống gồm những gì
+
+VietRoute là một ứng dụng Java đóng gói WAR: Spring MVC 6 + Spring Security, Thymeleaf + Bootstrap/Axios, JDBC thuần và PostgreSQL. Docker chạy Java 21/Tomcat 10.1; IntelliJ dùng launcher trong `src/dev/java`. Không có Spring Boot, ORM, Kafka hoặc Redis bắt buộc. Redis adapter cũ chỉ là tùy chọn tương thích, không bật trong cấu hình hiện tại.
+
+```mermaid
+flowchart LR
+    Browser[Trình duyệt Thymeleaf và Axios] --> Web[Tomcat và Spring MVC]
+    Api[API client] --> Web
+    Web --> Security[Quota và JWT/CSRF]
+    Security --> Services[Service kiểm quyền và transaction]
+    Services --> DB[(PostgreSQL: auth, catalog, media, jobs)]
+    Worker[Worker nhận lease] --> DB
+    Worker --> Gmail[Gmail API HTTPS]
+    Worker --> Cloudinary[Cloudinary cleanup]
+    Services --> Cloudinary
+    Monitor[Collector bên ngoài] -->|Token chỉ đọc| Metrics[Metrics JVM, HTTP, pool và worker]
+    Metrics --> Registry[Registry và cache trong node]
+    Monitor --> Dashboard[Dashboard và cảnh báo bên ngoài]
+```
+
+Phần đã có: nền tảng locale/error/validation/audit/paging, auth/JWT/phân quyền, migration/seed, catalog CRUD, hàng đợi PostgreSQL, Gmail/SMTP, Cloudinary và giám sát. Nhà xe, tuyến/chuyến, booking/tồn chỗ và Maps là giai đoạn tiếp theo trong [PHAN_CONG.md](PHAN_CONG.md).
+
+## 2. Tìm code ở đâu
+
+| Package | Trách nhiệm và điểm bắt đầu |
+|---|---|
+| `common.config` | RootConfig ghép DatabaseConfig, TrafficConfig, IntegrationConfig, MonitoringConfig; WebConfig ở MVC context. Settings đọc env qua ConfigValues |
+| `common.base` | Hợp đồng kế thừa entity/DTO/request/response/page và BaseController |
+| `common.constant` | Key cấu hình, route/regex/HTTP, mã lỗi, thành công và validation; không chứa secrets |
+| `common.jdbc` | Connection đặt schema, transaction, metadata và nâng cấp DB; giữ một cụm vì quy mô còn nhỏ |
+| `common.web` | Controller web, envelope, filter, locale, advice, OpenAPI và route policy |
+| `common.exception`, `validation`, `util` | Chuyển lỗi an toàn, quy tắc nhập liệu và tiện ích dùng chung |
+| `common.job` | `controller`, `dto/request`, `dto/response`, `model`, `repository`, `service`, `handler`, `worker` |
+| `common.mail` | `controller`, `dto/request`, `model`, `service`, `handler`, `transport`; provider chỉ ở transport |
+| `common.monitoring` | `controller`, `dto/response`, `filter`, `repository`, `service`: đo HTTP/JVM/pool/worker và probe DB có chủ đích |
+| `common.media`, `traffic` | Adapter lưu ảnh, kiểm ảnh; giới hạn request/body/quota. Chưa chia lớp rỗng khi không cần |
+| `auth` | Credential, role/permission, principal, cookie/JWT và bootstrap tài khoản |
+| `business/catalog`, `business/media` | Module đang chạy; controller → service → repository → entity/response |
+
+Đổi package chỉ đổi tổ chức code, không đổi route/schema/dữ liệu. Không tạo lớp ở package cũ để chuyển tiếp. Sau khi cập nhật nhánh lần đầu, dừng IDE server → Maven clean → Reload Maven → Rebuild Project rồi Run.
+
+## 3. Khởi động và dừng
+
+1. Tomcat khởi tạo root context và các bean hạ tầng; Settings kiểm giá trị env. Không có tự đọc `.env`.
+2. DatabaseInitializer chỉ migrate/seed khi `VIETROUTE_DB_INIT_ENABLED=true`. V001–V004 có history/checksum, advisory transaction lock và kiểm metadata trước commit. Không reset admin đã tồn tại.
+3. Pool khởi tạo lười. Worker và DatabaseProbe chỉ bắt đầu sau initializer, mỗi loại bật bằng env riêng; tắt mặc định.
+4. MVC context đăng ký controller/advice/Thymeleaf/Swagger; hai context không tạo service/controller trùng.
+5. Shutdown ngừng poll, chờ worker đang chạy theo timeout, đóng pool, GC listener và registry. Kill đột ngột có thể để lại lease; node khác nhận lại khi hết hạn.
+
+Xem [schema và quyền](SCHEMA_VA_PHAN_QUYEN.md), [IntelliJ](CLOUDINARY_VA_INTELLIJ.md) và [deploy](DEPLOY_RENDER.md).
+
+## 4. Luồng request và lỗi
+
+Tomcat giới hạn connection/header/body → HttpMetricsFilter gắn request ID và bắt đầu đo → TrafficGuardFilter kiểm quota/semaphore/body → CSRF/JWT → MVC chuyển kiểu và validate DTO → BaseController.execute → service kiểm quyền/nghiệp vụ → JDBC → factory envelope. Filter đo nằm ngoài security nên ghi cả 401/403/429/503; bỏ health/static/scrape. RequestTraceFilter của MVC tái sử dụng ID đã có.
+
+JWT kiểm chữ ký/hạn dùng rồi tra DB để cập nhật active/tokenVersion/quyền trên từng request. Cookie HttpOnly cần CSRF khi ghi; Bearer tách khỏi cơ chế cookie. Quyền READ/CREATE/UPDATE/DELETE/ASSIGN theo resource ở service; scope dữ liệu phải kiểm thêm khi module nghiệp vụ ra đời. Ẩn nút UI không thay quyền server.
+
+Lỗi trước controller vào GlobalExceptionHandler, lỗi trong execute vào ApiExceptionMapper, lỗi filter dùng ApiErrorWriter; đều giữ HTTP status, code, messageKey, locale và traceId. Không trả stacktrace/SQL/password. Thời điểm là Instant/UTC. Xem [luồng base](LUONG_XU_LY_BASE.md) và [API_BASE.md](API_BASE.md).
+
+## 5. Transaction, job và provider
+
+JdbcTransactions mượn connection → đặt search_path → tắt autocommit → callback DAO dùng cùng connection → commit/rollback → trả pool. Không gọi Gmail/Cloudinary trong transaction giữ khóa DB dài. Client không được ghi audit, quyền hoặc tenant.
+
+Outbox: transaction lưu `system_jobs` cùng thay đổi nghiệp vụ → commit → worker claim `SKIP LOCKED` và lease → commit claim → handler mạng → transaction ACK/NACK. Retry backoff+jitter, lỗi cuối DEAD; token lease ngăn worker cũ ghi đè. Đây là at least once: provider đã nhận nhưng ACK mất thì có thể gửi lặp. Handler cần idempotent và timeout nhỏ hơn lease; tác vụ dài cần thiết kế gia hạn riêng.
+
+Ảnh công khai: giữ metadata PENDING + job cleanup → upload ngoài transaction → metadata READY. Xóa qua DELETING/job/provider/DELETED; cleanup không xóa ảnh READY. Chỉ JPEG/PNG bytes thật, giới hạn byte/pixel, quyền và owner phía server. Không dùng module này cho giấy tờ riêng tư.
+
+Chi tiết [worker/mail](NEN_TANG_MO_RONG.md) và [Cloudinary](CLOUDINARY_VA_INTELLIJ.md).
+
+## 6. Vận hành và nhiều node
+
+`/health` kiểm web sống; `/api/v1/admin/system/status` kiểm DB thật theo yêu cầu; `/api/v1/admin/system/runtime` và `/monitoring` đọc runtime/cache với SYSTEM_READ; `/internal/metrics` dùng token vận hành riêng và không cần DB/JWT. Dashboard bền vững/cảnh báo nằm bên ngoài app. Xem [GIAM_SAT_VA_VAN_HANH.md](GIAM_SAT_VA_VAN_HANH.md).
+
+Nhiều node dùng cùng DB/schema/JWT secret và cấu hình provider. Không cần sticky session cho đăng nhập. Quota memory áp dụng từng node, tổng mức có thể tăng theo số node; phải đặt quota toàn cụm tại ingress khi scale. Tổng connection = tổng pool mọi node và worker. Job chia qua DB, mỗi node tự có metrics; collector phải scrape từng instance thực, không qua load balancer ngẫu nhiên. Queue counts là dữ liệu chung: dùng max, không sum giữa node.
+
+Đã có nền khóa/migration/worker nhiều instance; chưa phải nghiệm thu tải production hoặc cam kết không lỗi. Render Free một instance có ngủ và không bảo đảm lịch job liên tục. Chưa đổi Spring major trong lượt này: Framework 6.2/Security 6.5 có rủi ro vòng đời OSS, cần PR nâng stack được kiểm tương thích riêng.
+
+## 7. Cách thêm module đúng nền
+
+Đọc quy ước/phân công → tạo nhánh member/task → chốt API, quyền, scope và SQL migration mới → DTO @Schema/Validation + bundle vi/en → service transaction + quyền → DAO PreparedStatement → controller BaseController + @Operation → UI gọi client CSRF chung → kiểm thử bằng DB tạm → format → PR/CI → merge. Không sửa migration đã áp dụng hoặc test trên Neon production.
+
+Local: `mvnw verify`, Node test Swagger và formatter. Production: `-Pproduction` chỉ main, bỏ test/launcher/Node; CI Docker dùng PostgreSQL tạm. Xem [CONTRIBUTING.md](../CONTRIBUTING.md). Khi đọc kết quả kiểm tra trong tài liệu cũ, xem commit/PR tương ứng, không coi số test lịch sử là số hiện tại.

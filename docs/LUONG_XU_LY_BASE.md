@@ -2,11 +2,11 @@
 
 ## Đọc code theo luồng request
 
-1. `RequestTraceFilter` gắn `X-Request-ID` để đối chiếu response với log.
+1. `HttpMetricsFilter` ở ngoài Security gắn `X-Request-ID`, bắt đầu đo và ghi nhận cả 401/403/429/503. `TrafficGuardFilter` giới hạn quota/semaphore/body trước CSRF/JWT. `RequestTraceFilter` của MVC tái sử dụng ID đã có; health/static/scrape không tính lưu lượng nghiệp vụ.
 2. Spring Security kiểm CSRF, JWT và quyền truy cập. `JwtAuthenticationFilter` ưu tiên Bearer; nếu không có header mới lấy cookie. Sau xác minh chữ ký/thời hạn, filter đọc lại user/role/tokenVersion từ DB.
 3. Spring MVC đọc JSON, chuyển enum/kiểu dữ liệu và chạy `@Valid` trước khi gọi controller. Lỗi bước này đi vào `GlobalExceptionHandler`.
 4. Controller auth/catalog kế thừa `BaseController`, gọi `execute(...)` và truyền phần việc dưới dạng `Supplier<T>`. Base gọi callback đúng một lần trong cùng thread, tạo envelope thành công hoặc bắt `Exception` và chuyển qua `ApiExceptionMapper`.
-5. Service kiểm tra nghiệp vụ/quyền và quyết định transaction. Repository chỉ bind tham số SQL, thực hiện câu lệnh rồi map dữ liệu; mọi bảng ứng dụng nằm trong `vietroute`.
+5. Service kiểm tra nghiệp vụ/quyền và quyết định transaction. Repository chỉ bind tham số SQL, thực hiện câu lệnh rồi map dữ liệu; bảng ứng dụng nằm trong schema cấu hình qua VIETROUTE_DB_SCHEMA (mặc định vietroute).
 6. `ApiExceptionMapper` là nơi duy nhất phân loại lỗi MVC/nghiệp vụ thành HTTP status, code, key dịch và lỗi field. Response luôn dùng factory `ApiResponses`.
 
 Lỗi từ filter xảy ra trước MVC nên được ghi bằng `ApiErrorWriter`, vẫn dùng cùng enum/factory. `/health` trả text và `/v3/api-docs` trả đặc tả OpenAPI thuần theo hợp đồng của hai endpoint; không bọc JSON thành công của chúng vào envelope nghiệp vụ.
@@ -42,7 +42,7 @@ Startup được bật bằng `VIETROUTE_DB_INIT_ENABLED=true`:
 
 1. Lấy advisory transaction lock để hai instance không migrate/seed cùng lúc.
 2. SchemaBootstrap kiểm một history trong DB, tạo schema cấu hình; nếu history legacy public thì chuyển sang schema đó. History nơi khác/nhiều history hoặc legacy thiếu history bị chặn trước seed.
-3. Kiểm tra/chạy V001–V003. DB mới tạo bảng ở schema cấu hình; legacy public được V002 chuyển vào đó, giữ ID/FK/sequence/index/dữ liệu. V001–V003 nguyên byte/checksum; adapter chỉ ánh xạ schema SQL lịch sử V002/V003 trong RAM. Query/DDL mới dùng search_path cấu hình.
+3. Kiểm tra/chạy V001–V004. DB mới tạo bảng ở schema cấu hình; legacy public được V002 chuyển vào đó, giữ ID/FK/sequence/index/dữ liệu. Migration giữ nguyên byte/checksum; adapter chỉ ánh xạ schema SQL lịch sử V002/V003 trong RAM. Query/DDL mới dùng search_path cấu hình.
 4. Đối chiếu metadata entity với DB, seed role/admin/catalog theo khóa duy nhất, rồi commit. Admin có sẵn không bị reset mật khẩu.
 
 Chạy Maven build không khởi tạo DB. Muốn chạy app và có dữ liệu ngay, đặt các biến DB/JWT/bootstrap và bật initializer trong cấu hình chạy IDE/Tomcat hoặc Render; `.env` không được Java tự nạp. CI dùng PostgreSQL tạm để kiểm DB mới, khởi động đồng thời, restart và nâng cấp từ `public`.

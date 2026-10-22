@@ -1,0 +1,96 @@
+# Ngưỡng khởi điểm cần hiệu chỉnh sau baseline. Rule file cho Prometheus/Alertmanager.
+# Grafana Cloud dùng cùng biểu thức nhưng cần tạo managed alert và contact point tương ứng.
+groups:
+  - name: vietroute-availability
+    rules:
+      - alert: VietRouteInstanceUnavailable
+        expr: up{job="vietroute"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Không scrape được instance VietRoute'
+          description: 'Kiểm tra Events/Logs Render, token scrape, mạng và trạng thái JVM. Endpoint lỗi không luôn đồng nghĩa JVM đã chết.'
+      - alert: VietRouteDatabaseUnavailable
+        expr: (vietroute_database_available{job="vietroute"} == 0) and on(job, instance) (vietroute_database_probe_enabled{job="vietroute"} == 1)
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Probe database VietRoute thất bại'
+      - alert: VietRouteDatabaseProbeStale
+        expr: (vietroute_database_probe_age{job="vietroute"} > 120) and on(job, instance) (vietroute_database_probe_enabled{job="vietroute"} == 1)
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Không có mẫu DB thành công mới trong hơn 120 giây'
+  - name: vietroute-resources
+    rules:
+      - alert: VietRouteHeapPressure
+        expr: sum by(job, instance) (jvm_memory_used_bytes{job="vietroute",area="heap"}) / sum by(job, instance) (jvm_memory_max_bytes{job="vietroute",area="heap"} > 0) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Heap JVM vượt 85% trong 5 phút'
+          description: 'Heap không phải RSS/container RAM. Kiểm tra thêm Render Metrics và GC trước khi tăng heap.'
+      - alert: VietRouteCpuPressure
+        expr: process_cpu_usage{job="vietroute"} > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'CPU tiến trình cao kéo dài'
+      - alert: VietRouteConnectionQueue
+        expr: vietroute_pool_waiting{job="vietroute"} > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Thread chờ pool database kéo dài'
+          description: 'Kiểm tra query chậm, transaction dài và tổng pool của mọi node trước khi tăng connection.'
+  - name: vietroute-http-worker
+    rules:
+      - alert: VietRouteHighErrorRate
+        expr: (sum by(job, instance) (rate(vietroute_http_errors_total{job="vietroute"}[5m])) / clamp_min(sum by(job, instance) (rate(vietroute_http_duration_seconds_count{job="vietroute"}[5m])), 0.001) > 0.05) and on(job, instance) (sum by(job, instance) (increase(vietroute_http_duration_seconds_count{job="vietroute"}[5m])) > 20)
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Tỷ lệ HTTP 5xx vượt 5% với đủ mẫu'
+      - alert: VietRouteSlowResponses
+        expr: (histogram_quantile(0.95, sum by(job, instance, le) (rate(vietroute_http_duration_seconds_bucket{job="vietroute"}[5m]))) > 2) and on(job, instance) (sum by(job, instance) (increase(vietroute_http_duration_seconds_count{job="vietroute"}[5m])) > 20)
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Độ trễ p95 HTTP vượt 2 giây'
+      - alert: VietRouteOverloadRejections
+        expr: increase(vietroute_http_unavailable_total{job="vietroute"}[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Có nhiều HTTP 503 trong 5 phút'
+      - alert: VietRouteWorkerNotClaiming
+        expr: ((vietroute_worker_claim_age{job="vietroute"} > 120) or (vietroute_worker_claim_age{job="vietroute"} < 0)) and on(job, instance) (vietroute_worker_enabled{job="vietroute"} == 1)
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Worker bật nhưng không có claim DB thành công gần đây'
+      - alert: VietRouteDeadJobs
+        expr: max by(job) (vietroute_jobs_dead{job="vietroute"}) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Có job DEAD cần xử lý'
+      - alert: VietRouteJobBacklog
+        expr: max by(job) (vietroute_jobs_oldest_due{job="vietroute"}) > 300
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Job đã đến hạn chờ quá 5 phút'

@@ -1,0 +1,150 @@
+<!doctype html>
+<html
+    lang="vi"
+    xmlns:th="http://www.thymeleaf.org"
+    th:lang="${currentLocale}"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.monitoring})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main
+            class="container-xl py-5"
+            id="monitoring-dashboard"
+        >
+            <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+                <h1 th:text="#{ui.monitoring}">Giám sát ứng dụng</h1>
+                <button
+                    type="button"
+                    id="monitoring-refresh"
+                    class="button"
+                    th:text="#{ui.monitoring.refresh}"
+                >
+                    Làm mới
+                </button>
+            </div>
+            <p
+                class="text-secondary"
+                th:text="#{ui.monitoring.note}"
+            >
+                Chỉ số của instance đang trả lời; lịch sử trình duyệt không thay dashboard vận hành.
+            </p>
+            <p
+                id="form-feedback"
+                class="feedback"
+                role="alert"
+                hidden
+            ></p>
+            <p>
+                <span th:text="#{ui.monitoring.instance}">Instance</span>
+                :
+                <code id="monitor-instance">—</code>
+            </p>
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="card p-3">
+                        <h2
+                            class="h6"
+                            th:text="#{ui.monitoring.heap}"
+                        >
+                            Heap đang dùng / tối đa
+                        </h2>
+                        <strong id="monitor-heap">—</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card p-3">
+                        <h2
+                            class="h6"
+                            th:text="#{ui.monitoring.cpu}"
+                        >
+                            CPU tiến trình
+                        </h2>
+                        <strong id="monitor-cpu">—</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card p-3">
+                        <h2
+                            class="h6"
+                            th:text="#{ui.monitoring.active}"
+                        >
+                            Request đang xử lý
+                        </h2>
+                        <strong id="monitor-active">—</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card p-3">
+                        <h2
+                            class="h6"
+                            th:text="#{ui.monitoring.errors}"
+                        >
+                            5xx / 429 / 503
+                        </h2>
+                        <strong id="monitor-errors">—</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card p-3">
+                        <h2
+                            class="h6"
+                            th:text="#{ui.monitoring.pool}"
+                        >
+                            Connection dùng / chờ
+                        </h2>
+                        <strong id="monitor-pool">—</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card p-3">
+                        <h2
+                            class="h6"
+                            th:text="#{ui.monitoring.worker}"
+                        >
+                            Worker / job đang chạy
+                        </h2>
+                        <strong id="monitor-worker">—</strong>
+                    </div>
+                </div>
+            </div>
+            <p>
+                <span th:text="#{ui.monitoring.database}">Probe DB</span>
+                :
+                <strong id="monitor-database">—</strong>
+            </p>
+            <p>
+                <span th:text="#{ui.monitoring.jobs}">Job đến hạn / DEAD / lag (giây)</span>
+                :
+                <strong id="monitor-jobs">—</strong>
+            </p>
+            <p
+                th:text="#{ui.monitoring.memoryNote}"
+                class="text-secondary"
+            >
+                Heap không bao gồm toàn bộ RAM container. CPU/RAM tổng xem tại Render Metrics.
+            </p>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th th:text="#{ui.monitoring.time}">Thời điểm</th>
+                            <th th:text="#{ui.monitoring.uptime}">Uptime (s)</th>
+                            <th th:text="#{ui.monitoring.rps}">Request/s giữa hai mẫu</th>
+                            <th th:text="#{ui.monitoring.total}">Tổng request</th>
+                            <th th:text="#{ui.monitoring.mean}">Độ trễ TB (ms)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monitor-history"></tbody>
+                </table>
+            </div>
+            <div
+                id="monitor-labels"
+                hidden
+                th:attr="data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off},data-unknown=#{ui.monitoring.unknown},data-up=#{ui.monitoring.up},data-down=#{ui.monitoring.down}"
+            ></div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/monitoring.js}"></script>
+    </body>
+</html>
