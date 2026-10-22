@@ -8,7 +8,8 @@ db_password="$(openssl rand -hex 24)"
 admin_password="CiA1!$(openssl rand -hex 16)"
 next_password="CiB2!$(openssl rand -hex 16)"
 jwt_secret="$(openssl rand -hex 48)"
-printf '::add-mask::%s\n' "$db_password" "$admin_password" "$next_password" "$jwt_secret"
+metrics_token="$(openssl rand -hex 32)"
+printf '::add-mask::%s\n' "$db_password" "$admin_password" "$next_password" "$jwt_secret" "$metrics_token"
 docker rm --force vietroute-ci >/dev/null
 docker network create vietroute-auth-net >/dev/null
 docker run --detach --name vietroute-db-ci --network vietroute-auth-net \
@@ -23,6 +24,7 @@ start_app() {
     -e PORT=10001 -p "127.0.0.1:$2:10001" \
     -e VIETROUTE_ENV=production -e VIETROUTE_COOKIE_SECURE=false -e VIETROUTE_DB_INIT_ENABLED=true \
     -e VIETROUTE_WORKER_ENABLED=true -e VIETROUTE_WORKER_POLL_SECONDS=1 \
+    -e VIETROUTE_METRICS_TOKEN="$metrics_token" -e VIETROUTE_MONITORING_DB_ENABLED=true -e VIETROUTE_MONITORING_POLL_SECONDS=15 \
     -e VIETROUTE_RATE_REQUESTS="${4:-300}" -e VIETROUTE_RATE_LOGINS=200 \
     -e VIETROUTE_REDIS_URL="${5:-}" \
     -e VIETROUTE_DB_SCHEMA="${6:-vietroute}" \
@@ -89,6 +91,9 @@ grep -qi 'SameSite=Lax' "$work/headers"
 call 200 GET /api/v1/auth/me '' cookie
 [[ "$(field data.username)" == admin ]]
 call 200 GET /api/v1/auth/me '' bearer
+call 200 GET /api/v1/admin/system/runtime '' bearer
+[[ "$(field data.databaseProbeEnabled)" == True ]]
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["heapUsedBytes"]>0 and len(d["instanceId"])==36' "$result"
 call 401 GET /api/v1/auth/me
 assert_code AUTH002
 call 200 GET '/api/v1/catalogs/VEHICLE_TYPE?lang=en'
@@ -424,31 +429,59 @@ token=$(field data.accessToken)
 call 200 GET "/api/v1/admin/catalogs/$custom_catalog_id" '' bearer
 [[ "$(field data.code)" == CITEST ]]
 
-printf 'Traffic stage: quota shared across two instances and fail-closed Redis outage\n'
+printf 'Traffic/monitoring stage: per-node memory quota, protected scrape and database recovery without Redis\n'
 docker rm --force vietroute-auth-ci vietroute-auth-ci2 >/dev/null
-docker run --detach --name vietroute-redis-ci --network vietroute-auth-net redis:8-alpine >/dev/null
-for attempt in {1..20}; do
-  if docker exec vietroute-redis-ci redis-cli ping >/dev/null 2>&1; then break; fi
-  sleep 1
-done
-start_app vietroute-auth-ci 18080 vietroute_ci 3 redis://vietroute-redis-ci:6379
-start_app vietroute-auth-ci2 18081 vietroute_ci 3 redis://vietroute-redis-ci:6379
+start_app vietroute-auth-ci 18080 vietroute_ci 3
+start_app vietroute-auth-ci2 18081 vietroute_ci 3
 for port in 18080 18081; do
   curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
     --retry-connrefused --max-time 5 "http://127.0.0.1:$port/health" > /dev/null
 done
-for port in 18080 18081 18080; do
-  status=$(curl --silent --show-error --max-time 10 -o "$result" -w '%{http_code}' "http://127.0.0.1:$port/api/v1/auth/csrf")
-  [[ "$status" == 200 ]]
+for port in 18080 18081; do
+  for attempt in {1..3}; do
+    status=$(curl --silent --show-error --max-time 10 -o "$result" -w '%{http_code}' "http://127.0.0.1:$port/api/v1/auth/csrf")
+    [[ "$status" == 200 ]]
+  done
 done
 status=$(curl --silent --show-error --max-time 10 -D "$work/rate-headers" -o "$result" -w '%{http_code}' \
   -H 'X-Forwarded-For: 192.0.2.222' http://127.0.0.1:18081/api/v1/auth/csrf)
 [[ "$status" == 429 ]]
 assert_code COM012
 grep -qi '^Retry-After:' "$work/rate-headers"
-docker stop vietroute-redis-ci >/dev/null
-status=$(curl --silent --show-error --max-time 10 -o "$result" -w '%{http_code}' http://127.0.0.1:18080/api/v1/auth/csrf)
-[[ "$status" == 503 ]]
-assert_code COM013
+scrape() {
+  curl --fail --silent --show-error --max-time 5 -H "Authorization: Bearer $metrics_token" "http://127.0.0.1:${1:-18080}/internal/metrics" -o "$work/metrics.txt"
+}
+[[ "$(curl --silent --show-error --max-time 5 -o /dev/null -w '%{http_code}' "$base/internal/metrics")" == 401 ]]
+scrape
+grep -q '^vietroute_http_limited_total ' "$work/metrics.txt"
+grep -q '^jvm_memory_used_bytes' "$work/metrics.txt"
+grep -q '^hikaricp_connections_acquire_seconds_count' "$work/metrics.txt"
+grep -q '^vietroute_http_duration_seconds_bucket' "$work/metrics.txt"
+if grep -q "$metrics_token" "$work/metrics.txt"; then exit 1; fi
+for attempt in {1..20}; do
+  scrape
+  if grep -q '^vietroute_database_available 1' "$work/metrics.txt"; then break; fi
+  sleep 2
+done
+grep -q '^vietroute_database_available 1' "$work/metrics.txt"
+# Dừng DB tạm sau mọi kiểm tra dữ liệu. Scrape vẫn phải hoạt động dù JWT/DB/quota không sẵn sàng.
+docker stop vietroute-db-ci >/dev/null
+for attempt in {1..25}; do
+  scrape
+  if grep -q '^vietroute_database_available 0' "$work/metrics.txt"; then break; fi
+  sleep 2
+done
+grep -q '^vietroute_database_available 0' "$work/metrics.txt"
 curl --fail --silent --show-error --max-time 5 http://127.0.0.1:18080/health > /dev/null
-printf 'Function permissions, durable workers, lease recovery, shared Redis quota and outage protection passed.\n'
+docker start vietroute-db-ci >/dev/null
+for attempt in {1..25}; do
+  scrape
+  if grep -q '^vietroute_database_available 1' "$work/metrics.txt"; then break; fi
+  sleep 2
+done
+grep -q '^vietroute_database_available 1' "$work/metrics.txt"
+# Mất một node không làm scrape node còn lại thất bại; không coi đây là benchmark production.
+docker stop vietroute-auth-ci2 >/dev/null
+scrape
+if curl --fail --silent --max-time 3 -H "Authorization: Bearer $metrics_token" http://127.0.0.1:18081/internal/metrics >/dev/null 2>&1; then exit 1; fi
+printf 'Function permissions, durable workers, per-node quota, metrics isolation and DB/node recovery checks passed.\n'

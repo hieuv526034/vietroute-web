@@ -5,9 +5,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import vn.vietroute.business.media.repository.MediaRepository;
 import vn.vietroute.common.jdbc.JdbcTransactions;
-import vn.vietroute.common.job.Job;
-import vn.vietroute.common.job.JobFailure;
-import vn.vietroute.common.job.JobHandler;
+import vn.vietroute.common.job.handler.JobHandler;
+import vn.vietroute.common.job.model.Job;
+import vn.vietroute.common.job.model.JobFailure;
 import vn.vietroute.common.media.MediaStorage;
 
 /** Xóa lặp an toàn: nhận trạng thái trước mạng; retry dùng lại publicId, không tạo file mới. */

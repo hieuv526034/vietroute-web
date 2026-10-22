@@ -28,7 +28,7 @@ import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.BaseRepository.SqlWork;
 import vn.vietroute.common.jdbc.JdbcTransactions;
-import vn.vietroute.common.job.JobRepository;
+import vn.vietroute.common.job.repository.JobRepository;
 import vn.vietroute.common.media.MediaStorage;
 import vn.vietroute.common.traffic.MemoryRateLimitStore;
 

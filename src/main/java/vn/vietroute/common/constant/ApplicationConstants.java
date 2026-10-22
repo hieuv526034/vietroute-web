@@ -66,7 +66,12 @@ public final class ApplicationConstants {
         CLOUDINARY_API_KEY("VIETROUTE_CLOUDINARY_API_KEY"),
         CLOUDINARY_API_SECRET("VIETROUTE_CLOUDINARY_API_SECRET"),
         CLOUDINARY_FOLDER("VIETROUTE_CLOUDINARY_FOLDER"),
-        HTTP_PORT("VIETROUTE_HTTP_PORT");
+        HTTP_PORT("VIETROUTE_HTTP_PORT"),
+
+        // Token đọc metrics tách khỏi JWT người dùng; probe DB chỉ bật có chủ đích.
+        METRICS_TOKEN("VIETROUTE_METRICS_TOKEN"),
+        MONITORING_DB_ENABLED("VIETROUTE_MONITORING_DB_ENABLED"),
+        MONITORING_POLL_SECONDS("VIETROUTE_MONITORING_POLL_SECONDS");
 
         private final String key;
 
@@ -154,6 +159,12 @@ public final class ApplicationConstants {
 
         public static final String SYSTEM_STATUS = ADMIN_API + "/system/status";
 
+        public static final String SYSTEM_RUNTIME = ADMIN_API + "/system/runtime";
+
+        public static final String MONITORING_PAGE = "/monitoring";
+
+        public static final String METRICS = "/internal/metrics";
+
         public static final String ASSETS = "/assets/";
 
         public static final String WEBJARS = "/webjars/";
@@ -239,6 +250,8 @@ public final class ApplicationConstants {
         public static final String TEXT_UTF8 = "text/plain;charset=UTF-8";
 
         public static final String NO_STORE = "no-store";
+
+        public static final String PROMETHEUS = "text/plain;version=0.0.4;charset=utf-8";
 
         private Http() {}
     }

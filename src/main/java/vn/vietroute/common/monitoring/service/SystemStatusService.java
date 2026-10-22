@@ -16,7 +16,7 @@ import vn.vietroute.common.config.MailSettings;
 import vn.vietroute.common.config.TrafficSettings;
 import vn.vietroute.common.jdbc.BaseRepository;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
-import vn.vietroute.common.job.JobWorker;
+import vn.vietroute.common.job.worker.JobWorker;
 import vn.vietroute.common.monitoring.dto.response.SystemStatusResponse;
 
 /** Endpoint readiness có truy vấn DB thật; tách khỏi /health để health check không đánh thức Neon. */

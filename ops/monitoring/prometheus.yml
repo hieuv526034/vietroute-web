@@ -1,0 +1,23 @@
+# Chạy ở hệ thống giám sát BÊN NGOÀI app; không thêm container vào Render Free.
+# Token file chỉ tồn tại trên collector, không commit nội dung token.
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+rule_files:
+  - alerts.yml
+
+scrape_configs:
+  - job_name: vietroute
+    scheme: https
+    metrics_path: /internal/metrics
+    scrape_timeout: 5s
+    authorization:
+      type: Bearer
+      credentials_file: /etc/secrets/vietroute_metrics_token
+    static_configs:
+      - targets: ['vietroute.example:443']
+        labels:
+          environment: production
+
+# Thêm alerting.alertmanagers theo hạ tầng thực tế; chưa có receiver được bật tự động.

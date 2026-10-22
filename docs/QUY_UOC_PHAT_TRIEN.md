@@ -2,6 +2,8 @@
 
 ## Phạm vi và thứ tự triển khai
 
+Người mới đọc [tổng quan hệ thống](TONG_QUAN_HE_THONG.md) trước. Package job/mail đã chia controller, DTO, service và phần thực thi theo trách nhiệm; root wiring tách DatabaseConfig, IntegrationConfig, TrafficConfig, MonitoringConfig. Theo [giám sát/vận hành](GIAM_SAT_VA_VAN_HANH.md) khi thêm metrics hoặc handler. Không bật Kafka/Redis trong giai đoạn hiện tại; quota memory có phạm vi từng node.
+
 Lượt nền tảng: common → auth/JWT/bootstrap → danh mục mẫu → layout/Swagger → kiểm thử và CI. Sau đó mới triển khai lần lượt các nghiệp vụ theo `PHAN_CONG.md`. Không coi các module đặt vé, tuyến/chuyến hoặc Maps là đã hoàn thành khi mới có package.
 
 Giữ Spring MVC 6, Thymeleaf, JDBC thuần, PostgreSQL và WAR/Tomcat 10.1. Spring Security xử lý bảo mật; Hibernate Validator chỉ dùng Bean Validation, không sử dụng Hibernate ORM/JPA. Không chuyển sang Spring Boot.

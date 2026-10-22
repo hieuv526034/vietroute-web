@@ -10,7 +10,9 @@ import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
+import vn.vietroute.common.monitoring.dto.response.RuntimeStatusResponse;
 import vn.vietroute.common.monitoring.dto.response.SystemStatusResponse;
+import vn.vietroute.common.monitoring.service.ApplicationMetrics;
 import vn.vietroute.common.monitoring.service.SystemStatusService;
 import vn.vietroute.common.web.response.ApiResponse;
 import vn.vietroute.common.web.response.ApiResponses;
@@ -21,9 +23,17 @@ public class SystemStatusController extends BaseController {
 
     private final SystemStatusService system;
 
-    public SystemStatusController(SystemStatusService system, ApiResponses responses, ApiExceptionMapper errors) {
+    private final ApplicationMetrics metrics;
+
+    public SystemStatusController(
+        SystemStatusService system,
+        ApplicationMetrics metrics,
+        ApiResponses responses,
+        ApiExceptionMapper errors
+    ) {
         super(responses, errors);
         this.system = system;
+        this.metrics = metrics;
     }
 
     @GetMapping(Routes.SYSTEM_STATUS)
@@ -33,5 +43,14 @@ public class SystemStatusController extends BaseController {
     )
     public ResponseEntity<ApiResponse<SystemStatusResponse>> status(HttpServletRequest request) {
         return execute(SuccessCode.OK, request, system::status);
+    }
+
+    @GetMapping(Routes.SYSTEM_RUNTIME)
+    @Operation(
+        summary = "Đọc tài nguyên và lưu lượng instance",
+        description = "SYSTEM_READ; đọc JVM/registry/cache. JWT vẫn xác minh tài khoản qua DB; metrics vận hành dùng route và token riêng."
+    )
+    public ResponseEntity<ApiResponse<RuntimeStatusResponse>> runtime(HttpServletRequest request) {
+        return execute(SuccessCode.OK, request, metrics::snapshot);
     }
 }

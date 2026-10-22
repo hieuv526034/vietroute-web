@@ -23,5 +23,13 @@ public class PageModelAdvice {
         model.addAttribute("currentLocale", new SupportedLocaleResolver().resolveLocale(request).getLanguage());
         model.addAttribute("currentUser", user);
         model.addAttribute("adminUser", user != null && user.roles().contains(Role.ADMIN));
+        model.addAttribute(
+            "monitoringAllowed",
+            auth != null &&
+                auth
+                    .getAuthorities()
+                    .stream()
+                    .anyMatch(value -> value.getAuthority().equals("SYSTEM_READ"))
+        );
     }
 }

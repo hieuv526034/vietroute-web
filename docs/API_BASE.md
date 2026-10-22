@@ -1,5 +1,7 @@
 # Hợp đồng API nền tảng
 
+Giám sát bổ sung: `GET /api/v1/admin/system/runtime` dùng SYSTEM_READ và envelope chung; `GET /monitoring` là trang chỉ đọc cùng quyền. `GET /internal/metrics` là Prometheus text, token vận hành riêng, không bọc envelope/JWT và không truy vấn DB. Token rỗng đóng endpoint. Xem [giám sát và vận hành](GIAM_SAT_VA_VAN_HANH.md) và [tổng quan](TONG_QUAN_HE_THONG.md).
+
 ## Endpoint đang có
 
 | Method | Đường dẫn | Quyền | Hành vi |

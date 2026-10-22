@@ -50,13 +50,17 @@ common/
     openapi/                   OpenApiController, OpenApiModels
     routing/WebRoutePolicy
   monitoring/
-    controller/SystemStatusController
-    dto/response/SystemStatusResponse
-    service/SystemStatusService
+    controller/                SystemStatusController, MonitoringPageController
+    dto/response/              SystemStatusResponse, RuntimeStatusResponse
+    filter/                    HTTP metrics và token scrape
+    repository/                Tổng hợp DB/queue có timeout
+    service/                   SystemStatusService, ApplicationMetrics, DatabaseProbe
   exception/                   BusinessException, mapper và MVC exception advice
 ```
 
 `web.response` quản lý envelope và việc xuất phản hồi HTTP. `web.openapi` giữ controller và helper model cùng package để tránh trùng tên annotation/model thư viện. `web.advice` là model giao diện; exception advice ở `common.exception` tiếp tục dùng cùng mapper với BaseController. Monitoring là tính năng hạ tầng có controller/DTO/service, không đặt service vào thư mục web. Component scan vẫn quét common/auth/business và tách root/MVC để không tạo bean trùng.
+
+Job/mail được chia theo trách nhiệm như [tổng quan hệ thống](TONG_QUAN_HE_THONG.md); RootConfig ghép DatabaseConfig/IntegrationConfig/TrafficConfig/MonitoringConfig. Chỉ gom tên key/route vào ApplicationConstants, không gom logic giám sát hoặc enum nghiệp vụ tương lai vào lớp này.
 
 ## Khi thêm hoặc đổi cấu hình
 

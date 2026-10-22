@@ -1,7 +1,9 @@
 package vn.vietroute.auth.config;
 
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -12,7 +14,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.security.web.csrf.CsrfFilter;
@@ -23,9 +27,13 @@ import vn.vietroute.auth.security.AuthCookies;
 import vn.vietroute.auth.security.JwtAuthenticationFilter;
 import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.common.config.AppSettings;
+import vn.vietroute.common.config.MonitoringSettings;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
+import vn.vietroute.common.monitoring.filter.HttpMetricsFilter;
+import vn.vietroute.common.monitoring.filter.MetricsScrapeFilter;
+import vn.vietroute.common.monitoring.service.ApplicationMetrics;
 import vn.vietroute.common.traffic.TrafficGuardFilter;
 import vn.vietroute.common.web.response.ApiErrorWriter;
 import vn.vietroute.common.web.routing.WebRoutePolicy;
@@ -35,6 +43,26 @@ import vn.vietroute.common.web.routing.WebRoutePolicy;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+
+    /** Chain riêng chỉ đọc metrics; không chạy JWT/DB/quota nên vẫn scrape được khi DB hoặc quota lỗi. */
+    @Bean
+    @Order(1)
+    public SecurityFilterChain metricsFilterChain(
+        HttpSecurity http,
+        MonitoringSettings settings,
+        PrometheusMeterRegistry registry
+    ) throws Exception {
+        http.securityMatcher(matcher(Routes.METRICS))
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .requestCache(AbstractHttpConfigurer::disable)
+            .csrf(AbstractHttpConfigurer::disable)
+            .formLogin(AbstractHttpConfigurer::disable)
+            .httpBasic(AbstractHttpConfigurer::disable)
+            .logout(AbstractHttpConfigurer::disable)
+            .authorizeHttpRequests(auth -> auth.anyRequest().denyAll())
+            .addFilterBefore(new MetricsScrapeFilter(settings, registry), AuthorizationFilter.class);
+        return http.build();
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -49,7 +77,8 @@ public class SecurityConfig {
         ApiErrorWriter errors,
         AuthCookies cookies,
         AppSettings settings,
-        TrafficGuardFilter traffic
+        TrafficGuardFilter traffic,
+        ApplicationMetrics metrics
     ) throws Exception {
         CookieCsrfTokenRepository csrf = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrf.setCookiePath(Routes.HOME);
@@ -121,6 +150,7 @@ public class SecurityConfig {
                     )
                 )
             )
+            .addFilterBefore(new HttpMetricsFilter(metrics), SecurityContextHolderFilter.class)
             .addFilterBefore(traffic, CsrfFilter.class)
             .addFilterBefore(
                 new JwtAuthenticationFilter(jwt, users, errors, cookies),

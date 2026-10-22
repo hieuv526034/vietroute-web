@@ -26,7 +26,7 @@ import vn.vietroute.common.jdbc.JdbcSchemaValidator;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.jdbc.LegacyMigrationSql;
 import vn.vietroute.common.jdbc.SchemaBootstrap;
-import vn.vietroute.common.job.Job;
+import vn.vietroute.common.job.model.Job;
 
 /** Migration/seed chạy theo cờ môi trường; tuyệt đối không chạy từ bước đóng gói Maven. */
 @Component

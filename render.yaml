@@ -36,6 +36,12 @@ services:
         value: vietroute
       - key: VIETROUTE_WORKER_ENABLED
         value: "false"
+      - key: VIETROUTE_METRICS_TOKEN
+        generateValue: true
+      - key: VIETROUTE_MONITORING_DB_ENABLED
+        value: "false"
+      - key: VIETROUTE_MONITORING_POLL_SECONDS
+        value: "30"
       - key: VIETROUTE_WORKER_THREADS
         value: "2"
       - key: VIETROUTE_MAIL_ENABLED
