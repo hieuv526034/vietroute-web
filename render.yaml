@@ -20,6 +20,7 @@ services:
         - docker/**
         - render.yaml
         - .github/workflows/build.yml
+        - .github/scripts/**
     envVars:
       - key: PORT
         value: "10000"
@@ -29,6 +30,8 @@ services:
         sync: false
       - key: VIETROUTE_DB_PASSWORD
         sync: false
+      - key: VIETROUTE_DB_POOL_SIZE
+        value: "4"
       - key: VIETROUTE_ENV
         value: production
       - key: VIETROUTE_DB_INIT_ENABLED

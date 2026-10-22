@@ -7,12 +7,15 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -80,7 +83,15 @@ public class ApiExceptionMapper {
         if (code == ErrorCode.INTERNAL_ERROR) {
             LOG.log(Level.SEVERE, "Request failed traceId=" + RequestTraceFilter.ensure(request, null), error);
         }
-        return result(code, new Object[0], List.of(), request);
+        ResponseEntity<ApiResponse<T>> response = result(code, new Object[0], List.of(), request);
+        // Giữ các header giao thức của MVC, đặc biệt Allow của HTTP 405 và Accept của HTTP 415.
+        if (error instanceof ErrorResponse mvc && !mvc.getHeaders().isEmpty()) {
+            HttpHeaders headers = new HttpHeaders();
+            headers.putAll(response.getHeaders());
+            headers.putAll(mvc.getHeaders());
+            return new ResponseEntity<>(response.getBody(), headers, response.getStatusCode());
+        }
+        return response;
     }
 
     /** HTTP status phản ánh đúng loại lỗi; không dùng HTTP 200 cho phản hồi thất bại. */
@@ -143,6 +154,8 @@ public class ApiExceptionMapper {
         HttpServletRequest request
     ) {
         return ResponseEntity.status(code.getStatus())
+            // Lỗi vẫn có envelope JSON kể cả khi client yêu cầu định dạng không hỗ trợ (HTTP 406).
+            .contentType(MediaType.APPLICATION_JSON)
             .header("Content-Language", responses.locale(request).getLanguage())
             .header("Cache-Control", "no-store")
             .body(responses.error(code, args, fields, request));

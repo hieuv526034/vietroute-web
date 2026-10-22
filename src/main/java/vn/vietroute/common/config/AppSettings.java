@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.Locale;
 import java.util.function.Function;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -34,7 +35,11 @@ public final class AppSettings {
     private final Duration accessTokenLifetime = Duration.ofMinutes(30);
 
     public AppSettings(Function<String, String> source) {
-        production = "production".equalsIgnoreCase(value(source, "VIETROUTE_ENV", "development"));
+        String environment = value(source, "VIETROUTE_ENV", "development").toLowerCase(Locale.ROOT);
+        if (!environment.equals("development") && !environment.equals("production")) {
+            throw new IllegalStateException("VIETROUTE_ENV must be development or production");
+        }
+        production = environment.equals("production");
         databaseInitEnabled = flag(source, "VIETROUTE_DB_INIT_ENABLED", false);
         cookieSecure = flag(source, "VIETROUTE_COOKIE_SECURE", production);
         bootstrapUsername = value(source, "VIETROUTE_BOOTSTRAP_ADMIN_USERNAME", "admin");
@@ -57,6 +62,9 @@ public final class AppSettings {
         }
         if (secret.getBytes(StandardCharsets.UTF_8).length < 32) {
             throw new IllegalStateException("VIETROUTE_JWT_SECRET must contain at least 32 UTF-8 bytes");
+        }
+        if (production && secret.startsWith("replace_with_")) {
+            throw new IllegalStateException("VIETROUTE_JWT_SECRET must not use the example placeholder in production");
         }
         jwtKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
     }

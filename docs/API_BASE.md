@@ -43,6 +43,8 @@ View Thymeleaf: `/`, `/login`, `/account` (đăng nhập), `/admin` (ADMIN). Tr�
 
 Đây là ví dụ hợp đồng, không phải lỗi thực tế ở production. Khi thành công, `data` có nội dung, `errors` rỗng; messageKey/code giữ ổn định khi đổi locale. API client xử lý theo HTTP status và code, không so sánh câu dịch. X-Request-ID tương ứng traceId; không gửi hoặc lưu password/token vào log.
 
+JSON input từ chối field không khai báo, key trùng, object/token thừa ở cuối và `null` cho kiểu primitive. Lỗi binding trả COM002/HTTP 400 trước khi gọi service. Lỗi HTTP 406 vẫn trả envelope JSON; HTTP 405 giữ header `Allow` của MVC. Swagger lấy lại CSRF hiện hành trước mỗi mutation để sử dụng được tiếp sau login/logout; không lưu token qua reload.
+
 ## Nhóm mã lỗi
 
 | Mã | HTTP | Ý nghĩa |

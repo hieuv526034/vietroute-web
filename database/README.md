@@ -6,7 +6,9 @@
 4. Thay đổi schema mới đặt trong resource migration có version mới và thêm vào danh sách runner `DatabaseInitializer`. File đã áp dụng được kiểm checksum, không sửa lại. Các bảng nghiệp vụ trong đặc tả chưa được tạo; thống nhất thiết kế trước khi thêm migration.
 5. Dữ liệu demo, tên nhà xe, giờ và giá phải được ghi rõ là minh họa.
 
-`JdbcConnectionFactory.open()` trả một Connection mới. DAO dùng `PreparedStatement`, `ResultSet` và `try-with-resources`. Với nghiệp vụ nhiều DAO, service sở hữu một Connection và truyền cùng Connection cho toàn bộ giao dịch, rồi commit/rollback; các DAO tham gia không tự đóng Connection đó.
+`JdbcConnectionFactory.open()` mượn Connection từ HikariCP, đặt schema `vietroute`; `close()` trả connection về pool. Pool mặc định tối đa 4 connection/instance, minimumIdle=0, không ping giữ DB thức, đóng khi Spring undeploy. DAO dùng `PreparedStatement`, `ResultSet` và `try-with-resources`. Với nghiệp vụ nhiều DAO, service sở hữu một Connection và truyền cùng Connection cho toàn bộ giao dịch, rồi commit/rollback; các DAO tham gia không tự đóng Connection đó. Callback lỗi SQL/runtime hoặc `Error` đều rollback trước khi trả connection; lỗi JVM vẫn được ném tiếp.
+
+Giới hạn cấu hình: `VIETROUTE_DB_POOL_SIZE` mặc định 4 (1–10), `VIETROUTE_DB_ACQUIRE_TIMEOUT_MS` 20000 (1000–60000), `VIETROUTE_DB_CONNECT_TIMEOUT_SECONDS` 15 (1–60), `VIETROUTE_DB_SOCKET_TIMEOUT_SECONDS` 30 (1–300). PostgreSQL timeout là thuộc tính driver; nếu thêm timeout cùng tên vào JDBC URL, pgJDBC ưu tiên URL. Không dùng query timeout vô hạn cho luồng nghiệp vụ dài; tách tác vụ dài và đặt timeout phù hợp thay vì tăng pool tùy ý. Mỗi instance có pool riêng nên tổng connection cần tính theo số instance. Khởi tạo bean/đóng gói Maven không mở kết nối; initializer bật hoặc request cần DAO mới dùng DB.
 
 Không đưa mật khẩu database hoặc dữ liệu khách thật vào Git. `.env.example` chỉ là mẫu, Java không tự đọc `.env`.
 

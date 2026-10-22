@@ -89,6 +89,17 @@ call 401 GET /api/v1/auth/me
 assert_code AUTH002
 call 200 GET '/api/v1/catalogs/VEHICLE_TYPE?lang=en'
 [[ "$(field locale)" == en ]]
+# Nhiều request đồng thời vẫn dùng pool giới hạn, trả hết connection về trạng thái idle.
+printf 'JDBC stage: concurrent reads and bounded pool\n'
+pids=()
+for attempt in {1..12}; do
+  curl --fail --silent --show-error --max-time 30 "$base/api/v1/catalogs/VEHICLE_TYPE" > /dev/null &
+  pids+=("$!")
+done
+for pid in "${pids[@]}"; do wait "$pid"; done
+connections=$(sql "SELECT count(*) FROM pg_stat_activity WHERE datname='vietroute_ci' AND application_name='vietroute-web'")
+[[ "$connections" -ge 1 && "$connections" -le 4 ]]
+[[ "$(sql "SELECT count(*) FROM pg_stat_activity WHERE datname='vietroute_ci' AND application_name='vietroute-web' AND state='idle in transaction'")" == 0 ]]
 call 400 GET '/api/v1/catalogs/VEHICLE_TYPE?size=101'
 assert_code COM001
 call 400 GET '/api/v1/catalogs/VEHICLE_TYPE?lang=fr'
@@ -99,6 +110,12 @@ JSON
 call 403 POST /api/v1/admin/catalogs "$work/catalog.json" cookie-no-csrf
 assert_code AUTH006
 printf 'Auth stage: catalog validation, audit and duplicate constraints\n'
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["sortOrder"]=None; json.dump(d,sys.stdout)' "$work/catalog.json" > "$work/null.json"
+call 400 POST /api/v1/admin/catalogs "$work/null.json" bearer
+assert_code COM002
+printf '%s\n' '{"type":"VEHICLE_TYPE","type":"BOOKING_SOURCE"}' > "$work/duplicate-key.json"
+call 400 POST /api/v1/admin/catalogs "$work/duplicate-key.json" bearer
+assert_code COM002
 call 201 POST /api/v1/admin/catalogs "$work/catalog.json" bearer
 [[ "$(field data.code)" == CITEST ]]
 [[ "$(field data.createdBy)" == 1 ]]

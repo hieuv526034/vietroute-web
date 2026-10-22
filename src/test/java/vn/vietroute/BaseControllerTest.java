@@ -130,6 +130,40 @@ class BaseControllerTest {
     }
 
     @Test
+    void rejectsAmbiguousJsonBeforeCallingBusinessLogic() throws Exception {
+        for (String payload : new String[] {
+            "{\"username\":\"first\",\"username\":\"second\",\"password\":\"test-only\"}",
+            "{\"username\":\"admin\",\"password\":\"test-only\"} {}",
+        }) {
+            MockHttpServletResponse response = mvc
+                .perform(post("/api/test").contentType("application/json").content(payload))
+                .andReturn()
+                .getResponse();
+            assertEquals(400, response.getStatus());
+            assertEquals("COM002", body(response).get("code").asText());
+        }
+    }
+
+    @Test
+    void unsupportedRepresentationStillHasReadableJsonError() throws Exception {
+        MockHttpServletResponse response = mvc
+            .perform(get("/api/test/success").accept("application/xml"))
+            .andReturn()
+            .getResponse();
+        assertEquals(406, response.getStatus());
+        assertEquals("application/json", response.getContentType());
+        assertEquals(ErrorCode.NOT_ACCEPTABLE.getCode(), body(response).get("code").asText());
+    }
+
+    @Test
+    void unsupportedMethodPreservesAllowHeader() throws Exception {
+        MockHttpServletResponse response = mvc.perform(get("/api/test")).andReturn().getResponse();
+        assertEquals(405, response.getStatus());
+        assertTrue(response.getHeader("Allow").contains("POST"));
+        assertEquals(ErrorCode.METHOD_NOT_ALLOWED.getCode(), body(response).get("code").asText());
+    }
+
+    @Test
     void createdAnnotationDoesNotOverwriteConflictResponse() throws Exception {
         MockHttpServletResponse created = mvc
             .perform(

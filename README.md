@@ -23,6 +23,7 @@ Website quản lý nhà xe, tuyến/chuyến, đặt chỗ và theo dõi hành t
 6. [Quy trình Git và ghi nhận đóng góp](CONTRIBUTING.md).
 7. [Đặc tả nghiệp vụ và bộ ca nghiệm thu](docs/DAC_TA_HE_THONG_XE_KHACH.md).
 8. [Luồng xử lý base để thành viên học và mở rộng](docs/LUONG_XU_LY_BASE.md).
+9. [Rà soát nền tảng và các điểm cần chốt trước nghiệp vụ](docs/RA_SOAT_BASE.md).
 
 ## Chạy dự án
 
@@ -33,6 +34,9 @@ Khi phát triển, cài Node.js để chạy `npm ci`, `npm run format` và `npm
 ```powershell
 # Kiểm tra phát triển, bao gồm test local không dùng Neon
 .\mvnw.cmd verify
+
+# Kiểm tra CSRF của Swagger bằng Node, chỉ dành cho phát triển
+node --test src/test/resources/dev/swagger.test.cjs
 
 # Build production: bỏ qua cả compile và chạy test
 .\mvnw.cmd -Pproduction clean package

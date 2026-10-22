@@ -20,7 +20,7 @@ public class JdbcTransactions {
                 T result = work.apply(connection);
                 connection.commit();
                 return result;
-            } catch (SQLException | RuntimeException exception) {
+            } catch (SQLException | RuntimeException | Error exception) {
                 try {
                     connection.rollback();
                 } catch (SQLException rollback) {
