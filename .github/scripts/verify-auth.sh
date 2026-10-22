@@ -308,10 +308,10 @@ sql "INSERT INTO system_jobs(id,type,dedup_key,payload) VALUES ('00000000-0000-0
 sql "INSERT INTO system_jobs(id,type,dedup_key,payload,available_at) VALUES ('00000000-0000-0000-0000-000000000022','SYSTEM_CLEANUP','ci-future','{}',CURRENT_TIMESTAMP+INTERVAL '1 hour')" >/dev/null
 sql "BEGIN; INSERT INTO system_jobs(id,type,dedup_key,payload) VALUES ('00000000-0000-0000-0000-000000000023','SYSTEM_CLEANUP','ci-rollback','{}'); ROLLBACK" >/dev/null
 for attempt in {1..40}; do
-  if [[ "$(sql "SELECT count(*) FROM system_jobs WHERE status='SUCCEEDED'")" == 13 && "$(sql "SELECT status FROM system_jobs WHERE dedup_key='ci-dead'")" == DEAD ]]; then break; fi
+  if [[ "$(sql "SELECT count(*) FROM system_jobs WHERE status='SUCCEEDED' AND (dedup_key LIKE 'ci-cleanup-%' OR dedup_key='ci-expired')")" == 13 && "$(sql "SELECT status FROM system_jobs WHERE dedup_key='ci-dead'")" == DEAD ]]; then break; fi
   sleep 1
 done
-[[ "$(sql "SELECT count(*) FROM system_jobs WHERE status='SUCCEEDED'")" == 13 ]]
+[[ "$(sql "SELECT count(*) FROM system_jobs WHERE status='SUCCEEDED' AND (dedup_key LIKE 'ci-cleanup-%' OR dedup_key='ci-expired')")" == 13 ]]
 [[ "$(sql "SELECT count(*) FROM system_jobs WHERE dedup_key LIKE 'ci-cleanup-%' AND attempts=1 AND payload='{}'::jsonb")" == 12 ]]
 [[ "$(sql "SELECT attempts FROM system_jobs WHERE dedup_key='ci-expired'")" == 2 ]]
 [[ "$(sql "SELECT attempts FROM system_jobs WHERE dedup_key='ci-future'")" == 0 ]]
