@@ -78,7 +78,8 @@ public class WebConfig extends DelegatingWebMvcConfiguration {
     public SpringTemplateEngine templateEngine(SpringResourceTemplateResolver resolver) {
         SpringTemplateEngine engine = new SpringTemplateEngine();
         engine.setTemplateResolver(resolver);
-        engine.setEnableSpringELCompiler(true);
+        // Template của đồ án không cần sinh class SpEL động; giữ chế độ diễn giải dễ kiểm soát trên RAM nhỏ.
+        engine.setEnableSpringELCompiler(false);
         return engine;
     }
 

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zaxxer.hikari.HikariDataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.FileSystemResourceLoader;
 import org.springframework.mock.web.MockServletContext;
@@ -25,6 +26,7 @@ class ApplicationSmokeTest {
             context.setServletContext(new MockServletContext("src/main/webapp", new FileSystemResourceLoader()));
             context.register(RootConfig.class, WebConfig.class);
             context.refresh();
+            assertTrue(context.getBean(HikariDataSource.class).getHikariPoolMXBean() == null);
             MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
 
             MvcResult home = mvc.perform(get("/")).andReturn();

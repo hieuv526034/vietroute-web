@@ -23,6 +23,8 @@ Nếu đã tạo service từ bản source trước khi có auth, thêm `VIETROU
 
 `/health` chỉ xác nhận web chạy; không truy vấn Neon. Kiểm tra thêm login, `/api/v1/auth/me` và danh mục để xác nhận DB hoạt động. Khi initializer bật, lỗi migration/checksum/secret sẽ làm ứng dụng không khởi động thành công; xem Logs và không sửa migration đã áp dụng.
 
+`VIETROUTE_ENV` chỉ nhận `development` hoặc `production`; gõ sai làm startup dừng. Production bắt buộc khai báo DB URL/user/password và JWT secret thật, không dùng placeholder trong `.env.example`. HikariCP mặc định tối đa 4 connection/instance; chờ mượn connection 20 giây, connect timeout 15 giây, socket timeout 30 giây. Có thể chỉnh bằng các biến trong `.env.example`, xem giới hạn ở `database/README.md`. Pool không giữ connection rảnh hoặc ping định kỳ; Neon có thể ngủ khi không dùng. Đây là timeout I/O/kết nối, không thay thế việc thiết kế query/index hoặc kiểm thử tải.
+
 Schema ứng dụng cố định là `vietroute` trong database `neondb`. User DB cần quyền tạo schema/bảng/index; `neondb_owner` hiện được dùng qua Environment. Startup tự tạo schema trên DB mới, hoặc dùng V002 chuyển dữ liệu/history đã có từ `public`, giữ ID/FK/sequence/index và mật khẩu đã đổi. Không cần tự chạy SQL trên Dashboard trước khi deploy. Nếu có bảng/history trùng ở cả hai schema, initializer dừng và rollback để đối chiếu; không tự xóa dữ liệu. Xem `database/README.md` và `docs/LUONG_XU_LY_BASE.md`.
 
 ## Nếu tạo Web Service thủ công
