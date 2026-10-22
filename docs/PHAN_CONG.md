@@ -2,6 +2,8 @@
 
 Cập nhật ngày 22/10/2026 theo username GitHub và email do chủ dự án cung cấp.
 
+Đọc [bảng tiến độ và kế hoạch nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) để xem phần đã có trên main, phần chỉ có API/chưa có UI, công việc tiếp theo của từng người và điều kiện bàn giao. Tài liệu này giữ phạm vi phụ trách; bảng tiến độ mới là nơi cập nhật trạng thái cùng bằng chứng PR.
+
 ## Thông tin thành viên
 
 | Username GitHub | Email tác giả commit |
@@ -13,11 +15,11 @@ Cập nhật ngày 22/10/2026 theo username GitHub và email do chủ dự án c
 
 Dùng đúng bảng này khi tham chiếu thành viên, chuẩn bị phân công/PR và hướng dẫn cấu hình Git. Email cần được chính thành viên thêm/xác minh trong tài khoản GitHub để liên kết commit. Không suy diễn email từ username hoặc tên nhánh; không đổi tác giả các commit cũ theo bảng này.
 
-## Phần nền tảng đang triển khai
+## Phần nền tảng đã có trên main
 
-**hieuv526034@gmail.com** phụ trách source base, cấu hình/build/Docker/Render, database/migration/audit, common/locale/error/validation, JWT/auth/bootstrap, nền transaction và tích hợp. Đây là phần code đã được chuẩn bị trong lượt hiện tại, không phân bổ lại tác giả commit cho người khác.
+**hieuv526034 <hieuv526034@gmail.com>** đã triển khai source base, cấu hình/build/Docker/Render Blueprint, database/migration/audit, common/locale/error/validation, JWT/auth/bootstrap, quyền theo hành động, nền transaction/worker/mail/media và giám sát. Mốc đối chiếu là `b1f3cde` sau PR #13. Đây là code nền tảng có trên main, không phân bổ lại tác giả commit cho người khác; không tự coi Render/provider/cảnh báo production đã được kết nối.
 
-Các module nghiệp vụ bên dưới là kế hoạch triển khai tiếp, chưa phải các chức năng đã hoàn thành. Đọc `QUY_UOC_PHAT_TRIEN.md` và `API_BASE.md` trước khi bắt đầu; dùng catalog làm ví dụ controller → service → repository → entity/response.
+Các module nghiệp vụ bên dưới là kế hoạch triển khai tiếp, chưa phải các chức năng đã hoàn thành. Catalog có API CRUD và UI xem/tạo; UI sửa/xóa/phân trang còn ở CAT02. Thư viện ảnh public có API/UI nhưng cần credentials để thử Cloudinary thật. Đọc `QUY_UOC_PHAT_TRIEN.md` và `API_BASE.md` trước khi bắt đầu; dùng catalog làm ví dụ controller → service → repository → entity/response.
 
 ## Chia theo độ khó
 
@@ -66,7 +68,9 @@ git merge origin/main
 | 5 | TRACK01 — bản đồ/vị trí/tiến độ | Hieu | Quyền chuyến được giao, hiển thị timestamp/stale; xử lý từ chối vị trí/mất mạng; không giả lập GPS thật |
 | 5 | INTEGRATION01 — hủy chuyến/tổng hợp | Hieu + Bang | Không lọt booking sau hủy; audit/khóa/rollback nhất quán; nghiệm thu theo đặc tả |
 
-Không làm tất cả cùng lúc. Chốt schema và hợp đồng trước mỗi giai đoạn; chức năng tiếp theo chỉ bắt đầu khi phần phụ thuộc đã có API dùng được. Bảng này là kế hoạch, chưa tạo Issue/assign trên GitHub.
+Trước giai đoạn 2 phải chốt SCOPE01 (membership/scope nhà xe) và hợp đồng AUTH03 (cấp tài khoản). AUTH02 đăng ký CUSTOMER, CAT02 hoàn thiện UI catalog và LOCATION01 được tách thành các việc rõ ràng trong bảng tiến độ. DRIVERUI01, DETAIL01/HISTORY01, REPORT01 và ACCEPT01 cũng có người phối hợp/đầu ra tại đó, tránh bỏ sót luồng F01–F19.
+
+Không làm tất cả cùng lúc. Chốt schema và hợp đồng trước mỗi giai đoạn; chức năng tiếp theo chỉ bắt đầu khi phần phụ thuộc đã có API dùng được. Bảng này là kế hoạch, chưa tạo Issue/assign trên GitHub. Backlog UI quản lý job/quyền/cấu hình, triển khai provider/cảnh báo/backup được ghi riêng, không đánh dấu xong bằng API hoặc mẫu cấu hình.
 
 ## Quy tắc bàn giao và commit
 

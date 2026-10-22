@@ -213,22 +213,22 @@ Một Maven project WAR với controller, service, dao, model/dto, config, filte
 
 ## 12. Chia công việc cho 4 thành viên
 
-Username/email hiện hành và phân công triển khai theo độ khó nằm trong [PHAN_CONG.md](PHAN_CONG.md). Bảng bên dưới là phương án ban đầu của đặc tả; khi giao việc thực tế dùng phân công hiện hành. Username của Bang là `BangPhamIT` theo thông tin chủ dự án cung cấp ngày 22/10/2026.
+Phân công dưới đây được đồng bộ với [PHAN_CONG.md](PHAN_CONG.md) ngày 22/10/2026. Xem [tiến độ và kế hoạch nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) để phân biệt phần đã có trên main, phần thiếu UI và module chưa triển khai. Bảng này là trách nhiệm dự kiến, không phải ghi nhận đã hoàn thành.
 
 | Thành viên | Phần chính | Kết quả tự trình bày khi bảo vệ |
 |---|---|---|
-| BangPhamIT | Tài khoản, phân quyền; nhà xe; xe, loại xe và tài xế; F01–F04. | CRUD và đăng nhập hoạt động; tách quyền nhà xe; kiểm tra dữ liệu và lịch sử khi khóa. |
-| anhhoang104 | Danh mục địa điểm cùng nền tảng tuyến/chuyến; điểm dừng, lịch, phân xe/tài xế; F05–F06, phần dữ liệu F03. | Hai chiều độc lập, chuyến qua ngày, sao chép dữ liệu tuyến, không trùng lịch xe/tài xế. |
-| hiencoi250404-design | Tìm chuyến, đặt/xác nhận/từ chối/hủy đơn; chỗ theo chặng; F07, F09–F12, F17. | Query tìm đúng chiều/ngày; transaction giữ và trả chỗ; chống xác nhận trùng. |
-| hieuv526034 | Chi tiết chuyến, Google Maps, giao diện tài xế, cập nhật chặng, báo cáo; F08, F13–F15, F18. | Bản đồ, tiến độ, khách cần đón/trả, phân quyền tài xế, báo cáo theo nhà xe. |
+| hieuv526034 | Base/CI/database/auth và scope/cấp tài khoản; tồn chỗ theo chặng; Maps/Geolocation và luồng tài xế; tích hợp transaction và nghiệm thu. | Giải thích phần nền tảng thực đã merge, cơ chế khóa/rollback/scope, tracking thật và giới hạn; không nhận thay phần nhóm tự viết. |
+| BangPhamIT | Chuyến/phân xe-tài xế/lịch chồng/snapshot (F06), booking WEB/PHONE/xác nhận-từ chối-hủy (F09–F12/F19), báo cáo phối hợp Hieu (F18). | Vòng đời chuyến/đơn, dữ liệu lịch sử, xử lý lặp và dùng service tồn chỗ trong cùng transaction. |
+| anhhoang104 | Hoàn thiện UI danh mục, nhà xe/xe/hồ sơ tài xế (F02/F04, phần loại xe F03); tài khoản/quyền phối hợp auth của Hieu. | CRUD đúng nhà xe, validation/phiên bản/trạng thái, UI và kiểm truy cập chéo; không tự quản lý password hash. |
+| hiencoi250404-design | Địa điểm/tuyến/điểm dừng (phần địa điểm F03/F05), tìm và chi tiết chuyến/nhà xe, lịch sử đơn khách (F07/F08/F17). | Tuyến một chiều/giờ/giá, tìm đúng ngày tại điểm đón, UI responsive/vi-en gọi service chung, không tính lại chỗ ở JS. |
 
-F16 hủy chuyến: anhhoang104 phụ trách luồng và giao diện; hiencoi250404-design phụ trách transaction đơn/tồn chỗ dùng chung; cùng nghiệm thu.
+F16 hủy chuyến: Hieu và Bang cùng xử lý transaction trip/booking/segments; Anh và Hien phối hợp UI/nghiệm thu theo phạm vi. F01 đăng ký CUSTOMER còn ở AUTH02 của Hieu, phần đăng nhập/đổi mật khẩu/logout đã có nền tảng. F13–F15 do Hieu chủ trì; Hien ghép hiển thị chi tiết và bản đồ theo API có thật.
 
-F19 đặt qua điện thoại: hiencoi250404-design phụ trách, tái sử dụng form và service đặt chỗ, chỉ bổ sung nguồn đặt/người tạo và khả năng không gắn CUSTOMER.
+F19 đặt qua điện thoại: Bang phụ trách, dùng cùng service đặt chỗ/tồn chỗ do Bang và Hieu thống nhất; ghi nguồn đặt/người tạo và cho phép không gắn CUSTOMER.
 
-Mỗi người làm Controller + Service + DAO + Thymeleaf + dữ liệu mẫu + ca nghiệm thu + phần báo cáo của module. Không giao một người chỉ viết báo cáo hoặc chỉ ghép giao diện. Phần đặt theo chặng khó hơn: thành viên này không kiêm dựng khung, tổng hợp slide hoặc cấu hình Google Cloud. Người phụ trách bản đồ tổng hợp slide từ nội dung cả nhóm; người phụ trách tài khoản dựng khung ban đầu; cả 4 viết tài liệu chạy dự án.
+Mỗi người làm Controller + Service + DAO + Thymeleaf + dữ liệu mẫu + ca nghiệm thu + phần báo cáo của module. Không giao một người chỉ viết báo cáo hoặc chỉ ghép giao diện. Hieu xử lý nền tảng và tích hợp khó nhất; Bang xử lý nghiệp vụ gần khó; Anh và Hien nhận CRUD/UI theo phân công hiện hành. Cả nhóm tự cung cấp nội dung báo cáo và ca kiểm của phần mình; Hieu tổng hợp, không viết lại tác giả commit đã có.
 
-Chốt ngay ngày 1: mã trạng thái, tên bảng/cột, quyền, cách dùng Connection trong transaction, thứ tự điểm và công thức giá/chỗ. booking service là nơi duy nhất thay tồn chỗ; trip service gọi nghiệp vụ đóng đơn/đặt chỗ đã thống nhất khi xe rời điểm hoặc hủy chuyến. Không để hai module tự viết hai cách tính tồn chỗ khác nhau.
+Trước mỗi giai đoạn chốt mã trạng thái, bảng/cột, scope/quyền, Connection trong transaction, thứ tự điểm và công thức giá/chỗ. CAPACITY01 do Hieu cung cấp là cơ chế duy nhất thay tồn chỗ; booking/trip service gọi cơ chế đó cùng transaction khi xác nhận/hủy đơn, rời điểm hoặc hủy chuyến. Không để hai module tự viết hai cách tính tồn chỗ khác nhau.
 
 ## 13. Kế hoạch 14 ngày và dữ liệu demo
 
