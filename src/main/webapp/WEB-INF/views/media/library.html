@@ -1,0 +1,93 @@
+<!doctype html>
+<html
+    th:lang="${currentLocale}"
+    xmlns:th="http://www.thymeleaf.org"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.media})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main
+            class="container-xl workspace-page"
+            id="media-library"
+            th:attr="data-empty=#{ui.mediaEmpty},data-view=#{ui.mediaView},data-delete=#{ui.mediaDelete},data-confirm=#{ui.mediaConfirm},data-pending=#{ui.mediaPending},data-ready=#{ui.mediaReady},data-deleting=#{ui.mediaDeleting},data-deleted=#{ui.mediaDeleted}"
+        >
+            <div class="page-heading">
+                <p class="eyebrow">VIETROUTE / MEDIA</p>
+                <h1 th:text="#{ui.media}"></h1>
+                <p
+                    class="muted"
+                    th:text="#{ui.mediaDescription}"
+                ></p>
+            </div>
+            <section class="panel mb-4">
+                <form
+                    id="media-upload-form"
+                    enctype="multipart/form-data"
+                >
+                    <label
+                        class="form-label"
+                        for="media-file"
+                        th:text="#{ui.mediaChoose}"
+                    ></label>
+                    <input
+                        id="media-file"
+                        name="file"
+                        type="file"
+                        class="form-control mb-3"
+                        accept="image/jpeg,image/png"
+                        required
+                    />
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button
+                            id="media-upload"
+                            class="button"
+                            type="submit"
+                            disabled
+                            th:text="#{ui.mediaUpload}"
+                        ></button>
+                        <button
+                            id="media-refresh"
+                            class="button button-outline"
+                            type="button"
+                            th:text="#{ui.mediaRefresh}"
+                        ></button>
+                    </div>
+                </form>
+                <p
+                    id="form-feedback"
+                    class="form-feedback"
+                    role="status"
+                    hidden
+                ></p>
+            </section>
+            <section
+                class="media-gallery"
+                id="media-gallery"
+                aria-live="polite"
+            ></section>
+            <nav
+                class="d-flex gap-3 align-items-center mt-4"
+                th:attr="aria-label=#{ui.mediaPages}"
+            >
+                <button
+                    id="media-prev"
+                    class="button button-outline"
+                    type="button"
+                    disabled
+                    th:text="#{ui.mediaPrevious}"
+                ></button>
+                <span id="media-page"></span>
+                <button
+                    id="media-next"
+                    class="button button-outline"
+                    type="button"
+                    disabled
+                    th:text="#{ui.mediaNext}"
+                ></button>
+            </nav>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/media.js}"></script>
+    </body>
+</html>

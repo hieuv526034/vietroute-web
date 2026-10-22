@@ -24,7 +24,10 @@ public enum Permission {
     JOB_READ("JOB", Set.of(PermissionAction.READ)),
     JOB_RETRY("JOB", Set.of(PermissionAction.RETRY)),
     MAIL_SEND("MAIL", Set.of(PermissionAction.SEND)),
-    SYSTEM_READ("SYSTEM", Set.of(PermissionAction.READ));
+    SYSTEM_READ("SYSTEM", Set.of(PermissionAction.READ)),
+    MEDIA_READ("MEDIA", Set.of(PermissionAction.READ)),
+    MEDIA_CREATE("MEDIA", Set.of(PermissionAction.CREATE)),
+    MEDIA_DELETE("MEDIA", Set.of(PermissionAction.DELETE));
 
     private final String resource;
 

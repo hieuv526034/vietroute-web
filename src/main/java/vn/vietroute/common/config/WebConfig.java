@@ -17,6 +17,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.validation.Validator;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.multipart.support.StandardServletMultipartResolver;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.config.annotation.DelegatingWebMvcConfiguration;
@@ -42,6 +43,14 @@ import vn.vietroute.common.web.SupportedLocaleResolver;
     )
 )
 public class WebConfig extends DelegatingWebMvcConfiguration {
+
+    /** Chỉ parse multipart/form-data; giới hạn byte do Servlet registration áp dụng trước controller. */
+    @Bean
+    public StandardServletMultipartResolver multipartResolver() {
+        StandardServletMultipartResolver resolver = new StandardServletMultipartResolver();
+        resolver.setStrictServletCompliance(true);
+        return resolver;
+    }
 
     private final MessageSource messages;
 

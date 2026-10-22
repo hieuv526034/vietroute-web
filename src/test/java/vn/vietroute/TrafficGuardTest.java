@@ -185,6 +185,27 @@ class TrafficGuardTest {
         assertEquals(200, available.getStatus());
     }
 
+    @Test
+    void imageMultipartKeepsOriginalStreamAndUsesDedicatedByteLimit() throws Exception {
+        var guard = filter(Map.of(), new MemoryRateLimitStore(Clock.systemUTC(), 100));
+        var multipart = new MockHttpServletRequest("POST", "/api/v1/media");
+        multipart.setContentType("multipart/form-data; boundary=test");
+        byte[] content = new byte[70000];
+        multipart.setContent(content);
+        var response = new MockHttpServletResponse();
+        guard.doFilter(multipart, response, (request, output) -> {
+            assertTrue(request == multipart);
+            assertEquals(content.length, request.getInputStream().readAllBytes().length);
+        });
+        assertEquals(200, response.getStatus());
+        var oversized = new MockHttpServletRequest("POST", "/api/v1/media");
+        oversized.setContentType("multipart/form-data; boundary=test");
+        oversized.setContent(new byte[5308417]);
+        response = new MockHttpServletResponse();
+        guard.doFilter(oversized, response, (request, output) -> fail("Oversized multipart must be rejected"));
+        assertEquals(413, response.getStatus());
+    }
+
     private static final class MutableClock extends Clock {
 
         private Instant now = Instant.parse("2026-10-22T00:00:00Z");

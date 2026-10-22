@@ -100,6 +100,8 @@ Swagger UI ở `/docs`; tài liệu OpenAPI JSON ở `/v3/api-docs`. @Operation 
 
 ## Git và kiểm tra
 
+Ảnh công khai dùng adapter Cloudinary và module `business/media`; không lưu file bền vững trên Render hoặc đưa secret vào UI. Chạy IDE bằng profile local và cấu hình Run chia sẻ, production vẫn WAR. Đọc [Cloudinary và IntelliJ](CLOUDINARY_VA_INTELLIJ.md) trước khi tích hợp mediaId hoặc đổi cấu hình chạy.
+
 Hạ tầng/common/auth/schema và tích hợp khó hiện do hieuv526034 thực hiện, commit dưới định danh Git đã cấu hình. Bảng phân công chỉ là người phụ trách công việc tương lai; không tạo commit rỗng hoặc gán tác giả cho người chưa thực hiện. Mỗi phần code có PR và bằng chứng nghiệm thu.
 
 Nhánh theo mẫu `<người-phụ-trách>/<mã-việc-hoặc-chức-năng>` trong `PHAN_CONG.md`, không dùng tiền tố `codex/`. Người thực hiện commit trên nhánh được giao, tạo PR vào `main`, kiểm tra và review trước khi merge. Nhánh `main` chỉ nhận thay đổi qua PR. Dùng merge commit để giữ tác giả và ranh giới phần việc.
