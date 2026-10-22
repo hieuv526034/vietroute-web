@@ -12,5 +12,5 @@ fi
 sed -i "s/port=\"8080\"/port=\"${PORT:-10000}\"/" "$CATALINA_HOME/conf/server.xml"
 # Giới hạn thread/backlog/header/body ở connector trước khi request vào Java; không dùng default 200 threads cho RAM 512 MB.
 # JSON còn được giới hạn stream thật trong TrafficGuardFilter (maxPostSize Tomcat không giới hạn JSON).
-sed -i 's/protocol="HTTP\/1.1"/protocol="HTTP\/1.1" maxThreads="64" minSpareThreads="4" maxConnections="256" acceptCount="64" connectionTimeout="10000" keepAliveTimeout="5000" maxKeepAliveRequests="100" maxHttpRequestHeaderSize="16384" maxParameterCount="100" maxPostSize="65536" maxSwallowSize="65536"/' "$CATALINA_HOME/conf/server.xml"
+sed -i 's/connectionTimeout="20000"/connectionTimeout="10000"/; s/maxParameterCount="1000"/maxParameterCount="100"/; s/protocol="HTTP\/1.1"/protocol="HTTP\/1.1" maxThreads="64" minSpareThreads="4" maxConnections="256" acceptCount="64" keepAliveTimeout="5000" maxKeepAliveRequests="100" maxHttpRequestHeaderSize="16384" maxPostSize="65536" maxSwallowSize="65536"/' "$CATALINA_HOME/conf/server.xml"
 exec "$CATALINA_HOME/bin/catalina.sh" run

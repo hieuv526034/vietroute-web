@@ -11,7 +11,7 @@
 | POST | `/api/v1/auth/change-password` | Đăng nhập | Nhận currentPassword/newPassword; thu hồi token cũ, phát token mới |
 | POST | `/api/v1/auth/logout` | Cookie/Bearer; anonymous vẫn được xóa cookie | Thu hồi mọi token của tài khoản nếu còn xác thực hợp lệ |
 | GET | `/api/v1/catalogs/{type}` | Công khai | Danh mục đang hoạt động theo locale; page/size |
-| POST | `/api/v1/admin/catalogs` | ADMIN | Tạo mục danh mục, HTTP 201; code null sẽ tự sinh |
+| POST | `/api/v1/admin/catalogs` | CATALOG_WRITE | Tạo mục danh mục, HTTP 201; code null sẽ tự sinh |
 | GET | `/v3/api-docs` | Công khai | OpenAPI JSON tạo từ Spring mapping và Swagger annotations |
 | GET | `/docs` | Công khai | Swagger UI được đóng gói cùng WAR |
 
