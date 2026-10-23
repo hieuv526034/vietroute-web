@@ -35,7 +35,7 @@ Các trang nhiều nhóm đã chuyển sang tab và form ghi sang modal: xem [qu
 `traceId` là mã đối chiếu một HTTP request, có trong JSON và header `X-Request-ID`. UI hiển thị mã lỗi ổn định như `[COM008]` cùng thông báo đã dịch và hướng dẫn gửi mã yêu cầu cho quản trị viên. Nó không phải mã đăng nhập, mật khẩu hay kết luận nguyên nhân lỗi.
 
 - IntelliJ: Console của đúng lần Run → tìm nguyên traceId.
-- Trong app: ADMIN có SYSTEM_READ → Hệ thống → [Nhật ký API](NHAT_KY_API_VA_DEBUG.md), lọc traceId → modal Request/Response/Xuất debug. Bộ đệm từng node 300 request/30 phút mặc định, mất khi restart; chỉ có bản đã lọc từ lúc bật tính năng.
+- Trong app: ADMIN có SYSTEM_READ → Hệ thống → [Nhật ký API](NHAT_KY_API_VA_DEBUG.md), lọc traceId → modal Request/Response/Xuất debug. Lịch sử PostgreSQL dùng chung, mặc định 7 ngày; record đã commit còn sau restart, chỉ có snapshot đã lọc từ lúc triển khai V005.
 - Render: service → Logs → tìm traceId trong đúng khoảng thời gian/node. Chưa có màn xem log tập trung trong app.
 - Trình duyệt: DevTools → Network → request lỗi → Response, xem `code`, `message`, `errors`; không chia sẻ cookie/token hoặc nội dung mật khẩu.
 

@@ -54,32 +54,44 @@ Route lấy từ mapping MVC; replay chỉ khôi phục path variable số/UUID/
 - `ApiJournalFilter` đặt trước Security/traffic để ghi cả 401/403/429/503 và đo duration. Chỉ `/api/**` đồng bộ; bỏ qua chính API nhật ký, static/page/health/metrics/Swagger. Hiện chưa instrument Servlet async/streaming.
 - `ApiJournalBodyAdvice` đọc DTO đã parse trước validation, tạo projection rồi trả nguyên DTO cho controller. Không đọc stream thêm lần nữa.
 - `ApiResponses` ghi projection response vào trạng thái request; `ApiExceptionMapper` trích SQLState tối đa 8 tầng cause. `BaseRepository` giữ cause nội bộ để chẩn đoán, không trả cause ra client.
-- Khi request hoàn tất, filter lưu metadata/projection vào `ApiJournalStore`. Không lưu servlet, exception, principal hay raw object. UUID bản ghi khác traceId vì client có thể gửi lại cùng traceId.
-- Store dùng bộ đệm RAM có khóa ngắn, dung lượng/TTL giới hạn; không thêm thread, DB query, bảng hoặc job cho mỗi request. Service và page kiểm **ADMIN + SYSTEM_READ**; API kế thừa `BaseController`, schema trên Swagger.
+- Khi request hoàn tất, filter đưa metadata/projection vào `ApiJournalStore` để insert đồng bộ và commit PostgreSQL. Không giữ danh sách/queue lịch sử trong RAM; chỉ có snapshot tạm của request đang xử lý. Không lưu servlet, exception, principal hay raw object. UUID bản ghi khác traceId vì client có thể gửi lại cùng traceId.
+- `ApiJournalRepository` lưu bảng `api_request_journal` (V005) bằng JDBC/PreparedStatement, query/filter/paging trên DB, chỉ tải metadata trang hiện tại và JSON khi mở chi tiết. Pool nhật ký riêng tối đa 1 connection/node, không chiếm slot pool nghiệp vụ (mặc định 4). Service/page kiểm **ADMIN + SYSTEM_READ**; API kế thừa `BaseController`, Swagger đầy đủ.
 
 WAR có hai Spring context: root tạo service/security, servlet tạo controller. `@EnableMethodSecurity` phải hiện diện tại `SecurityConfig` **và** `WebConfig`; advisor root không tự áp dụng cho controller ở servlet context con. Test hồi quy dựng đúng hai context để kiểm HTTP 403 cho trang nhật ký/giám sát/cấu hình/job/quyền khi CUSTOMER nhập URL trực tiếp. Không chỉ kiểm bằng context gộp hoặc dựa vào menu bị ẩn.
 
 | API GET | Hợp đồng |
 |---|---|
-| `/api/v1/admin/system/api-journal` | Envelope `ApiJournalResponse`: instanceId, enabled, capacity, retentionMinutes, evicted và `records` phân trang |
+| `/api/v1/admin/system/api-journal` | Envelope `ApiJournalResponse`: instanceId node phục vụ, enabled, capacity (mục tiêu toàn DB), retentionMinutes, failedWrites node hiện tại, storage=POSTGRESQL và `records` phân trang |
 | `/api/v1/admin/system/api-journal/{id}` | Envelope `ApiJournalDetail`: entry, instanceId, replayPath, query, requestBody, responseBody, contentKind; id UUID |
 
-List nhận `page=0`, `size=20` (tối đa 100), `traceId` chính xác, `endpoint` chứa chuỗi route, `method`, `status=0` bỏ lọc, `code`, `minDurationMs=0`, `errorsOnly=false`. Lọc/paging trên bộ đệm, request mới hoàn tất trước nằm đầu. 400 cho bộ lọc không hợp lệ, 401 chưa xác thực, 403 thiếu role/quyền, 404 bản ghi hết hạn/khác node/không tồn tại. Response dùng locale/traceId/error envelope chung và `Cache-Control: no-store`.
+List nhận `page=0`, `size=20` (tối đa 100), `traceId` chính xác, `endpoint` chứa chuỗi route, `method`, `status=0` bỏ lọc, `code`, `minDurationMs=0`, `errorsOnly=false`. Lọc/paging trên PostgreSQL, mới ghi trước theo recorded_at/id; started_at là thời điểm bắt đầu request. Bộ đếm/trang có thể thay đổi khi request khác đang ghi. 400 cho bộ lọc không hợp lệ, 401 chưa xác thực, 403 thiếu role/quyền, 404 bản ghi hết hạn/đã dọn/không tồn tại; 503 nếu DB không đọc được. Response dùng locale/traceId/error envelope chung và `Cache-Control: no-store`.
 
-## Cấu hình và nhiều node
+## Cấu hình, retention và nhiều node
 
 | Biến môi trường | Mặc định | Giới hạn |
 |---|---|---|
-| `VIETROUTE_API_JOURNAL_ENABLED` | `true` | Bật/tắt từ Environment khi restart |
-| `VIETROUTE_API_JOURNAL_CAPACITY` | `300` | 20–1000 bản ghi/node |
-| `VIETROUTE_API_JOURNAL_MINUTES` | `30` | 1–120 phút, tính từ lúc request bắt đầu |
+| `VIETROUTE_API_JOURNAL_ENABLED` | `true` | Bật/tắt ghi request mới; vẫn tra được record đã lưu |
+| `VIETROUTE_API_JOURNAL_CAPACITY` | `10000` | 20–100000 dòng mục tiêu toàn DB, không phải mỗi node |
+| `VIETROUTE_API_JOURNAL_MINUTES` | `10080` (7 ngày) | 1–43200 phút; env cũ 30 phải cập nhật |
 
-Lịch sử **mất khi restart/deploy**, bị loại khi đầy/hết TTL; TTL được dọn khi ghi/đọc tiếp, không có scheduler riêng. Không truy hồi được request xảy ra trước khi bật tính năng. UI hiển thị instanceId và cảnh báo khi node đổi; load balancer chuyển node có thể khiến chi tiết trả 404. Không cộng gộp hay đồng bộ log toàn cụm. Nếu cần lịch sử lâu dài/toàn cụm, thiết kế kho log ngoài app, retention/quyền truy cập và cách lọc dữ liệu trước khi gửi; không bật Kafka/Redis trong giai đoạn này.
+Người dùng đã chọn retention **7 ngày**. Database cấp `recorded_at TIMESTAMPTZ`; mọi node cùng DB/schema thấy cùng lịch sử. `instanceId` trong detail là node đã ghi request, không giới hạn truy cập theo node. Bản ghi đã commit **không mất khi restart/deploy/crash**. Khi process bị kill trước khi insert/commit thì không bảo đảm có log; không truy hồi được log RAM đã mất từ phiên bản cũ.
 
-Nhật ký là công cụ chẩn đoán trong app, **không phải API gateway**, không routing upstream, không audit bất biến. Khi DB hỏng, JWT vẫn cần DB để kiểm tài khoản/quyền nên trang/API nhật ký có thể không mở được; không tạo đường bỏ qua auth. Dùng Logs đúng node trên Render/IntelliJ và metrics token độc lập theo [vận hành](GIAM_SAT_VA_VAN_HANH.md); sau DB hồi phục có thể tra request còn trong bộ đệm.
+Cleanup tối đa mỗi phút trên node có request ghi thành công, hoặc khi job `SYSTEM_CLEANUP` chạy: advisory transaction lock, xóa tối đa 500 dòng hết hạn và 500 dòng vượt mục tiêu/lượt. Không chạy background flush hoặc queue log trong RAM. Khi app/worker/traffic tắt, xóa vật lý chờ lần bảo trì tiếp theo; API luôn ẩn record quá 7 ngày dù chưa dọn. Dưới tải cao, số dòng có thể vượt mục tiêu 10000 tạm thời; cần theo dõi dung lượng DB/autovacuum và lịch bảo trì. Không cam kết giữ đủ 7 ngày khi vượt mục tiêu dung lượng; dòng cũ có thể bị dọn sớm.
 
-## Mở rộng và kiểm tra
+Đọc metadata không tải body cả bảng vào RAM. Snapshot request/response mỗi loại tối đa 4096 ký tự vẫn giữ nguyên; không lưu ảnh/blob hoặc dữ liệu tự do. PostgreSQL có TOAST/index/overhead nên 10000 dòng không phải cam kết một số MB chính xác.
 
-Khi thêm API/DTO, cập nhật Swagger/locales và kiểm quyền backend như cũ. Chỉ bổ sung projection sau khi rà từng field dữ liệu, không chuyển sang log raw hoặc blacklist theo tên password/token. Giữ giới hạn snapshot/list/TTL và kiểm sentinel secret không lọt vào cả UI/export. Không thêm email/username/address vào whitelist chỉ để tiện replay.
+## Chống quá tải và lỗi ghi log
 
-`ApiJournalTest` kiểm filter/security/MVC thật bằng MockMvc, DTO validation, service permission, TTL/capacity/ghi đồng thời, body/path/query omission, SQLState và OpenAPI/HTML vi/en với DB tắt. Node test kiểm cURL/collection không secret/script và quoting. Docker CI bổ sung tra trace/controller/snapshot/auth omission và từ chối CUSTOMER trên PostgreSQL **tạm**; không dùng Neon hoặc provider thật. Kiểm UI bằng dữ liệu giả chỉ xác nhận frontend, không thay bằng chứng auth/SQL từ CI.
+Pool riêng lazy/minIdle=0, tối đa **1 connection/node**, chờ mượn tối đa 250ms, connect/socket timeout 2 giây, statement timeout 1 giây. Ngân sách mặc định cả app là tối đa **4 connection nghiệp vụ + 1 journal = 5/node**; nhân với mọi node khi lên kế hoạch Neon. Một slot ghi/node, request chờ slot tối đa 100ms; không tạo queue/batch log riêng. Hết thời gian chờ thì bỏ bản ghi đó và tăng `failedWrites`, không retry mutation hoặc giữ payload để gửi lại. DB insert lỗi kích hoạt backoff 30 giây để tránh mỗi HTTP request đều chờ DB hỏng. Timeout là từng bước I/O, không phải cam kết wall-clock toàn request bằng một con số.
+
+`failedWrites` và thông tin backoff chỉ là counter/trạng thái nhỏ trong RAM node, không phải lịch sử request; reset khi node restart. Log `event=api_journal_write_unavailable traceId=...` lấy mẫu tối đa một dòng/giây, không log payload/exception/URL/credential. Cleanup timeout có log riêng, không rollback bản ghi đã commit. Response nghiệp vụ gốc không bị thay bằng lỗi ghi nhật ký. **Không hứa đủ mọi traceId khi DB/slot không sẵn sàng hoặc process bị kill.**
+
+Nếu chính PostgreSQL lưu nhật ký bị chết, app không thể ghi vào DB đó. JWT cũng cần DB để kiểm tài khoản/quyền nên UI có thể không mở được; không tạo đường bỏ qua auth. Dùng server Logs/metrics độc lập khi sự cố và kiểm các record đã commit sau DB hồi phục. Đây là nhật ký chẩn đoán dùng chung trong DB, không phải API gateway/audit bất biến hoặc kho log độc lập với database ứng dụng.
+
+## Triển khai và kiểm tra
+
+V005 chỉ chạy tại startup khi `VIETROUTE_DB_INIT_ENABLED=true`; giữ nguyên V001–V004/checksum. Đã đổi Blueprint/.env.example sang 10000/10080; Environment của service cũ có 300/30 cần cập nhật, default Java không ghi đè env cũ. Không khởi tạo/migrate/cleanup Neon trong build verification. Source chuyển DB không có nghĩa production đã deploy/migrate thành công.
+
+Khi thêm API/DTO, cập nhật Swagger/locales và kiểm quyền backend như cũ. Chỉ bổ sung projection sau khi rà từng field, không log raw hoặc blacklist theo tên password/token. Kiểm sentinel secret không lọt vào UI/export/DB; không thêm email/username/address vào whitelist để tiện replay.
+
+Java test dùng repository giả chỉ để kiểm filter/security/omission/no-queue/backoff và response không bị log failure làm hỏng. Docker CI dùng PostgreSQL **tạm** để kiểm migration/index/schema cấu hình, SQL insert/filter/detail, restart vẫn thấy trace, node khác đọc được, retention/cleanup và permission. Node tests kiểm cURL/collection không secret/script; UI fixture HTML thật chỉ xác nhận frontend, không thay SQL integration. Không dùng Neon/provider thật hoặc benchmark production trong các kiểm tra này.

@@ -6,7 +6,7 @@ import java.util.Map;
 /** Chỉ lưu projection đã lọc; không phải raw HTTP và không đủ để replay nguyên trạng. */
 public record ApiJournalDetail(
     @Schema(description = "Metadata request") ApiJournalEntry entry,
-    @Schema(description = "Node sở hữu bộ đệm") String instanceId,
+    @Schema(description = "Node đã ghi request; tra được từ mọi node cùng DB/schema") String instanceId,
     @Schema(description = "Path an toàn để debug; biến path ngoài whitelist trở thành placeholder") String replayPath,
     @Schema(description = "Query page/size/status/lang đã kiểm whitelist; query khác bị bỏ") Map<String, String> query,
     @Schema(description = "JSON request projection; chuỗi tự do/secret bị che, body không hỗ trợ bị bỏ")

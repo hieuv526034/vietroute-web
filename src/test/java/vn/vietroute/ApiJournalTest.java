@@ -16,12 +16,14 @@ import com.zaxxer.hikari.HikariDataSource;
 import java.sql.SQLException;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.IntStream;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.FileSystemResourceLoader;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -55,8 +57,10 @@ import vn.vietroute.common.monitoring.service.ApiJournalStore;
 import vn.vietroute.common.web.response.ApiErrorWriter;
 import vn.vietroute.common.web.response.ApiResponse;
 import vn.vietroute.common.web.response.FieldViolation;
+import vn.vietroute.support.JournalTestConfig;
+import vn.vietroute.support.JournalTestConfig.FakeJournalRepository;
 
-/** Chứng minh không giữ credential/PII, kiểm quyền/service/filter thật và giới hạn RAM; không DB production. */
+/** Chứng minh không giữ credential/PII, kiểm quyền/service/filter thật và không queue lịch sử trong RAM; không DB production. */
 class ApiJournalTest {
 
     @Test
@@ -101,7 +105,7 @@ class ApiJournalTest {
     private AnnotationConfigWebApplicationContext context() {
         var context = new AnnotationConfigWebApplicationContext();
         context.setServletContext(new MockServletContext("src/main/webapp", new FileSystemResourceLoader()));
-        context.register(RootConfig.class, WebConfig.class);
+        context.register(RootConfig.class, JournalTestConfig.class, WebConfig.class);
         context.refresh();
         return context;
     }
@@ -114,7 +118,7 @@ class ApiJournalTest {
         ) {
             var servletContext = new MockServletContext("src/main/webapp", new FileSystemResourceLoader());
             root.setServletContext(servletContext);
-            root.register(RootConfig.class);
+            root.register(RootConfig.class, JournalTestConfig.class);
             root.refresh();
             servlet.setParent(root);
             servlet.setServletContext(servletContext);
@@ -376,25 +380,56 @@ class ApiJournalTest {
     }
 
     @Test
-    void capacityTtlAndConcurrentWritesStayBoundedIncludingOutOfOrderCompletion() {
-        Instant now = Instant.parse("2026-10-23T00:00:00Z");
-        var settings = new ApiJournalSettings(
-            Map.of("VIETROUTE_API_JOURNAL_CAPACITY", "20", "VIETROUTE_API_JOURNAL_MINUTES", "1")::get
-        );
-        var store = new ApiJournalStore(settings, Clock.fixed(now, ZoneOffset.UTC));
-        IntStream.range(0, 200)
-            .parallel()
-            .forEach(i -> store.add(detail(now)));
-        assertEquals(20, store.page(new ApiJournalSearchRequest()).records().totalElements());
-        assertEquals(180, store.page(new ApiJournalSearchRequest()).evicted());
-        store.add(detail(now.minusSeconds(120))); // Request bắt đầu cũ nhưng hoàn tất sau; phải bị loại ngay khi đọc.
-        assertEquals(19, store.page(new ApiJournalSearchRequest()).records().totalElements());
+    void busyWriterHasNoHistoryQueueAndFailureBackoffDoesNotRetryEveryRequest() throws Exception {
+        var entered = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        var repository = new FakeJournalRepository() {
+            @Override
+            public void append(ApiJournalDetail detail) {
+                entered.countDown();
+                try {
+                    assertTrue(release.await(5, TimeUnit.SECONDS));
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError(exception);
+                }
+                super.append(detail);
+            }
+        };
+        var settings = new ApiJournalSettings(Map.<String, String>of()::get);
+        var store = new ApiJournalStore(settings, repository);
+        var executor = Executors.newSingleThreadExecutor();
+        try {
+            var running = executor.submit(() -> store.add(detail(Instant.now())));
+            assertTrue(entered.await(5, TimeUnit.SECONDS));
+            store.add(detail(Instant.now())); // Slot bận: không cache/queue lại snapshot.
+            release.countDown();
+            running.get(5, TimeUnit.SECONDS);
+            assertEquals(1, store.page(new ApiJournalSearchRequest()).records().totalElements());
+            assertEquals(1, store.page(new ApiJournalSearchRequest()).failedWrites());
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+        }
+        var attempts = new AtomicInteger();
+        var unavailable = new FakeJournalRepository() {
+            @Override
+            public void append(ApiJournalDetail detail) {
+                attempts.incrementAndGet();
+                throw new IllegalStateException("DB offline");
+            }
+        };
+        var failedStore = new ApiJournalStore(settings, unavailable);
+        for (int i = 0; i < 20; i++) failedStore.add(detail(Instant.now()));
+        assertEquals(1, attempts.get());
+        assertEquals(20, failedStore.page(new ApiJournalSearchRequest()).failedWrites());
+        assertEquals(0, failedStore.page(new ApiJournalSearchRequest()).records().totalElements());
         var disabled = new ApiJournalStore(
             new ApiJournalSettings(Map.of("VIETROUTE_API_JOURNAL_ENABLED", "false")::get),
-            Clock.systemUTC()
+            unavailable
         );
-        disabled.add(detail(now));
-        assertEquals(0, disabled.page(new ApiJournalSearchRequest()).records().totalElements());
+        disabled.add(detail(Instant.now()));
+        assertEquals(1, attempts.get());
     }
 
     @Test

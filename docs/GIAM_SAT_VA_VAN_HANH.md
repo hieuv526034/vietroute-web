@@ -12,7 +12,7 @@ Cập nhật 22/10/2026. Không cần Kafka/Redis. Source cung cấp instrument,
 | `/api/v1/admin/system/status` | Kiểm DB + queue/pool theo yêu cầu | JWT/cookie và SYSTEM_READ; query DB thật |
 | `/api/v1/admin/system/runtime` | JVM/HTTP/pool/worker và mẫu DB cache | SYSTEM_READ; method không query DB, nhưng JWT vẫn kiểm tài khoản qua DB |
 | `/monitoring` | Trang xem và 30 mẫu gần nhất trong tab | SYSTEM_READ, poll 5s, dừng khi tab ẩn; không thay kho lịch sử |
-| `/operations/api-journal` và `/api/v1/admin/system/api-journal` | [Nhật ký API, trace/controller, snapshot đã lọc, cURL/Postman](NHAT_KY_API_VA_DEBUG.md) | ADMIN + SYSTEM_READ; bộ đệm RAM từng node, mất khi restart, không query DB để ghi nhận |
+| `/operations/api-journal` và `/api/v1/admin/system/api-journal` | [Nhật ký API, trace/controller, snapshot đã lọc, cURL/Postman](NHAT_KY_API_VA_DEBUG.md) | ADMIN + SYSTEM_READ; lưu PostgreSQL 7 ngày, mục tiêu 10000 dòng toàn DB; pool riêng 1 connection/node, không cache/queue lịch sử RAM |
 | `/internal/metrics` | Prometheus text cho collector | Chain chính xác riêng; Bearer token vận hành 32–256 ASCII; không cookie/JWT/DB |
 
 Khi token env rỗng, scrape trả 404; sai/thiếu token trả 401; token đúng mà khác GET trả 405. Token không cấp quyền API nào khác. Một scrape đồng thời/node; không log token, header hoặc query. Endpoint không nhận token qua URL. Luôn dùng HTTPS ngoài local, token đặt secret file/env của collector. Khi đổi token phải cập nhật cả collector và app, thử scrape rồi thu hồi token cũ. UI không nhìn thấy token vận hành.

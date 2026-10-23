@@ -42,7 +42,7 @@ for port in 18080 18081; do
 done
 sql() { docker exec -e PGOPTIONS=-csearch_path=vietroute vietroute-db-ci psql -U vietroute_ci -d vietroute_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
 [[ "$(sql "SELECT count(*) FROM auth_users WHERE username='admin'")" == 1 ]]
-[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 4 ]]
+[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 5 ]]
 [[ "$(sql 'SELECT count(*) FROM catalog_items')" == 5 ]]
 [[ "$(sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','catalog_items','vietroute_schema_history')")" == 0 ]]
 [[ "$(sql "SELECT count(*) FROM pg_indexes WHERE schemaname='vietroute' AND indexname IN ('idx_auth_users_created_by','idx_auth_users_updated_by','idx_auth_user_roles_role_code','idx_catalog_created_by','idx_catalog_updated_by')")" == 5 ]]
@@ -179,9 +179,10 @@ sed 's/CITEST/bad-code!/' "$work/catalog.json" > "$work/invalid.json"
 call 400 POST /api/v1/admin/catalogs "$work/invalid.json" bearer
 assert_code COM001
 journal_trace=$(field traceId)
+journal_retained_trace="$journal_trace"
 printf 'API journal stage: trace lookup, controller, filtered bodies and auth omission\n'
 call 200 GET "/api/v1/admin/system/api-journal?traceId=$journal_trace" '' bearer
-python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["capacity"]==300 and d["retentionMinutes"]==30; r=d["records"]; assert r["totalElements"]==1; e=r["content"][0]; assert e["status"]==400 and e["code"]=="COM001" and "CatalogController#create" in e["controller"]' "$result"
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["capacity"]==10000 and d["retentionMinutes"]==10080 and d["storage"]=="POSTGRESQL"; r=d["records"]; assert r["totalElements"]==1; e=r["content"][0]; assert e["status"]==400 and e["code"]=="COM001" and "CatalogController#create" in e["controller"]' "$result"
 # field() dùng key object; chỉ số mảng được đọc rõ ràng, không log snapshot chứa dữ liệu test.
 journal_id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["data"]["records"]["content"][0]["id"])' "$result")
 call 200 GET "/api/v1/admin/system/api-journal/$journal_id" '' bearer
@@ -224,6 +225,9 @@ assert_code AUTH001
 login_body admin "$next_password"
 call 200 POST /api/v1/auth/login "$work/login.json" cookie
 [[ "$(field data.user.mustChangePassword)" == False ]]
+# Lịch sử đã commit tồn tại qua restart, không phụ thuộc JVM/instance cũ.
+call 200 GET "/api/v1/admin/system/api-journal?traceId=$journal_retained_trace" '' cookie
+[[ "$(field data.records.totalElements)" == 1 ]]
 call 200 POST /api/v1/auth/logout '' cookie
 # Tạo user CUSTOMER trong DB test riêng để kiểm tra quyền, khóa user và bộ đếm sai phải được commit.
 sql "INSERT INTO auth_users(username,password_hash,display_name,must_change_password) SELECT 'customer',password_hash,'CI customer',false FROM auth_users WHERE username='admin'" >/dev/null
@@ -368,10 +372,21 @@ actual=$(curl --silent --show-error --max-time 10 -o "$result" -w '%{http_code}'
 [[ "$actual" == 503 ]]
 assert_code MAIL001
 
+# Chèn fixture hết hạn chỉ trong DB CI; handler bảo trì phải dọn DB, không tạo cache RAM.
+sql "INSERT INTO api_request_journal(id,recorded_at,started_at,instance_id,trace_id,method,endpoint,controller,http_status,duration_ms,code,message_key,diagnostic,sql_state,replay_path,query_json,request_body,response_body,content_kind) VALUES (gen_random_uuid(),CURRENT_TIMESTAMP-INTERVAL '8 days',CURRENT_TIMESTAMP-INTERVAL '8 days','ci-node','ci-expired-journal','GET','/api/fixture','Fixture',200,1,'OK000','success.ok','SUCCESS','','/api/fixture','{}','{}','{}','JSON')" >/dev/null
+# Fixture vượt mục tiêu: PostgreSQL tạm kiểm dọn theo dung lượng, không chèn dữ liệu vào Neon.
+sql "INSERT INTO api_request_journal(id,recorded_at,started_at,instance_id,trace_id,method,endpoint,controller,http_status,duration_ms,code,message_key,diagnostic,sql_state,replay_path,query_json,request_body,response_body,content_kind) SELECT gen_random_uuid(),CURRENT_TIMESTAMP-INTERVAL '1 day',CURRENT_TIMESTAMP-INTERVAL '1 day','ci-node','ci-capacity-journal','GET','/api/fixture','Fixture',200,1,'OK000','success.ok','SUCCESS','','/api/fixture','{}','{}','{}','JSON' FROM generate_series(1,10025)" >/dev/null
+call 200 GET '/api/v1/admin/system/api-journal?traceId=ci-expired-journal' '' bearer
+[[ "$(field data.records.totalElements)" == 0 ]]
 printf 'Worker stage: concurrent claims, lease recovery, dead jobs and retry\n'
 start_app vietroute-auth-ci2 18081
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 http://127.0.0.1:18081/health > /dev/null
+saved_base="$base"
+base=http://127.0.0.1:18081
+call 200 GET "/api/v1/admin/system/api-journal?traceId=$journal_retained_trace" '' bearer
+[[ "$(field data.records.totalElements)" == 1 ]]
+base="$saved_base"
 sql "INSERT INTO system_jobs(id,type,dedup_key,payload) SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'SYSTEM_CLEANUP','ci-cleanup-'||n,'{}' FROM generate_series(1,12) n" >/dev/null
 sql "INSERT INTO system_jobs(id,type,dedup_key,payload) VALUES ('00000000-0000-0000-0000-000000000001','SYSTEM_CLEANUP','ci-cleanup-1','{}') ON CONFLICT DO NOTHING" >/dev/null
 sql "INSERT INTO system_jobs(id,type,dedup_key,payload,status,attempts,locked_until,lease_token) VALUES ('00000000-0000-0000-0000-000000000020','SYSTEM_CLEANUP','ci-expired','{}','RUNNING',1,CURRENT_TIMESTAMP-INTERVAL '1 minute','00000000-0000-0000-0000-000000000099')" >/dev/null
@@ -386,6 +401,9 @@ done
 [[ "$(sql "SELECT count(*) FROM system_jobs WHERE dedup_key LIKE 'ci-cleanup-%' AND attempts=1 AND payload='{}'::jsonb")" == 12 ]]
 [[ "$(sql "SELECT attempts FROM system_jobs WHERE dedup_key='ci-expired'")" == 2 ]]
 [[ "$(sql "SELECT attempts FROM system_jobs WHERE dedup_key='ci-future'")" == 0 ]]
+[[ "$(sql "SELECT count(*) FROM api_request_journal WHERE trace_id='ci-expired-journal'")" == 0 ]]
+[[ "$(sql "SELECT count(*) FROM api_request_journal WHERE trace_id='ci-capacity-journal'")" -lt 10025 ]]
+[[ "$(sql 'SELECT count(*) FROM api_request_journal')" -le 10010 ]]
 [[ "$(sql "SELECT count(*) FROM system_jobs WHERE dedup_key='ci-rollback'")" == 0 ]]
 call 200 GET '/api/v1/admin/jobs?status=DEAD&size=100' '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["totalElements"]>=1 and all(j["status"]=="DEAD" for j in d["content"]); assert all("payload" not in j and "dedupKey" not in j for j in d["content"])' "$result"
@@ -423,7 +441,7 @@ start_app vietroute-auth-ci2 18081 vietroute_legacy_ci 300 '' legacy_custom
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 http://127.0.0.1:18081/health >/dev/null
 legacy_sql() { docker exec -e PGOPTIONS=-csearch_path=legacy_custom vietroute-db-ci psql -U vietroute_ci -d vietroute_legacy_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(legacy_sql 'SELECT count(*) FROM vietroute_schema_history')" == 4 ]]
+[[ "$(legacy_sql 'SELECT count(*) FROM vietroute_schema_history')" == 5 ]]
 [[ "$(legacy_sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','catalog_items','vietroute_schema_history')")" == 0 ]]
 [[ "$(legacy_sql "SELECT display_name FROM auth_users WHERE id=1 AND username='admin'")" == 'Legacy admin retained' ]]
 [[ "$(legacy_sql "SELECT code FROM catalog_items WHERE id=1")" == LEGACY ]]
@@ -448,7 +466,7 @@ start_app vietroute-auth-ci 18080 vietroute_schema_ci 300 '' select
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 http://127.0.0.1:18080/health >/dev/null
 custom_sql() { docker exec -e 'PGOPTIONS=-csearch_path="select"' vietroute-db-ci psql -U vietroute_ci -d vietroute_schema_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(custom_sql 'SELECT count(*) FROM vietroute_schema_history')" == 4 ]]
+[[ "$(custom_sql 'SELECT count(*) FROM vietroute_schema_history')" == 5 ]]
 [[ "$(custom_sql 'SELECT count(*) FROM catalog_items')" == 5 ]]
 [[ "$(custom_sql "SELECT count(*) FROM pg_namespace WHERE nspname='vietroute'")" == 0 ]]
 for migration in src/main/resources/db/migration/V00*.sql; do
@@ -486,7 +504,7 @@ start_app vietroute-auth-ci 18080 vietroute_schema_ci 300 '' renamed_app
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 "$base/health" >/dev/null
 renamed_sql() { docker exec -e PGOPTIONS=-csearch_path=renamed_app vietroute-db-ci psql -U vietroute_ci -d vietroute_schema_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(renamed_sql 'SELECT count(*) FROM vietroute_schema_history')" == 4 ]]
+[[ "$(renamed_sql 'SELECT count(*) FROM vietroute_schema_history')" == 5 ]]
 [[ "$(renamed_sql 'SELECT count(*) FROM catalog_items')" == 6 ]]
 renamed_sql "SELECT password_hash FROM auth_users WHERE username='admin'" > "$work/renamed-hash"
 cmp --silent "$work/custom-hash" "$work/renamed-hash"
@@ -496,6 +514,18 @@ call 200 POST /api/v1/auth/login "$work/login.json" cookie
 token=$(field data.accessToken)
 call 200 GET "/api/v1/admin/catalogs/$custom_catalog_id" '' bearer
 [[ "$(field data.code)" == CITEST ]]
+
+printf 'API journal stage: storage failure preserves business response and reports missed writes\n'
+# Chỉ đổi tên bảng trên DB CI sau khởi tạo: giả lập storage log lỗi, không phá DB nghiệp vụ.
+renamed_sql 'ALTER TABLE api_request_journal RENAME TO api_request_journal_paused_ci' >/dev/null
+call 200 GET /api/v1/catalogs/VEHICLE_TYPE
+journal_missed_trace=$(field traceId)
+call 503 GET /api/v1/admin/system/api-journal '' cookie
+assert_code COM007
+renamed_sql 'ALTER TABLE api_request_journal_paused_ci RENAME TO api_request_journal' >/dev/null
+call 200 GET /api/v1/admin/system/api-journal '' cookie
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["failedWrites"]>=1 and d["storage"]=="POSTGRESQL"' "$result"
+[[ "$(renamed_sql "SELECT count(*) FROM api_request_journal WHERE trace_id='$journal_missed_trace'")" == 0 ]]
 
 printf 'Traffic/monitoring stage: per-node memory quota, protected scrape and database recovery without Redis\n'
 docker rm --force vietroute-auth-ci vietroute-auth-ci2 >/dev/null

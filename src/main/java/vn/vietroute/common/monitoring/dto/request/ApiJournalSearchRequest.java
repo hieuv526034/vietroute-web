@@ -10,7 +10,7 @@ import lombok.Setter;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 
-/** Bộ lọc trên snapshot RAM, không nhận biểu thức truy vấn tùy ý. */
+/** Bộ lọc SQL bind parameter trên PostgreSQL; không nhận biểu thức hoặc sort tùy ý. */
 @Getter
 @Setter
 public class ApiJournalSearchRequest extends PageRequest {

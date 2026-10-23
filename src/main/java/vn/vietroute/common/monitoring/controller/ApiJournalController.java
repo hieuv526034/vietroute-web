@@ -23,7 +23,7 @@ import vn.vietroute.common.web.response.ApiResponses;
 
 /** API chỉ đọc nhật ký đã lọc, không có endpoint replay hoặc xem raw credentials. */
 @RestController
-@Tag(name = "API Journal", description = "Nhật ký HTTP trong RAM từng node, chỉ ADMIN và SYSTEM_READ")
+@Tag(name = "API Journal", description = "Nhật ký HTTP lưu PostgreSQL dùng chung, chỉ ADMIN và SYSTEM_READ")
 public class ApiJournalController extends BaseController {
 
     private final ApiJournalService journal;
@@ -36,7 +36,7 @@ public class ApiJournalController extends BaseController {
     @GetMapping(Routes.API_JOURNAL)
     @Operation(
         summary = "Tra nhật ký API",
-        description = "ADMIN + SYSTEM_READ. Lọc traceId chính xác, route, method, status, code và thời gian; TTL/dung lượng giới hạn, từng node. Không lưu raw body/header; API nhật ký tự loại khỏi capture."
+        description = "ADMIN + SYSTEM_READ. Lọc/paging trên PostgreSQL, mặc định giữ 7 ngày; bản ghi đã commit vẫn còn sau restart. Không cache lịch sử trong RAM/raw body/header; tự loại API nhật ký khỏi capture."
     )
     public ResponseEntity<ApiResponse<ApiJournalResponse>> page(
         @Valid @ModelAttribute ApiJournalSearchRequest search,
@@ -48,7 +48,7 @@ public class ApiJournalController extends BaseController {
     @GetMapping(Routes.API_JOURNAL_DETAIL)
     @Operation(
         summary = "Xem request/response đã lọc",
-        description = "ADMIN + SYSTEM_READ. UUID là ID bản ghi; hết TTL/đổi node trả 404. Projection bỏ auth/file/PII và chuỗi tự do, không đủ để phát lại nguyên trạng."
+        description = "ADMIN + SYSTEM_READ. UUID là ID bản ghi dùng chung giữa các node; hết retention/đã dọn trả 404, DB lỗi trả 503. Projection bỏ auth/file/PII và chuỗi tự do."
     )
     public ResponseEntity<ApiResponse<ApiJournalDetail>> detail(@PathVariable UUID id, HttpServletRequest request) {
         return execute(SuccessCode.OK, request, () -> journal.find(id));
