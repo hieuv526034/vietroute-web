@@ -1,6 +1,7 @@
 package vn.vietroute.auth.config;
 
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
+import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -31,8 +32,10 @@ import vn.vietroute.common.config.MonitoringSettings;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
+import vn.vietroute.common.monitoring.filter.ApiJournalFilter;
 import vn.vietroute.common.monitoring.filter.HttpMetricsFilter;
 import vn.vietroute.common.monitoring.filter.MetricsScrapeFilter;
+import vn.vietroute.common.monitoring.service.ApiJournalStore;
 import vn.vietroute.common.monitoring.service.ApplicationMetrics;
 import vn.vietroute.common.traffic.TrafficGuardFilter;
 import vn.vietroute.common.web.response.ApiErrorWriter;
@@ -78,7 +81,9 @@ public class SecurityConfig {
         AuthCookies cookies,
         AppSettings settings,
         TrafficGuardFilter traffic,
-        ApplicationMetrics metrics
+        ApplicationMetrics metrics,
+        ApiJournalStore journal,
+        Clock clock
     ) throws Exception {
         CookieCsrfTokenRepository csrf = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrf.setCookiePath(Routes.HOME);
@@ -151,6 +156,7 @@ public class SecurityConfig {
                 )
             )
             .addFilterBefore(new HttpMetricsFilter(metrics), SecurityContextHolderFilter.class)
+            .addFilterBefore(new ApiJournalFilter(journal, clock), HttpMetricsFilter.class)
             .addFilterBefore(traffic, CsrfFilter.class)
             .addFilterBefore(
                 new JwtAuthenticationFilter(jwt, users, errors, cookies),

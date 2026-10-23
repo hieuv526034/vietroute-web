@@ -38,6 +38,7 @@ import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.exception.GlobalExceptionHandler;
+import vn.vietroute.common.monitoring.service.ApiJournalProjection;
 import vn.vietroute.common.web.filter.RequestTraceFilter;
 import vn.vietroute.common.web.locale.SupportedLocaleResolver;
 import vn.vietroute.common.web.response.ApiResponse;
@@ -57,7 +58,8 @@ class BaseControllerTest {
         ApiResponses responses = new ApiResponses(
             configuration.messageSource(),
             new SupportedLocaleResolver(),
-            Clock.fixed(Instant.parse("2026-10-21T10:00:00Z"), ZoneOffset.UTC)
+            Clock.fixed(Instant.parse("2026-10-21T10:00:00Z"), ZoneOffset.UTC),
+            new ApiJournalProjection(json)
         );
         ApiExceptionMapper exceptions = new ApiExceptionMapper(responses);
         mvc = MockMvcBuilders.standaloneSetup(new ExampleController(responses, exceptions))

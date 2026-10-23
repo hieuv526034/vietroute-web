@@ -28,6 +28,8 @@ flowchart LR
 
 Phần đã có: nền tảng locale/error/validation/audit/paging, auth/JWT/phân quyền, migration/seed, catalog CRUD, hàng đợi PostgreSQL, Gmail/SMTP, Cloudinary và giám sát. Nhà xe, tuyến/chuyến, booking/tồn chỗ và Maps là giai đoạn tiếp theo trong [PHAN_CONG.md](PHAN_CONG.md).
 
+[Nhật ký API và debug](NHAT_KY_API_VA_DEBUG.md) nằm trong `common.monitoring`: filter trước Security → projection DTO/response → bộ đệm RAM → API/page có kiểm quyền. Dùng để tra traceId/controller và xuất Postman đã che dữ liệu; không phải gateway hoặc kho log toàn cụm.
+
 ## 2. Tìm code ở đâu
 
 | Package | Trách nhiệm và điểm bắt đầu |

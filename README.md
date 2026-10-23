@@ -24,6 +24,8 @@ Trước khi bắt đầu nghiệp vụ, xem [nghiệm thu nền tảng và giao
 
 Menu **Hệ thống** có [quản lý job, ma trận quyền/gán role và xem cấu hình an toàn](docs/QUAN_TRI_HE_THONG.md). Các màn dùng quyền backend và CSRF chung; cấu hình chỉ đọc, secret vẫn ở Environment.
 
+ADMIN có SYSTEM_READ có thể mở **Hệ thống → Nhật ký API** để tra traceId/controller/lỗi và xem request/response đã lọc; có copy cURL/xuất Postman. Lịch sử RAM từng node, mặc định 300 bản ghi/30 phút, mất khi restart. Xem [hướng dẫn nhật ký và debug](docs/NHAT_KY_API_VA_DEBUG.md).
+
 1. [Quy ước phát triển và cấu trúc module](docs/QUY_UOC_PHAT_TRIEN.md).
 2. [Hợp đồng API/base/auth](docs/API_BASE.md).
 3. [Phân công theo độ khó và thứ tự triển khai](docs/PHAN_CONG.md).

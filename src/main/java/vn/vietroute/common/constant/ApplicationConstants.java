@@ -71,7 +71,10 @@ public final class ApplicationConstants {
         // Token đọc metrics tách khỏi JWT người dùng; probe DB chỉ bật có chủ đích.
         METRICS_TOKEN("VIETROUTE_METRICS_TOKEN"),
         MONITORING_DB_ENABLED("VIETROUTE_MONITORING_DB_ENABLED"),
-        MONITORING_POLL_SECONDS("VIETROUTE_MONITORING_POLL_SECONDS");
+        MONITORING_POLL_SECONDS("VIETROUTE_MONITORING_POLL_SECONDS"),
+        API_JOURNAL_ENABLED("VIETROUTE_API_JOURNAL_ENABLED"),
+        API_JOURNAL_CAPACITY("VIETROUTE_API_JOURNAL_CAPACITY"),
+        API_JOURNAL_MINUTES("VIETROUTE_API_JOURNAL_MINUTES");
 
         private final String key;
 
@@ -173,6 +176,12 @@ public final class ApplicationConstants {
 
         public static final String CONFIGURATION_PAGE = OPERATIONS + "/configuration";
 
+        public static final String API_JOURNAL_PAGE = OPERATIONS + "/api-journal";
+
+        public static final String API_JOURNAL = ADMIN_API + "/system/api-journal";
+
+        public static final String API_JOURNAL_DETAIL = API_JOURNAL + BY_ID;
+
         public static final String MONITORING_PAGE = "/monitoring";
 
         public static final String METRICS = "/internal/metrics";
@@ -235,11 +244,33 @@ public final class ApplicationConstants {
 
         public static final String SAFE_HTTP_METHOD = "GET|HEAD|OPTIONS";
 
+        public static final String API_METHOD = "GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS";
+
+        public static final String JOURNAL_TRACE = "[A-Za-z0-9-]{0,64}";
+
+        public static final String JOURNAL_ENDPOINT = "[A-Za-z0-9/{}/_.-]{0,180}";
+
+        public static final String JOURNAL_CODE = "[A-Z0-9]{0,16}";
+
+        public static final String SQL_STATE = "[A-Z0-9]{5}";
+
+        public static final String JOURNAL_FIELD = "[A-Za-z][A-Za-z0-9.]{0,60}";
+
+        public static final String JOURNAL_ENUM = "[A-Z][A-Z0-9_]{0,39}";
+
+        public static final String JOURNAL_PATH_VALUE = "[0-9]{1,19}|[0-9a-fA-F-]{36}|[A-Z][A-Z0-9_]{0,39}";
+
+        public static final String JOURNAL_QUERY_NUMBER = "[0-9]{1,5}";
+
+        public static final String JOURNAL_JOB_STATUS = "QUEUED|RUNNING|SUCCEEDED|DEAD";
+
         private Regex() {}
     }
 
     /** Tên cookie/header/attribute là hợp đồng HTTP, không phải key Environment. */
     public static final class Http {
+
+        public static final String JOURNAL_STATE = "vietroute.apiJournalState";
 
         public static final String AUTH_COOKIE = "VIETROUTE_ACCESS";
 

@@ -30,6 +30,10 @@ public class PageModelAdvice {
         model.addAttribute("accessAllowed", allowed(auth, Permission.ACCESS_READ));
         model.addAttribute("monitoringAllowed", allowed(auth, Permission.SYSTEM_READ));
         model.addAttribute("mediaAllowed", allowed(auth, Permission.MEDIA_READ));
+        model.addAttribute(
+            "journalAllowed",
+            user != null && user.roles().contains(Role.ADMIN) && allowed(auth, Permission.SYSTEM_READ)
+        );
         // Chỉ đánh dấu trang hiện hành; các cờ giao diện không thay thế kiểm quyền ở service.
         String path = request.getRequestURI().substring(request.getContextPath().length());
         Map<String, Boolean> navigation = Map.of(
@@ -48,7 +52,9 @@ public class PageModelAdvice {
             "access",
             path.equals(Routes.ACCESS_PAGE),
             "configuration",
-            path.equals(Routes.CONFIGURATION_PAGE)
+            path.equals(Routes.CONFIGURATION_PAGE),
+            "journal",
+            path.equals(Routes.API_JOURNAL_PAGE)
         );
         model.addAttribute("navigation", navigation);
         model.addAttribute(
@@ -56,7 +62,8 @@ public class PageModelAdvice {
             navigation.get("monitoring") ||
                 navigation.get("jobs") ||
                 navigation.get("access") ||
-                navigation.get("configuration")
+                navigation.get("configuration") ||
+                navigation.get("journal")
         );
     }
 

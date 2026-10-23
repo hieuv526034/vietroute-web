@@ -1,0 +1,334 @@
+<!doctype html>
+<html
+    lang="vi"
+    xmlns:th="http://www.thymeleaf.org"
+    th:lang="${currentLocale}"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.journal.title})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main
+            id="api-journal"
+            class="container-xl workspace-page operations-page"
+        >
+            <div class="page-heading">
+                <p class="eyebrow">WORKSPACE / API</p>
+                <h1 th:text="#{ui.journal.title}"></h1>
+                <p
+                    class="muted"
+                    th:text="#{ui.journal.note}"
+                ></p>
+            </div>
+            <p
+                id="form-feedback"
+                class="feedback"
+                role="alert"
+                hidden
+            ></p>
+            <p
+                id="journal-status"
+                role="status"
+                aria-live="polite"
+            ></p>
+            <div data-tabs>
+                <div
+                    class="workspace-tabs"
+                    role="tablist"
+                    th:attr="aria-label=#{ui.journal.title}"
+                >
+                    <button
+                        id="journal-history-tab"
+                        type="button"
+                        data-tab-target="journal-history"
+                        th:text="#{ui.journal.history}"
+                    ></button>
+                    <button
+                        id="journal-guide-tab"
+                        type="button"
+                        data-tab-target="journal-guide"
+                        th:text="#{ui.journal.guide}"
+                    ></button>
+                </div>
+                <section
+                    id="journal-history"
+                    class="panel"
+                >
+                    <p
+                        id="journal-node"
+                        class="muted"
+                    ></p>
+                    <fieldset
+                        id="journal-controls"
+                        class="dialog-controls"
+                    >
+                        <form
+                            id="journal-search"
+                            class="journal-filters"
+                        >
+                            <div>
+                                <label for="journal-trace">traceId</label>
+                                <input
+                                    id="journal-trace"
+                                    class="form-control"
+                                    maxlength="64"
+                                    pattern="[A-Za-z0-9-]{0,64}"
+                                    autocomplete="off"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    for="journal-endpoint"
+                                    th:text="#{ui.journal.endpoint}"
+                                ></label>
+                                <input
+                                    id="journal-endpoint"
+                                    class="form-control"
+                                    maxlength="180"
+                                />
+                            </div>
+                            <div>
+                                <label for="journal-method">Method</label>
+                                <select
+                                    id="journal-method"
+                                    class="form-select"
+                                >
+                                    <option
+                                        value=""
+                                        th:text="#{ui.journal.all}"
+                                    ></option>
+                                    <option>GET</option>
+                                    <option>POST</option>
+                                    <option>PUT</option>
+                                    <option>DELETE</option>
+                                    <option>PATCH</option>
+                                    <option>HEAD</option>
+                                    <option>OPTIONS</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="journal-http">HTTP status</label>
+                                <input
+                                    id="journal-http"
+                                    class="form-control"
+                                    type="number"
+                                    min="100"
+                                    max="599"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    for="journal-code"
+                                    th:text="#{ui.journal.code}"
+                                ></label>
+                                <input
+                                    id="journal-code"
+                                    class="form-control"
+                                    maxlength="16"
+                                    pattern="[A-Z0-9]{0,16}"
+                                    placeholder="COM007"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    for="journal-duration"
+                                    th:text="#{ui.journal.duration}"
+                                ></label>
+                                <input
+                                    id="journal-duration"
+                                    class="form-control"
+                                    type="number"
+                                    min="0"
+                                    max="600000"
+                                    value="0"
+                                />
+                            </div>
+                            <label class="d-flex align-items-center gap-2">
+                                <input
+                                    id="journal-errors"
+                                    class="form-check-input"
+                                    type="checkbox"
+                                />
+                                <span th:text="#{ui.journal.errorsOnly}"></span>
+                            </label>
+                            <div class="catalog-actions">
+                                <button
+                                    class="button button-small"
+                                    type="submit"
+                                    th:text="#{ui.ops.filter}"
+                                ></button>
+                                <button
+                                    id="journal-reset"
+                                    class="button button-outline button-small"
+                                    type="button"
+                                    th:text="#{ui.journal.reset}"
+                                ></button>
+                            </div>
+                        </form>
+                        <div class="table-responsive mt-4">
+                            <table class="table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th th:text="#{ui.ops.createdAt}"></th>
+                                        <th>Method / endpoint</th>
+                                        <th>HTTP / code</th>
+                                        <th>ms</th>
+                                        <th>traceId</th>
+                                        <th th:text="#{ui.ops.actions}"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="journal-body"></tbody>
+                            </table>
+                        </div>
+                        <nav
+                            class="catalog-pagination"
+                            th:attr="aria-label=#{ui.ops.pagination}"
+                        >
+                            <button
+                                id="journal-previous"
+                                type="button"
+                                class="button button-outline button-small"
+                                disabled
+                                th:text="#{ui.mediaPrevious}"
+                            ></button>
+                            <span id="journal-page"></span>
+                            <button
+                                id="journal-next"
+                                type="button"
+                                class="button button-outline button-small"
+                                disabled
+                                th:text="#{ui.mediaNext}"
+                            ></button>
+                        </nav>
+                    </fieldset>
+                </section>
+                <section
+                    id="journal-guide"
+                    class="panel"
+                >
+                    <h2 th:text="#{ui.journal.guide}"></h2>
+                    <p th:text="#{ui.journal.guideText}"></p>
+                    <p th:text="#{ui.journal.exportNote}"></p>
+                    <p th:text="#{ui.journal.retentionNote}"></p>
+                    <a
+                        class="button button-outline button-small"
+                        th:href="@{/docs(lang=${currentLocale})}"
+                        th:text="#{ui.docs}"
+                    ></a>
+                </section>
+            </div>
+            <dialog
+                id="journal-dialog"
+                class="workspace-dialog workspace-dialog-wide"
+                aria-labelledby="journal-detail-title"
+            >
+                <div class="dialog-heading">
+                    <h2
+                        id="journal-detail-title"
+                        class="h4"
+                        th:text="#{ui.journal.details}"
+                    ></h2>
+                    <button
+                        class="dialog-close"
+                        type="button"
+                        data-dialog-close
+                        th:attr="aria-label=#{ui.ops.close}"
+                    >
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <p
+                    id="journal-detail-feedback"
+                    class="feedback"
+                    role="alert"
+                    hidden
+                ></p>
+                <dl
+                    id="journal-metadata"
+                    class="operations-details"
+                ></dl>
+                <div data-tabs>
+                    <div
+                        class="workspace-tabs"
+                        role="tablist"
+                        th:attr="aria-label=#{ui.journal.details}"
+                    >
+                        <button
+                            id="journal-request-tab"
+                            type="button"
+                            data-tab-target="journal-request"
+                            th:text="#{ui.journal.request}"
+                        ></button>
+                        <button
+                            id="journal-response-tab"
+                            type="button"
+                            data-tab-target="journal-response"
+                            th:text="#{ui.journal.response}"
+                        ></button>
+                        <button
+                            id="journal-export-tab"
+                            type="button"
+                            data-tab-target="journal-export"
+                            th:text="#{ui.journal.export}"
+                        ></button>
+                    </div>
+                    <section id="journal-request">
+                        <p
+                            class="form-help"
+                            th:text="#{ui.journal.redacted}"
+                        ></p>
+                        <pre
+                            id="journal-request-json"
+                            class="journal-json"
+                        ></pre>
+                    </section>
+                    <section id="journal-response">
+                        <p
+                            class="form-help"
+                            th:text="#{ui.journal.redacted}"
+                        ></p>
+                        <pre
+                            id="journal-response-json"
+                            class="journal-json"
+                        ></pre>
+                    </section>
+                    <section id="journal-export">
+                        <p
+                            class="notice"
+                            th:text="#{ui.journal.exportNote}"
+                        ></p>
+                        <div class="catalog-actions my-3">
+                            <button
+                                id="journal-copy"
+                                class="button button-small"
+                                type="button"
+                                th:text="#{ui.journal.copy}"
+                            ></button>
+                            <button
+                                id="journal-download"
+                                class="button button-outline button-small"
+                                type="button"
+                                th:text="#{ui.journal.download}"
+                            ></button>
+                        </div>
+                        <textarea
+                            id="journal-curl"
+                            class="form-control journal-json"
+                            readonly
+                            rows="8"
+                            aria-label="cURL"
+                        ></textarea>
+                    </section>
+                </div>
+            </dialog>
+            <div
+                id="journal-labels"
+                hidden
+                th:attr="data-loading=#{ui.loading},data-empty=#{ui.empty},data-details=#{ui.ops.details},data-node=#{ui.journal.node},data-capacity=#{ui.journal.capacity},data-minutes=#{ui.journal.minutes},data-enabled=#{ui.journal.enabled},data-disabled=#{ui.journal.disabled},data-expired=#{ui.journal.expired},data-copied=#{ui.journal.copied},data-copy-failed=#{ui.journal.copyFailed},data-node-changed=#{ui.journal.nodeChanged},data-export-note=#{ui.journal.exportNote},data-endpoint=#{ui.journal.endpoint},data-controller=#{ui.journal.controller},data-diagnostic=#{ui.journal.diagnostic},data-code=#{ui.journal.code}"
+            ></div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/api-journal-export.js}"></script>
+        <script th:src="@{/assets/js/api-journal.js}"></script>
+    </body>
+</html>
