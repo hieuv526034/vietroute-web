@@ -4,6 +4,9 @@
     const root = document.getElementById('account-flow-workspace');
     if (!root) return;
     const app = window.VietRoute;
+    const view = new URLSearchParams(window.location.search).get('view');
+    if (['register', 'activate', 'forgot', 'reset'].includes(view))
+        window.VietRouteUI.tabs(root.querySelector('[data-tabs]') || root).select(`${view}-panel`);
     const forms = Array.from(root.querySelectorAll('form[data-account-action]'));
     const paths = Object.freeze({
         register: '/register',

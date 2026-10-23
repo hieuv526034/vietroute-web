@@ -2,6 +2,7 @@ package vn.vietroute.auth.security;
 
 import io.swagger.v3.oas.annotations.Operation;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import org.springframework.core.annotation.AnnotatedElementUtils;
@@ -10,6 +11,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
 import vn.vietroute.auth.dto.response.AccessTargetResponse;
+import vn.vietroute.auth.entity.Permission;
+import vn.vietroute.auth.entity.Role;
+import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.web.routing.WebRoutePolicy;
 
@@ -56,6 +60,25 @@ public final class AccessTargets {
                 : "MENU";
             Operation operation = AnnotatedElementUtils.findMergedAnnotation(handler.getMethod(), Operation.class);
             String name = handler.getBeanType().getSimpleName() + "#" + handler.getMethod().getName();
+            AccessFunction declared = AnnotatedElementUtils.findMergedAnnotation(
+                handler.getMethod(),
+                AccessFunction.class
+            );
+            if (declared == null) declared = AnnotatedElementUtils.findMergedAnnotation(
+                handler.getBeanType(),
+                AccessFunction.class
+            );
+            String group = declared == null ? "GENERAL" : declared.group();
+            Role.valueOf(group); // Cùng allowlist mã in hoa; chặn metadata sai ngay lúc startup.
+            List<String> declaredPermissions =
+                declared == null
+                    ? List.of()
+                    : Arrays.stream(declared.permissions())
+                          .map(Permission::valueOf)
+                          .map(Permission::name)
+                          .distinct()
+                          .sorted()
+                          .toList();
             String description = operation == null || operation.summary().isBlank() ? name : operation.summary();
             info.getPatternValues().forEach(path ->
                 info
@@ -71,7 +94,9 @@ public final class AccessTargets {
                                 publicRoute(method.name(), path),
                                 configurable(method.name(), path),
                                 null,
-                                null
+                                null,
+                                group,
+                                declaredPermissions
                             )
                         );
                     })

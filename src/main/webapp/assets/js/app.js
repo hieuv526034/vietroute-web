@@ -5,6 +5,8 @@
     const base = meta('app-base');
     const locale = meta('app-locale') || 'vi';
     const api = axios.create({ baseURL: base || '/', headers: { 'X-Locale': locale }, withCredentials: true });
+    const captureTrigger = window.VietRouteRequests.attach(api);
+    const runMutation = window.VietRouteRequests.singleFlight();
     const route = (path) => `${base}${path}?lang=${locale}`;
     const feedback = (message, success = false, id = 'form-feedback') => {
         const node = document.getElementById(id);
@@ -51,10 +53,18 @@
         }
     };
     // CSRF lấy trước mỗi mutation; không đọc cookie auth hoặc ghi token vào storage.
-    const mutate = async (path, body, method = 'post') => {
-        const csrf = (await api.get('/api/v1/auth/csrf')).data.data;
-        return api.request({ url: path, method, data: body, headers: { [csrf.headerName]: csrf.token } });
-    };
+    const mutate = (path, body, method = 'post') =>
+        runMutation(`${method}:${path}`, async () => {
+            const uiTrigger = captureTrigger();
+            const csrf = (await api.get('/api/v1/auth/csrf', { uiTrigger })).data.data;
+            return api.request({
+                url: path,
+                method,
+                data: body,
+                uiTrigger,
+                headers: { [csrf.headerName]: csrf.token },
+            });
+        });
 
     // Các màn hình mở rộng dùng cùng HTTP client và cơ chế CSRF/lỗi, không sao chép luồng xác thực.
     window.VietRoute = Object.freeze({ api, mutate, failure, feedback });
@@ -156,30 +166,58 @@
         'password-feedback',
     );
 
-    document.getElementById('logout-button')?.addEventListener('click', async () => {
+    document.getElementById('logout-button')?.addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        if (button.dataset.submitting === 'true') return;
+        button.dataset.submitting = 'true';
+        button.disabled = true;
         try {
             await mutate('/api/v1/auth/logout', {});
-            window.location.assign(route('/login'));
+            window.location.assign(route('/'));
         } catch (error) {
             failure(error);
+        } finally {
+            button.dataset.submitting = 'false';
+            button.disabled = false;
         }
     });
 
-    // Menu native vẫn dùng được khi tắt JavaScript; Escape/click ngoài giúp đóng menu rõ ràng.
-    const systemMenu = document.querySelector('.operations-menu');
-    if (systemMenu) {
-        document.addEventListener('click', (event) => {
-            if (!systemMenu.contains(event.target)) {
-                systemMenu.open = false;
+    // Mỗi lần chỉ mở một menu; Escape/click ngoài đóng menu và trả focus cho bàn phím.
+    const menus = Array.from(document.querySelectorAll('.operations-menu'));
+    for (const menu of menus)
+        menu.addEventListener('toggle', () => {
+            if (menu.open) for (const other of menus) if (other !== menu) other.open = false;
+        });
+    document.addEventListener('click', (event) => {
+        for (const menu of menus) if (!menu.contains(event.target)) menu.open = false;
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape')
+            for (const menu of menus)
+                if (menu.open) {
+                    menu.open = false;
+                    menu.querySelector('summary').focus();
+                }
+    });
+    document.dispatchEvent(new Event('vietroute-navigation-ready'));
+    document.addEventListener('vietroute-profile-updated', (event) => {
+        const user = event.detail;
+        document.querySelectorAll('[data-user-name]').forEach((node) => {
+            node.textContent = user.displayName;
+        });
+        document.querySelectorAll('[data-avatar-shell]').forEach((node) => {
+            node.replaceChildren();
+            if (user.avatarUrl) {
+                const img = document.createElement('img');
+                img.src = user.avatarUrl;
+                img.alt = '';
+                node.append(img);
+            } else {
+                node.textContent = user.username.slice(0, 1).toUpperCase();
             }
         });
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && systemMenu.open) {
-                systemMenu.open = false;
-                systemMenu.querySelector('summary').focus();
-            }
-        });
-    }
+        void loadAccount();
+    });
 
     void loadAccount();
 })();

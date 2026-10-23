@@ -32,7 +32,7 @@ public class AccessRepository extends BaseRepository {
             List<Role> roles = new ArrayList<>();
             try (
                 PreparedStatement query = connection.prepareStatement(
-                    "SELECT code FROM auth_roles WHERE active ORDER BY code LIMIT 512"
+                    "SELECT code FROM auth_roles WHERE active AND NOT deleted ORDER BY code LIMIT 512"
                 );
                 ResultSet rows = query.executeQuery()
             ) {
@@ -74,7 +74,7 @@ public class AccessRepository extends BaseRepository {
     public void validateMappings(Connection connection, Set<Role> roles, Set<Permission> permissions)
         throws SQLException {
         for (Role role : roles) {
-            requireActive(connection, "SELECT 1 FROM auth_roles WHERE code=? AND active", role.name());
+            requireActive(connection, "SELECT 1 FROM auth_roles WHERE code=? AND active AND NOT deleted", role.name());
         }
         for (Permission permission : permissions) {
             requireActive(connection, "SELECT 1 FROM auth_permissions WHERE code=? AND active", permission.name());
@@ -99,7 +99,7 @@ public class AccessRepository extends BaseRepository {
     public RolePermissionsResponse role(Connection connection, Role role) throws SQLException {
         try (
             PreparedStatement query = connection.prepareStatement(
-                "SELECT permission_version, updated_at, updated_by FROM auth_roles WHERE code=?"
+                "SELECT permission_version, updated_at, updated_by FROM auth_roles WHERE code=? AND NOT deleted"
             )
         ) {
             query.setString(1, role.name());

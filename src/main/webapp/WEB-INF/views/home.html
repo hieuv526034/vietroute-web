@@ -41,6 +41,23 @@
                             Khám phá API
                         </a>
                     </div>
+                    <div
+                        class="guest-account-links"
+                        th:if="${currentUser == null}"
+                    >
+                        <a
+                            th:href="@{/account-access(lang=${currentLocale},view='register')}"
+                            th:text="#{ui.accountFlow.register}"
+                        ></a>
+                        <a
+                            th:href="@{/account-access(lang=${currentLocale},view='forgot')}"
+                            th:text="#{ui.accountFlow.forgot}"
+                        ></a>
+                        <a
+                            th:href="@{/account-access(lang=${currentLocale},view='activate')}"
+                            th:text="#{ui.accountFlow.activate}"
+                        ></a>
+                    </div>
                 </div>
                 <div
                     class="journey-art"

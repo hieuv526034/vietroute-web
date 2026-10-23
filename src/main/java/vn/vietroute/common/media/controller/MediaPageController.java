@@ -5,12 +5,14 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.common.config.integration.MediaSettings;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 
 /** Trang thư viện ảnh; API phía dưới luôn kiểm quyền chức năng và owner riêng. */
 @Controller
 @RequiredArgsConstructor
+@AccessFunction(group = "MEDIA")
 public class MediaPageController {
 
     private final MediaSettings settings;

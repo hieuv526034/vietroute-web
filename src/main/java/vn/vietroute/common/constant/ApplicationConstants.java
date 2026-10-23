@@ -113,6 +113,12 @@ public final class ApplicationConstants {
         public static final String AUTH_FORGOT = "/password/forgot";
         public static final String AUTH_RESET = "/password/reset";
         public static final String AUTH_EMAIL = "/email";
+
+        public static final String AUTH_PROFILE = "/profile";
+
+        public static final String AUTH_AVATAR = "/avatar";
+
+        public static final String ACCESS_ROLE_ITEM = "/registry/roles/{code}";
         public static final String AUTH_LIFECYCLE_PAGE = "/account-access";
 
         public static final String PRESENCE = "/api/v1/activity/heartbeat";

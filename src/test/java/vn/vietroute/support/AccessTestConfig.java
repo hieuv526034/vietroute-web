@@ -39,7 +39,9 @@ public class AccessTestConfig {
                             false,
                             true,
                             Instant.EPOCH,
-                            Instant.EPOCH
+                            Instant.EPOCH,
+                            "MEDIA",
+                            List.of("MEDIA_READ")
                         )
                     ),
                     page,

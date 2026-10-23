@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Repository;
 import vn.vietroute.auth.dto.request.AccessUserSearchRequest;
+import vn.vietroute.auth.dto.request.ProfileUpdateRequest;
 import vn.vietroute.auth.dto.response.AccessUserResponse;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
@@ -22,6 +23,7 @@ import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.constant.ErrorCode;
+import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.BaseRepository;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.validation.BusinessRules;
@@ -96,6 +98,22 @@ public class UserRepository extends BaseRepository {
         });
     }
 
+    /** Chỉ đổi tên và liên kết ảnh của principal; không thay email, role, hash hoặc tokenVersion. */
+    public void updateProfile(Connection connection, long id, ProfileUpdateRequest body) throws SQLException {
+        try (
+            var query = connection.prepareStatement(
+                "UPDATE auth_users SET display_name=?,avatar_media_id=?,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=? AND version=?"
+            )
+        ) {
+            query.setString(1, body.displayName().strip());
+            query.setObject(2, body.avatarMediaId());
+            query.setLong(3, id);
+            query.setLong(4, id);
+            query.setLong(5, body.version());
+            if (query.executeUpdate() != 1) throw new BusinessException(ErrorCode.STALE_VERSION);
+        }
+    }
+
     /** Login truyền lock=true để FOR UPDATE bảo vệ bộ đếm sai khi nhiều request cùng tài khoản. */
     public UserAccount findByUsername(Connection connection, String username, boolean lock) throws SQLException {
         return find(connection, "username", username, lock);
@@ -110,7 +128,10 @@ public class UserRepository extends BaseRepository {
         // column chỉ do các hàm nội bộ chọn id/username, tuyệt đối không nhận tên cột từ HTTP.
         try (
             PreparedStatement query = connection.prepareStatement(
-                "SELECT * FROM auth_users WHERE " + column + " = ?" + (lock ? " FOR UPDATE" : "")
+                "SELECT *, (SELECT thumbnail_url FROM media_assets WHERE id=avatar_media_id AND status='READY') AS avatar_url FROM auth_users WHERE " +
+                    column +
+                    " = ?" +
+                    (lock ? " FOR UPDATE" : "")
             )
         ) {
             query.setObject(1, value);
@@ -123,6 +144,8 @@ public class UserRepository extends BaseRepository {
                     .username(result.getString("username"))
                     .displayName(result.getString("display_name"))
                     .email(result.getString("email"))
+                    .avatarMediaId(result.getObject("avatar_media_id", Long.class))
+                    .avatarUrl(result.getString("avatar_url"))
                     .emailVerifiedAt(instant(result, "email_verified_at"))
                     .activationPending(result.getBoolean("activation_pending"))
                     .passwordHash(result.getString("password_hash"))
@@ -141,7 +164,7 @@ public class UserRepository extends BaseRepository {
                 user.setPermissions(new LinkedHashSet<>());
                 try (
                     PreparedStatement roles = connection.prepareStatement(
-                        "SELECT r.role_code, p.permission_code FROM auth_user_roles r JOIN auth_roles ar ON ar.code=r.role_code AND ar.active LEFT JOIN (auth_role_permissions rp JOIN auth_permissions ap ON ap.code=rp.permission_code AND ap.active) p ON p.role_code=r.role_code WHERE r.user_id=? ORDER BY r.role_code, p.permission_code"
+                        "SELECT r.role_code, p.permission_code FROM auth_user_roles r JOIN auth_roles ar ON ar.code=r.role_code AND ar.active AND NOT ar.deleted LEFT JOIN (auth_role_permissions rp JOIN auth_permissions ap ON ap.code=rp.permission_code AND ap.active) p ON p.role_code=r.role_code WHERE r.user_id=? ORDER BY r.role_code, p.permission_code"
                     )
                 ) {
                     roles.setLong(1, user.getId());

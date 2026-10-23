@@ -8,6 +8,7 @@ import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
+import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
@@ -26,6 +27,7 @@ import vn.vietroute.common.web.response.ApiResult;
     name = "Lưu lượng truy cập",
     description = "Hiện diện và tín hiệu bất thường dùng chung PostgreSQL; ADMIN + SYSTEM_READ"
 )
+@AccessFunction(group = "SYSTEM")
 public class ActivityController extends BaseController {
 
     private final ActivityService activity;

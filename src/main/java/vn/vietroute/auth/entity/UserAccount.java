@@ -23,6 +23,7 @@ import vn.vietroute.common.jdbc.JdbcTable;
         @JdbcIndex(name = "auth_users_pkey", columns = { "id" }, unique = true),
         @JdbcIndex(name = "auth_users_username_key", columns = { "username" }, unique = true),
         @JdbcIndex(name = "uq_auth_users_email", columns = { "email" }, unique = true),
+        @JdbcIndex(name = "idx_auth_users_avatar", columns = { "avatar_media_id" }),
         @JdbcIndex(name = "idx_auth_users_created_by", columns = { "created_by" }),
         @JdbcIndex(name = "idx_auth_users_updated_by", columns = { "updated_by" }),
     }
@@ -34,6 +35,10 @@ public class UserAccount extends BaseEntity {
     private String passwordHash;
 
     private String displayName;
+
+    private Long avatarMediaId;
+
+    private String avatarUrl;
 
     private String email;
 

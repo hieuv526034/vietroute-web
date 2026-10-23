@@ -32,10 +32,10 @@ public class AccessResourceRepository extends BaseRepository {
         }
         try (
             PreparedStatement query = connection.prepareStatement(
-                "INSERT INTO auth_access_resources(kind,target,handler,description,public_route,configurable,created_by,updated_by) " +
-                    "VALUES (?,?,?,?,?,?,?,?) ON CONFLICT (kind,target) DO UPDATE SET handler=EXCLUDED.handler," +
+                "INSERT INTO auth_access_resources(kind,target,handler,description,public_route,configurable,created_by,updated_by,resource_group,declared_permissions) " +
+                    "VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT (kind,target) DO UPDATE SET handler=EXCLUDED.handler," +
                     "description=EXCLUDED.description,public_route=EXCLUDED.public_route,configurable=EXCLUDED.configurable," +
-                    "last_seen_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP,updated_by=EXCLUDED.updated_by,version=auth_access_resources.version+1"
+                    "resource_group=EXCLUDED.resource_group,declared_permissions=EXCLUDED.declared_permissions,last_seen_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP,updated_by=EXCLUDED.updated_by,version=auth_access_resources.version+1"
             )
         ) {
             for (AccessResourceResponse resource : resources) {
@@ -47,6 +47,8 @@ public class AccessResourceRepository extends BaseRepository {
                 query.setBoolean(6, resource.configurable());
                 query.setLong(7, SystemActor.ID);
                 query.setLong(8, SystemActor.ID);
+                query.setString(9, resource.group());
+                query.setString(10, String.join(",", resource.declaredPermissions()));
                 query.addBatch();
             }
             query.executeBatch();
@@ -67,7 +69,7 @@ public class AccessResourceRepository extends BaseRepository {
             List<AccessResourceResponse> result = new ArrayList<>();
             try (
                 PreparedStatement query = connection.prepareStatement(
-                    "SELECT kind,target,handler,description,public_route,configurable,first_seen_at,last_seen_at " +
+                    "SELECT kind,target,handler,description,public_route,configurable,first_seen_at,last_seen_at,resource_group,declared_permissions " +
                         "FROM auth_access_resources ORDER BY kind,target LIMIT ? OFFSET ?"
                 )
             ) {
@@ -84,7 +86,9 @@ public class AccessResourceRepository extends BaseRepository {
                                 rows.getBoolean(5),
                                 rows.getBoolean(6),
                                 rows.getTimestamp(7).toInstant(),
-                                rows.getTimestamp(8).toInstant()
+                                rows.getTimestamp(8).toInstant(),
+                                rows.getString(9),
+                                rows.getString(10).isEmpty() ? List.of() : List.of(rows.getString(10).split(","))
                             )
                         );
                     }

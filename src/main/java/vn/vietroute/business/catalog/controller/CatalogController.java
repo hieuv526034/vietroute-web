@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.security.UserPrincipal;
+import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.business.catalog.dto.request.CatalogCreateRequest;
 import vn.vietroute.business.catalog.dto.request.CatalogDeleteRequest;
 import vn.vietroute.business.catalog.dto.request.CatalogUpdateRequest;
@@ -35,6 +36,7 @@ import vn.vietroute.common.web.response.ApiResult;
 /** Controller danh mục làm ví dụ hoàn chỉnh để các thành viên triển khai module sau theo cùng chuẩn. */
 @RestController
 @Tag(name = "Catalog", description = "Danh mục vi/en, phân trang và audit")
+@AccessFunction(group = "CATALOG")
 public class CatalogController extends BaseController {
 
     private final CatalogService catalogs;
@@ -64,6 +66,7 @@ public class CatalogController extends BaseController {
         description = "Yêu cầu CATALOG_CREATE (hoặc CATALOG_WRITE tương thích). Server tự sinh mã nếu null; tên vi/en bắt buộc; code trùng trả 409; audit lấy từ principal."
     )
     @ResponseStatus(HttpStatus.CREATED)
+    @AccessFunction(group = "CATALOG", permissions = { "CATALOG_CREATE", "CATALOG_WRITE" })
     public ApiResult<CatalogResponse> create(
         @Valid @RequestBody CatalogCreateRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
@@ -80,6 +83,7 @@ public class CatalogController extends BaseController {
         summary = "Đọc danh mục quản trị",
         description = "Yêu cầu CATALOG_READ; xem cả bản đã xóa mềm, không thay đổi API tra cứu công khai"
     )
+    @AccessFunction(group = "CATALOG", permissions = { "CATALOG_READ" })
     public ApiResult<CatalogResponse> find(
         @PathVariable @Min(value = 1, message = "{validation.invalid}") long id,
         HttpServletRequest request
@@ -92,6 +96,7 @@ public class CatalogController extends BaseController {
         summary = "Sửa danh mục",
         description = "Yêu cầu CATALOG_UPDATE (hoặc CATALOG_WRITE tương thích); version cũ trả COM008/409"
     )
+    @AccessFunction(group = "CATALOG", permissions = { "CATALOG_UPDATE", "CATALOG_WRITE" })
     public ApiResult<CatalogResponse> update(
         @PathVariable @Min(value = 1, message = "{validation.invalid}") long id,
         @Valid @RequestBody CatalogUpdateRequest body,
@@ -106,6 +111,7 @@ public class CatalogController extends BaseController {
         summary = "Xóa mềm danh mục",
         description = "Yêu cầu CATALOG_DELETE, body chứa version; WRITE không có quyền xóa. Bản đã xóa biến mất khỏi tra cứu công khai, audit vẫn giữ."
     )
+    @AccessFunction(group = "CATALOG", permissions = { "CATALOG_DELETE" })
     public ApiResult<CatalogResponse> delete(
         @PathVariable @Min(value = 1, message = "{validation.invalid}") long id,
         @Valid @RequestBody CatalogDeleteRequest body,

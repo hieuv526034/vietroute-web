@@ -61,13 +61,31 @@ public class AccessManagementService {
         } catch (IllegalArgumentException exception) {
             throw new BusinessException(ErrorCode.INVALID_CODE);
         }
-        if (("ADMIN".equals(code) || AccessRegistryRepository.builtIn(kind, code)) && (!body.active() || create)) {
+        if (
+            ("roles".equals(kind) && "ADMIN".equals(code)) ||
+            (AccessRegistryRepository.builtIn(kind, code) && (!body.active() || create))
+        ) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }
         return transactions.execute(connection -> {
             access.lockRoleAssignments(connection);
             registry.save(connection, kind, code, body, actor.id(), create);
             return registry.registry(connection, kind);
+        });
+    }
+
+    /** Xóa mềm role chưa được dùng; advisory lock thống nhất với gán role/policy để không lọt tham chiếu mới. */
+    @PreAuthorize("hasRole('ADMIN') and hasAuthority('ACCESS_DELETE')")
+    public List<AccessRegistryResponse> deleteRole(String code, long version, UserPrincipal actor) {
+        try {
+            if (Role.ADMIN.equals(Role.valueOf(code))) throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        } catch (IllegalArgumentException error) {
+            throw new BusinessException(ErrorCode.INVALID_CODE);
+        }
+        return transactions.execute(connection -> {
+            access.lockRoleAssignments(connection);
+            registry.deleteRole(connection, code, version, actor.id());
+            return registry.registry(connection, "roles");
         });
     }
 

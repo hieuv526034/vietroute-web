@@ -163,6 +163,31 @@ public class MediaRepository extends BaseRepository {
         }
     }
 
+    /** FOR UPDATE đồng bộ với xóa ảnh; cả ADMIN cũng không gắn avatar từ ảnh thuộc user khác. */
+    public void requireAvatar(Connection connection, long id, long actor) throws SQLException {
+        try (
+            var query = connection.prepareStatement(
+                "SELECT id FROM media_assets WHERE id=? AND created_by=? AND status='READY' FOR UPDATE"
+            )
+        ) {
+            query.setLong(1, id);
+            query.setLong(2, actor);
+            try (var row = query.executeQuery()) {
+                if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
+            }
+        }
+    }
+
+    /** Caller đã khóa ảnh: hồ sơ đang tham chiếu phải gỡ/thay ảnh trước; lỗi rollback cả trạng thái DELETING. */
+    public void requireUnreferenced(Connection connection, long id) throws SQLException {
+        try (var query = connection.prepareStatement("SELECT 1 FROM auth_users WHERE avatar_media_id=? LIMIT 1")) {
+            query.setLong(1, id);
+            try (var row = query.executeQuery()) {
+                if (row.next()) throw new BusinessException(ErrorCode.RESOURCE_IN_USE);
+            }
+        }
+    }
+
     /** Nhận việc dọn bằng UPDATE nguyên tử để không đua với bước hoàn tất upload. */
     public MediaAsset claimCleanup(Connection connection, long id) throws SQLException {
         try (

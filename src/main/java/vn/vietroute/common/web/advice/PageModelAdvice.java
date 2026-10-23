@@ -31,6 +31,15 @@ public class PageModelAdvice {
         model.addAttribute("currentLocale", new SupportedLocaleResolver().resolveLocale(request).getLanguage());
         model.addAttribute("currentUser", user);
         model.addAttribute("workspacePath", AuthNavigation.workspace(user));
+        model.addAttribute(
+            "catalogAllowed",
+            menuAllowed(request, auth, Routes.ADMIN) &&
+                (allowed(auth, Permission.CATALOG_READ) ||
+                    allowed(auth, Permission.CATALOG_CREATE) ||
+                    allowed(auth, Permission.CATALOG_UPDATE) ||
+                    allowed(auth, Permission.CATALOG_WRITE) ||
+                    allowed(auth, Permission.CATALOG_DELETE))
+        );
         model.addAttribute("adminUser", user != null && user.roles().contains(Role.ADMIN));
         model.addAttribute(
             "jobsAllowed",
@@ -38,7 +47,10 @@ public class PageModelAdvice {
         );
         model.addAttribute(
             "accessAllowed",
-            allowed(auth, Permission.ACCESS_READ) && menuAllowed(request, auth, Routes.ACCESS_PAGE)
+            user != null &&
+                user.roles().contains(Role.ADMIN) &&
+                allowed(auth, Permission.ACCESS_READ) &&
+                menuAllowed(request, auth, Routes.ACCESS_PAGE)
         );
         model.addAttribute(
             "monitoringAllowed",
@@ -87,7 +99,6 @@ public class PageModelAdvice {
             "operationsActive",
             navigation.get("monitoring") ||
                 navigation.get("jobs") ||
-                navigation.get("access") ||
                 navigation.get("configuration") ||
                 navigation.get("journal")
         );
