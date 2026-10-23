@@ -19,12 +19,19 @@ public class ApiJournalStore {
     private static final Logger LOG = Logger.getLogger(ApiJournalStore.class.getName());
 
     private final ApiJournalSettings settings;
+
     private final ApiJournalRepository repository;
+
     private final String instanceId = UUID.randomUUID().toString();
+
     private final Semaphore writer = new Semaphore(1);
+
     private final AtomicLong failedWrites = new AtomicLong();
+
     private final AtomicLong lastWarning = new AtomicLong();
+
     private volatile long retryAfter;
+
     private volatile long cleanupAfter;
 
     public ApiJournalStore(ApiJournalSettings settings, ApiJournalRepository repository) {

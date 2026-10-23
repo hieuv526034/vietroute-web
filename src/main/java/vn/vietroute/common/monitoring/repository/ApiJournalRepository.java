@@ -24,6 +24,7 @@ import vn.vietroute.common.monitoring.dto.response.ApiJournalEntry;
 public class ApiJournalRepository {
 
     private final ApiJournalDatabase database;
+
     private final ObjectMapper mapper;
 
     private static final String FILTER = """

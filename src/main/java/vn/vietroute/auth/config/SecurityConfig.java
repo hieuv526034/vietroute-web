@@ -156,7 +156,8 @@ public class SecurityConfig {
                 )
             )
             .addFilterBefore(new HttpMetricsFilter(metrics), SecurityContextHolderFilter.class)
-            .addFilterBefore(new ApiJournalFilter(journal, clock), HttpMetricsFilter.class)
+            // Metrics bao cả thời gian I/O ghi log; journal vẫn đứng trước CSRF/JWT/authorization.
+            .addFilterAfter(new ApiJournalFilter(journal, clock), HttpMetricsFilter.class)
             .addFilterBefore(traffic, CsrfFilter.class)
             .addFilterBefore(
                 new JwtAuthenticationFilter(jwt, users, errors, cookies),

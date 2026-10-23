@@ -86,6 +86,8 @@ Pool riêng lazy/minIdle=0, tối đa **1 connection/node**, chờ mượn tối
 
 `failedWrites` và thông tin backoff chỉ là counter/trạng thái nhỏ trong RAM node, không phải lịch sử request; reset khi node restart. Log `event=api_journal_write_unavailable traceId=...` lấy mẫu tối đa một dòng/giây, không log payload/exception/URL/credential. Cleanup timeout có log riêng, không rollback bản ghi đã commit. Response nghiệp vụ gốc không bị thay bằng lỗi ghi nhật ký. **Không hứa đủ mọi traceId khi DB/slot không sẵn sàng hoặc process bị kill.**
 
+`HttpMetricsFilter` bao ngoài journal để số đo HTTP gồm cả thời gian chờ/ghi DB log; `durationMs` trong bản ghi được chốt trước insert nên không gồm chính thao tác lưu nó. Ghi đồng bộ có thêm I/O/độ trễ; cần đo staging để điều chỉnh quota, không khẳng định nhanh hơn hoặc RAM giảm một con số cụ thể khi chưa benchmark.
+
 Nếu chính PostgreSQL lưu nhật ký bị chết, app không thể ghi vào DB đó. JWT cũng cần DB để kiểm tài khoản/quyền nên UI có thể không mở được; không tạo đường bỏ qua auth. Dùng server Logs/metrics độc lập khi sự cố và kiểm các record đã commit sau DB hồi phục. Đây là nhật ký chẩn đoán dùng chung trong DB, không phải API gateway/audit bất biến hoặc kho log độc lập với database ứng dụng.
 
 ## Triển khai và kiểm tra
