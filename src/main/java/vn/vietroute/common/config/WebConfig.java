@@ -14,6 +14,7 @@ import org.springframework.context.annotation.FilterType;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.Validator;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
@@ -36,6 +37,8 @@ import vn.vietroute.common.web.locale.SupportedLocaleResolver;
 
 /** Servlet context quản lý MVC, Thymeleaf, locale và Swagger; kế thừa cấu hình MVC để ghi đè locale mặc định. */
 @Configuration
+// WAR có root/servlet context riêng: advisor của root chỉ bảo vệ service, MVC phải bật để bảo vệ controller.
+@EnableMethodSecurity
 @ComponentScan(
     basePackages = { "vn.vietroute.common", "vn.vietroute.auth", "vn.vietroute.business" },
     useDefaultFilters = false,

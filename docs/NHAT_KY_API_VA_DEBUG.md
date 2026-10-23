@@ -57,6 +57,8 @@ Route lấy từ mapping MVC; replay chỉ khôi phục path variable số/UUID/
 - Khi request hoàn tất, filter lưu metadata/projection vào `ApiJournalStore`. Không lưu servlet, exception, principal hay raw object. UUID bản ghi khác traceId vì client có thể gửi lại cùng traceId.
 - Store dùng bộ đệm RAM có khóa ngắn, dung lượng/TTL giới hạn; không thêm thread, DB query, bảng hoặc job cho mỗi request. Service và page kiểm **ADMIN + SYSTEM_READ**; API kế thừa `BaseController`, schema trên Swagger.
 
+WAR có hai Spring context: root tạo service/security, servlet tạo controller. `@EnableMethodSecurity` phải hiện diện tại `SecurityConfig` **và** `WebConfig`; advisor root không tự áp dụng cho controller ở servlet context con. Test hồi quy dựng đúng hai context để kiểm HTTP 403 cho trang nhật ký/giám sát/cấu hình/job/quyền khi CUSTOMER nhập URL trực tiếp. Không chỉ kiểm bằng context gộp hoặc dựa vào menu bị ẩn.
+
 | API GET | Hợp đồng |
 |---|---|
 | `/api/v1/admin/system/api-journal` | Envelope `ApiJournalResponse`: instanceId, enabled, capacity, retentionMinutes, evicted và `records` phân trang |

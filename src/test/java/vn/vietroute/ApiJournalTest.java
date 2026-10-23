@@ -106,6 +106,70 @@ class ApiJournalTest {
         return context;
     }
 
+    @Test
+    void pageSecurityAlsoRunsInSeparateServletContextLikeProductionWar() throws Exception {
+        try (
+            var root = new AnnotationConfigWebApplicationContext();
+            var servlet = new AnnotationConfigWebApplicationContext()
+        ) {
+            var servletContext = new MockServletContext("src/main/webapp", new FileSystemResourceLoader());
+            root.setServletContext(servletContext);
+            root.register(RootConfig.class);
+            root.refresh();
+            servlet.setParent(root);
+            servlet.setServletContext(servletContext);
+            servlet.register(WebConfig.class);
+            servlet.refresh();
+            var mvc = MockMvcBuilders.webAppContextSetup(servlet).apply(springSecurity()).build();
+            for (String route : List.of(
+                Routes.API_JOURNAL_PAGE,
+                Routes.MONITORING_PAGE,
+                Routes.CONFIGURATION_PAGE,
+                Routes.JOBS_PAGE,
+                Routes.ACCESS_PAGE
+            )) {
+                var denied = mvc
+                    .perform(get(route).with(authentication(actor("ROLE_CUSTOMER"))))
+                    .andReturn()
+                    .getResponse();
+                assertEquals(403, denied.getStatus(), route);
+            }
+            assertEquals(
+                403,
+                mvc
+                    .perform(get(Routes.API_JOURNAL_PAGE).with(authentication(actor("ROLE_ADMIN"))))
+                    .andReturn()
+                    .getResponse()
+                    .getStatus()
+            );
+            assertEquals(
+                403,
+                mvc
+                    .perform(get(Routes.API_JOURNAL_PAGE).with(authentication(actor("SYSTEM_READ"))))
+                    .andReturn()
+                    .getResponse()
+                    .getStatus()
+            );
+            assertEquals(
+                200,
+                mvc
+                    .perform(get(Routes.API_JOURNAL_PAGE).with(authentication(actor("ROLE_ADMIN", "SYSTEM_READ"))))
+                    .andReturn()
+                    .getResponse()
+                    .getStatus()
+            );
+            assertEquals(
+                403,
+                mvc
+                    .perform(get(Routes.API_JOURNAL).with(authentication(actor("ROLE_CUSTOMER"))))
+                    .andReturn()
+                    .getResponse()
+                    .getStatus()
+            );
+            assertNull(root.getBean(HikariDataSource.class).getHikariPoolMXBean());
+        }
+    }
+
     private UsernamePasswordAuthenticationToken actor(String... authorities) {
         return UsernamePasswordAuthenticationToken.authenticated(
             "isolated",

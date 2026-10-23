@@ -233,7 +233,10 @@ login_body customer "$next_password"
 call 200 POST /api/v1/auth/login "$work/login.json" cookie
 token=$(field data.accessToken)
 call 403 GET /api/v1/admin/system/api-journal '' bearer
-call 403 GET /operations/api-journal '' cookie
+for protected_page in api-journal configuration jobs access; do
+  call 403 GET "/operations/$protected_page" '' cookie
+done
+call 403 GET /monitoring '' cookie
 call 403 POST /api/v1/admin/catalogs "$work/catalog.json" bearer
 assert_code AUTH003
 sql "UPDATE auth_users SET active=false WHERE username='customer'" >/dev/null
