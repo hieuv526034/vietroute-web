@@ -74,7 +74,10 @@
                 if (!pending) {
                     progress.hidden = true;
                     document.body.classList.remove('is-request-loading');
-                    trigger = null;
+                    // Giữ nút qua chuỗi await GET me/CSRF rồi tải/lưu; xóa sau khi microtask kế tiếp đã đăng ký request.
+                    window.setTimeout(() => {
+                        if (!pending) trigger = null;
+                    }, 0);
                 }
             };
             return config;

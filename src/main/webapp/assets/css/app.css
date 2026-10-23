@@ -1720,6 +1720,8 @@ img.avatar-preview {
 .guest-account-links a {
     text-decoration: none;
 }
+fieldset:disabled .button[type='submit']::before,
+[aria-busy='true'] .button[id$='-refresh']::before,
 .button[data-request-loading]::before {
     content: '';
     width: 13px;
@@ -1778,6 +1780,8 @@ img.avatar-preview {
 }
 @media (prefers-reduced-motion: reduce) {
     .request-progress,
+    fieldset:disabled .button[type='submit']::before,
+    [aria-busy='true'] .button[id$='-refresh']::before,
     .button[data-request-loading]::before,
     .is-request-loading .table-responsive::before {
         animation: none;
