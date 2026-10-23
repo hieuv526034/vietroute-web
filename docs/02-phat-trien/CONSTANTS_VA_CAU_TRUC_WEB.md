@@ -15,7 +15,7 @@ Phụ trách: hieuv526034. Lượt này quy hoạch source để nhóm tìm đú
 | `DatabaseProperties` | Key của file mặc định database.properties | `DatabaseProperties.SCHEMA` |
 | `LocaleCode`, `CatalogType` | Enum giá trị dùng trong hợp đồng hiện hành | `CatalogType.VEHICLE_TYPE` |
 
-Header có sẵn trong Spring dùng `HttpHeaders.AUTHORIZATION`, `CONTENT_LANGUAGE`, `RETRY_AFTER`... Không tạo thêm tên khác cho header chuẩn. Mã lỗi/thành công/permission vẫn ở enum chuyên trách `ErrorCode`, `SuccessCode`; `Permission` là value object mã quyền với hằng lõi và registry DB; không gom các trách nhiệm nghiệp vụ khác nhau thành một enum khổng lồ.
+Header có sẵn trong Spring dùng `HttpHeaders.AUTHORIZATION`, `CONTENT_LANGUAGE`, `RETRY_AFTER`... Không tạo thêm tên khác cho header chuẩn. Mã lỗi/thành công ở enum chuyên trách `ErrorCode`, `SuccessCode`; `Permission` là value object mã quyền với hằng lõi và registry DB; không gom các trách nhiệm nghiệp vụ khác nhau thành một enum khổng lồ.
 
 `Env` lưu tên key thực bằng `key()`. Các Settings nhận `ConfigValues`, chỉ truyền enum; không dùng chuỗi tùy ý hoặc đọc `System.getenv` rải rác trong service/controller. Giá trị mặc định, giới hạn và điều kiện bắt buộc vẫn thuộc Settings của module. Điều này giữ mỗi module có trách nhiệm kiểm cấu hình riêng. `ConfigValues` chỉ đưa tên key vào lỗi, không đưa giá trị bị từ chối hoặc secret vào log.
 

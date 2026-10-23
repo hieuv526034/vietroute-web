@@ -1,6 +1,6 @@
 # Nghiệm thu nền tảng trước nghiệp vụ
 
-Cập nhật 23/10/2026, đối chiếu main tại `d722089` sau [PR #30](https://github.com/hieuv526034/vietroute-web/pull/30). Phạm vi là source nền tảng và UI quản trị trên Spring MVC/JDBC hiện tại. Đọc cùng [quản trị hệ thống](../04-van-hanh/QUAN_TRI_HE_THONG.md), [tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) và [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md). Kết quả trên nhánh chức năng chỉ trở thành bản bàn giao main sau khi PR qua CI và merge.
+Cập nhật 23/10/2026, đối chiếu main tại `df22688` sau [PR #35](https://github.com/hieuv526034/vietroute-web/pull/35). Phạm vi là source nền tảng và UI quản trị trên Spring MVC/JDBC hiện tại. Đọc cùng [quản trị hệ thống](../04-van-hanh/QUAN_TRI_HE_THONG.md), [tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) và [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md). Kết quả trên nhánh chức năng chỉ trở thành bản bàn giao main sau khi PR qua CI và merge.
 
 ## Các màn và chức năng đã có trong source
 
@@ -8,17 +8,17 @@ Cập nhật 23/10/2026, đối chiếu main tại `d722089` sau [PR #30](https:
 |---|---|---|
 | Đăng nhập/tài khoản | Login, thông tin tài khoản, đổi mật khẩu, logout; JWT cookie HttpOnly, CSRF, khóa tạm và thu hồi token | Bootstrap không ghi đè mật khẩu đã đổi; quên mật khẩu/OTP là phạm vi riêng |
 | Trang quản trị `/admin` | Lối tắt giám sát/job/quyền/cấu hình; danh mục lọc nhóm, phân trang server với chọn size/nhảy trang, tạo/sửa/xóa mềm, xác nhận và version | Chỉ liệt kê danh mục active; chưa có khôi phục/lịch sử chỉnh sửa trên UI. Không phải CRUD nhà xe/địa điểm |
-| Phân quyền | Ma trận quyền theo role, tra tài khoản và gán role; bảo vệ ADMIN, bản thân và tập quyền người được ủy quyền | Cấp tài khoản OPERATOR/DRIVER và membership chờ mô hình nhà xe; không coi role là tenant scope |
+| Phân quyền | Registry role/quyền tùy chỉnh, ma trận/gán, inventory/policy menu/endpoint, kiểm URL trực tiếp và quyền nền; bảo vệ ADMIN/bản thân/admin cuối | Cấp tài khoản OPERATOR/DRIVER và membership chờ mô hình nhà xe; không coi role là tenant scope |
 | Công việc nền | Lọc trạng thái, phân trang, chi tiết metadata, retry DEAD có quyền và version | At least once; worker tắt mặc định; tác vụ dài cần cơ chế lease riêng |
-| Giám sát | Heap/CPU/HTTP/pool/worker, snapshot DB probe opt-in; scrape token riêng | Không có lưu lịch sử tập trung/receiver cảnh báo thật chỉ nhờ UI này |
+| Giám sát | Heap/CPU/HTTP/pool/worker, scrape token riêng; tab online/phân trang/bất thường DB và missed writes | Lịch sử JVM vẫn theo node/tab; online DB có retention/capacity/cửa sổ 3 phút, không phải analytics tuyệt đối. Receiver cảnh báo ngoài app chưa xác nhận |
 | Cấu hình | Whitelist thông số startup không nhạy cảm, chỉ đọc | Thay env ở IDE/Render rồi restart; không có nút sửa secret hoặc bật provider từ trình duyệt |
-| Ảnh công khai | Thư viện, phân trang, upload/xem/xóa theo quyền/owner, chuẩn hóa JPEG/PNG và cleanup | Khi dịch vụ tắt: hiện lý do, khóa file/upload và không hiện xóa; ảnh đã lưu vẫn xem được. Cần credentials Cloudinary và worker để nghiệm thu provider |
+| Ảnh công khai | Thư viện, phân trang, upload/xem/sửa metadata/xóa theo quyền/owner/version, chuẩn hóa JPEG/PNG và cleanup | Khi dịch vụ tắt: hiện lý do, khóa file/upload và không hiện xóa; ảnh đã lưu vẫn xem được. Cần credentials Cloudinary và worker để nghiệm thu provider |
 | Tài liệu API | Swagger và DTO/schema/mã lỗi vi/en; thử cookie có CSRF | Dữ liệu trả về Swagger vẫn theo quyền thực của tài khoản |
 | Nền chạy | Schema cấu hình, transaction/checksum/lock/audit; Docker/CI, launcher IntelliJ; không Boot/ORM/Kafka/Redis mới | IDE dùng launcher đọc `.env` riêng hoặc env OS/IDE; WAR dùng env. Pool/quota cần đo theo hạ tầng thực |
 
 UI dùng layout xanh chung, menu không gạch chân ở trạng thái thường/hover, nền đánh dấu trang hiện tại và focus bàn phím. Menu đóng bằng Escape hoặc click ngoài. Bảng có vùng cuộn, ma trận quyền giữ header khi cuộn; form/loading/rỗng/lỗi dùng thông báo chung. Trang vận hành thu gọn cỡ tiêu đề, bảng và khoảng cách; không dùng cỡ chữ hero cho công cụ quản trị.
 
-Các trang nhiều nhóm đã chuyển sang tab và form ghi sang modal: xem [quy ước tab/modal](../03-giao-dien/QUY_UOC_UI.md). Danh mục/Tổng quan và Quyền role/Vai trò tài khoản tách riêng; cấu hình có sáu tab chỉ đọc. Form thêm/sửa danh mục, gán quyền/role, upload và đổi mật khẩu không còn chiếm cố định trên trang chính.
+Các trang nhiều nhóm đã chuyển sang tab và form ghi sang modal: xem [quy ước tab/modal](../03-giao-dien/QUY_UOC_UI.md). Danh mục/Tổng quan, các tab phân quyền/registry/policy và tài nguyên/online tách riêng; cấu hình có sáu tab chỉ đọc. Form thêm/sửa danh mục, gán quyền/role, upload và đổi mật khẩu không còn chiếm cố định trên trang chính.
 
 ## Luồng danh mục để thành viên học theo
 
@@ -56,3 +56,8 @@ Các bằng chứng sau giữ nguyên theo mốc nhật ký API trước đó, k
 Sau khi các kiểm tra/PR đạt, nền tảng source đủ để bắt đầu thiết kế và triển khai nghiệp vụ theo từng đợt. Điểm đầu tiếp theo là SCOPE01 và hợp đồng cấp tài khoản; chưa được xây CRUD nhà xe bỏ qua quyền dữ liệu. CAT02 đã có UI cơ bản trong đợt nền tảng này, Anh tiếp tục nghiệm thu/tích hợp danh mục với nghiệp vụ thay vì viết bộ CRUD thứ hai.
 
 Trước khi mở cho người dùng thật vẫn cần xác nhận Render Live/env, credentials Gmail/Cloudinary khi sử dụng, collector/receiver cảnh báo, backup/restore staging và tải staging. Không gọi các phần đó là đã vận hành chỉ vì source có adapter/file mẫu. Redis/Kafka vẫn chưa bật; quota bộ nhớ là từng node. Lượt này chưa triển khai nhà xe, tuyến, chuyến, booking hoặc tracking.
+
+
+## Bằng chứng bổ sung FOUNDATION02
+
+Xem [tiến độ và CI của PR #35](TIEN_DO_VA_KE_HOACH_NHOM.md). Source đã qua 100 test Java, 16 test Node, Docker/PostgreSQL tạm và kiểm UI fixture; đủ nền tảng để nhóm bắt đầu module theo phân công. Khi tích hợp provider hoặc deploy thật vẫn phải nghiệm thu riêng. Không có benchmark tải Neon/Render Free, backup/receiver cảnh báo hoặc OTP chỉ vì base đã merge. Test Maven được cách ly env, runtime local vẫn có thể dùng Neon duy nhất qua `.env` riêng và initializer bật rõ ràng.

@@ -18,7 +18,7 @@ flowchart LR
     Api[API client] --> Web
     Web --> Security[Quota và JWT/CSRF]
     Security --> Services[Service kiểm quyền và transaction]
-    Services --> DB[(PostgreSQL: auth, catalog, media, jobs)]
+    Services --> DB[(PostgreSQL: auth, policy, catalog, media, jobs, activity)]
     Worker[Worker nhận lease] --> DB
     Worker --> Gmail[Gmail API HTTPS]
     Worker --> Cloudinary[Cloudinary cleanup]
@@ -36,7 +36,7 @@ Phần đã có: nền tảng locale/error/validation/audit/paging, auth/JWT/ph�
 
 | Package | Trách nhiệm và điểm bắt đầu |
 |---|---|
-| `common.config` | RootConfig ghép DatabaseConfig, TrafficConfig, IntegrationConfig, MonitoringConfig; WebConfig ở MVC context. Settings đọc env qua ConfigValues |
+| `common.config` | RootConfig/initializer lắp ghép; application/database/integration/traffic/monitoring/web giữ config/settings theo trách nhiệm; launcher local chủ động bật nguồn env file riêng |
 | `common.base` | Hợp đồng kế thừa entity/DTO/request/response/page và BaseController |
 | `common.constant` | Key cấu hình, route/regex/HTTP, mã lỗi, thành công và validation; không chứa secrets |
 | `common.jdbc` | Connection đặt schema, transaction, metadata và nâng cấp DB; giữ một cụm vì quy mô còn nhỏ |
@@ -45,7 +45,7 @@ Phần đã có: nền tảng locale/error/validation/audit/paging, auth/JWT/ph�
 | `common.job` | `controller`, `dto/request`, `dto/response`, `model`, `repository`, `service`, `handler`, `worker` |
 | `common.mail` | `controller`, `dto/request`, `model`, `service`, `handler`, `transport`; provider chỉ ở transport |
 | `common.monitoring` | `controller`, `dto/response`, `filter`, `repository`, `service`: đo HTTP/JVM/pool/worker và probe DB có chủ đích |
-| `common.media`, `traffic` | Adapter lưu ảnh, kiểm ảnh; giới hạn request/body/quota. Chưa chia lớp rỗng khi không cần |
+| `common.traffic` | Giới hạn request/body/quota, nhận địa chỉ qua trusted proxy; quota memory theo node |
 | `auth` | Credential, role/permission, principal, cookie/JWT và bootstrap tài khoản |
 | `business/catalog` | Danh mục nền đang chạy; controller → service → repository → entity/response |
 | `common/media`, `business/media/controller` | Lõi thư viện ảnh/upload dùng chung, controller public gọi service lõi |
@@ -54,8 +54,8 @@ Phần đã có: nền tảng locale/error/validation/audit/paging, auth/JWT/ph�
 
 ## 3. Khởi động và dừng
 
-1. Tomcat khởi tạo root context và các bean hạ tầng; Settings kiểm giá trị env. Không có tự đọc `.env`.
-2. DatabaseInitializer chỉ migrate/seed khi `VIETROUTE_DB_INIT_ENABLED=true`. V001–V006 có history/checksum, advisory transaction lock và kiểm metadata trước commit. Không reset admin đã tồn tại.
+1. Tomcat khởi tạo root context và các bean hạ tầng; Settings kiểm env OS/IDE. WAR không tự đọc `.env`; launcher local chủ động đọc file riêng trước khi tạo context.
+2. DatabaseInitializer chỉ migrate/seed khi `VIETROUTE_DB_INIT_ENABLED=true`. V001–V009 có history/checksum, advisory transaction lock và kiểm metadata trước commit. Không reset admin đã tồn tại.
 3. Pool khởi tạo lười. Worker và DatabaseProbe chỉ bắt đầu sau initializer, mỗi loại bật bằng env riêng; tắt mặc định.
 4. MVC context đăng ký controller/advice/Thymeleaf/Swagger; hai context không tạo service/controller trùng.
 5. Shutdown ngừng poll, chờ worker đang chạy theo timeout, đóng pool, GC listener và registry. Kill đột ngột có thể để lại lease; node khác nhận lại khi hết hạn.
@@ -64,7 +64,7 @@ Xem [schema và quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md), [IntelliJ](C
 
 ## 4. Luồng request và lỗi
 
-Tomcat giới hạn connection/header/body → HttpMetricsFilter gắn request ID và bắt đầu đo → TrafficGuardFilter kiểm quota/semaphore/body → CSRF/JWT → MVC chuyển kiểu và validate DTO → BaseController.execute → service kiểm quyền/nghiệp vụ → JDBC → factory envelope. Filter đo nằm ngoài security nên ghi cả 401/403/429/503; bỏ health/static/scrape. RequestTraceFilter của MVC tái sử dụng ID đã có.
+Tomcat giới hạn connection/header/body → HttpMetricsFilter gắn request ID và bắt đầu đo → TrafficGuardFilter kiểm quota/semaphore/body → CSRF/JWT → policy menu/endpoint bổ sung → MVC chuyển kiểu và validate DTO → BaseController.execute → service kiểm quyền/nghiệp vụ → JDBC → factory envelope. Filter đo nằm ngoài security nên ghi cả 401/403/429/503; bỏ health/static/scrape. RequestTraceFilter của MVC tái sử dụng ID đã có.
 
 JWT kiểm chữ ký/hạn dùng rồi tra DB để cập nhật active/tokenVersion/quyền trên từng request. Cookie HttpOnly cần CSRF khi ghi; Bearer tách khỏi cơ chế cookie. Quyền READ/CREATE/UPDATE/DELETE/ASSIGN theo resource ở service; scope dữ liệu phải kiểm thêm khi module nghiệp vụ ra đời. Ẩn nút UI không thay quyền server.
 
@@ -93,3 +93,6 @@ Nhiều node dùng cùng DB/schema/JWT secret và cấu hình provider. Không c
 Đọc quy ước/phân công → tạo nhánh member/task → chốt API, quyền, scope và SQL migration mới → DTO @Schema/Validation + bundle vi/en → service transaction + quyền → DAO PreparedStatement → controller BaseController + @Operation → UI gọi client CSRF chung → kiểm thử bằng DB tạm → format → PR/CI → merge. Không sửa migration đã áp dụng hoặc test trên Neon production.
 
 Local: `mvnw verify`, Node test Swagger và formatter. Production: `-Pproduction` chỉ main, bỏ test/launcher/Node; CI Docker dùng PostgreSQL tạm. Xem [CONTRIBUTING.md](../../CONTRIBUTING.md). Khi đọc kết quả kiểm tra trong tài liệu cũ, xem commit/PR tương ứng, không coi số test lịch sử là số hiện tại.
+
+
+Đợt FOUNDATION02 qua [PR #35](https://github.com/hieuv526034/vietroute-web/pull/35) bổ sung registry/policy auth, local env, media chung và online/bất thường. Đọc [nền tảng mở rộng](../02-phat-trien/NEN_TANG_MO_RONG.md) để thêm quyền/role/policy, [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md) để hiểu cửa sổ online, quota theo node và missed writes. Bằng chứng và phần chưa triển khai giữ ở tiến độ, không suy từ sơ đồ rằng provider/cảnh báo ngoài app đã hoạt động.

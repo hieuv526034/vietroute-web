@@ -45,7 +45,7 @@ Source giữ Spring MVC/JDBC thuần; không có Spring Boot, Spring Data hoặc
 | PostgreSQL JDBC driver | 42.7.14 | Mở connection, PreparedStatement/ResultSet; chuyển Timestamp/Instant tại biên JDBC |
 | HikariCP | 7.1.0 | Pool nghiệp vụ mặc định 4 connection/node; journal có pool riêng tối đa 1/node |
 | Neon | Dịch vụ PostgreSQL production do chủ dự án cấu hình | DB `neondb`; schema cấu hình một nơi qua `VIETROUTE_DB_SCHEMA`, mặc định vietroute; credential ngoài Git |
-| Migration/seed tự quản lý | V001–V006, checksum/history và transaction lock | Chạy lúc startup khi bật initializer; giữ mật khẩu cũ, không chạy khi Maven package |
+| Migration/seed tự quản lý | V001–V009, checksum/history và transaction lock | Chạy lúc startup khi bật initializer; giữ mật khẩu cũ, không chạy khi Maven package |
 | Job/outbox PostgreSQL | Code dự án, lease/ACK/NACK/retry/idempotency | Enqueue cùng transaction; nhiều worker/node chia việc qua SKIP LOCKED; handler cần chịu việc chạy lại |
 | Executor JVM | Số thread/lease/poll cấu hình qua JobSettings | Giới hạn worker đang xử lý, không tạo thread mới cho mỗi request; không tăng thread/pool vô hạn |
 | Nhật ký API | PostgreSQL, retention 7 ngày, mục tiêu 10.000 dòng | Snapshot được whitelist, query/paging trên DB; không queue/cache lịch sử trong RAM; có counter ghi lỡ khi DB/slot lỗi |
@@ -116,3 +116,6 @@ Kafka hiện chưa dùng. Cloudinary, Gmail, cảnh báo ngoài app và backup/r
 | Vì sao export chưa có token thật? | Chủ dự án chọn URL thực + `{{accessToken}}`; token của tài khoản debug điền riêng trong Postman, journal không ghi JWT. |
 
 Khi được hỏi một tính năng “đã có chưa”, dẫn [tiến độ và PR bằng chứng](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md) cùng màn/code liên quan. Không trình bày kế hoạch như tính năng đã hoàn thành; phiên bản dependency, khả năng chịu tải và trạng thái deploy là ba thông tin cần kiểm chứng riêng.
+
+
+FOUNDATION02 không thêm framework/provider mới. Registry auth/policy và online/bucket tiếp tục JDBC/PostgreSQL; Role/Permission dùng value object JSON chuỗi để nhận mã mở rộng, hằng lõi dùng bootstrap. Media core chung và config theo trách nhiệm dùng các thư viện hiện có. Chi tiết cơ chế/giới hạn xem [nền tảng mở rộng](../02-phat-trien/NEN_TANG_MO_RONG.md) và [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md).
