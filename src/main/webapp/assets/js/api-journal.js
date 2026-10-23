@@ -1,4 +1,4 @@
-/* Tra nhật ký theo node; lỗi chi tiết ở modal, không tự replay mutation hoặc đọc header xác thực. */
+/* Tra nhật ký PostgreSQL dùng chung; lỗi chi tiết ở modal, không tự replay mutation hoặc đọc header xác thực. */
 (() => {
     'use strict';
     const root = document.getElementById('api-journal');
@@ -9,7 +9,6 @@
     const route = '/api/v1/admin/system/api-journal';
     let busy = false,
         page = 0,
-        instance,
         selected,
         params = {};
     const modal = window.VietRouteUI.modal('journal-dialog');
@@ -78,10 +77,12 @@
     };
     const load = async () => {
         const data = (await api.get(route, { params: { ...params, page, size: 20 }, timeout: 10000 })).data.data;
-        if (instance && instance !== data.instanceId) feedback(labels.nodeChanged);
-        instance = data.instanceId;
+        const retention =
+            data.retentionMinutes % 1440 === 0
+                ? `${data.retentionMinutes / 1440} ${labels.days}`
+                : `${data.retentionMinutes} ${labels.minutes}`;
         node('node').textContent =
-            `${labels.node}: ${instance} · ${data.enabled ? labels.enabled : labels.disabled} · ${labels.capacity}: ${data.capacity} · ${data.retentionMinutes} ${labels.minutes} · ${labels.expired}: ${data.evicted}`;
+            `${data.storage} · ${labels.node}: ${data.instanceId} · ${data.enabled ? labels.enabled : labels.disabled} · ${labels.capacity}: ${data.capacity} · ${retention} · ${labels.expired}: ${data.failedWrites}`;
         const body = node('body');
         body.replaceChildren();
         for (const entry of data.records.content) {

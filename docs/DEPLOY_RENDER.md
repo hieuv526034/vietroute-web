@@ -71,3 +71,9 @@ Mở `/monitoring` bằng tài khoản có SYSTEM_READ để xem JVM/HTTP/pool/w
 - [Render Free](https://render.com/docs/free)
 - [Docker GitHub Actions cache](https://docs.docker.com/build/cache/backends/gha/)
 - [PostgreSQL JDBC](https://jdbc.postgresql.org/documentation/use/)
+
+## Chuyển nhật ký API sang PostgreSQL
+
+V005 tạo `api_request_journal` trên schema cấu hình khi startup initializer bật. `VIETROUTE_API_JOURNAL_ENABLED=true`, `VIETROUTE_API_JOURNAL_CAPACITY=10000`, `VIETROUTE_API_JOURNAL_MINUTES=10080` là mặc định mới (7 ngày). Service đã có key 300/30 từ bản RAM cần sửa Environment/đồng bộ Blueprint; default Java không ghi đè giá trị env cũ. Không dùng flag để tắt quyền/che dữ liệu.
+
+Tổng pool mặc định tối đa 4 nghiệp vụ + 1 nhật ký mỗi node. Nhật ký ghi đồng bộ sau request, timeout/circuit breaker ngắn và không có queue/cache RAM; có thể thiếu record nếu DB/slot ghi không sẵn sàng. Record đã commit tồn tại qua restart/node khác; không có đảm bảo ghi khi cùng DB chết hoặc process bị kill trước commit. Theo dõi failed-write counter ở UI và log `api_journal_write_unavailable`; xem [hướng dẫn chi tiết](NHAT_KY_API_VA_DEBUG.md).

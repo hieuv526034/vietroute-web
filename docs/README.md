@@ -44,7 +44,7 @@ Lần đầu chạy local không bật migration/seed trên Neon để thử. Xi
 | [Nhật ký API/Postman](NHAT_KY_API_VA_DEBUG.md) | Có traceId/lỗi API: tra controller/status, request/response đã lọc, copy cURL/import collection |
 | [Giám sát và vận hành](GIAM_SAT_VA_VAN_HANH.md) | Đọc heap/CPU/pool/HTTP, xử lý 503, metrics/cảnh báo; phân biệt cấu hình mẫu với dịch vụ thật |
 
-Trang nhật ký cần ADMIN + SYSTEM_READ; lịch sử RAM hữu hạn từng node, không gateway hoặc kho log toàn cụm. Nếu DB hỏng khiến JWT không xác thực được, dùng Logs đúng node/metrics vận hành, không bỏ qua kiểm quyền để mở nhật ký.
+Trang nhật ký cần ADMIN + SYSTEM_READ; lịch sử lưu PostgreSQL dùng chung, mặc định 7 ngày; không cache/queue lịch sử trong RAM hoặc thay thế gateway/audit bất biến. Nếu DB hỏng khiến JWT không xác thực được, dùng Logs đúng node/metrics vận hành, không bỏ qua kiểm quyền để mở nhật ký.
 
 ## Nhóm D — Triển khai và vận hành
 

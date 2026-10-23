@@ -10,7 +10,7 @@ import vn.vietroute.common.monitoring.dto.request.ApiJournalSearchRequest;
 import vn.vietroute.common.monitoring.dto.response.ApiJournalDetail;
 import vn.vietroute.common.monitoring.dto.response.ApiJournalResponse;
 
-/** Nhật ký rộng toàn node chỉ ADMIN có SYSTEM_READ; không cho role nghiệp vụ xem dữ liệu chéo người dùng. */
+/** Nhật ký toàn DB chỉ ADMIN có SYSTEM_READ; không cho role nghiệp vụ xem dữ liệu chéo người dùng. */
 @Service
 @RequiredArgsConstructor
 public class ApiJournalService {

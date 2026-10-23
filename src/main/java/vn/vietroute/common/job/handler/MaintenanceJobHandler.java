@@ -2,10 +2,12 @@ package vn.vietroute.common.job.handler;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import vn.vietroute.common.config.ApiJournalSettings;
 import vn.vietroute.common.config.JobSettings;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.job.model.Job;
 import vn.vietroute.common.job.repository.JobRepository;
+import vn.vietroute.common.monitoring.repository.ApiJournalRepository;
 
 /** Handler bảo trì có thể enqueue từ module vận hành; xử lý lặp an toàn, xóa tối đa một lô nhỏ. */
 @Component
@@ -18,6 +20,10 @@ public class MaintenanceJobHandler implements JobHandler {
 
     private final JobSettings settings;
 
+    private final ApiJournalRepository journal;
+
+    private final ApiJournalSettings journalSettings;
+
     @Override
     public String type() {
         return "SYSTEM_CLEANUP";
@@ -29,5 +35,7 @@ public class MaintenanceJobHandler implements JobHandler {
             jobs.cleanup(connection, settings.getRetentionDays());
             return null;
         });
+        // Transaction log riêng, giữ batch nhỏ; job retry nếu dọn DB lỗi, không tạo queue RAM.
+        journal.cleanup(journalSettings.getRetentionMinutes(), journalSettings.getCapacity());
     }
 }

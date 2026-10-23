@@ -27,6 +27,7 @@ import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.jdbc.LegacyMigrationSql;
 import vn.vietroute.common.jdbc.SchemaBootstrap;
 import vn.vietroute.common.job.model.Job;
+import vn.vietroute.common.monitoring.model.ApiJournalRecord;
 
 /** Migration/seed chạy theo cờ môi trường; tuyệt đối không chạy từ bước đóng gói Maven. */
 @Component
@@ -63,6 +64,7 @@ public class DatabaseInitializer implements InitializingBean {
         migrate(connection, "V002__vietroute_schema_and_indexes.sql");
         migrate(connection, "V003__permissions_and_jobs.sql");
         migrate(connection, "V004__media_assets.sql");
+        migrate(connection, "V005__api_request_journal.sql");
         JdbcSchemaValidator.verify(
             connection,
             UserAccount.class,
@@ -70,7 +72,8 @@ public class DatabaseInitializer implements InitializingBean {
             MediaAsset.class,
             Job.class,
             Role.class,
-            Permission.class
+            Permission.class,
+            ApiJournalRecord.class
         );
         seedRoles(connection);
         seedPermissions(connection);

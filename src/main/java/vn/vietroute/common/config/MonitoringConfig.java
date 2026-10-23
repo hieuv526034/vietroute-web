@@ -4,10 +4,17 @@ import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import vn.vietroute.common.jdbc.JdbcSchema;
+import vn.vietroute.common.monitoring.repository.ApiJournalDatabase;
 
 /** Registry riêng của ứng dụng, không dùng global static registry và không tự gửi dữ liệu ra ngoài. */
 @Configuration
 public class MonitoringConfig {
+
+    @Bean(destroyMethod = "close")
+    public ApiJournalDatabase apiJournalDatabase(DatabaseSettings settings, JdbcSchema schema) {
+        return new ApiJournalDatabase(settings, schema);
+    }
 
     @Bean
     public ApiJournalSettings apiJournalSettings() {

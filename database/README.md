@@ -24,7 +24,7 @@ V003 tạo `auth_permissions`, `auth_role_permissions`, audit/version quyền tr
 
 Database production vẫn là neondb. **Schema cấu hình bằng VIETROUTE_DB_SCHEMA**, mặc định vietroute từ db.schema trong database.properties. Mỗi connection mượn pool đặt lại search_path; query runtime chỉ ghi tên bảng, entity không ghi schema. Bật initializer để bootstrap schema cấu hình. Giữ byte V001–V003, LegacyMigrationSql render hai migration lịch sử ở RAM trước thực thi với checksum nguồn. Đọc [schema và quyền theo hành động](../docs/SCHEMA_VA_PHAN_QUYEN.md) để đổi schema mới hoặc rename schema đang có dữ liệu; startup chặn history khác nơi để tránh seed nhầm.
 
-- DB mới: tạo schema cấu hình và bảng vietroute_schema_history, chạy V001–V004 theo path/render tương thích, kiểm chứng metadata rồi seed. V004 thêm metadata ảnh công khai `media_assets`, không lưu file nhị phân trong DB.
+- DB mới: tạo schema cấu hình và bảng vietroute_schema_history, chạy V001–V005 theo path/render tương thích, kiểm chứng metadata rồi seed. V004 thêm metadata ảnh công khai `media_assets`, không lưu file nhị phân trong DB.
 - DB cũ V001 ở public: chuyển history sang schema cấu hình giữ checksum, bỏ qua V001; V002 chuyển bốn bảng ứng dụng theo OID, giữ ID/FK/sequence/index/dữ liệu, V003 bổ sung quyền/job. Không reset admin/hash.
 - Nếu có hai history, bảng cùng tên ở cả hai schema, checksum sai hoặc bảng legacy thiếu history, startup dừng và rollback. Cần đối chiếu dữ liệu trước khi xử lý; runner không tự xóa hay gộp bảng.
 - V001 giữ nguyên nội dung đã áp dụng. Thay đổi tiếp theo phải có migration version mới; không chạy DDL từ Maven build.
@@ -43,3 +43,11 @@ Index hiện tại:
 | `media_assets` trong schema cấu hình | PK `id`; UNIQUE `public_id` | `(created_by, created_at, id)`, `(status, created_at, id)`, `updated_by` |
 
 CI kiểm tra DB mới, khởi động đồng thời/restart và DB legacy tạo từ đúng V001 trên PostgreSQL tạm; không truy cập Neon production. Tham khảo [PostgreSQL ALTER TABLE SET SCHEMA](https://www.postgresql.org/docs/17/sql-altertable.html) về việc giữ index/constraint/sequence sở hữu bởi bảng khi chuyển schema.
+
+## Nhật ký API PostgreSQL (V005)
+
+`api_request_journal` giữ metadata/JSON đã lọc, không file/secret/PII. Runtime insert dùng pool riêng tối đa **1 connection/node** ngoài pool nghiệp vụ (mặc định 4), nên tổng ngân sách mặc định tối đa **5 connection/node**; nhân với mọi node/worker theo hạ tầng. Không giữ danh sách/queue lịch sử trong RAM. Đọc/paging SQL giới hạn từng trang; index trace/time/status khai báo trong `ApiJournalRecord` và kiểm tại startup.
+
+Mặc định retention **10080 phút = 7 ngày**, mục tiêu **10000 dòng toàn bảng**. Mỗi phút có request ghi thành công, hoặc job `SYSTEM_CLEANUP`, dọn tối đa 500 dòng hết hạn và 500 dòng vượt mục tiêu, có advisory transaction lock chống các node dọn chồng. API không trả dòng quá hạn dù cleanup vật lý chưa chạy. Khi không có traffic/worker/job, dữ liệu chờ lượt bảo trì tiếp theo; không cam kết xóa vật lý đúng giây hết hạn. Mục tiêu dung lượng có thể vượt tạm thời dưới tải cao; theo dõi dung lượng DB/autovacuum và lịch bảo trì, không lưu vĩnh viễn.
+
+Bật initializer trên đúng DB/schema khi triển khai để V005 chạy một lần; không sửa V001–V004. Chỉ chạy kiểm tra migration/seed/cleanup trên PostgreSQL tạm, không Neon. Xem [nhật ký và debug](../docs/NHAT_KY_API_VA_DEBUG.md).

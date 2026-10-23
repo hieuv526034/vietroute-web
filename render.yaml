@@ -45,9 +45,9 @@ services:
       - key: VIETROUTE_API_JOURNAL_ENABLED
         value: "true"
       - key: VIETROUTE_API_JOURNAL_CAPACITY
-        value: "300"
+        value: "10000"
       - key: VIETROUTE_API_JOURNAL_MINUTES
-        value: "30"
+        value: "10080"
       - key: VIETROUTE_WORKER_THREADS
         value: "2"
       - key: VIETROUTE_MAIL_ENABLED

@@ -15,6 +15,8 @@ Không tính phần trăm tiến độ bằng số dòng code, số nhánh hoặ
 
 APIJOURNAL01 đã có trên main tại `eeecd3c` qua [PR #25](https://github.com/hieuv526034/vietroute-web/pull/25), do `hieuv526034` thực hiện trên `hieuv526034/api-request-journal`: UI lịch sử/filter/modal, metadata controller/trace/lỗi, projection request/response và xuất cURL/Postman. Có kiểm quyền ADMIN + SYSTEM_READ, TTL/capacity từng node; không lưu bền vững/toàn cụm, không gateway hay body nguyên trạng. 85 test Java, 5 test Node, production WAR, Docker/PostgreSQL tạm và kiểm liên kết tài liệu đạt trước merge. Xem [hợp đồng và cách dùng](NHAT_KY_API_VA_DEBUG.md). Không chuyển việc nền tảng này thành đóng góp đã hoàn thành của thành viên khác.
 
+Đợt tiếp theo `hieuv526034/api-journal-postgresql` chuyển lịch sử từ RAM sang PostgreSQL theo yêu cầu mới: V005, retention 7 ngày, mục tiêu 10.000 dòng, query/filter SQL và cleanup batch/lock. Chỉ xác nhận có trên main sau PR tương ứng qua CI và merge; phạm vi triển khai trong [nhật ký API](NHAT_KY_API_VA_DEBUG.md).
+
 Onboarding và rule format IDE tập trung tại [mục lục đọc theo nhóm/thứ tự](README.md) và [Format IntelliJ](FORMAT_INTELLIJ.md). Phần này giữ nguyên người phụ trách/tác giả của các module; không coi bổ sung tài liệu là đã triển khai nghiệp vụ.
 
 ## 2. Nền tảng đã thực hiện và phần còn thiếu
