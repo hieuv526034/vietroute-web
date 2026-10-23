@@ -30,6 +30,7 @@ import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.constant.ValidationCode;
+import vn.vietroute.common.monitoring.service.ApiJournalState;
 import vn.vietroute.common.web.filter.RequestTraceFilter;
 import vn.vietroute.common.web.response.ApiResponse;
 import vn.vietroute.common.web.response.ApiResponses;
@@ -50,6 +51,7 @@ public class ApiExceptionMapper {
      * Không bắt Error của JVM và không trả exception.getMessage() cho client.
      */
     public <T> ResponseEntity<ApiResponse<T>> toResponse(Exception error, HttpServletRequest request) {
+        ApiJournalState.failure(request, error);
         if (error instanceof BusinessException business) {
             return result(business.getErrorCode(), business.getArguments(), List.of(), request);
         }

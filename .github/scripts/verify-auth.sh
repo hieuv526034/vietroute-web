@@ -85,6 +85,7 @@ login_body admin "$admin_password"
 call 200 POST /api/v1/auth/login "$work/login.json" cookie
 token=$(field data.accessToken)
 initial_token="$token"
+login_trace=$(field traceId)
 grep -qi 'HttpOnly' "$work/headers"
 grep -qi 'SameSite=Lax' "$work/headers"
 [[ "$(field data.user.mustChangePassword)" == True ]]
@@ -95,11 +96,16 @@ call 200 GET /api/v1/admin/system/runtime '' bearer
 [[ "$(field data.databaseProbeEnabled)" == True ]]
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["heapUsedBytes"]>0 and len(d["instanceId"])==36' "$result"
 printf 'System management stage: protected pages, safe config and account lookup\n'
-for page_path in jobs access configuration; do
+for page_path in jobs access configuration api-journal; do
   for locale in vi en; do
     call 200 GET "/operations/$page_path?lang=$locale" '' cookie
-    grep -q 'data-operations=' "$result"
-    grep -q 'ops-controls' "$result"
+    if [[ "$page_path" == api-journal ]]; then
+      grep -q 'journal-dialog' "$result"
+      grep -q 'journal-export-tab' "$result"
+    else
+      grep -q 'data-operations=' "$result"
+      grep -q 'ops-controls' "$result"
+    fi
     if grep -q '??ui.ops' "$result"; then exit 1; fi
   done
 done
@@ -172,6 +178,21 @@ assert_code COM005
 sed 's/CITEST/bad-code!/' "$work/catalog.json" > "$work/invalid.json"
 call 400 POST /api/v1/admin/catalogs "$work/invalid.json" bearer
 assert_code COM001
+journal_trace=$(field traceId)
+printf 'API journal stage: trace lookup, controller, filtered bodies and auth omission\n'
+call 200 GET "/api/v1/admin/system/api-journal?traceId=$journal_trace" '' bearer
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["capacity"]==300 and d["retentionMinutes"]==30; r=d["records"]; assert r["totalElements"]==1; e=r["content"][0]; assert e["status"]==400 and e["code"]=="COM001" and "CatalogController#create" in e["controller"]' "$result"
+# field() dùng key object; chỉ số mảng được đọc rõ ràng, không log snapshot chứa dữ liệu test.
+journal_id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["data"]["records"]["content"][0]["id"])' "$result")
+call 200 GET "/api/v1/admin/system/api-journal/$journal_id" '' bearer
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; body=json.loads(d["requestBody"]); response=json.loads(d["responseBody"]); assert body["code"]=="[REDACTED]" and body["nameVi"]=="[REDACTED]" and body["type"]=="VEHICLE_TYPE"; assert response["code"]=="COM001" and "message" not in response; assert d["replayPath"]=="/api/v1/admin/catalogs"; assert "bad-code!" not in json.dumps(d)' "$result"
+call 200 GET "/api/v1/admin/system/api-journal?traceId=$login_trace" '' bearer
+[[ "$(field data.records.totalElements)" == 1 ]]
+journal_id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["data"]["records"]["content"][0]["id"])' "$result")
+call 200 GET "/api/v1/admin/system/api-journal/$journal_id" '' bearer
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert "capture" in json.loads(d["requestBody"]); assert json.loads(d["responseBody"])["data"]=="OMITTED_BY_POLICY"; assert "accessToken" not in d["responseBody"]; assert "password" not in d["requestBody"]' "$result"
+call 200 GET "/api/v1/admin/system/api-journal?endpoint=api-journal" '' bearer
+[[ "$(field data.records.totalElements)" == 0 ]]
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); del d["code"]; json.dump(d,sys.stdout)' "$work/catalog.json" > "$work/generated.json"
 call 201 POST /api/v1/admin/catalogs "$work/generated.json" bearer
 python3 -c 'import json,re,sys; d=json.load(open(sys.argv[1])); assert re.fullmatch(r"[A-Z][A-Z0-9]{2,39}",d["data"]["code"])' "$result"
@@ -211,6 +232,11 @@ sql "INSERT INTO auth_user_roles(user_id,role_code) SELECT id,'CUSTOMER' FROM au
 login_body customer "$next_password"
 call 200 POST /api/v1/auth/login "$work/login.json" cookie
 token=$(field data.accessToken)
+call 403 GET /api/v1/admin/system/api-journal '' bearer
+for protected_page in api-journal configuration jobs access; do
+  call 403 GET "/operations/$protected_page" '' cookie
+done
+call 403 GET /monitoring '' cookie
 call 403 POST /api/v1/admin/catalogs "$work/catalog.json" bearer
 assert_code AUTH003
 sql "UPDATE auth_users SET active=false WHERE username='customer'" >/dev/null

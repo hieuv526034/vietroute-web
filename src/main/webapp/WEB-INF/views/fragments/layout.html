@@ -71,6 +71,12 @@
                         <summary th:text="#{ui.ops.menu}">Hệ thống</summary>
                         <div class="operations-menu-items">
                             <a
+                                th:if="${journalAllowed}"
+                                th:href="@{/operations/api-journal(lang=${currentLocale})}"
+                                th:attr="aria-current=${navigation.journal} ? 'page' : null"
+                                th:text="#{ui.journal.title}"
+                            ></a>
+                            <a
                                 th:if="${monitoringAllowed}"
                                 th:attr="aria-current=${navigation.monitoring} ? 'page' : null"
                                 th:href="@{/monitoring(lang=${currentLocale})}"

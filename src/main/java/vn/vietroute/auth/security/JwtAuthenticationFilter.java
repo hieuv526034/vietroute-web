@@ -21,6 +21,7 @@ import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
+import vn.vietroute.common.monitoring.service.ApiJournalState;
 import vn.vietroute.common.web.response.ApiErrorWriter;
 import vn.vietroute.common.web.routing.WebRoutePolicy;
 
@@ -112,6 +113,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     return;
                 }
             } catch (BusinessException exception) {
+                // Lỗi DB lúc kiểm JWT xảy ra trước MVC: chỉ giữ SQLState đã lọc để tra cứu sau khi DB hồi phục.
+                ApiJournalState.failure(request, exception);
                 errors.write(request, response, exception.getErrorCode());
                 return;
             }

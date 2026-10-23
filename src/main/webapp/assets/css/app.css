@@ -1307,6 +1307,44 @@ body:has(dialog[open]) {
     font-size: 12px;
 }
 
+.journal-filters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px 18px;
+    align-items: end;
+}
+
+.journal-filters label {
+    margin-top: 8px;
+}
+
+.journal-json {
+    padding: 18px;
+    margin: 16px 0;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--ink);
+    background: #f4f7f1;
+    font:
+        12px/1.8 Consolas,
+        monospace;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-height: 430px;
+    overflow: auto;
+}
+
+#journal-body td {
+    max-width: 280px;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 700px) {
+    .journal-filters {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 700px) {
     .workspace-dialog {
         padding: 20px;

@@ -10,6 +10,11 @@ import org.springframework.context.annotation.Configuration;
 public class MonitoringConfig {
 
     @Bean
+    public ApiJournalSettings apiJournalSettings() {
+        return new ApiJournalSettings(System::getenv);
+    }
+
+    @Bean
     public MonitoringSettings monitoringSettings() {
         return new MonitoringSettings(System::getenv);
     }

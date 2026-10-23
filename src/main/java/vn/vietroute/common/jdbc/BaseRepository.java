@@ -30,8 +30,11 @@ public abstract class BaseRepository {
 
     public static BusinessException translate(SQLException error) {
         // SQLState chuẩn; không đính kèm SQL/parameter/mật khẩu vào lỗi trả về.
-        return new BusinessException(
+        BusinessException translated = new BusinessException(
             "23505".equals(error.getSQLState()) ? ErrorCode.CONFLICT : ErrorCode.DATABASE_UNAVAILABLE
         );
+        // Giữ nguyên nhân nội bộ để chẩn đoán SQLState; không đưa message/SQL/parameter ra HTTP.
+        translated.initCause(error);
+        return translated;
     }
 }

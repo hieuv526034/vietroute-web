@@ -10,6 +10,8 @@ import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Component;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.constant.SuccessCode;
+import vn.vietroute.common.monitoring.service.ApiJournalProjection;
+import vn.vietroute.common.monitoring.service.ApiJournalState;
 import vn.vietroute.common.web.filter.RequestTraceFilter;
 import vn.vietroute.common.web.locale.SupportedLocaleResolver;
 
@@ -23,6 +25,8 @@ public class ApiResponses {
     private final SupportedLocaleResolver localeResolver;
 
     private final Clock clock;
+
+    private final ApiJournalProjection journal;
 
     /** Dịch bằng key ổn định; args chỉ chứa dữ liệu được phép xuất hiện trong thông báo công khai. */
     public String message(String key, Object[] args, Locale locale) {
@@ -59,7 +63,7 @@ public class ApiResponses {
         HttpServletRequest request
     ) {
         Locale locale = locale(request);
-        return new ApiResponse<>(
+        ApiResponse<T> result = new ApiResponse<>(
             success,
             code,
             key,
@@ -71,5 +75,20 @@ public class ApiResponses {
             RequestTraceFilter.ensure(request, null),
             locale.getLanguage()
         );
+        ApiJournalState state = ApiJournalState.get(request);
+        if (state != null) {
+            state.code = code;
+            state.messageKey = key;
+            if (state.diagnostic.equals("HTTP_STATUS_ONLY")) state.diagnostic = success ? "SUCCESS" : "API_ERROR";
+            try {
+                state.responseBody = journal.response(
+                    result,
+                    request.getRequestURI().substring(request.getContextPath().length())
+                );
+            } catch (RuntimeException ignored) {
+                /* Projection lỗi không được làm lỗi response nghiệp vụ. */
+            }
+        }
+        return result;
     }
 }

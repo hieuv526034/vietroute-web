@@ -13,6 +13,8 @@ Cập nhật 23/10/2026. Nền tảng đối chiếu tại `b1f3cde` sau [PR #13
 
 Không tính phần trăm tiến độ bằng số dòng code, số nhánh hoặc số task. Có nhánh chuẩn bị, đặc tả, enum/role hoặc adapter không đồng nghĩa đã có nghiệp vụ hoàn chỉnh. Tài liệu chỉ xác nhận những gì có trên main tại mốc nêu trên, không kết luận về công việc chưa push hoặc nhánh riêng của thành viên.
 
+Đợt APIJOURNAL01 do `hieuv526034` thực hiện trên `hieuv526034/api-request-journal`: UI lịch sử/filter/modal, metadata controller/trace/lỗi, projection request/response và xuất cURL/Postman. Có kiểm quyền ADMIN + SYSTEM_READ, TTL/capacity từng node; không lưu bền vững/toàn cụm, không gateway hay body nguyên trạng. Xem [hợp đồng và cách dùng](NHAT_KY_API_VA_DEBUG.md); chỉ ghi nhận đã có trên main sau PR qua CI và merge. Không chuyển việc nền tảng này thành đóng góp đã hoàn thành của thành viên khác.
+
 ## 2. Nền tảng đã thực hiện và phần còn thiếu
 
 Phần code nền tảng bên dưới hiện được commit dưới định danh `hieuv526034 <hieuv526034@gmail.com>`. Không phân bổ lại các commit này cho người khác. Cột chủ trì tiếp theo ở mục 4 là kế hoạch, không phải tác giả đã hoàn thành.

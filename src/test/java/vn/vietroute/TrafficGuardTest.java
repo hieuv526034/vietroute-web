@@ -23,6 +23,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.TrafficSettings;
+import vn.vietroute.common.monitoring.service.ApiJournalProjection;
 import vn.vietroute.common.traffic.ClientAddressResolver;
 import vn.vietroute.common.traffic.MemoryRateLimitStore;
 import vn.vietroute.common.traffic.RateLimitStore;
@@ -44,7 +45,12 @@ class TrafficGuardTest {
             store,
             new ApiErrorWriter(
                 json,
-                new ApiResponses(config.messageSource(), new SupportedLocaleResolver(), Clock.systemUTC())
+                new ApiResponses(
+                    config.messageSource(),
+                    new SupportedLocaleResolver(),
+                    Clock.systemUTC(),
+                    new ApiJournalProjection(config.objectMapper())
+                )
             )
         );
     }
