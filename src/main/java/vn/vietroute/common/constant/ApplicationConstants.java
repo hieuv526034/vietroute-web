@@ -11,6 +11,16 @@ public final class ApplicationConstants {
 
     private ApplicationConstants() {}
 
+    /** Actor kỹ thuật do V006 tạo: chỉ dùng audit, không đăng nhập hoặc gán role. */
+    public static final class SystemActor {
+
+        public static final long ID = 0L;
+
+        public static final String USERNAME = "system";
+
+        private SystemActor() {}
+    }
+
     /** Mỗi biến môi trường khai báo đúng một lần; không tạo toString chứa giá trị cấu hình. */
     public enum Env {
         // Môi trường, JWT và tài khoản bootstrap.

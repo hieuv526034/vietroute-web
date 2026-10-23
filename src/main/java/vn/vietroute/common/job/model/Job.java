@@ -16,6 +16,7 @@ import vn.vietroute.common.jdbc.JdbcTable;
         @JdbcIndex(name = "idx_jobs_expired_lease", columns = { "locked_until" }),
         @JdbcIndex(name = "idx_jobs_finished", columns = { "finished_at" }),
         @JdbcIndex(name = "idx_jobs_created_by", columns = { "created_by" }),
+        @JdbcIndex(name = "idx_jobs_updated_by", columns = { "updated_by" }),
     }
 )
 public record Job(

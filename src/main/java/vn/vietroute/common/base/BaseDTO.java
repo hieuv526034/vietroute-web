@@ -24,10 +24,13 @@ public abstract class BaseDTO {
     @Schema(description = "Thời điểm cập nhật theo UTC", accessMode = Schema.AccessMode.READ_ONLY)
     private Instant updatedAt;
 
-    @Schema(description = "ID người tạo; null nếu bootstrap hệ thống", accessMode = Schema.AccessMode.READ_ONLY)
+    @Schema(
+        description = "ID người tạo; 0 tham chiếu tài khoản kỹ thuật system",
+        accessMode = Schema.AccessMode.READ_ONLY
+    )
     private Long createdBy;
 
-    @Schema(description = "ID người cập nhật", accessMode = Schema.AccessMode.READ_ONLY)
+    @Schema(description = "ID người cập nhật; 0 là system", accessMode = Schema.AccessMode.READ_ONLY)
     private Long updatedBy;
 
     @Schema(

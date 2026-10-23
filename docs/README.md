@@ -23,6 +23,7 @@ Lần đầu chạy local không bật migration/seed trên Neon để thử. Xi
 | [Luồng xử lý base](LUONG_XU_LY_BASE.md) | Học một request từ filter đến lỗi/response; đọc trước khi thêm controller/service |
 | [Nền tảng mở rộng](NEN_TANG_MO_RONG.md) | Trước khi thêm job/worker/mail, quota hoặc permission |
 | [Schema và phân quyền](SCHEMA_VA_PHAN_QUYEN.md) | Trước khi viết SQL, migration, CRUD hoặc đổi schema môi trường |
+| [Audit và system](AUDIT_VA_SYSTEM.md) | Chọn actor người dùng/hệ thống, hiểu ID 0, migration dữ liệu cũ và quy tắc worker |
 | [Database và migration](../database/README.md) | Chạy migration lúc startup, history/checksum/lock và quy trình dữ liệu |
 
 ## Nhóm B — Viết code và giao diện

@@ -11,6 +11,7 @@ import javax.crypto.spec.SecretKeySpec;
 import lombok.Getter;
 import vn.vietroute.common.constant.ApplicationConstants.Env;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
+import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.validation.StrongPasswordValidator;
 
 /** Đọc cấu hình một lần; không có toString để tránh vô tình ghi secrets ra log. */
@@ -46,7 +47,7 @@ public final class AppSettings {
         cookieSecure = values.flag(Env.COOKIE_SECURE, production);
         bootstrapUsername = values.text(Env.BOOTSTRAP_ADMIN_USERNAME, "admin");
         bootstrapPassword = values.text(Env.BOOTSTRAP_ADMIN_PASSWORD, "");
-        if (!bootstrapUsername.matches(Regex.USERNAME)) {
+        if (!bootstrapUsername.matches(Regex.USERNAME) || bootstrapUsername.equalsIgnoreCase(SystemActor.USERNAME)) {
             throw new IllegalStateException(Env.BOOTSTRAP_ADMIN_USERNAME.key() + " is invalid");
         }
         if (databaseInitEnabled && !StrongPasswordValidator.valid(bootstrapPassword)) {

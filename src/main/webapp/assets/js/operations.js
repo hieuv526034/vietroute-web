@@ -123,11 +123,19 @@
                 'createdAt',
                 'updatedAt',
                 'createdBy',
+                'updatedBy',
                 'version',
             ]) {
                 details.append(
                     text('dt', details.dataset[key]),
-                    text('dd', key === 'attempts' ? `${job.attempts} / ${job.maxAttempts}` : job[key]),
+                    text(
+                        'dd',
+                        key === 'attempts'
+                            ? `${job.attempts} / ${job.maxAttempts}`
+                            : (key === 'createdBy' || key === 'updatedBy') && job[key] === 0
+                              ? 'system'
+                              : job[key],
+                    ),
                 );
             }
             node('job-retry').disabled = !has('JOB_RETRY') || job.status !== 'DEAD';

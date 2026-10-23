@@ -17,6 +17,7 @@ public record JobResponse(
     @Schema(description = "Thời điểm kết thúc") Instant finishedAt,
     @Schema(description = "Thời điểm tạo") Instant createdAt,
     @Schema(description = "Thời điểm cập nhật") Instant updatedAt,
-    @Schema(description = "Người tạo") Long createdBy,
+    @Schema(description = "ID người tạo; 0 là system") Long createdBy,
+    @Schema(description = "ID người cập nhật; 0 là system") Long updatedBy,
     @Schema(description = "Version optimistic retry") long version
 ) {}

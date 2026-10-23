@@ -19,6 +19,7 @@ import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.common.base.PageResponse;
+import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.jdbc.BaseRepository;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 
@@ -42,10 +43,11 @@ public class UserRepository extends BaseRepository {
             long total;
             try (
                 PreparedStatement count = connection.prepareStatement(
-                    "SELECT count(*) FROM auth_users WHERE lower(username) LIKE ?"
+                    "SELECT count(*) FROM auth_users WHERE lower(username) LIKE ? AND id<>?"
                 )
             ) {
                 count.setString(1, prefix);
+                count.setLong(2, SystemActor.ID);
                 try (ResultSet row = count.executeQuery()) {
                     row.next();
                     total = row.getLong(1);
@@ -56,12 +58,13 @@ public class UserRepository extends BaseRepository {
                 PreparedStatement query = connection.prepareStatement(
                     "SELECT u.id,u.username,u.display_name,u.active,u.version,u.created_at,u.updated_at," +
                         "COALESCE((SELECT string_agg(r.role_code,',' ORDER BY r.role_code) FROM auth_user_roles r WHERE r.user_id=u.id),'') AS roles " +
-                        "FROM auth_users u WHERE lower(u.username) LIKE ? ORDER BY u.username,u.id LIMIT ? OFFSET ?"
+                        "FROM auth_users u WHERE lower(u.username) LIKE ? AND u.id<>? ORDER BY u.username,u.id LIMIT ? OFFSET ?"
                 )
             ) {
                 query.setString(1, prefix);
-                query.setInt(2, page.getSize());
-                query.setLong(3, page.offset());
+                query.setLong(2, SystemActor.ID);
+                query.setInt(3, page.getSize());
+                query.setLong(4, page.offset());
                 try (ResultSet rows = query.executeQuery()) {
                     while (rows.next()) {
                         String roleCodes = rows.getString("roles");
@@ -154,12 +157,14 @@ public class UserRepository extends BaseRepository {
     public void recordFailure(Connection connection, long id, int attempts, Instant lockedUntil) throws SQLException {
         try (
             PreparedStatement update = connection.prepareStatement(
-                "UPDATE auth_users SET failed_login_attempts=?, locked_until=?, updated_at=CURRENT_TIMESTAMP, version=version+1 WHERE id=?"
+                "UPDATE auth_users SET failed_login_attempts=?, locked_until=?, updated_at=CURRENT_TIMESTAMP, updated_by=?, version=version+1 WHERE id=?"
             )
         ) {
             update.setInt(1, attempts);
             update.setTimestamp(2, lockedUntil == null ? null : Timestamp.from(lockedUntil));
-            update.setLong(3, id);
+            // Bộ đếm chống đăng nhập sai là quyết định của hệ thống, chưa có actor đã xác thực.
+            update.setLong(3, SystemActor.ID);
+            update.setLong(4, id);
             update.executeUpdate();
         }
     }

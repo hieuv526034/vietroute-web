@@ -8,7 +8,11 @@ import vn.vietroute.common.jdbc.JdbcTable;
 @JdbcTable(
     name = "auth_permissions",
     primaryKey = { "code" },
-    indexes = { @JdbcIndex(name = "auth_permissions_pkey", columns = { "code" }, unique = true) }
+    indexes = {
+        @JdbcIndex(name = "auth_permissions_pkey", columns = { "code" }, unique = true),
+        @JdbcIndex(name = "idx_permissions_created_by", columns = { "created_by" }),
+        @JdbcIndex(name = "idx_permissions_updated_by", columns = { "updated_by" }),
+    }
 )
 public enum Permission {
     CATALOG_READ("CATALOG", Set.of(PermissionAction.READ)),

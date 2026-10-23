@@ -15,6 +15,7 @@ import vn.vietroute.auth.dto.response.UserResponse;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.security.UserPrincipal;
+import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.JdbcTransactions;
@@ -58,7 +59,7 @@ public class AuthService {
             // Khóa dòng user để các lần đăng nhập đồng thời không làm mất bộ đếm sai.
             UserAccount user = users.findByUsername(connection, request.getUsername().toLowerCase(Locale.ROOT), true);
             Instant now = Instant.now(clock);
-            if (user == null) {
+            if (user == null || user.getId() == SystemActor.ID) {
                 // Vẫn kiểm BCrypt để giảm khác biệt thời gian giữa username không tồn tại và mật khẩu sai.
                 passwords.matches(
                     request.getPassword().getBytes(StandardCharsets.UTF_8).length <= 72

@@ -24,6 +24,9 @@ import vn.vietroute.auth.dto.response.AuthResponse;
 import vn.vietroute.auth.dto.response.UserResponse;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.common.config.AppSettings;
+import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
+import vn.vietroute.common.constant.ErrorCode;
+import vn.vietroute.common.exception.BusinessException;
 
 /** Ký/xác minh bằng Nimbus của Spring Security; không tự cài đặt thuật toán JWT. */
 @Service
@@ -57,6 +60,10 @@ public class JwtService {
 
     /** Vai trò trong JWT phục vụ mô tả; filter vẫn đọc DB để áp dụng khóa/thu hồi quyền ngay. */
     public AuthResponse issue(UserAccount user) {
+        // Chặn cả lời gọi nội bộ: system không bao giờ được cấp JWT dù có lỗi ở caller.
+        if (user.getId() == SystemActor.ID) {
+            throw new BusinessException(ErrorCode.TOKEN_INVALID);
+        }
         Instant now = Instant.now(clock);
         Instant expires = now.plus(settings.getAccessTokenLifetime());
         JwtClaimsSet claims = JwtClaimsSet.builder()
