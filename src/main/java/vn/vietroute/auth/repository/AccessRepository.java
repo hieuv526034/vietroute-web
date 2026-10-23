@@ -32,7 +32,7 @@ public class AccessRepository extends BaseRepository {
             List<Role> roles = new ArrayList<>();
             try (
                 PreparedStatement query = connection.prepareStatement(
-                    "SELECT code FROM auth_roles ORDER BY code LIMIT 512"
+                    "SELECT code FROM auth_roles WHERE active ORDER BY code LIMIT 512"
                 );
                 ResultSet rows = query.executeQuery()
             ) {

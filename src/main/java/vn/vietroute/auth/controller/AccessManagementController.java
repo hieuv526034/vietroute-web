@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import vn.vietroute.auth.dto.request.AccessPolicyRequest;
@@ -68,6 +70,7 @@ public class AccessManagementController extends BaseController {
     }
 
     @PostMapping(Routes.ACCESS_REGISTRY_ITEM)
+    @ResponseStatus(HttpStatus.CREATED)
     @Operation(
         summary = "Tạo role hoặc quyền hành động",
         description = "ADMIN + ACCESS_CREATE; mã role in hoa, quyền RESOURCE_ACTION; mã không đổi tên"
@@ -79,7 +82,9 @@ public class AccessManagementController extends BaseController {
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
-        return execute(SuccessCode.CREATED, request, () -> access.save(kind, code, body, actor, true));
+        return execute(HttpStatus.CREATED, SuccessCode.CREATED, request, () ->
+            access.save(kind, code, body, actor, true)
+        );
     }
 
     @PutMapping(Routes.ACCESS_REGISTRY_ITEM)
@@ -114,6 +119,7 @@ public class AccessManagementController extends BaseController {
     }
 
     @PostMapping(Routes.ACCESS_POLICIES)
+    @ResponseStatus(HttpStatus.CREATED)
     @Operation(
         summary = "Tạo chính sách bổ sung",
         description = "ADMIN + ACCESS_CREATE, required permissions là all-of, roles là any-of; không mở rộng quyền trong code"
@@ -123,7 +129,7 @@ public class AccessManagementController extends BaseController {
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
-        return execute(SuccessCode.CREATED, request, () ->
+        return execute(HttpStatus.CREATED, SuccessCode.CREATED, request, () ->
             access.savePolicy(0, body, actor, AccessTargets.inventory(mapping.getObject()))
         );
     }

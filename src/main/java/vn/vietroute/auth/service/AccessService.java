@@ -43,7 +43,7 @@ public class AccessService {
         return access.permissions(locale);
     }
 
-    /** Đọc cấu hình role hiện hành để UI lấy version trước khi sửa. */
+    /** Đọc role đang hoạt động để gán quyền/role; mã đã tắt vẫn quản lý tại registry, không gợi ý để gán mới. */
     @PreAuthorize("hasAuthority('ACCESS_READ')")
     public List<RolePermissionsResponse> roles() {
         return access.roles().stream().map(access::role).toList();
