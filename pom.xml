@@ -276,6 +276,29 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.3</version>
+                <configuration>
+                    <!-- Test không kế thừa DB/initializer/provider production từ shell hoặc IDE của người dùng. -->
+                    <environmentVariables>
+                        <VIETROUTE_ENV>development</VIETROUTE_ENV>
+                        <VIETROUTE_COOKIE_SECURE>false</VIETROUTE_COOKIE_SECURE>
+                        <VIETROUTE_DB_INIT_ENABLED>false</VIETROUTE_DB_INIT_ENABLED>
+                        <VIETROUTE_DB_URL>jdbc:postgresql://127.0.0.1:1/vietroute_unit_tests</VIETROUTE_DB_URL>
+                        <VIETROUTE_DB_USER>test_only</VIETROUTE_DB_USER>
+                        <VIETROUTE_DB_PASSWORD>test_only</VIETROUTE_DB_PASSWORD>
+                        <VIETROUTE_DB_SCHEMA>vietroute_unit_tests</VIETROUTE_DB_SCHEMA>
+                        <VIETROUTE_DB_POOL_SIZE>4</VIETROUTE_DB_POOL_SIZE>
+                        <VIETROUTE_DB_ACQUIRE_TIMEOUT_MS>1000</VIETROUTE_DB_ACQUIRE_TIMEOUT_MS>
+                        <VIETROUTE_DB_CONNECT_TIMEOUT_SECONDS>1</VIETROUTE_DB_CONNECT_TIMEOUT_SECONDS>
+                        <VIETROUTE_DB_SOCKET_TIMEOUT_SECONDS>1</VIETROUTE_DB_SOCKET_TIMEOUT_SECONDS>
+                        <VIETROUTE_JWT_SECRET>unit_tests_only_never_use_for_runtime_0123456789</VIETROUTE_JWT_SECRET>
+                        <VIETROUTE_WORKER_ENABLED>false</VIETROUTE_WORKER_ENABLED>
+                        <VIETROUTE_MAIL_ENABLED>false</VIETROUTE_MAIL_ENABLED>
+                        <VIETROUTE_MEDIA_ENABLED>false</VIETROUTE_MEDIA_ENABLED>
+                        <VIETROUTE_ACTIVITY_ENABLED>false</VIETROUTE_ACTIVITY_ENABLED>
+                        <VIETROUTE_MONITORING_DB_ENABLED>false</VIETROUTE_MONITORING_DB_ENABLED>
+                        <VIETROUTE_REDIS_URL />
+                    </environmentVariables>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
