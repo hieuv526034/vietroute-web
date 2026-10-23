@@ -1,6 +1,6 @@
 # Nghiệm thu nền tảng trước nghiệp vụ
 
-Cập nhật 24/10/2026, đối chiếu main tại `0237ad3` sau [PR #41](https://github.com/hieuv526034/vietroute-web/pull/41). Phạm vi là source nền tảng và UI quản trị trên Spring MVC/JDBC hiện tại. Đọc cùng [quản trị hệ thống](../04-van-hanh/QUAN_TRI_HE_THONG.md), [tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) và [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md). Kết quả trên nhánh chức năng chỉ trở thành bản bàn giao main sau khi PR qua CI và merge.
+Cập nhật 24/10/2026, đối chiếu main tại `46d0243` sau [PR #44](https://github.com/hieuv526034/vietroute-web/pull/44). Phạm vi là source nền tảng và UI quản trị trên Spring MVC/JDBC hiện tại. Đọc cùng [quản trị hệ thống](../04-van-hanh/QUAN_TRI_HE_THONG.md), [tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) và [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md). Kết quả trên nhánh chức năng chỉ trở thành bản bàn giao main sau khi PR qua CI và merge.
 
 ## Các màn và chức năng đã có trong source
 
@@ -72,3 +72,10 @@ Xem [tiến độ và CI của PR #35](TIEN_DO_VA_KE_HOACH_NHOM.md). Source đã
 [PR #41](https://github.com/hieuv526034/vietroute-web/pull/41) đã merge tại 0237ad3; 109 test Java/16 test Node và ba CI tại head b435d65 đạt, link ở [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md). PostgreSQL tạm kiểm đủ đăng ký pending/CUSTOMER, kích hoạt/reset/mã một lần/hết hạn, cửa sổ mật khẩu và thu hồi JWT, outbox mã hóa + retry SMTP loopback, actor journal/filter. Production WAR không có test/dev/env; không chạy ghi/migration trên Neon để kiểm.
 
 UI vi/en fixture kiểm tab/required, modal email giữ bản nháp khi lỗi, khóa thao tác trong lúc gửi và cột user/khách trên journal. Đây là dữ liệu UI kiểm thử; chưa nghiệm thu provider/inbox thật, tải production hoặc mọi thiết bị. Local Run có chẩn đoán nguồn DB, JVM property env-file và UTF-8 BOM; kiểm Neon chỉ đọc xác nhận kết nối/admin tại thời điểm chẩn đoán, chưa tái hiện lỗi IDE cụ thể. Runtime áp dụng V011 trước, rồi bật email có chủ đích; admin cũ không cần xác minh lại để đăng nhập. SMS/phone OTP chưa có. Bước kế tiếp là cấu hình/nghiệm thu provider và SCOPE01/hợp đồng cấp tài khoản theo phân công.
+
+
+## Bằng chứng bổ sung FOUNDATION05
+
+[PR #44](https://github.com/hieuv526034/vietroute-web/pull/44) đã merge; bằng chứng 112 Java/18 Node, ba CI đúng head 6318e38 và phạm vi SQL/UI tại [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md). Annotation mô tả inventory, quyền vẫn từ DB/service; ADMIN bất biến, role khác xóa mềm có chặn liên quan. Hồ sơ/avatar dùng media chung, owner/READY/version và không xóa ảnh đang tham chiếu. Menu tách nhóm, Swagger giữ danh tính cookie, controls gọn, loading/single-flight và heartbeat nền uiSilent. Khung 390px đã sửa dropdown, chưa thay kiểm thiết bị thật.
+
+Runtime áp dụng V012 trên schema đang có và cập nhật tất cả node trước khi dùng avatar; không chạy migration trên Neon để kiểm build. Cloudinary/Gmail/Render Live/tải production vẫn cần nghiệm thu riêng; không có cam kết mọi cấu hình/tải đều không lỗi. Không còn phần code dở của FOUNDATION05, chưa bắt đầu nhà xe/chuyến/booking.
