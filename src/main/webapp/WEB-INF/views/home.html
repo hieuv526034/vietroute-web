@@ -26,8 +26,9 @@
                     </p>
                     <div class="hero-actions">
                         <a
+                            id="home-workspace"
                             class="button"
-                            th:href="@{/login(lang=${currentLocale})}"
+                            th:href="@{${workspacePath}(lang=${currentLocale})}"
                         >
                             <span th:text="#{ui.getStarted}">Vào hệ thống</span>
                             <span aria-hidden="true">↗</span>

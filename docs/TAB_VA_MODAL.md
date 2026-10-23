@@ -17,6 +17,8 @@ Ma trận quyền ở modal chỉnh sửa; phía tab hiện danh sách quyền �
 
 ## Dùng component chung
 
+Danh sách và form dùng thêm [bảng/phân trang/validation chung](BANG_VA_VALIDATION_UI.md). Nút tìm kiếm/thêm đặt bên phải, cột thao tác rộng cố định với icon có tên truy cập; footer Hủy/Lưu dùng `dialog-actions` cùng hàng bên phải. Không tự tạo pager hoặc validation bằng bubble riêng cho mỗi module.
+
 `assets/js/workspace.js` được layout nạp trước `app.js`, cung cấp `window.VietRouteUI`. Không cần Bootstrap JS hoặc thư viện modal mới. CSS dùng `workspace-tabs`, `workspace-dialog`, `workspace-dialog-wide`, `dialog-heading`, `dialog-controls`; form danh mục dùng grid hai cột desktop, một cột mobile.
 
 - Bọc nhóm bằng `data-tabs`. Mỗi button có id duy nhất, `data-tab-target` trỏ id panel trong nhóm; đặt trong vùng `role="tablist"` có tên dịch vi/en. Không dùng tab để cấp quyền.

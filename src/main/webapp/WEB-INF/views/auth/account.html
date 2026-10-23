@@ -41,12 +41,14 @@
                     role="alert"
                     hidden
                 ></div>
-                <button
-                    id="password-open"
-                    class="button mt-3"
-                    type="button"
-                    th:text="#{ui.changePassword}"
-                ></button>
+                <div class="toolbar-actions">
+                    <button
+                        id="password-open"
+                        class="button mt-3"
+                        type="button"
+                        th:text="#{ui.changePassword}"
+                    ></button>
+                </div>
             </section>
             <dialog
                 id="password-dialog"
@@ -115,18 +117,20 @@
                             id="password-hint"
                             th:text="#{ui.passwordHint}"
                         ></p>
-                        <button
-                            class="button"
-                            type="submit"
-                            th:text="#{ui.savePassword}"
-                        ></button>
+                        <div class="dialog-actions">
+                            <button
+                                class="button button-outline"
+                                type="button"
+                                data-dialog-close
+                                th:text="#{ui.catalog.cancel}"
+                            ></button>
+                            <button
+                                class="button"
+                                type="submit"
+                                th:text="#{ui.savePassword}"
+                            ></button>
+                        </div>
                     </form>
-                    <button
-                        class="button button-outline mt-3"
-                        type="button"
-                        data-dialog-close
-                        th:text="#{ui.catalog.cancel}"
-                    ></button>
                 </fieldset>
             </dialog>
         </main>

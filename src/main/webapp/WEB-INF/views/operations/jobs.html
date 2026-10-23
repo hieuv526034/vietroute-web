@@ -41,7 +41,7 @@
             >
                 <form
                     id="jobs-filter"
-                    class="d-flex flex-wrap gap-3 align-items-end mb-4"
+                    class="table-filter mb-4"
                 >
                     <div>
                         <label
@@ -69,7 +69,12 @@
                         th:text="#{ui.ops.filter}"
                     ></button>
                 </form>
-                <div class="table-responsive">
+                <div
+                    class="table-responsive"
+                    tabindex="0"
+                    role="region"
+                    th:attr="aria-label=#{ui.table.scroll}"
+                >
                     <table class="table align-middle">
                         <thead>
                             <tr>
@@ -78,32 +83,16 @@
                                 <th th:text="#{ui.ops.status}"></th>
                                 <th th:text="#{ui.ops.attempts}"></th>
                                 <th th:text="#{ui.ops.updatedAt}"></th>
-                                <th th:text="#{ui.ops.actions}"></th>
+                                <th
+                                    class="table-actions"
+                                    th:text="#{ui.ops.actions}"
+                                ></th>
                             </tr>
                         </thead>
                         <tbody id="jobs-body"></tbody>
                     </table>
                 </div>
-                <nav
-                    class="d-flex gap-3 align-items-center my-3"
-                    th:attr="aria-label=#{ui.ops.pagination}"
-                >
-                    <button
-                        id="jobs-previous"
-                        class="button button-outline"
-                        type="button"
-                        disabled
-                        th:text="#{ui.mediaPrevious}"
-                    ></button>
-                    <span id="jobs-page"></span>
-                    <button
-                        id="jobs-next"
-                        class="button button-outline"
-                        type="button"
-                        disabled
-                        th:text="#{ui.mediaNext}"
-                    ></button>
-                </nav>
+                <div th:replace="~{fragments/pagination :: pager('jobs', 20)}"></div>
                 <dialog
                     id="job-dialog"
                     class="operations-dialog workspace-dialog workspace-dialog-wide"
@@ -123,10 +112,12 @@
                         ></h2>
                         <button
                             id="job-close"
-                            class="button button-outline"
+                            class="dialog-close"
                             type="button"
-                            th:text="#{ui.ops.close}"
-                        ></button>
+                            th:attr="aria-label=#{ui.ops.close}"
+                        >
+                            <span aria-hidden="true">×</span>
+                        </button>
                     </div>
                     <dl
                         id="job-details"
@@ -137,13 +128,15 @@
                         th:text="#{ui.ops.retryNote}"
                         class="text-secondary"
                     ></p>
-                    <button
-                        id="job-retry"
-                        type="button"
-                        class="button"
-                        disabled
-                        th:text="#{ui.ops.retry}"
-                    ></button>
+                    <div class="dialog-actions">
+                        <button
+                            id="job-retry"
+                            type="button"
+                            class="button"
+                            disabled
+                            th:text="#{ui.ops.retry}"
+                        ></button>
+                    </div>
                 </dialog>
             </fieldset>
             <div

@@ -33,11 +33,13 @@ SQLState chỉ là gợi ý phân nhóm; không có SQL, parameter, stack trace 
 
 1. Trong **Xuất debug**, bấm **Sao chép cURL** hoặc **Tải Postman JSON**. Nếu trình duyệt không cho clipboard, nội dung được chọn để nhấn Ctrl+C.
 2. Với cURL: Postman → Import → Raw text, dán nội dung. Hoặc import file `*.postman_collection.json` theo [schema Postman v2.1 chính thức](https://schema.postman.com/collection/json/v2.1.0/draft-07/docs/index.html).
-3. Điền `baseUrl` trong môi trường Postman, ví dụ `http://localhost:8080`; WAR deploy có context thì dùng `http://localhost:8080/vietroute`. Điền `accessToken` bằng token của tài khoản debug được cấp quyền. Collection không lấy token/cookie đang đăng nhập trên trình duyệt.
+3. URL đã được điền từ origin trình duyệt và context ứng dụng. Ví dụ cURL dùng `http://localhost:8080/api/...`; WAR context dùng `http://localhost:8080/vietroute/api/...`. Collection đặt sẵn biến `baseUrl` tương ứng, không cần nhập lại. Token vẫn là `{{accessToken}}`: điền bằng token tài khoản debug được cấp quyền trong Postman. Không lấy token/cookie đang đăng nhập hoặc credential của request lịch sử.
 4. Điền lại `[REDACTED]`, placeholder path và payload còn thiếu theo Swagger. Auth chỉ có placeholder username/password; file/multipart và DTO không được capture cần bổ sung thủ công. Mẫu response trong collection là projection đã lọc, không phải toàn bộ response server.
 5. Kiểm tra method, URL và payload trước khi tự bấm Send. Export không gửi lại request. Mutation có thể thay đổi dữ liệu; ưu tiên môi trường development/staging tách biệt.
 
-Collection không có script, secret, cookie hay thông tin môi trường thật. Giữ token/password trong môi trường riêng hoặc Vault của công cụ, không commit collection đã điền secret. cURL dùng cú pháp shell POSIX; Windows có thể import trực tiếp vào Postman, không dán nguyên cú pháp này vào PowerShell.
+Collection có URL môi trường đang xem, không có script/secret/cookie. URL lấy từ origin + meta app-base, không lấy host/Forwarded header từ request lịch sử; chỉ chấp nhận HTTP/HTTPS, không URL có user/password. Token giữ placeholder theo lựa chọn của chủ dự án, không có API cấp token debug mới. Giữ token/password trong môi trường riêng hoặc Vault của công cụ, không commit collection đã điền secret. cURL dùng cú pháp shell POSIX; Windows có thể import trực tiếp vào Postman, không dán nguyên cú pháp này vào PowerShell.
+
+![Xuất debug có URL ứng dụng, token placeholder; dữ liệu thử riêng](images/journal-export-url.png)
 
 ## Chính sách dữ liệu
 
@@ -96,4 +98,4 @@ V005 chỉ chạy tại startup khi `VIETROUTE_DB_INIT_ENABLED=true`; giữ nguy
 
 Khi thêm API/DTO, cập nhật Swagger/locales và kiểm quyền backend như cũ. Chỉ bổ sung projection sau khi rà từng field, không log raw hoặc blacklist theo tên password/token. Kiểm sentinel secret không lọt vào UI/export/DB; không thêm email/username/address vào whitelist để tiện replay.
 
-Java test dùng repository giả chỉ để kiểm filter/security/omission/no-queue/backoff và response không bị log failure làm hỏng. Docker CI dùng PostgreSQL **tạm** để kiểm migration/index/schema cấu hình, SQL insert/filter/detail, restart vẫn thấy trace, node khác đọc được, retention/cleanup và permission. Node tests kiểm cURL/collection không secret/script; UI fixture HTML thật chỉ xác nhận frontend, không thay SQL integration. Không dùng Neon/provider thật hoặc benchmark production trong các kiểm tra này.
+Java test dùng repository giả chỉ để kiểm filter/security/omission/no-queue/backoff và response không bị log failure làm hỏng. Docker CI dùng PostgreSQL **tạm** để kiểm migration/index/schema cấu hình, SQL insert/filter/detail, restart vẫn thấy trace, node khác đọc được, retention/cleanup và permission. Node tests kiểm URL ROOT/context, token placeholder và cURL/collection không secret/script; UI fixture HTML thật chỉ xác nhận frontend, không thay SQL integration. Không dùng Neon/provider thật hoặc benchmark production trong các kiểm tra này.

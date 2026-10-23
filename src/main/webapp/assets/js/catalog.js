@@ -13,11 +13,13 @@
     const status = document.getElementById('catalog-status');
     const conflict = document.getElementById('catalog-conflict');
     const save = document.getElementById('catalog-save');
-    const previous = document.getElementById('catalog-previous');
-    const next = document.getElementById('catalog-next');
     const type = document.getElementById('catalog-type');
     const code = document.getElementById('catalog-code');
-    let page = 0;
+    const tables = window.VietRouteTable;
+    const pager = tables.pager('catalog', {
+        busy: () => busy,
+        onChange: (query) => perform(() => load(query), 'catalog-feedback'),
+    });
     let selected = null;
     let permissions = [];
     let busy = false;
@@ -72,15 +74,8 @@
         note.textContent = note.dataset.create;
     };
 
-    const button = (label, danger, action) => {
-        const node = document.createElement('button');
-        node.type = 'button';
-        node.className = `button button-small ${danger ? 'button-danger' : 'button-outline'}`;
-        node.textContent = label;
-        // Giữ nút mở trước khi fieldset bị khóa và trình duyệt chuyển focus ra body.
-        node.addEventListener('click', () => perform(() => action(node)));
-        return node;
-    };
+    const button = (label, icon, danger, action) =>
+        tables.actionButton(label, icon, (trigger) => perform(() => action(trigger)), danger);
 
     // Đọc bản mới nhất khi mở form; version được giữ ở bộ nhớ và gửi lại đúng một lần khi lưu.
     const edit = async (item, trigger) => {
@@ -115,14 +110,11 @@
         await load();
     };
 
-    const load = async () => {
-        let result = (await api.get(`/api/v1/catalogs/${filter.value}`, { params: { page, size: 10 }, timeout: 10000 }))
-            .data.data;
-        if (page > 0 && !result.content.length) {
-            page = Math.max(0, result.totalPages - 1);
-            result = (await api.get(`/api/v1/catalogs/${filter.value}`, { params: { page, size: 10 }, timeout: 10000 }))
-                .data.data;
-        }
+    const load = async (query = pager.query) => {
+        const result = await tables.readPage(
+            async (params) => (await api.get(`/api/v1/catalogs/${filter.value}`, { params, timeout: 10000 })).data.data,
+            query,
+        );
         rows.replaceChildren();
         for (const item of result.content) {
             const row = document.createElement('tr');
@@ -133,15 +125,19 @@
             }
             const actions = document.createElement('td');
             const group = document.createElement('div');
-            group.className = 'catalog-actions';
+            group.className = 'row-actions';
+            actions.className = 'table-actions';
             if (can('READ') && can('UPDATE')) {
-                group.append(button(root.dataset.edit, false, (trigger) => edit(item, trigger)));
+                group.append(
+                    button(`${root.dataset.edit}: ${item.code}`, 'edit', false, (trigger) => edit(item, trigger)),
+                );
             }
             if (can('DELETE')) {
-                group.append(button(root.dataset.delete, true, () => remove(item)));
+                group.append(button(`${root.dataset.delete}: ${item.code}`, 'delete', true, () => remove(item)));
             }
             if (!group.childElementCount) {
-                group.textContent = root.dataset.readonly;
+                group.textContent = '—';
+                group.title = root.dataset.readonly;
             }
             actions.append(group);
             row.append(actions);
@@ -155,15 +151,12 @@
             row.append(cell);
             rows.append(row);
         }
-        previous.disabled = !result.hasPrevious;
-        next.disabled = !result.hasNext;
-        document.getElementById('catalog-page').textContent =
-            `${root.dataset.page} ${result.page + 1}/${Math.max(1, result.totalPages)} · ${result.totalElements}`;
+        pager.update(result);
     };
 
     form.addEventListener('submit', (event) => {
         event.preventDefault();
-        if (busy || save.disabled || !form.reportValidity()) {
+        if (busy || save.disabled || !window.VietRouteForms.validate(form)) {
             return;
         }
         void perform(async () => {
@@ -180,12 +173,11 @@
                       ...(code.value.trim() ? { code: code.value.trim() } : {}),
                   });
             filter.value = selected?.type || type.value;
-            page = 0;
             resetEditor();
             // Thành công mới đóng modal; lỗi/409 vẫn giữ bản nháp và phản hồi ngay trong modal.
             document.getElementById('catalog-dialog').close();
             feedback(response.data.message, true, 'catalog-feedback');
-            await load();
+            await load({ ...pager.query, page: 0 });
         });
     });
     document.getElementById('catalog-create').addEventListener('click', () => {
@@ -196,21 +188,8 @@
     });
     filter.addEventListener('change', () =>
         perform(async () => {
-            page = 0;
             resetEditor();
-            await load();
-        }, 'catalog-feedback'),
-    );
-    previous.addEventListener('click', () =>
-        perform(async () => {
-            page -= 1;
-            await load();
-        }, 'catalog-feedback'),
-    );
-    next.addEventListener('click', () =>
-        perform(async () => {
-            page += 1;
-            await load();
+            await load({ ...pager.query, page: 0 });
         }, 'catalog-feedback'),
     );
     document.getElementById('catalog-refresh').addEventListener('click', () =>

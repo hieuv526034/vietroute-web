@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
+import vn.vietroute.auth.security.AuthNavigation;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.web.locale.SupportedLocaleResolver;
@@ -25,6 +26,7 @@ public class PageModelAdvice {
         model.addAttribute("currentPath", request.getRequestURI());
         model.addAttribute("currentLocale", new SupportedLocaleResolver().resolveLocale(request).getLanguage());
         model.addAttribute("currentUser", user);
+        model.addAttribute("workspacePath", AuthNavigation.workspace(user));
         model.addAttribute("adminUser", user != null && user.roles().contains(Role.ADMIN));
         model.addAttribute("jobsAllowed", allowed(auth, Permission.JOB_READ));
         model.addAttribute("accessAllowed", allowed(auth, Permission.ACCESS_READ));

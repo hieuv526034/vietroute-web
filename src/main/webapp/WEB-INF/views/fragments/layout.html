@@ -29,6 +29,10 @@
             name="app-request-help"
             th:content="#{ui.requestHelp}"
         />
+        <meta
+            name="app-login-action"
+            th:content="#{ui.loginAgain}"
+        />
         <title th:text="${title} + ' · VietRoute'">VietRoute</title>
         <link
             rel="stylesheet"
@@ -185,8 +189,15 @@
             <span th:text="#{ui.footer}">Kết nối hành trình</span>
         </footer>
         <th:block th:fragment="scripts">
+            <div
+                id="validation-labels"
+                hidden
+                th:attr="data-required=#{ui.validation.required},data-invalid=#{ui.validation.invalid},data-pattern=#{ui.validation.pattern},data-min-length=#{ui.validation.minLength},data-max-length=#{ui.validation.maxLength},data-minimum=#{ui.validation.minimum},data-maximum=#{ui.validation.maximum},data-selection=#{ui.validation.selection}"
+            ></div>
             <script th:src="@{/webjars/axios/1.20.0/dist/axios.min.js}"></script>
             <script th:src="@{/assets/js/workspace.js}"></script>
+            <script th:src="@{/assets/js/table.js}"></script>
+            <script th:src="@{/assets/js/forms.js}"></script>
             <script th:src="@{/assets/js/app.js}"></script>
         </th:block>
     </body>

@@ -24,7 +24,7 @@
             lines.push(`[${data.code}]`);
         }
         for (const field of data?.errors || []) {
-            lines.push(`${field.field}: ${field.message}`);
+            lines.push(field.message);
         }
 
         if (data?.traceId) {
@@ -35,8 +35,19 @@
         }
 
         feedback(lines.join('\n'), false, id);
+        const scope =
+            document.getElementById(id || 'form-feedback')?.closest('dialog') || document.querySelector('main');
+        window.VietRouteForms.serverErrors(scope, data?.errors);
         if (error.response?.status === 401 && !document.getElementById('login-form')) {
-            window.location.assign(route('/login'));
+            // Hết phiên phải báo rõ và giữ form/modal; chỉ điều hướng khi người dùng chủ động đăng nhập lại.
+            const target = document.getElementById(id || 'form-feedback');
+            if (target) {
+                const link = document.createElement('a');
+                link.href = route('/login');
+                link.className = 'feedback-login';
+                link.textContent = meta('app-login-action');
+                target.append(document.createElement('br'), link);
+            }
         }
     };
     // CSRF lấy trước mỗi mutation; không đọc cookie auth hoặc ghi token vào storage.
@@ -58,7 +69,7 @@
             event.preventDefault();
             if (form.dataset.submitting === 'true') return;
             feedback('', false, feedbackId);
-            if (!form.reportValidity()) {
+            if (!window.VietRouteForms.validate(form)) {
                 return;
             }
 

@@ -9,10 +9,13 @@
     const gallery = document.getElementById('media-gallery');
     const form = document.getElementById('media-upload-form');
     const upload = document.getElementById('media-upload');
-    const previous = document.getElementById('media-prev');
-    const next = document.getElementById('media-next');
     const enabled = root.dataset.enabled === 'true';
-    let page = 0;
+    const tables = window.VietRouteTable;
+    const pager = tables.pager('media', {
+        busy: () => uploading || loading,
+        onChange: (query) => load(query).catch(failure),
+    });
+    let loading = false;
     let permissions = [];
     let uploading = false;
     const open = document.getElementById('media-open');
@@ -27,13 +30,13 @@
         if (!uploading && enabled && permissions.includes('MEDIA_CREATE')) uploadModal.open();
     });
 
-    const load = async () => {
-        const result = (await api.get('/api/v1/media', { params: { page, size: 12 } })).data.data;
+    const loadPage = async (query) => {
+        const result = await tables.readPage(
+            async (params) => (await api.get('/api/v1/media', { params })).data.data,
+            query,
+        );
         gallery.replaceChildren();
-        previous.disabled = !result.hasPrevious;
-        next.disabled = !result.hasNext;
-        document.getElementById('media-page').textContent =
-            `${result.totalElements} · ${result.page + 1}/${Math.max(1, result.totalPages)}`;
+        pager.update(result);
         if (!result.content.length) {
             gallery.textContent = root.dataset.empty;
         }
@@ -89,10 +92,25 @@
         }
     };
 
+    // Không cho refresh/phân trang chạy đua và thay kết quả của một request mới hơn.
+    const load = async (query = pager.query) => {
+        if (loading) return;
+        loading = true;
+        root.setAttribute('aria-busy', 'true');
+        document.getElementById('media-refresh').disabled = true;
+        try {
+            await loadPage(query);
+        } finally {
+            loading = false;
+            root.setAttribute('aria-busy', 'false');
+            document.getElementById('media-refresh').disabled = false;
+        }
+    };
+
     // File đi qua backend để kiểm pixel/chuẩn hóa; trình duyệt không biết Cloudinary API secret.
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        if (uploading || !enabled || !permissions.includes('MEDIA_CREATE') || !form.reportValidity()) {
+        if (uploading || !enabled || !permissions.includes('MEDIA_CREATE') || !window.VietRouteForms.validate(form)) {
             return;
         }
         upload.disabled = true;
@@ -105,8 +123,7 @@
             feedback(response.data.message, true);
             form.reset();
             document.getElementById('media-dialog').close();
-            page = 0;
-            await load();
+            await load({ ...pager.query, page: 0 });
         } catch (error) {
             failure(error, document.getElementById('media-dialog').open ? 'media-upload-feedback' : 'form-feedback');
         } finally {
@@ -116,14 +133,6 @@
         }
     });
     document.getElementById('media-refresh').addEventListener('click', () => load().catch(failure));
-    previous.addEventListener('click', () => {
-        page -= 1;
-        load().catch(failure);
-    });
-    next.addEventListener('click', () => {
-        page += 1;
-        load().catch(failure);
-    });
     api.get('/api/v1/auth/me')
         .then(async (response) => {
             permissions = response.data.data.permissions;

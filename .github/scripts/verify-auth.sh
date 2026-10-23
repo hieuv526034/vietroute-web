@@ -106,6 +106,11 @@ grep -qi 'SameSite=Lax' "$work/headers"
 [[ "$(field data.user.mustChangePassword)" == True ]]
 call 200 GET /api/v1/auth/me '' cookie
 [[ "$(field data.username)" == admin ]]
+printf 'Navigation stage: authenticated home enters workspace and login redirects without another password\n'
+call 200 GET '/?lang=vi' '' cookie
+python3 -c 'import re,sys; h=open(sys.argv[1]).read(); a=re.search(r"id=\"home-workspace\"[\s\S]*?</a>",h).group(); assert "href=\"/admin?lang=vi\"" in a' "$result"
+call 302 GET '/login?lang=en' '' cookie
+grep -qi '^Location: .*/admin?lang=en' "$work/headers"
 call 200 GET /api/v1/auth/me '' bearer
 call 200 GET /api/v1/admin/system/runtime '' bearer
 [[ "$(field data.databaseProbeEnabled)" == True ]]
@@ -256,6 +261,11 @@ sql "INSERT INTO auth_user_roles(user_id,role_code) SELECT id,'CUSTOMER' FROM au
 login_body customer "$next_password"
 call 200 POST /api/v1/auth/login "$work/login.json" cookie
 token=$(field data.accessToken)
+call 200 GET '/?lang=en' '' cookie
+python3 -c 'import re,sys; h=open(sys.argv[1]).read(); a=re.search(r"id=\"home-workspace\"[\s\S]*?</a>",h).group(); assert "href=\"/account?lang=en\"" in a' "$result"
+call 302 GET '/login?lang=en' '' cookie
+grep -qi '^Location: .*/account?lang=en' "$work/headers"
+call 403 GET /admin '' cookie
 call 403 GET /api/v1/admin/system/api-journal '' bearer
 for protected_page in api-journal configuration jobs access; do
   call 403 GET "/operations/$protected_page" '' cookie
