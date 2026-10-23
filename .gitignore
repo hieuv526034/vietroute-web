@@ -6,7 +6,11 @@
 *.log
 
 # IDE and operating system
-/.idea/
+/.idea/*
+!/.idea/codeStyles/
+/.idea/codeStyles/*
+!/.idea/codeStyles/Project.xml
+!/.idea/codeStyles/codeStyleConfig.xml
 *.iml
 /.classpath
 /.project

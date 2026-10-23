@@ -1,5 +1,7 @@
 # Cloudinary và chạy Spring MVC bằng IntelliJ
 
+Người mới theo [lộ trình tài liệu](README.md). Thiết lập format/Code Style và nút Run Format tại [Format IntelliJ](FORMAT_INTELLIJ.md); tài liệu này tập trung Run/Debug ứng dụng và tích hợp ảnh.
+
 Phụ trách nền tảng: hieuv526034. Stack giữ Spring MVC 6, JDBC, Thymeleaf và WAR/Tomcat 10.1. Không cần Spring Boot hoặc thêm container cho dịch vụ ảnh.
 
 ## Nút Run/Debug trong IntelliJ

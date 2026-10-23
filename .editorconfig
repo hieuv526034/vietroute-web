@@ -7,6 +7,27 @@ insert_final_newline = true
 indent_style = space
 indent_size = 4
 trim_trailing_whitespace = true
+max_line_length = 120
+ij_continuation_indent_size = 4
+ij_visual_guides = 120
+
+# IntelliJ: giu khoang cach ro rang, import tuong minh, annotation tren dong rieng.
+[*.java]
+ij_java_class_count_to_use_import_on_demand = 999
+ij_java_names_count_to_use_import_on_demand = 999
+ij_java_packages_to_use_import_on_demand = unset
+ij_java_use_fq_class_names = false
+ij_java_blank_lines_around_field = 1
+ij_java_blank_lines_around_method = 1
+ij_java_blank_lines_around_class = 1
+ij_java_blank_lines_after_imports = 1
+ij_java_keep_simple_blocks_in_one_line = false
+ij_java_keep_simple_methods_in_one_line = false
+ij_java_keep_simple_lambdas_in_one_line = false
+ij_java_keep_multiple_expressions_in_one_line = false
+ij_java_method_annotation_wrap = split_into_lines
+ij_java_field_annotation_wrap = split_into_lines
+ij_java_class_annotation_wrap = split_into_lines
 
 [*.{md,yml,yaml}]
 indent_size = 2
@@ -16,3 +37,8 @@ indent_size = 2
 
 [*.{cmd,ps1}]
 end_of_line = crlf
+
+# SQL migration da ap dung: khong trim/chen newline ngau nhien khi luu file.
+[src/main/resources/db/migration/*.sql]
+trim_trailing_whitespace = false
+insert_final_newline = false

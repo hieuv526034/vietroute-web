@@ -1,0 +1,47 @@
+name: Development formatting
+
+on:
+  pull_request:
+    paths: &format-paths
+      - 'src/**/*.java'
+      - 'src/main/webapp/**/*.html'
+      - 'src/main/webapp/**/*.css'
+      - 'src/main/webapp/**/*.js'
+      - '.idea/codeStyles/**'
+      - '.run/**'
+      - '.editorconfig'
+      - '.prettierrc.json'
+      - '.prettierignore'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'pom.xml'
+      - '.github/workflows/format.yml'
+  push:
+    branches: [main]
+    paths: *format-paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: development-format-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  formatting:
+    name: Check development source formatting
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked development formatting tools
+        run: npm ci
+      - name: Check formatting without changing files or building production
+        run: npm run format:check
