@@ -9,14 +9,19 @@ import vn.vietroute.common.constant.ApplicationConstants.Env;
 @Getter
 public final class JobSettings {
 
+    /** Bật vòng poll job; false thì không đánh thức Neon để tìm việc. */
     private final boolean enabled;
 
+    /** Số worker thực thi đồng thời trên mỗi node, mặc định 2, tối đa 8. */
     private final int threads;
 
+    /** Khoảng nghỉ giữa các lần tìm job, đơn vị giây, mặc định 10. */
     private final int pollSeconds;
 
+    /** Thời gian giữ quyền xử lý job, đơn vị giây; mặc định 180 để node khác phục hồi khi chết. */
     private final int leaseSeconds;
 
+    /** Số ngày giữ receipt job đã hoàn thành, mặc định 14; cleanup theo lô. */
     private final int retentionDays;
 
     public JobSettings(Function<String, String> source) {

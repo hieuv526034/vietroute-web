@@ -1,5 +1,6 @@
 package vn.vietroute.support;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -8,14 +9,45 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import vn.vietroute.auth.dto.response.AccessPolicyResponse;
+import vn.vietroute.auth.dto.response.AccessResourceResponse;
 import vn.vietroute.auth.dto.response.PermissionResponse;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.repository.AccessRegistryRepository;
 import vn.vietroute.auth.repository.AccessRepository;
+import vn.vietroute.auth.repository.AccessResourceRepository;
+import vn.vietroute.common.base.PageRequest;
+import vn.vietroute.common.base.PageResponse;
 
 /** Fixture chỉ trong test: registry/policy DB giả, không thay hoặc bỏ method security của service/controller. */
 @Configuration
 public class AccessTestConfig {
+
+    /** Projection giả chỉ trong test; giữ method security của AccessResourceService thật. */
+    @Bean
+    @Primary
+    public AccessResourceRepository isolatedAccessResources() {
+        return new AccessResourceRepository(null) {
+            @Override
+            public PageResponse<AccessResourceResponse> page(PageRequest page) {
+                return PageResponse.of(
+                    List.of(
+                        new AccessResourceResponse(
+                            "MENU",
+                            "GET /media",
+                            "MediaPageController#media",
+                            "Thư viện ảnh",
+                            false,
+                            true,
+                            Instant.EPOCH,
+                            Instant.EPOCH
+                        )
+                    ),
+                    page,
+                    1
+                );
+            }
+        };
+    }
 
     @Bean
     @Primary

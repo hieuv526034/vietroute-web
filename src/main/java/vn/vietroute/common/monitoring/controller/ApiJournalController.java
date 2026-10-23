@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.UUID;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,8 +17,8 @@ import vn.vietroute.common.monitoring.dto.request.ApiJournalSearchRequest;
 import vn.vietroute.common.monitoring.dto.response.ApiJournalDetail;
 import vn.vietroute.common.monitoring.dto.response.ApiJournalResponse;
 import vn.vietroute.common.monitoring.service.ApiJournalService;
-import vn.vietroute.common.web.response.ApiResponse;
 import vn.vietroute.common.web.response.ApiResponses;
+import vn.vietroute.common.web.response.ApiResult;
 
 /** API chỉ đọc nhật ký đã lọc, không có endpoint replay hoặc xem raw credentials. */
 @RestController
@@ -38,7 +37,7 @@ public class ApiJournalController extends BaseController {
         summary = "Tra nhật ký API",
         description = "ADMIN + SYSTEM_READ. Lọc/paging trên PostgreSQL, mặc định giữ 7 ngày; bản ghi đã commit vẫn còn sau restart. Không cache lịch sử trong RAM/raw body/header; tự loại API nhật ký khỏi capture."
     )
-    public ResponseEntity<ApiResponse<ApiJournalResponse>> page(
+    public ApiResult<ApiJournalResponse> page(
         @Valid @ModelAttribute ApiJournalSearchRequest search,
         HttpServletRequest request
     ) {
@@ -50,7 +49,7 @@ public class ApiJournalController extends BaseController {
         summary = "Xem request/response đã lọc",
         description = "ADMIN + SYSTEM_READ. UUID là ID bản ghi dùng chung giữa các node; hết retention/đã dọn trả 404, DB lỗi trả 503. Projection bỏ auth/file/PII và chuỗi tự do."
     )
-    public ResponseEntity<ApiResponse<ApiJournalDetail>> detail(@PathVariable UUID id, HttpServletRequest request) {
+    public ApiResult<ApiJournalDetail> detail(@PathVariable UUID id, HttpServletRequest request) {
         return execute(SuccessCode.OK, request, () -> journal.find(id));
     }
 }

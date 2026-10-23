@@ -6,7 +6,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,8 +23,8 @@ import vn.vietroute.common.exception.ApiExceptionMapper;
 import vn.vietroute.common.job.dto.response.JobResponse;
 import vn.vietroute.common.mail.dto.request.MailRequest;
 import vn.vietroute.common.mail.service.MailService;
-import vn.vietroute.common.web.response.ApiResponse;
 import vn.vietroute.common.web.response.ApiResponses;
+import vn.vietroute.common.web.response.ApiResult;
 
 @RestController
 @RequestMapping(Routes.MAIL)
@@ -45,7 +44,7 @@ public class MailController extends BaseController {
         summary = "Xếp email vào hàng đợi",
         description = "Yêu cầu MAIL_SEND. Idempotency-Key 8–64 chữ/số/_/-. HTTP 202 chỉ xác nhận lưu việc; xem job để biết gửi thành công."
     )
-    public ResponseEntity<ApiResponse<JobResponse>> queue(
+    public ApiResult<JobResponse> queue(
         @Valid @RequestBody MailRequest body,
         @RequestHeader(Http.IDEMPOTENCY_HEADER) @Pattern(
             regexp = Regex.IDEMPOTENCY_KEY,

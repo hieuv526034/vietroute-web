@@ -9,8 +9,10 @@ import vn.vietroute.common.constant.ApplicationConstants.Env;
 @Getter
 public final class ActivitySettings {
 
+    /** Bật thống kê truy cập trực tiếp PostgreSQL; mặc định false, không giữ lịch sử RAM. */
     private final boolean enabled;
 
+    /** Ngưỡng request mỗi phút của một chủ thể để đánh dấu bất thường, không tự khóa user. */
     private final int requestThreshold;
 
     public ActivitySettings(Function<String, String> source) {

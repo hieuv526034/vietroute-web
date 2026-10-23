@@ -14,20 +14,28 @@ import vn.vietroute.common.jdbc.JdbcSchema;
 @Getter
 public final class DatabaseSettings {
 
+    /** JDBC PostgreSQL URL; nhận từ môi trường, production không được dùng localhost dự phòng. */
     private final String url;
 
+    /** Tài khoản kết nối DB; không phải tài khoản đăng nhập ứng dụng. */
     private final String username;
 
+    /** Mật khẩu DB chỉ giữ trong settings riêng, không serialize/log. */
     private final String password;
 
+    /** Schema được validate trước khi đặt search_path trên từng connection. */
     private final String schema;
 
+    /** Trần connection nghiệp vụ trên mỗi node, mặc định 4 để phù hợp Neon Free. */
     private final int maximumPoolSize;
 
+    /** Mili giây chờ mượn connection từ pool, mặc định 20000; hết hạn trả lỗi dữ liệu. */
     private final int acquisitionTimeoutMs;
 
+    /** Giây tối đa tạo kết nối TCP/SSL tới PostgreSQL, mặc định 15. */
     private final int connectTimeoutSeconds;
 
+    /** Giây chờ đọc dữ liệu từ PostgreSQL, mặc định 30; không thay statement timeout. */
     private final int socketTimeoutSeconds;
 
     public DatabaseSettings(Function<String, String> source, boolean production) {

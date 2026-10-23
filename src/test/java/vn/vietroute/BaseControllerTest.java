@@ -17,7 +17,6 @@ import java.time.ZoneOffset;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.access.AccessDeniedException;
@@ -41,8 +40,8 @@ import vn.vietroute.common.exception.GlobalExceptionHandler;
 import vn.vietroute.common.monitoring.service.ApiJournalProjection;
 import vn.vietroute.common.web.filter.RequestTraceFilter;
 import vn.vietroute.common.web.locale.SupportedLocaleResolver;
-import vn.vietroute.common.web.response.ApiResponse;
 import vn.vietroute.common.web.response.ApiResponses;
+import vn.vietroute.common.web.response.ApiResult;
 
 /** Kiểm tra hợp đồng HTTP thực tế của base và advice bằng controller test, không cần database. */
 class BaseControllerTest {
@@ -201,13 +200,13 @@ class BaseControllerTest {
         }
 
         @GetMapping("/{scenario}")
-        public ResponseEntity<ApiResponse<String>> read(@PathVariable String scenario, HttpServletRequest request) {
+        public ApiResult<String> read(@PathVariable String scenario, HttpServletRequest request) {
             return execute(SuccessCode.OK, request, () -> data(scenario));
         }
 
         @PostMapping
         @ResponseStatus(HttpStatus.CREATED)
-        public ResponseEntity<ApiResponse<String>> create(@RequestBody LoginRequest body, HttpServletRequest request) {
+        public ApiResult<String> create(@RequestBody LoginRequest body, HttpServletRequest request) {
             return execute(HttpStatus.CREATED, SuccessCode.CREATED, request, () -> data(body.getUsername()));
         }
 

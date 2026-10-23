@@ -11,24 +11,34 @@ import vn.vietroute.common.constant.ApplicationConstants.Env;
 @Getter
 public final class MailSettings {
 
+    /** Bật gửi email thật; mặc định false, job không giả báo đã gửi khi tắt. */
     private final boolean enabled;
 
+    /** Chọn gmail HTTPS OAuth hoặc smtp STARTTLS; mặc định gmail. */
     private final String provider;
 
+    /** Một địa chỉ gửi đã được provider cấp quyền sử dụng. */
     private final String from;
 
+    /** OAuth client ID Gmail/Workspace từ môi trường. */
     private final String clientId;
 
+    /** OAuth secret chỉ dùng phía server, không trả qua API cấu hình. */
     private final String clientSecret;
 
+    /** Refresh token dùng lấy access token Gmail, không lưu vào nhật ký. */
     private final String refreshToken;
 
+    /** Máy chủ SMTP, mặc định smtp.gmail.com; chỉ dùng khi chọn smtp. */
     private final String smtpHost;
 
+    /** Cổng SMTP STARTTLS, mặc định 587, không đồng nghĩa SMTPS implicit 465. */
     private final int smtpPort;
 
+    /** Tài khoản xác thực SMTP do môi trường cung cấp. */
     private final String smtpUser;
 
+    /** Mật khẩu ứng dụng SMTP, không phải mật khẩu tài khoản web. */
     private final String smtpPassword;
 
     public MailSettings(Function<String, String> source) {

@@ -10,18 +10,25 @@ import vn.vietroute.common.constant.ApplicationConstants.Regex;
 @Getter
 public final class MediaSettings {
 
+    /** Trần byte một ảnh: 5 MiB; còn phải kiểm nội dung thật và số pixel. */
     public static final int MAX_FILE_BYTES = 5 * 1024 * 1024;
 
+    /** Dành thêm 64 KiB cho multipart boundary/metadata; không nới trần byte ảnh. */
     public static final int MAX_REQUEST_BYTES = MAX_FILE_BYTES + 64 * 1024;
 
+    /** Bật upload/xóa Cloudinary; sửa metadata trong DB không cần bật provider. */
     private final boolean enabled;
 
+    /** Tên cloud Cloudinary được kiểm định dạng, không nhận từ request. */
     private final String cloudName;
 
+    /** Định danh API Cloudinary do môi trường cung cấp, không gửi cho browser. */
     private final String apiKey;
 
+    /** Secret ký request Cloudinary, chỉ dùng tại adapter server. */
     private final String apiSecret;
 
+    /** Thư mục đích do server cấu hình; client không được chỉ định public ID/folder. */
     private final String folder;
 
     public MediaSettings(Function<String, String> source) {

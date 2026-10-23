@@ -14,11 +14,13 @@ import vn.vietroute.common.web.response.ApiErrorWriter;
 @Configuration
 public class TrafficConfig {
 
+    /** Validate quota/concurrency/body/proxy trước khi đưa request vào luồng nghiệp vụ. */
     @Bean
     public TrafficSettings trafficSettings(ConfigurationEnvironment environment) {
         return new TrafficSettings(environment);
     }
 
+    /** Mặc định quota memory mỗi node; adapter Redis chỉ chọn khi có URL tường minh. */
     @Bean(destroyMethod = "close")
     public RateLimitStore rateLimitStore(TrafficSettings settings, Clock clock) {
         return settings.getRedisUrl().isBlank()
@@ -26,6 +28,7 @@ public class TrafficConfig {
             : new RedisRateLimitStore(settings.getRedisUrl());
     }
 
+    /** Ghép quota, giới hạn request đồng thời và lỗi HTTP chung, không bỏ qua service guard. */
     @Bean
     public TrafficGuardFilter trafficGuardFilter(
         TrafficSettings settings,

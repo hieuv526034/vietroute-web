@@ -6,7 +6,7 @@
 
 Launcher local được phép đọc `.env` riêng để kết nối cùng Neon của chủ dự án. Biến OS/IDE ưu tiên, WAR/Render chỉ đọc env. Chạy local mặc định development/cookie HTTP, không ghi secret vào Git. Chỉ startup với DB_INIT bật rõ ràng mới migration/seed; kiểm thử dùng DB tạm/giả, không dùng Neon để thử ghi.
 
-Lõi media thuộc `common.media`, giữ adapter storage và validation riêng, service kiểm quyền + owner/version; controller public mỏng ở `business.media.controller` theo quy tắc public media, gọi duy nhất service chung. Các module nghiệp vụ sau gọi lại service, không tạo bộ upload thứ hai. Cấu hình chia application/database/integration/traffic/monitoring/web, root chỉ lắp ghép.
+Lõi media thuộc `common.media`, giữ adapter storage và validation riêng, service kiểm quyền + owner/version; controller và page cùng ở `common.media.controller`, gọi duy nhất service chung. Các module nghiệp vụ sau gọi lại service, không tạo bộ upload thứ hai. Cấu hình chia application/database/integration/traffic/monitoring/web, root chỉ lắp ghép.
 
 Thống kê online là cửa sổ hoạt động, không khẳng định số người thật tuyệt đối. Bản ghi hiện diện và bộ đếm theo phút nằm PostgreSQL để nhiều node dùng chung; không queue lịch sử trong RAM. Chỉ lưu định danh băm, user ID đã xác thực và bộ đếm trạng thái; không IP/UA/token/payload thô. Ghi quan sát có timeout/backoff và công bố missed-write khi DB lỗi; phát hiện bất thường là tín hiệu cần xem xét, không tự kết luận tấn công.
 

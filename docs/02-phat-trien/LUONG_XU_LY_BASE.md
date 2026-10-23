@@ -58,3 +58,16 @@ Class được import tường minh ở đầu file. Không viết `vn.vietroute
 `common.web` được chia theo trách nhiệm: `controller`, `response`, `filter`, `locale`, `advice`, `openapi`, `routing`. Phần trạng thái hệ thống có cả service và DTO nằm ở `common.monitoring`. Xem [quy hoạch constants và web](CONSTANTS_VA_CAU_TRUC_WEB.md) để tìm class sau khi di chuyển.
 
 Comment/Javadoc tiếng Việt mô tả mục đích, thứ tự, điều kiện và lý do transaction/quyền; không chỉ diễn đạt lại từng lệnh hiển nhiên. Dùng format 4 spaces, mỗi lệnh/annotation một dòng, có dòng trống giữa method/field và các khối xử lý. Chạy `npm run format`, `npm run format:check`, rồi `mvnw verify` trước khi mở PR; production Docker vẫn bỏ compile/chạy/đóng gói test.
+
+## Kiểu trả về ngắn của controller
+
+Dùng `ApiResult<UserResponse>`, `ApiResult<PageResponse<UserResponse>>` hoặc `ApiResult<Void>` thay kiểu lồng dài ở controller. `ApiResult<T>` kế thừa ResponseEntity với body ApiResponse<T>; BaseController/ApiExceptionMapper tạo status/header/envelope, không custom serialize hoặc ép kiểu Object. Vì vậy JSON `data`, locale, traceId, HTTP 201/202 và lỗi 4xx/5xx giữ nguyên. OpenAPI mở ApiResult thành schema envelope có DTO cụ thể, không mô tả lớp vận chuyển HTTP như payload.
+
+```java
+@Operation(summary = "Đọc tài khoản đang đăng nhập")
+public ApiResult<UserResponse> me(HttpServletRequest request) {
+    return execute(SuccessCode.OK, request, auth::me);
+}
+```
+
+Ví dụ minh họa chữ ký; import ApiResult ở đầu file và giữ cách lấy principal/service của endpoint thực tế. Filter metrics/health/HTML vẫn dùng hợp đồng riêng của chúng.

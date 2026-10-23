@@ -9,8 +9,8 @@ import org.springframework.http.ResponseEntity;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
-import vn.vietroute.common.web.response.ApiResponse;
 import vn.vietroute.common.web.response.ApiResponses;
+import vn.vietroute.common.web.response.ApiResult;
 
 /**
  * Khung xử lý cho API nghiệp vụ: nhận kết quả service, bọc response và bắt lỗi tại biên HTTP.
@@ -28,11 +28,7 @@ public abstract class BaseController {
     }
 
     /** API đọc/cập nhật thông thường trả HTTP 200; callback chỉ chạy đúng một lần. */
-    protected final <T> ResponseEntity<ApiResponse<T>> execute(
-        SuccessCode code,
-        HttpServletRequest request,
-        Supplier<T> action
-    ) {
+    protected final <T> ApiResult<T> execute(SuccessCode code, HttpServletRequest request, Supplier<T> action) {
         return execute(HttpStatus.OK, code, request, action);
     }
 
@@ -40,7 +36,7 @@ public abstract class BaseController {
      * Service hoàn tất/commit rồi mới tạo response thành công; lỗi đã rollback được mapper đổi mã.
      * Supplier dùng cho luồng đồng bộ, không chuyển request hoặc transaction sang thread khác.
      */
-    protected final <T> ResponseEntity<ApiResponse<T>> execute(
+    protected final <T> ApiResult<T> execute(
         HttpStatus status,
         SuccessCode code,
         HttpServletRequest request,
@@ -48,10 +44,12 @@ public abstract class BaseController {
     ) {
         try {
             T data = action.get();
-            return ResponseEntity.status(status)
-                .header(HttpHeaders.CACHE_CONTROL, Http.NO_STORE)
-                .header(HttpHeaders.CONTENT_LANGUAGE, locale(request).getLanguage())
-                .body(responses.success(code, data, request));
+            return ApiResult.from(
+                ResponseEntity.status(status)
+                    .header(HttpHeaders.CACHE_CONTROL, Http.NO_STORE)
+                    .header(HttpHeaders.CONTENT_LANGUAGE, locale(request).getLanguage())
+                    .body(responses.success(code, data, request))
+            );
         } catch (Exception error) {
             return exceptions.toResponse(error, request);
         }

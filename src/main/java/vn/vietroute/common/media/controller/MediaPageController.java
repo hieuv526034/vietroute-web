@@ -1,4 +1,4 @@
-package vn.vietroute.business.media.controller;
+package vn.vietroute.common.media.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;

@@ -45,7 +45,7 @@ Source giữ Spring MVC/JDBC thuần; không có Spring Boot, Spring Data hoặc
 | PostgreSQL JDBC driver | 42.7.14 | Mở connection, PreparedStatement/ResultSet; chuyển Timestamp/Instant tại biên JDBC |
 | HikariCP | 7.1.0 | Pool nghiệp vụ mặc định 4 connection/node; journal có pool riêng tối đa 1/node |
 | Neon | Dịch vụ PostgreSQL production do chủ dự án cấu hình | DB `neondb`; schema cấu hình một nơi qua `VIETROUTE_DB_SCHEMA`, mặc định vietroute; credential ngoài Git |
-| Migration/seed tự quản lý | V001–V009, checksum/history và transaction lock | Chạy lúc startup khi bật initializer; giữ mật khẩu cũ, không chạy khi Maven package |
+| Migration/seed tự quản lý | V001–V010, checksum/history và transaction lock | Chạy lúc startup khi bật initializer; giữ mật khẩu cũ, không chạy khi Maven package |
 | Job/outbox PostgreSQL | Code dự án, lease/ACK/NACK/retry/idempotency | Enqueue cùng transaction; nhiều worker/node chia việc qua SKIP LOCKED; handler cần chịu việc chạy lại |
 | Executor JVM | Số thread/lease/poll cấu hình qua JobSettings | Giới hạn worker đang xử lý, không tạo thread mới cho mỗi request; không tăng thread/pool vô hạn |
 | Nhật ký API | PostgreSQL, retention 7 ngày, mục tiêu 10.000 dòng | Snapshot được whitelist, query/paging trên DB; không queue/cache lịch sử trong RAM; có counter ghi lỡ khi DB/slot lỗi |

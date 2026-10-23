@@ -282,6 +282,7 @@
                         <VIETROUTE_ENV>development</VIETROUTE_ENV>
                         <VIETROUTE_COOKIE_SECURE>false</VIETROUTE_COOKIE_SECURE>
                         <VIETROUTE_DB_INIT_ENABLED>false</VIETROUTE_DB_INIT_ENABLED>
+                        <VIETROUTE_ACCESS_SYNC_ENABLED>false</VIETROUTE_ACCESS_SYNC_ENABLED>
                         <VIETROUTE_DB_URL>jdbc:postgresql://127.0.0.1:1/vietroute_unit_tests</VIETROUTE_DB_URL>
                         <VIETROUTE_DB_USER>test_only</VIETROUTE_DB_USER>
                         <VIETROUTE_DB_PASSWORD>test_only</VIETROUTE_DB_PASSWORD>

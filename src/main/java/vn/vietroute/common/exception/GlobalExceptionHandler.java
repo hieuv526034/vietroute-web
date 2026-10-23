@@ -2,10 +2,9 @@ package vn.vietroute.common.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import vn.vietroute.common.web.response.ApiResponse;
+import vn.vietroute.common.web.response.ApiResult;
 
 /**
  * Bắt lỗi MVC xảy ra trước/sau thân controller, ví dụ JSON sai, @Valid hoặc endpoint không tồn tại.
@@ -18,7 +17,7 @@ public class GlobalExceptionHandler {
     private final ApiExceptionMapper exceptions;
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handle(Exception error, HttpServletRequest request) {
+    public ApiResult<Void> handle(Exception error, HttpServletRequest request) {
         return exceptions.toResponse(error, request);
     }
 }

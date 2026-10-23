@@ -78,3 +78,19 @@ DELETE nhận body `{ "version": 1 }`, đổi active=false và giữ record/FK/a
 Đọc theo thứ tự DatabaseSettings → JdbcSchema → JdbcConnectionFactory → SchemaBootstrap/LegacyMigrationSql → JdbcSchemaValidator → repository. Sau đó đọc PermissionAction/Permission → AccessService và CatalogService → CatalogRepository để hiểu authority/transaction/version.
 
 Kiểm thử local không dùng DB production: kiểm tên schema lỗi/injection, path mỗi lần mượn, đóng connection khi đặt path lỗi, adapter migration, locale registry/action, quyền tạo không cho sửa/xóa và quyền gán không nâng quyền. CI PostgreSQL tạm kiểm DB mới schema tùy chọn (kể cả keyword), URL currentSchema sai, bảng public cùng tên, legacy public nâng cấp vào schema khác, giữ checksum/hash/dữ liệu sau rename offline, và chặn schema nhầm không tạo bảng mới. CI còn kiểm CRUD quyền cụ thể, WRITE tương thích, version cũ, xóa mềm, audit và JWT cũ được cập nhật quyền. Production Docker vẫn bỏ test compile/chạy/đóng gói test.
+
+## Danh bạ UI/API tự đồng bộ — FOUNDATION03
+
+Role chính là **nhóm quyền**: user nhận một hoặc nhiều role, role chứa các permission RESOURCE_ACTION. Chưa cần thêm bảng nhóm quyền trùng role. Nhóm phòng ban/đội nhà xe sẽ là khái niệm nghiệp vụ khác, thiết kế sau cùng scope/tenant; không đồng nhất với ADMIN/OPERATOR hay menu.
+
+`AccessTargets.discover` thu thập method/template path/handler từ `RequestMappingHandlerMapping` thật của Spring. Controller MVC phân loại MENU (giao diện), RestController phân loại ENDPOINT (API/kỹ thuật); mô tả API lấy từ `@Operation`. Không cần nhập lại link khi thêm endpoint. Luôn khai báo method HTTP cụ thể bằng GetMapping/PostMapping/...; khai báo route constant không cấp quyền.
+
+Luồng startup: root `DatabaseInitializer` áp dụng V010 → servlet context tạo xong mapping → `ContextRefreshedEvent` gọi `AccessResourceSynchronizer` → service transaction → advisory lock/upsert `auth_access_resources`. `VIETROUTE_ACCESS_SYNC_ENABLED` mặc định theo DB_INIT_ENABLED nếu không khai báo; có thể tắt riêng, hoặc bật sau khi DBA đã áp dụng V010. Render Blueprint bật true. Thiếu schema/DB khi bật sync sẽ làm startup báo lỗi, không báo đồng bộ thành công giả. Maven/unit test tắt cả init/sync và không đọc Neon.
+
+Danh bạ có PK `(kind,target)`, audit system=0, TIMESTAMPTZ và index audit. Startup chỉ ghi metadata, không cấp quyền, không tạo policy mặc định, không sửa mapping role/user hoặc reset admin. Nhiều node dùng khóa và upsert idempotent; không xóa route vắng trên một node trong rolling deploy. `lastSeenAt` chỉ là lần startup quan sát, **không khẳng định route đang sống**. Metadata có thể phản ánh node khởi động sau cùng; quyết định truy cập luôn theo code/policy request hiện hành. Dọn route cũ cần kiểm mọi phiên bản đang triển khai, chưa có chức năng tự dọn.
+
+Tab **Tài nguyên UI/API** ở trang Phân quyền đọc `GET /api/v1/admin/access/resources?page=0&size=20`, phân trang DB, yêu cầu ADMIN + ACCESS_READ tại service. Public được xác định từ `WebRoutePolicy` cùng cấu hình Security, không có API chỉnh public flag. Auth/metrics/quản trị quyền là tài nguyên chỉ đọc để giữ đường cứu hộ. Picker policy lấy mapping thật trên node hiện tại, không lấy route cũ trong DB để kích hoạt lại.
+
+Hai loại policy kiểm độc lập: MENU kiểm URL trang và ẩn menu; ENDPOINT kiểm method + template của API. Có quyền menu không tự có quyền API và ẩn menu không thay kiểm backend. Điều kiện role là any-of, permission là all-of; policy chỉ siết thêm guard service/controller, ownership/version vẫn bắt buộc. Public không cần policy/quyền chức năng nhưng CSRF/quota/validation vẫn áp dụng. ADMIN bỏ điều kiện policy bổ sung để cứu hộ, không bỏ guard nền.
+
+Khi thêm module: khai báo Routes → mapping + Operation → service guard resource/action + scope → menu theo quy ước UI → startup sync → quản trị tạo policy nếu cần siết thêm. Không dùng danh bạ như API gateway hoặc cơ chế tự cấp quyền cho code mới chưa có guard.

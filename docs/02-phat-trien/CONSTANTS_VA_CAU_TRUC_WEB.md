@@ -89,4 +89,4 @@ Sau khi lấy source đổi package lần đầu, dừng server, chọn Maven �
 | `monitoring` | MonitoringConfig, MonitoringSettings/ApiJournalSettings/ActivitySettings, pool quan sát |
 | `web` | WebConfig cho MVC/Thymeleaf/interceptor và method security servlet context |
 
-Auth giữ SecurityConfig, registry/chính sách/controller/service/repository riêng; không chuyển logic phân quyền vào config. `common.media` chứa service/repository/entity/DTO cùng `storage` và `validation`. Public controller/page ở `business.media.controller` chỉ là adapter mỏng gọi lõi chung, không có upload implementation thứ hai. Phân biệt `common.monitoring` cho dữ liệu quan sát với `common.web` cho HTTP plumbing.
+Auth giữ SecurityConfig, registry/chính sách/controller/service/repository riêng; không chuyển logic phân quyền vào config. `common.media` chứa service/repository/entity/DTO cùng `storage` và `validation`. Public controller/page ở `common.media.controller` chỉ là adapter mỏng gọi lõi chung, không có upload implementation thứ hai. Phân biệt `common.monitoring` cho dữ liệu quan sát với `common.web` cho HTTP plumbing.

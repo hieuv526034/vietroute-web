@@ -1,11 +1,10 @@
-package vn.vietroute.business.media.controller;
+package vn.vietroute.common.media.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -31,8 +30,8 @@ import vn.vietroute.common.media.dto.request.MediaUpdateRequest;
 import vn.vietroute.common.media.dto.request.MediaUploadRequest;
 import vn.vietroute.common.media.dto.response.MediaResponse;
 import vn.vietroute.common.media.service.MediaService;
-import vn.vietroute.common.web.response.ApiResponse;
 import vn.vietroute.common.web.response.ApiResponses;
+import vn.vietroute.common.web.response.ApiResult;
 
 /** API chỉ nhận file/version; owner và audit lấy từ principal đã được xác minh. */
 @RestController
@@ -58,7 +57,7 @@ public class MediaController extends BaseController {
         summary = "Đọc thư viện ảnh",
         description = "MEDIA_READ; chỉ ảnh của mình, ADMIN xem tất cả. Sắp mới nhất trước."
     )
-    public ResponseEntity<ApiResponse<PageResponse<MediaResponse>>> page(
+    public ApiResult<PageResponse<MediaResponse>> page(
         @Valid PageRequest page,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
@@ -71,7 +70,7 @@ public class MediaController extends BaseController {
         summary = "Đọc metadata ảnh",
         description = "MEDIA_READ và kiểm owner/ADMIN. URL là ảnh công khai trên CDN."
     )
-    public ResponseEntity<ApiResponse<MediaResponse>> find(
+    public ApiResult<MediaResponse> find(
         @PathVariable long id,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
@@ -84,7 +83,7 @@ public class MediaController extends BaseController {
         summary = "Sửa tên và mô tả ảnh",
         description = "MEDIA_UPDATE + owner/ADMIN; chỉ READY, kiểm version, không thay URL/provider ID"
     )
-    public ResponseEntity<ApiResponse<MediaResponse>> update(
+    public ApiResult<MediaResponse> update(
         @PathVariable long id,
         @Valid @RequestBody MediaUpdateRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
@@ -99,7 +98,7 @@ public class MediaController extends BaseController {
         summary = "Upload một ảnh công khai",
         description = "MEDIA_CREATE; JPEG/PNG tối đa 5 MiB, 4096 px mỗi chiều, 6 triệu pixel; chuẩn hóa bỏ metadata. Cookie cần CSRF header."
     )
-    public ResponseEntity<ApiResponse<MediaResponse>> upload(
+    public ApiResult<MediaResponse> upload(
         @Valid @ModelAttribute MediaUploadRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
@@ -113,7 +112,7 @@ public class MediaController extends BaseController {
         summary = "Yêu cầu xóa ảnh",
         description = "MEDIA_DELETE và owner/ADMIN, version hiện hành; worker xóa CDN rồi xác nhận DELETED. Cache có thể còn trong thời gian invalidation."
     )
-    public ResponseEntity<ApiResponse<MediaResponse>> delete(
+    public ApiResult<MediaResponse> delete(
         @PathVariable long id,
         @Valid @RequestBody MediaDeleteRequest body,
         @AuthenticationPrincipal UserPrincipal actor,

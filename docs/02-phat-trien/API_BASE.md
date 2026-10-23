@@ -90,7 +90,7 @@ Quyền ADMIN/OPERATOR/DRIVER/CUSTOMER là nền. Các module đa nhà xe sau n�
 
 ## Audit, transaction và module mẫu
 
-API nghiệp vụ/auth kế thừa `common/base/BaseController` và dùng `execute(...)` để bọc kết quả trong `ResponseEntity<ApiResponse<T>>`. Base có try/catch tại biên HTTP; `ApiExceptionMapper` phân loại lỗi và tạo phản hồi. `GlobalExceptionHandler` dùng cùng mapper cho lỗi JSON/validation/binding xảy ra trước khi vào controller. Controller không sao chép catch hoặc đổi lỗi thành HTTP 200. Xem [luồng và ví dụ học source](LUONG_XU_LY_BASE.md).
+API nghiệp vụ/auth kế thừa `common/base/BaseController` và dùng `execute(...)` để bọc kết quả trong `ApiResult<T>` (kế thừa `ResponseEntity<ApiResponse<T>>`). Base có try/catch tại biên HTTP; `ApiExceptionMapper` phân loại lỗi và tạo phản hồi. `GlobalExceptionHandler` dùng cùng mapper cho lỗi JSON/validation/binding xảy ra trước khi vào controller. Controller không sao chép catch hoặc đổi lỗi thành HTTP 200. Xem [luồng và ví dụ học source](LUONG_XU_LY_BASE.md).
 
 - BaseEntity: id, createdAt/updatedAt, createdBy/updatedBy, version. DTO response kế thừa BaseResponse; request kế thừa BaseRequest và không nhận audit từ client.
 - Audit actor 0 tham chiếu định danh kỹ thuật system; không trả NULL cho seed/tác vụ nền. Actor người dùng giữ ID thật; xem [quy tắc audit](AUDIT_VA_SYSTEM.md). System không được đăng nhập/gán role/cấp JWT.
@@ -99,7 +99,7 @@ API nghiệp vụ/auth kế thừa `common/base/BaseController` và dùng `execu
 - Service dùng `JdbcTransactions.execute(connection -> ...)`; mọi DAO trong giao dịch nhận cùng connection, không tự commit/close. SQLException hoặc RuntimeException rollback, cuối cùng đóng connection.
 - `BaseRepository.read` tự đóng connection cho truy vấn đơn. Không mở connection mới giữa một luồng thay tồn chỗ/đơn cần atomic.
 - `@BusinessCode` không bắt buộc null; kết hợp @NotBlank khi trường phải có. Tên tiếng Việt không áp regex mã. Code tự sinh vẫn có UNIQUE của DB.
-- Thêm API: đặt @Operation, request/response @Schema; dùng request/response typed, không trả entity hoặc map tùy tiện. OpenAPI generator hiện hỗ trợ JSON body, PathVariable, RequestParam, PageRequest, generic envelope/PageResponse và ResponseEntity. API mới có multipart hoặc binding phức tạp cần mở rộng generator và kiểm tra schema tương ứng.
+- Thêm API: đặt @Operation, request/response @Schema; dùng request/response typed, không trả entity hoặc map tùy tiện. OpenAPI generator hiện hỗ trợ JSON body, PathVariable, RequestParam, PageRequest, generic envelope/PageResponse, ApiResult và ResponseEntity. API mới có multipart hoặc binding phức tạp cần mở rộng generator và kiểm tra schema tương ứng.
 - API tạo mới gắn `@ResponseStatus(HttpStatus.CREATED)` và gọi base với `HttpStatus.CREATED`; lỗi vẫn trả status thực tế của `ResponseEntity`, không bị ép thành 201. `OpenApiModels` tách model Swagger khỏi annotation trùng tên.
 
 ## Khởi động DB và kiểm thử

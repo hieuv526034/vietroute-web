@@ -27,14 +27,15 @@ public final class AccessPolicyInterceptor implements HandlerInterceptor {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         List<AccessPolicyResponse> policies = access.requestPolicies(auth);
         request.setAttribute(Http.ACCESS_POLICY_ATTRIBUTE, policies);
-        if (!AccessTargets.configurable(request.getMethod(), path)) {
+        // Spring tự phục vụ HEAD từ GET; cùng chính sách để HEAD không bỏ qua ràng buộc của GET.
+        String method = request.getMethod().equals("HEAD") ? "GET" : request.getMethod();
+        if (!AccessTargets.configurable(method, path)) {
             return true;
         }
-        String target = request.getMethod() + " " + path;
+        String target = method + " " + path;
         for (var policy : policies) {
             boolean applies =
-                policy.target().equals(target) &&
-                (policy.kind().equals("ENDPOINT") || request.getMethod().equals("GET"));
+                policy.target().equals(target) && (policy.kind().equals("ENDPOINT") || method.equals("GET"));
             if (applies && !AccessManagementService.allows(policy, auth)) {
                 throw new BusinessException(ErrorCode.ACCESS_DENIED);
             }

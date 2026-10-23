@@ -30,7 +30,10 @@ import org.thymeleaf.spring6.templateresolver.SpringResourceTemplateResolver;
 import org.thymeleaf.spring6.view.ThymeleafViewResolver;
 import org.thymeleaf.templatemode.TemplateMode;
 import vn.vietroute.auth.security.AccessPolicyInterceptor;
+import vn.vietroute.auth.security.AccessResourceSynchronizer;
 import vn.vietroute.auth.service.AccessManagementService;
+import vn.vietroute.auth.service.AccessResourceService;
+import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
@@ -71,6 +74,16 @@ public class WebConfig extends DelegatingWebMvcConfiguration {
         this.locales = locales;
     }
 
+    /** Listener thuộc servlet context; mapping sẵn sàng sau root migration mới đồng bộ danh bạ DB. */
+    @Bean
+    public AccessResourceSynchronizer accessResourceSynchronizer(
+        ApplicationContext context,
+        AppSettings settings,
+        AccessResourceService resources
+    ) {
+        return new AccessResourceSynchronizer(context, settings, resources);
+    }
+
     /** Chỉ parse multipart/form-data; giới hạn byte do Servlet registration áp dụng trước controller. */
     @Bean
     public StandardServletMultipartResolver multipartResolver() {
@@ -86,6 +99,7 @@ public class WebConfig extends DelegatingWebMvcConfiguration {
         return locales;
     }
 
+    /** Template trong WAR được cache; đổi source cần build/restart để tránh đọc file mỗi request. */
     @Bean
     public SpringResourceTemplateResolver templateResolver(ApplicationContext context) {
         SpringResourceTemplateResolver resolver = new SpringResourceTemplateResolver();
@@ -98,6 +112,7 @@ public class WebConfig extends DelegatingWebMvcConfiguration {
         return resolver;
     }
 
+    /** Dùng Thymeleaf Spring cho trang MVC; không khởi tạo bộ biên dịch SpEL động. */
     @Bean
     public SpringTemplateEngine templateEngine(SpringResourceTemplateResolver resolver) {
         SpringTemplateEngine engine = new SpringTemplateEngine();
@@ -107,6 +122,7 @@ public class WebConfig extends DelegatingWebMvcConfiguration {
         return engine;
     }
 
+    /** Render trang Thymeleaf UTF-8, khác converter JSON cho API. */
     @Bean
     public ThymeleafViewResolver viewResolver(SpringTemplateEngine engine) {
         ThymeleafViewResolver resolver = new ThymeleafViewResolver();
@@ -123,6 +139,7 @@ public class WebConfig extends DelegatingWebMvcConfiguration {
             .addResourceLocations("classpath:/META-INF/resources/webjars/");
     }
 
+    /** Validation dùng cùng MessageSource vi/en với response lỗi. */
     @Bean
     public LocalValidatorFactoryBean validator() {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
