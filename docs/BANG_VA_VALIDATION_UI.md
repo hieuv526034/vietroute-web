@@ -28,9 +28,13 @@ Cột thao tác dùng `table-actions` ở th/td, rộng 96px, căn giữa và gi
 
 Nút tìm kiếm/thêm/làm mới đặt bên phải bằng `table-filter`/`toolbar-actions`. Footer modal dùng `dialog-actions`, Hủy trước và nút lưu chính sau, cùng hàng bên phải; mobile có thể xuống dòng. Giữ khóa nút/fieldset trong request, không đóng modal hoặc tự replay mutation khi lỗi.
 
+Khi ít trường lọc, giữ bộ lọc và nút thao tác trên cùng một hàng, như `catalog-toolbar` ở danh mục hệ thống. Chỉ xuống dòng khi không đủ chiều rộng, không tách riêng một hàng nút trên desktop. Menu Hệ thống dùng grid với khoảng cách 6px giữa các mục để vùng hover/focus và mục đang chọn không chạm nhau.
+
 ## Validation trước khi gửi và lỗi từ API
 
 `assets/js/forms.js` cung cấp `window.VietRouteForms`. Mỗi input cần id/name rõ ràng và label tương ứng. Khai báo required/min/max/minlength/maxlength/pattern theo hợp đồng backend; pattern đặc thù có `data-pattern-message` lấy từ bundle vi/en. Component tắt bubble trình duyệt và hiện thông báo theo locale ứng dụng bên dưới field, viền lỗi, aria-invalid/aria-describedby, chuyển focus đến lỗi đầu tiên. Hint hiện có được giữ cùng aria-describedby.
+
+Trường có `required` tự có dấu `*` đỏ cạnh label ngay khi tải trang, kể cả modal chưa mở. Nhóm `data-required-selection` hiển thị dấu ở legend; không đánh dấu bắt buộc từng checkbox. Dấu trang trí có `aria-hidden`, control vẫn giữ ngữ nghĩa `required` native và validation backend. Reset/mở lại modal giữ dấu; trường tùy chọn như mã danh mục tự sinh không có dấu. Không nhập thêm `*` thủ công vào bản dịch hoặc label vì sẽ trùng dấu.
 
 Trước khi khóa fieldset/gửi request, gọi `VietRouteForms.validate(form)`. FormData phải lấy trước khi disable. Request bị chặn nếu không hợp lệ, không gọi API để thử kiểm tra field bắt buộc. Khi sửa input, lỗi tương ứng được tính lại; reset form xóa trạng thái lỗi. Nhóm checkbox vai trò có `data-required-selection` và `data-validation-key="roles"` để kiểm phải chọn ít nhất một role.
 
@@ -44,7 +48,13 @@ Test Java dựng root/servlet tách biệt như WAR, kiểm Home/login với kh�
 
 Kiểm trình duyệt dùng HTML Thymeleaf thật và API fixture riêng: đổi size/đến trang/trước/sau/cuối, tìm tài khoản, modal lỗi client/server/401, checkbox role, focus bàn phím và desktop/mobile. Fixture không chứng minh provider/DB production hoạt động. Không gửi form, đổi mật khẩu hoặc gán quyền thật lên Neon để kiểm UI.
 
+Phần menu/toolbar/dấu bắt buộc đã kiểm ở vi/en và mobile 390px: các mục menu cách nhau 6px, bộ lọc/nút cùng hàng trên desktop, modal có dấu trước lần submit đầu tiên. Submit trống vẫn giữ modal và hiện lỗi cạnh field; hủy/mở lại xóa lỗi nhưng giữ đúng một dấu mỗi label, ô mã tùy chọn không bị đánh dấu. Form mật khẩu cũng nhận dấu từ component chung; không gửi đổi mật khẩu để kiểm phần này.
+
 Ảnh minh họa dùng dữ liệu kiểm thử riêng:
+
+![Khoảng cách menu Hệ thống và bộ lọc cùng hàng với nút](images/catalog-toolbar-menu.png)
+
+![Dấu bắt buộc hiện ngay khi mở modal](images/modal-required.png)
 
 ![Phân trang và cột thao tác cố định](images/table-pagination.png)
 

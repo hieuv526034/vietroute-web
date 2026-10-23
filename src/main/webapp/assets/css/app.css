@@ -509,6 +509,13 @@ form label {
     margin: 21px 0 8px;
 }
 
+/* Dấu bắt buộc lấy từ required của control, hiện sẵn trước khi người dùng gửi form. */
+.required-marker {
+    margin-inline-start: 4px;
+    color: #b42318;
+    font-weight: 750;
+}
+
 .form-control,
 .form-select {
     border: 1px solid #d6e0d5;
@@ -990,6 +997,8 @@ form .button {
 }
 
 .operations-menu-items {
+    display: grid;
+    gap: 6px;
     position: absolute;
     right: 0;
     top: calc(100% + 8px);
@@ -1011,6 +1020,7 @@ form .button {
 }
 
 .operations-menu-items a:hover,
+.operations-menu-items a:focus-visible,
 .operations-menu-items a[aria-current='page'] {
     color: var(--green);
     background: var(--mint);
@@ -1489,6 +1499,23 @@ body:has(dialog[open]) {
 .toolbar-actions .button,
 .table-filter .button {
     margin-top: 0;
+}
+/* Bộ lọc ít trường đi cùng nút thao tác; chỉ xuống dòng khi màn hình không còn đủ chỗ. */
+.panel-heading.catalog-heading {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.catalog-toolbar {
+    max-width: 100%;
+    margin-left: auto;
+}
+.catalog-toolbar .form-select {
+    width: 180px;
+    max-width: 100%;
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 13px;
 }
 .table-filter {
     display: flex;
