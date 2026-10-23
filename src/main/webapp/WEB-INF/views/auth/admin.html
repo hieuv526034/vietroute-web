@@ -55,37 +55,37 @@
                         class="panel"
                         id="catalog-panel"
                     >
-                        <div class="panel-heading">
+                        <div class="panel-heading catalog-heading">
                             <h2 th:text="#{ui.catalogs}"></h2>
-                            <select
-                                class="form-select"
-                                id="catalog-filter"
-                                th:attr="aria-label=#{ui.catalogType}"
-                            >
-                                <option
-                                    value="VEHICLE_TYPE"
-                                    th:text="#{ui.vehicleType}"
-                                ></option>
-                                <option
-                                    value="BOOKING_SOURCE"
-                                    th:text="#{ui.bookingSource}"
-                                ></option>
-                            </select>
-                        </div>
-                        <div class="toolbar-actions mb-3">
-                            <button
-                                id="catalog-create"
-                                class="button button-small"
-                                type="button"
-                                disabled
-                                th:text="#{ui.createCatalog}"
-                            ></button>
-                            <button
-                                id="catalog-refresh"
-                                class="button button-outline button-small"
-                                type="button"
-                                th:text="#{ui.ops.refresh}"
-                            ></button>
+                            <div class="toolbar-actions catalog-toolbar">
+                                <select
+                                    class="form-select"
+                                    id="catalog-filter"
+                                    th:attr="aria-label=#{ui.catalogType}"
+                                >
+                                    <option
+                                        value="VEHICLE_TYPE"
+                                        th:text="#{ui.vehicleType}"
+                                    ></option>
+                                    <option
+                                        value="BOOKING_SOURCE"
+                                        th:text="#{ui.bookingSource}"
+                                    ></option>
+                                </select>
+                                <button
+                                    id="catalog-create"
+                                    class="button button-small"
+                                    type="button"
+                                    disabled
+                                    th:text="#{ui.createCatalog}"
+                                ></button>
+                                <button
+                                    id="catalog-refresh"
+                                    class="button button-outline button-small"
+                                    type="button"
+                                    th:text="#{ui.ops.refresh}"
+                                ></button>
+                            </div>
                         </div>
                         <p
                             class="form-help mb-3"
@@ -225,6 +225,7 @@
                                 class="form-select"
                                 id="catalog-type"
                                 name="type"
+                                required
                             >
                                 <option
                                     value="VEHICLE_TYPE"

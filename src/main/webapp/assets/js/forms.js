@@ -8,6 +8,15 @@
                 'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),select,textarea',
             ),
         );
+    // Dùng cùng khai báo required với validation; không gắn dấu vào trường tùy chọn như mã tự sinh.
+    const markRequired = (label) => {
+        if (!label || label.querySelector('.required-marker')) return;
+        const marker = document.createElement('span');
+        marker.className = 'required-marker';
+        marker.textContent = '*';
+        marker.setAttribute('aria-hidden', 'true');
+        label.append(marker);
+    };
     const messageNode = (input) => {
         const id = `${input.id || (input.id = `field-${crypto.randomUUID()}`)}-error`;
         let node = document.getElementById(id);
@@ -103,6 +112,13 @@
         requestAnimationFrame(() => container.querySelector('.is-invalid')?.focus());
     };
     for (const form of document.querySelectorAll('form')) {
+        // Khởi tạo ngay cả khi dialog chưa mở; reset form chỉ xóa lỗi, vẫn giữ dấu bắt buộc.
+        form.querySelectorAll('[required]').forEach((input) => {
+            Array.from(input.labels || []).forEach(markRequired);
+        });
+        form.querySelectorAll('[data-required-selection]').forEach((group) => {
+            markRequired(group.querySelector('legend'));
+        });
         form.noValidate = true;
         form.addEventListener('reset', () => clear(form));
         for (const eventName of ['input', 'change']) {
