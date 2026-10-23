@@ -58,6 +58,9 @@
                         class="form-control"
                         id="username"
                         name="username"
+                        minlength="3"
+                        pattern="[A-Za-z][A-Za-z0-9]{2,31}"
+                        th:attr="data-pattern-message=#{validation.username}"
                         autocomplete="username"
                         maxlength="32"
                         required

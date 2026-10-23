@@ -72,31 +72,41 @@
                                 ></option>
                             </select>
                         </div>
-                        <button
-                            id="catalog-create"
-                            class="button button-small mb-3"
-                            type="button"
-                            disabled
-                            th:text="#{ui.createCatalog}"
-                        ></button>
-                        <button
-                            id="catalog-refresh"
-                            class="button button-outline button-small mb-3"
-                            type="button"
-                            th:text="#{ui.ops.refresh}"
-                        ></button>
+                        <div class="toolbar-actions mb-3">
+                            <button
+                                id="catalog-create"
+                                class="button button-small"
+                                type="button"
+                                disabled
+                                th:text="#{ui.createCatalog}"
+                            ></button>
+                            <button
+                                id="catalog-refresh"
+                                class="button button-outline button-small"
+                                type="button"
+                                th:text="#{ui.ops.refresh}"
+                            ></button>
+                        </div>
                         <p
                             class="form-help mb-3"
                             th:text="#{ui.catalog.activeNote}"
                         ></p>
-                        <div class="table-responsive">
+                        <div
+                            class="table-responsive"
+                            tabindex="0"
+                            role="region"
+                            th:attr="aria-label=#{ui.table.scroll}"
+                        >
                             <table class="table catalog-table">
                                 <thead>
                                     <tr>
                                         <th th:text="#{ui.code}"></th>
                                         <th th:text="#{ui.name}"></th>
                                         <th th:text="#{ui.order}"></th>
-                                        <th th:text="#{ui.ops.actions}"></th>
+                                        <th
+                                            class="table-actions"
+                                            th:text="#{ui.ops.actions}"
+                                        ></th>
                                     </tr>
                                 </thead>
                                 <tbody
@@ -111,26 +121,7 @@
                             role="alert"
                             hidden
                         ></div>
-                        <nav
-                            class="catalog-pagination"
-                            th:attr="aria-label=#{ui.ops.pagination}"
-                        >
-                            <button
-                                id="catalog-previous"
-                                type="button"
-                                class="button button-outline button-small"
-                                disabled
-                                th:text="#{ui.mediaPrevious}"
-                            ></button>
-                            <span id="catalog-page"></span>
-                            <button
-                                id="catalog-next"
-                                type="button"
-                                class="button button-outline button-small"
-                                disabled
-                                th:text="#{ui.mediaNext}"
-                            ></button>
-                        </nav>
+                        <div th:replace="~{fragments/pagination :: pager('catalog', 10)}"></div>
                     </section>
                 </fieldset>
                 <section id="overview-panel">
@@ -254,6 +245,8 @@
                                 class="form-control"
                                 id="catalog-code"
                                 name="code"
+                                pattern="[A-Z][A-Z0-9]{2,39}"
+                                th:attr="data-pattern-message=#{validation.code}"
                                 maxlength="40"
                                 th:placeholder="#{ui.autoCode}"
                             />
@@ -300,20 +293,20 @@
                                 required
                             />
                         </div>
-                        <div class="catalog-actions mt-4">
-                            <button
-                                id="catalog-save"
-                                class="button"
-                                type="submit"
-                                disabled
-                                th:text="#{ui.createCatalog}"
-                            ></button>
+                        <div class="dialog-actions">
                             <button
                                 id="catalog-cancel"
                                 class="button button-outline"
                                 type="button"
                                 data-dialog-close
                                 th:text="#{ui.catalog.cancel}"
+                            ></button>
+                            <button
+                                id="catalog-save"
+                                class="button"
+                                type="submit"
+                                disabled
+                                th:text="#{ui.createCatalog}"
                             ></button>
                         </div>
                     </form>

@@ -7,6 +7,7 @@ on:
       - 'src/main/webapp/**/*.html'
       - 'src/main/webapp/**/*.css'
       - 'src/main/webapp/**/*.js'
+      - 'src/test/resources/dev/**'
       - '.idea/codeStyles/**'
       - '.run/**'
       - '.editorconfig'
@@ -45,3 +46,5 @@ jobs:
         run: npm ci
       - name: Check formatting without changing files or building production
         run: npm run format:check
+      - name: Check browser helper logic without database or production build
+        run: node --test src/test/resources/dev/*.test.cjs

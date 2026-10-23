@@ -1415,3 +1415,198 @@ body:has(dialog[open]) {
         padding: 8px 12px;
     }
 }
+
+/* Bảng: giữ cột thao tác gọn và không giãn theo những cột ít nội dung. */
+.table:has(.table-actions) {
+    min-width: 560px;
+}
+.table-responsive:focus-visible {
+    outline: 2px solid var(--green);
+    outline-offset: 3px;
+}
+.table:has(.table-actions) td {
+    padding-block: 10px;
+}
+.table .table-actions {
+    width: 96px;
+    min-width: 96px;
+    max-width: 96px;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    position: sticky;
+    right: 0;
+    z-index: 1;
+    background-color: white;
+    box-shadow: -1px 0 var(--line);
+}
+.catalog-table td:first-child {
+    white-space: nowrap;
+}
+.row-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+}
+.table .icon-button,
+.operations-page .table .icon-button {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    min-height: 32px;
+    padding: 7px;
+    margin: 0;
+    border-radius: 8px;
+}
+.icon-button svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.table-actions .muted {
+    font-size: 11px;
+    white-space: normal;
+}
+.toolbar-actions,
+.dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.dialog-actions {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+    margin-top: 24px;
+}
+.workspace-dialog .dialog-actions .button,
+.toolbar-actions .button,
+.table-filter .button {
+    margin-top: 0;
+}
+.table-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 16px;
+}
+.table-filter label {
+    margin-top: 0;
+}
+.table-filter > button {
+    margin-left: auto;
+}
+.journal-filters .filter-actions {
+    grid-column: 1 / -1;
+}
+/* Bootstrap pagination đóng gói trong WAR, số trang/size dùng chung cho mọi danh sách. */
+.table-pager {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--muted);
+}
+.pager-summary,
+.pager-navigation,
+.pager-jump {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+}
+.pager-navigation {
+    margin-left: auto;
+    gap: 14px;
+}
+.pager-jump {
+    flex-wrap: nowrap;
+    font-weight: 500;
+}
+.table-pager .form-select {
+    width: 74px;
+    max-width: 74px;
+    min-height: 34px;
+    padding: 6px 27px 6px 10px;
+    font-size: 12px;
+}
+.table-pager .form-control {
+    width: 65px;
+    min-height: 34px;
+    padding: 6px 8px;
+    font-size: 12px;
+}
+.table-pager .pagination {
+    --bs-pagination-color: var(--green);
+    --bs-pagination-hover-color: var(--green);
+    --bs-pagination-focus-color: var(--green);
+    --bs-pagination-active-bg: var(--green);
+    --bs-pagination-active-border-color: var(--green);
+    --bs-pagination-border-color: var(--line);
+    --bs-pagination-border-radius: 8px;
+}
+.table-pager .page-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    min-height: 34px;
+    font-size: 12px;
+    padding: 6px 8px;
+}
+.table-pager .page-link:focus-visible {
+    z-index: 3;
+    outline: 2px solid var(--green);
+    outline-offset: 2px;
+}
+.field-error:not([hidden]) {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #a44135;
+}
+.form-control.is-invalid,
+.form-select.is-invalid {
+    border-color: #c56b5f;
+    background-color: #fffafa;
+}
+.form-control.is-invalid:focus,
+.form-select.is-invalid:focus {
+    box-shadow: 0 0 0 3px #c56b5f18;
+}
+.feedback-login {
+    display: inline-block;
+    margin-top: 8px;
+    font-weight: 650;
+    color: var(--green);
+}
+@media (max-width: 600px) {
+    .table-pager {
+        gap: 14px;
+    }
+    .pager-summary,
+    .pager-navigation {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    .table-pager .page-link {
+        min-width: 29px;
+        padding-inline: 6px;
+    }
+    .dialog-actions .button {
+        min-height: 40px;
+    }
+}

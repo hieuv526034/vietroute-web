@@ -27,7 +27,7 @@
                     role="status"
                     th:text="#{ui.mediaDisabledNote}"
                 ></p>
-                <div class="d-flex gap-2 flex-wrap">
+                <div class="toolbar-actions">
                     <button
                         id="media-open"
                         class="button"
@@ -55,26 +55,7 @@
                 id="media-gallery"
                 aria-live="polite"
             ></section>
-            <nav
-                class="d-flex gap-3 align-items-center mt-4"
-                th:attr="aria-label=#{ui.mediaPages}"
-            >
-                <button
-                    id="media-prev"
-                    class="button button-outline"
-                    type="button"
-                    disabled
-                    th:text="#{ui.mediaPrevious}"
-                ></button>
-                <span id="media-page"></span>
-                <button
-                    id="media-next"
-                    class="button button-outline"
-                    type="button"
-                    disabled
-                    th:text="#{ui.mediaNext}"
-                ></button>
-            </nav>
+            <div th:replace="~{fragments/pagination :: pager('media', 12)}"></div>
             <dialog
                 id="media-dialog"
                 class="workspace-dialog"
@@ -127,7 +108,13 @@
                             required
                             th:disabled="${!mediaEnabled}"
                         />
-                        <div class="d-flex gap-2 flex-wrap">
+                        <div class="dialog-actions">
+                            <button
+                                class="button button-outline"
+                                type="button"
+                                data-dialog-close
+                                th:text="#{ui.catalog.cancel}"
+                            ></button>
                             <button
                                 id="media-upload"
                                 class="button"
@@ -137,12 +124,6 @@
                             ></button>
                         </div>
                     </form>
-                    <button
-                        class="button button-outline mt-3"
-                        type="button"
-                        data-dialog-close
-                        th:text="#{ui.catalog.cancel}"
-                    ></button>
                 </fieldset>
             </dialog>
         </main>

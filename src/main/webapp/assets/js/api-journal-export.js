@@ -1,11 +1,28 @@
-/* Tạo tài liệu debug từ dữ liệu đã lọc. Không thực thi HTTP, không lấy token/cookie hiện tại. */
+/* Xuất URL môi trường hiện tại và snapshot đã lọc; token luôn là placeholder, không đọc cookie hoặc tự replay. */
 (() => {
     'use strict';
-    const prepare = (detail) => {
+    const normalizeBase = (value) => {
+        if (!value) return '';
+        const url = new URL(value);
+        if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
+            throw new Error('Invalid application base URL');
+        }
+        return url.href.replace(/\/$/, '');
+    };
+    // Origin lấy từ trình duyệt, context từ meta server; tuyệt đối không lấy host/header trong lịch sử request.
+    const applicationBase = (origin, contextPath = '') => {
+        const host = new URL(origin);
+        if (host.origin !== origin || (contextPath && !/^(?:\/[A-Za-z0-9_-]+)+$/.test(contextPath))) {
+            throw new Error('Invalid application location');
+        }
+        return normalizeBase(`${origin}${contextPath}`);
+    };
+    const prepare = (detail, context = {}) => {
         const { entry } = detail;
-        const path = detail.replayPath.startsWith('/api/')
-            ? detail.replayPath.replace(/\{([^{}]+)\}/g, '{{$1}}')
-            : '/api/REPLACE_ENDPOINT';
+        const validPath =
+            /^\/api\/[A-Za-z0-9_{}./-]+$/.test(detail.replayPath) &&
+            !detail.replayPath.split('/').some((part, index) => index > 0 && (!part || part === '.' || part === '..'));
+        const path = validPath ? detail.replayPath.replace(/\{([^{}]+)\}/g, '{{$1}}') : '/api/REPLACE_ENDPOINT';
         const query = new URLSearchParams(detail.query).toString();
         const url = `{{baseUrl}}${path}${query ? `?${query}` : ''}`;
         let body;
@@ -18,22 +35,28 @@
         if (entry.endpoint === '/api/v1/auth/login') body = { username: '{{username}}', password: '{{password}}' };
         if (entry.endpoint === '/api/v1/auth/change-password')
             body = { currentPassword: '{{currentPassword}}', newPassword: '{{newPassword}}' };
-        return { url, method: entry.method === 'OTHER' ? 'REPLACE_METHOD' : entry.method, body };
+        return {
+            url,
+            baseUrl: normalizeBase(context.baseUrl),
+            locale: context.locale === 'en' ? 'en' : 'vi',
+            method: /^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)$/.test(entry.method) ? entry.method : 'REPLACE_METHOD',
+            body,
+        };
     };
     const quote = (value) => `'${String(value).replaceAll("'", "'\\''")}'`;
-    const curl = (detail) => {
-        const request = prepare(detail);
+    const curl = (detail, context) => {
+        const request = prepare(detail, context);
         const parts = [
-            `curl --request ${request.method} ${quote(request.url)}`,
+            `curl --request ${request.method} ${quote(request.baseUrl ? request.url.replace('{{baseUrl}}', request.baseUrl) : request.url)}`,
             "--header 'Authorization: Bearer {{accessToken}}'",
             "--header 'Content-Type: application/json'",
-            "--header 'X-Locale: vi'",
+            `--header 'X-Locale: ${request.locale}'`,
         ];
         if (request.body) parts.push(`--data-raw ${quote(JSON.stringify(request.body, null, 2))}`);
         return parts.join(' \\\n  ');
     };
-    const collection = (detail, description) => {
-        const value = prepare(detail);
+    const collection = (detail, description, context) => {
+        const value = prepare(detail, context);
         return {
             info: {
                 name: `VietRoute ${detail.entry.method} ${detail.entry.endpoint}`,
@@ -41,7 +64,7 @@
                 description,
             },
             variable: [
-                { key: 'baseUrl', value: '' },
+                { key: 'baseUrl', value: value.baseUrl },
                 { key: 'accessToken', value: '' },
                 { key: 'username', value: '' },
             ],
@@ -63,7 +86,7 @@
                         auth: { type: 'bearer', bearer: [{ key: 'token', value: '{{accessToken}}', type: 'string' }] },
                         header: [
                             { key: 'Content-Type', value: 'application/json' },
-                            { key: 'X-Locale', value: 'vi' },
+                            { key: 'X-Locale', value: value.locale },
                         ],
                         url: value.url,
                         ...(value.body
@@ -80,5 +103,5 @@
             ],
         };
     };
-    window.VietRouteJournalExport = Object.freeze({ curl, collection });
+    window.VietRouteJournalExport = Object.freeze({ applicationBase, curl, collection });
 })();

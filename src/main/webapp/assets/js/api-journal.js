@@ -7,8 +7,16 @@
     const labels = document.getElementById('journal-labels').dataset;
     const node = (id) => document.getElementById(`journal-${id}`);
     const route = '/api/v1/admin/system/api-journal';
+    const exporter = window.VietRouteJournalExport;
+    const meta = (name) => document.querySelector(`meta[name="${name}"]`)?.content || '';
+    const exportContext = Object.freeze({
+        baseUrl: exporter.applicationBase(window.location.origin, meta('app-base')),
+        locale: meta('app-locale'),
+    });
+    node('base-url').textContent = exportContext.baseUrl;
+    const tables = window.VietRouteTable;
+    const pager = tables.pager('journal', { busy: () => busy, onChange: (query) => perform(() => load(query)) });
     let busy = false,
-        page = 0,
         selected,
         params = {};
     const modal = window.VietRouteUI.modal('journal-dialog');
@@ -69,14 +77,18 @@
             }),
         );
         node('response-json').textContent = pretty(detail.responseBody);
-        node('curl').value = window.VietRouteJournalExport.curl(detail);
+        node('curl').value = exporter.curl(detail, exportContext);
         const detailTabs = node('dialog').querySelector('[data-tabs]');
         // Mở chi tiết từ list khi fieldset đang khóa: truyền nút gốc để trả focus đúng sau đóng.
         modal.open(trigger);
         requestAnimationFrame(() => window.VietRouteUI.tabs(detailTabs).select('journal-request'));
     };
-    const load = async () => {
-        const data = (await api.get(route, { params: { ...params, page, size: 20 }, timeout: 10000 })).data.data;
+    const load = async (query = pager.query) => {
+        let data;
+        const records = await tables.readPage(async (pagination) => {
+            data = (await api.get(route, { params: { ...params, ...pagination }, timeout: 10000 })).data.data;
+            return data.records;
+        }, query);
         const retention =
             data.retentionMinutes % 1440 === 0
                 ? `${data.retentionMinutes / 1440} ${labels.days}`
@@ -95,11 +107,11 @@
                 entry.traceId,
             ])
                 row.append(text('td', value));
-            const action = text('button', labels.details);
-            action.type = 'button';
-            action.className = 'button button-outline button-small';
-            action.addEventListener('click', () => perform(() => show(entry.id, action)));
+            const action = tables.actionButton(`${labels.details}: ${entry.traceId}`, 'view', (trigger) =>
+                perform(() => show(entry.id, trigger)),
+            );
             const cell = document.createElement('td');
+            cell.className = 'table-actions';
             cell.append(action);
             row.append(cell);
             body.append(row);
@@ -111,14 +123,11 @@
             row.append(cell);
             body.append(row);
         }
-        node('previous').disabled = !data.records.hasPrevious;
-        node('next').disabled = !data.records.hasNext;
-        node('page').textContent =
-            `${data.records.page + 1}/${Math.max(1, data.records.totalPages)} · ${data.records.totalElements}`;
+        pager.update(records);
     };
     node('search').addEventListener('submit', (event) => {
         event.preventDefault();
-        if (busy || !node('search').reportValidity()) return;
+        if (busy || !window.VietRouteForms.validate(node('search'))) return;
         params = {
             traceId: node('trace').value.trim(),
             endpoint: node('endpoint').value.trim(),
@@ -128,26 +137,12 @@
             minDurationMs: Number(node('duration').value || 0),
             errorsOnly: node('errors').checked,
         };
-        page = 0;
-        perform(load);
+        perform(() => load({ ...pager.query, page: 0 }));
     });
     node('reset').addEventListener('click', () => {
         node('search').reset();
         params = {};
-        page = 0;
-        perform(load);
-    });
-    node('previous').addEventListener('click', () => {
-        if (!busy && page > 0) {
-            page--;
-            perform(load);
-        }
-    });
-    node('next').addEventListener('click', () => {
-        if (!busy) {
-            page++;
-            perform(load);
-        }
+        perform(() => load({ ...pager.query, page: 0 }));
     });
     node('copy').addEventListener('click', async () => {
         try {
@@ -162,7 +157,7 @@
     node('download').addEventListener('click', () => {
         if (!selected) return;
         const blob = new Blob(
-            [JSON.stringify(window.VietRouteJournalExport.collection(selected, labels.exportNote), null, 2)],
+            [JSON.stringify(exporter.collection(selected, labels.exportNote, exportContext), null, 2)],
             { type: 'application/json' },
         );
         const url = URL.createObjectURL(blob);

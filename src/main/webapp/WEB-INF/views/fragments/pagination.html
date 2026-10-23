@@ -1,0 +1,110 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+    <body>
+        <!-- Một fragment cho mọi danh sách; số trang hiển thị 1-based, query API vẫn 0-based. -->
+        <nav
+            th:fragment="pager(prefix, defaultSize)"
+            class="table-pager"
+            data-pager
+            th:id="${prefix + '-pagination'}"
+            th:attr="aria-label=#{ui.ops.pagination},data-page-label=#{ui.pager.pageLabel},data-summary=#{ui.pager.summary}"
+        >
+            <div class="pager-summary">
+                <label
+                    th:for="${prefix + '-size'}"
+                    th:text="#{ui.pager.pageSize}"
+                ></label>
+                <select
+                    class="form-select form-select-sm"
+                    data-page-size
+                    th:id="${prefix + '-size'}"
+                >
+                    <option
+                        th:each="value : ${defaultSize == 12 ? {12,24,48,96} : {10,20,50,100}}"
+                        th:value="${value}"
+                        th:text="${value}"
+                        th:selected="${value == defaultSize}"
+                    ></option>
+                </select>
+                <span
+                    data-page-summary
+                    th:id="${prefix + '-page'}"
+                    role="status"
+                    aria-live="polite"
+                ></span>
+            </div>
+            <div class="pager-navigation">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item">
+                        <button
+                            type="button"
+                            class="page-link"
+                            data-page-first
+                            disabled
+                            th:attr="aria-label=#{ui.pager.first},title=#{ui.pager.first}"
+                        >
+                            <span aria-hidden="true">«</span>
+                        </button>
+                    </li>
+                    <li class="page-item">
+                        <button
+                            type="button"
+                            class="page-link"
+                            data-page-previous
+                            disabled
+                            th:id="${prefix + '-previous'}"
+                            th:attr="aria-label=#{ui.mediaPrevious},title=#{ui.mediaPrevious}"
+                        >
+                            <span aria-hidden="true">‹</span>
+                        </button>
+                    </li>
+                    <li
+                        class="page-item"
+                        data-page-next-item
+                    >
+                        <button
+                            type="button"
+                            class="page-link"
+                            data-page-next
+                            disabled
+                            th:id="${prefix + '-next'}"
+                            th:attr="aria-label=#{ui.mediaNext},title=#{ui.mediaNext}"
+                        >
+                            <span aria-hidden="true">›</span>
+                        </button>
+                    </li>
+                    <li class="page-item">
+                        <button
+                            type="button"
+                            class="page-link"
+                            data-page-last
+                            disabled
+                            th:attr="aria-label=#{ui.pager.last},title=#{ui.pager.last}"
+                        >
+                            <span aria-hidden="true">»</span>
+                        </button>
+                    </li>
+                </ul>
+                <label
+                    class="pager-jump"
+                    th:for="${prefix + '-jump'}"
+                >
+                    <span th:text="#{ui.pager.goTo}"></span>
+                    <input
+                        type="number"
+                        class="form-control form-control-sm"
+                        data-page-jump
+                        min="1"
+                        max="1"
+                        value="1"
+                        step="1"
+                        disabled
+                        th:id="${prefix + '-jump'}"
+                        th:attr="aria-label=#{ui.pager.goTo}"
+                    />
+                    <span data-page-total>/ 0</span>
+                </label>
+            </div>
+        </nav>
+    </body>
+</html>

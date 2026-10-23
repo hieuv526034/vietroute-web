@@ -4,6 +4,8 @@ Cập nhật 22/10/2026. Đọc tài liệu này trước, sau đó mở các t�
 
 Để biết ai làm gì tiếp theo và phần nào đã/chưa hoàn thành, xem [Tiến độ và kế hoạch nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md). Bảng tách trạng thái source/API/UI và cấu hình dịch vụ ngoài app, kèm PR và phụ thuộc để bàn giao.
 
+Để tra công nghệ từ BE đến UI và giải thích vai trò từng thư viện, đọc [danh mục công nghệ](CONG_NGHE_VA_THU_VIEN.md); phiên bản lấy từ source và được cập nhật cùng PR nâng dependency.
+
 Phần hoàn thiện ngày 23/10 có UI quản trị job/quyền và xem cấu hình whitelist trong menu Hệ thống; xem [hướng dẫn quản trị](QUAN_TRI_HE_THONG.md). Các màn này chưa phải nghiệp vụ nhà xe/chuyến/booking và không sửa secret từ trình duyệt.
 
 ## 1. Hệ thống gồm những gì

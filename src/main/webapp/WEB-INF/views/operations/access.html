@@ -93,13 +93,15 @@
                         id="role-permission-summary"
                         class="permission-summary"
                     ></div>
-                    <button
-                        id="permissions-edit"
-                        class="button"
-                        type="button"
-                        disabled
-                        th:text="#{ui.workspace.editPermissions}"
-                    ></button>
+                    <div class="toolbar-actions">
+                        <button
+                            id="permissions-edit"
+                            class="button"
+                            type="button"
+                            disabled
+                            th:text="#{ui.workspace.editPermissions}"
+                        ></button>
+                    </div>
                 </section>
                 <section
                     class="card p-4"
@@ -118,7 +120,7 @@
                     ></p>
                     <form
                         id="users-search"
-                        class="d-flex gap-3 flex-wrap align-items-end mb-3"
+                        class="table-filter mb-3"
                     >
                         <div>
                             <label
@@ -128,6 +130,7 @@
                             ></label>
                             <input
                                 id="user-prefix"
+                                name="username"
                                 class="form-control"
                                 maxlength="32"
                                 pattern="[A-Za-z0-9]{0,32}"
@@ -140,7 +143,12 @@
                             th:text="#{ui.ops.filter}"
                         ></button>
                     </form>
-                    <div class="table-responsive">
+                    <div
+                        class="table-responsive"
+                        tabindex="0"
+                        role="region"
+                        th:attr="aria-label=#{ui.table.scroll}"
+                    >
                         <table class="table align-middle">
                             <thead>
                                 <tr>
@@ -149,32 +157,16 @@
                                     <th th:text="#{ui.ops.displayName}"></th>
                                     <th th:text="#{ui.ops.role}"></th>
                                     <th th:text="#{ui.ops.status}"></th>
-                                    <th th:text="#{ui.ops.actions}"></th>
+                                    <th
+                                        class="table-actions"
+                                        th:text="#{ui.ops.actions}"
+                                    ></th>
                                 </tr>
                             </thead>
                             <tbody id="users-body"></tbody>
                         </table>
                     </div>
-                    <nav
-                        class="d-flex gap-3 align-items-center my-3"
-                        th:attr="aria-label=#{ui.ops.pagination}"
-                    >
-                        <button
-                            id="users-previous"
-                            class="button button-outline"
-                            type="button"
-                            disabled
-                            th:text="#{ui.mediaPrevious}"
-                        ></button>
-                        <span id="users-page"></span>
-                        <button
-                            id="users-next"
-                            class="button button-outline"
-                            type="button"
-                            disabled
-                            th:text="#{ui.mediaNext}"
-                        ></button>
-                    </nav>
+                    <div th:replace="~{fragments/pagination :: pager('users', 20)}"></div>
                 </section>
             </fieldset>
             <dialog
@@ -212,7 +204,12 @@
                         hidden
                     ></p>
                     <form id="permissions-form">
-                        <div class="table-responsive permission-table">
+                        <div
+                            class="table-responsive permission-table"
+                            tabindex="0"
+                            role="region"
+                            th:attr="aria-label=#{ui.table.scroll}"
+                        >
                             <table class="table align-middle">
                                 <thead>
                                     <tr>
@@ -225,20 +222,22 @@
                                 <tbody id="permissions-body"></tbody>
                             </table>
                         </div>
-                        <button
-                            id="permissions-save"
-                            class="button"
-                            type="submit"
-                            disabled
-                            th:text="#{ui.ops.savePermissions}"
-                        ></button>
+                        <div class="dialog-actions">
+                            <button
+                                class="button button-outline"
+                                type="button"
+                                data-dialog-close
+                                th:text="#{ui.catalog.cancel}"
+                            ></button>
+                            <button
+                                id="permissions-save"
+                                class="button"
+                                type="submit"
+                                disabled
+                                th:text="#{ui.ops.savePermissions}"
+                            ></button>
+                        </div>
                     </form>
-                    <button
-                        class="button button-outline mt-3"
-                        type="button"
-                        data-dialog-close
-                        th:text="#{ui.catalog.cancel}"
-                    ></button>
                 </fieldset>
             </dialog>
             <dialog
@@ -283,26 +282,32 @@
                             :
                             <strong id="user-version"></strong>
                         </p>
-                        <fieldset id="user-role-options">
+                        <fieldset
+                            id="user-role-options"
+                            data-required-selection
+                            data-validation-key="roles"
+                        >
                             <legend
                                 class="h6"
                                 th:text="#{ui.ops.role}"
                             ></legend>
                         </fieldset>
-                        <button
-                            id="user-roles-save"
-                            class="button"
-                            type="submit"
-                            disabled
-                            th:text="#{ui.ops.saveRoles}"
-                        ></button>
+                        <div class="dialog-actions">
+                            <button
+                                class="button button-outline"
+                                type="button"
+                                data-dialog-close
+                                th:text="#{ui.catalog.cancel}"
+                            ></button>
+                            <button
+                                id="user-roles-save"
+                                class="button"
+                                type="submit"
+                                disabled
+                                th:text="#{ui.ops.saveRoles}"
+                            ></button>
+                        </div>
                     </form>
-                    <button
-                        class="button button-outline mt-3"
-                        type="button"
-                        data-dialog-close
-                        th:text="#{ui.catalog.cancel}"
-                    ></button>
                 </fieldset>
             </dialog>
             <div

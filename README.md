@@ -20,6 +20,8 @@ Website quản lý nhà xe, tuyến/chuyến, đặt chỗ và theo dõi hành t
 
 Ba nguồn dùng thường xuyên: [Tổng quan hệ thống](docs/TONG_QUAN_HE_THONG.md), [Tiến độ nhóm và PR bằng chứng](docs/TIEN_DO_VA_KE_HOACH_NHOM.md), [Nghiệm thu trước nghiệp vụ](docs/NGHIEM_THU_NEN_TANG.md). Phân công tương lai không được coi là đóng góp đã hoàn thành.
 
+Kho Markdown tập trung trong `docs/`; [công nghệ và thư viện BE → UI](docs/CONG_NGHE_VA_THU_VIEN.md) tổng hợp phiên bản từ source, vai trò, điểm đọc code và câu trả lời khi trình bày đồ án.
+
 Menu **Hệ thống** có [quản lý job, ma trận quyền/gán role và xem cấu hình an toàn](docs/QUAN_TRI_HE_THONG.md). Các màn dùng quyền backend và CSRF chung; cấu hình chỉ đọc, secret vẫn ở Environment.
 
 ADMIN có SYSTEM_READ có thể mở **Hệ thống → Nhật ký API** để tra traceId/controller/lỗi và xem request/response đã lọc; có copy cURL/xuất Postman. Lịch sử lưu PostgreSQL dùng chung giữa các node, mặc định 7 ngày và mục tiêu 10.000 bản ghi; bản ghi đã commit còn sau restart. Xem [hướng dẫn nhật ký và debug](docs/NHAT_KY_API_VA_DEBUG.md).

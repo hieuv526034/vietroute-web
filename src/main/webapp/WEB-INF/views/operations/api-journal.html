@@ -150,7 +150,7 @@
                                 />
                                 <span th:text="#{ui.journal.errorsOnly}"></span>
                             </label>
-                            <div class="catalog-actions">
+                            <div class="toolbar-actions filter-actions">
                                 <button
                                     class="button button-small"
                                     type="submit"
@@ -164,7 +164,12 @@
                                 ></button>
                             </div>
                         </form>
-                        <div class="table-responsive mt-4">
+                        <div
+                            class="table-responsive mt-4"
+                            tabindex="0"
+                            role="region"
+                            th:attr="aria-label=#{ui.table.scroll}"
+                        >
                             <table class="table align-middle">
                                 <thead>
                                     <tr>
@@ -173,32 +178,16 @@
                                         <th>HTTP / code</th>
                                         <th>ms</th>
                                         <th>traceId</th>
-                                        <th th:text="#{ui.ops.actions}"></th>
+                                        <th
+                                            class="table-actions"
+                                            th:text="#{ui.ops.actions}"
+                                        ></th>
                                     </tr>
                                 </thead>
                                 <tbody id="journal-body"></tbody>
                             </table>
                         </div>
-                        <nav
-                            class="catalog-pagination"
-                            th:attr="aria-label=#{ui.ops.pagination}"
-                        >
-                            <button
-                                id="journal-previous"
-                                type="button"
-                                class="button button-outline button-small"
-                                disabled
-                                th:text="#{ui.mediaPrevious}"
-                            ></button>
-                            <span id="journal-page"></span>
-                            <button
-                                id="journal-next"
-                                type="button"
-                                class="button button-outline button-small"
-                                disabled
-                                th:text="#{ui.mediaNext}"
-                            ></button>
-                        </nav>
+                        <div th:replace="~{fragments/pagination :: pager('journal', 20)}"></div>
                     </fieldset>
                 </section>
                 <section
@@ -292,11 +281,16 @@
                         ></pre>
                     </section>
                     <section id="journal-export">
+                        <p class="form-help">
+                            <span th:text="#{ui.journal.baseUrl}"></span>
+                            :
+                            <code id="journal-base-url"></code>
+                        </p>
                         <p
                             class="notice"
                             th:text="#{ui.journal.exportNote}"
                         ></p>
-                        <div class="catalog-actions my-3">
+                        <div class="toolbar-actions my-3">
                             <button
                                 id="journal-copy"
                                 class="button button-small"

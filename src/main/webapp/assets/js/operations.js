@@ -6,6 +6,7 @@
         return;
     }
     const app = window.VietRoute;
+    const tables = window.VietRouteTable;
     const labels = document.getElementById('ops-labels').dataset;
     const node = (id) => document.getElementById(id);
     const routes = Object.freeze({
@@ -32,24 +33,12 @@
         element.value = value;
         return element;
     };
-    const button = (title, action) => {
-        const element = text('button', title, 'button button-outline button-small');
-        element.type = 'button';
-        element.addEventListener('click', action);
-        return element;
-    };
     const empty = (body, columns) => {
         const row = document.createElement('tr');
         const cell = text('td', labels.empty);
         cell.colSpan = columns;
         row.append(cell);
         body.append(row);
-    };
-    const pagination = (prefix, page) => {
-        node(`${prefix}-previous`).disabled = !page.hasPrevious;
-        node(`${prefix}-next`).disabled = !page.hasNext;
-        node(`${prefix}-page`).textContent =
-            `${labels.page}: ${page.totalPages ? page.page + 1 : 0} / ${page.totalPages} / ${page.totalElements}`;
     };
     // Khóa fieldset cha để chặn bấm lặp; không ghi đè disabled riêng của từng nút sau khi tải xong.
     const perform = async (action) => {
@@ -100,7 +89,7 @@
     };
 
     const jobs = () => {
-        let page = 0;
+        const pager = tables.pager('jobs', { busy: () => busy, onChange: (query) => perform(() => load(query)) });
         let selected;
         const body = node('jobs-body');
         const dialog = node('job-dialog');
@@ -145,9 +134,12 @@
             renderDetail(job);
             dialog.showModal();
         };
-        const load = async () => {
+        const load = async (query = pager.query) => {
             const status = node('job-status').value;
-            const data = await get(routes.jobs, { page, size: 20, ...(status ? { status } : {}) });
+            const data = await tables.readPage(
+                (params) => get(routes.jobs, { ...params, ...(status ? { status } : {}) }),
+                query,
+            );
             body.replaceChildren();
             for (const job of data.content) {
                 const row = document.createElement('tr');
@@ -161,34 +153,25 @@
                     row.append(text('td', value));
                 }
                 const actions = document.createElement('td');
-                actions.append(button(labels.details, () => perform(() => show(job.id))));
+                actions.className = 'table-actions';
+                actions.append(
+                    tables.actionButton(`${labels.details}: ${job.id}`, 'view', () => perform(() => show(job.id))),
+                );
                 row.append(actions);
                 body.append(row);
             }
             if (!data.content.length) {
                 empty(body, 6);
             }
-            pagination('jobs', data);
+            pager.update(data);
         };
         node('job-close').addEventListener('click', () => {
             if (!busy) dialog.close();
         });
         node('jobs-filter').addEventListener('submit', (event) => {
             event.preventDefault();
-            page = 0;
-            perform(load);
-        });
-        node('jobs-previous').addEventListener('click', () => {
-            if (!busy && page > 0) {
-                page--;
-                perform(load);
-            }
-        });
-        node('jobs-next').addEventListener('click', () => {
-            if (!busy) {
-                page++;
-                perform(load);
-            }
+            if (!window.VietRouteForms.validate(event.currentTarget)) return;
+            perform(() => load({ ...pager.query, page: 0 }));
         });
         node('job-retry').addEventListener('click', () => {
             if (
@@ -223,7 +206,7 @@
         let roles = [];
         let selectedRole;
         let selectedUser;
-        let usersPage = 0;
+        const pager = tables.pager('users', { busy: () => busy, onChange: (query) => perform(() => loadUsers(query)) });
         let prefix = '';
         const roleSelect = node('access-role');
         const permissionsBody = node('permissions-body');
@@ -239,6 +222,7 @@
             onClose: () => {
                 selectedUser = undefined;
                 app.feedback('', false, 'user-roles-feedback');
+                window.VietRouteForms.clear(node('user-roles-form'));
             },
         });
         const accessTabs = window.VietRouteUI.tabs(node('ops-controls'));
@@ -331,14 +315,17 @@
             }
             userModal.open();
         };
-        const loadUsers = async () => {
+        const loadUsers = async (query = pager.query) => {
             if (!isAdmin()) {
                 accessTabs.show('access-users-section', false);
                 return;
             }
             selectedUser = undefined;
             node('user-roles-form').hidden = true;
-            const data = await get(`${routes.access}/users`, { page: usersPage, size: 20, username: prefix });
+            const data = await tables.readPage(
+                (params) => get(`${routes.access}/users`, { ...params, username: prefix }),
+                query,
+            );
             const body = node('users-body');
             body.replaceChildren();
             for (const user of data.content) {
@@ -353,14 +340,17 @@
                     row.append(text('td', value));
                 }
                 const cell = document.createElement('td');
-                cell.append(button(labels.select, () => chooseUser(user)));
+                cell.className = 'table-actions';
+                cell.append(
+                    tables.actionButton(`${labels.select}: ${user.username}`, 'assign', () => chooseUser(user)),
+                );
                 row.append(cell);
                 body.append(row);
             }
             if (!data.content.length) {
                 empty(body, 6);
             }
-            pagination('users', data);
+            pager.update(data);
             accessTabs.show('access-users-section', true);
         };
         roleSelect.addEventListener('change', drawRole);
@@ -393,28 +383,20 @@
         });
         node('users-search').addEventListener('submit', (event) => {
             event.preventDefault();
-            if (busy) {
+            if (busy || !window.VietRouteForms.validate(event.currentTarget)) {
                 return;
             }
             prefix = node('user-prefix').value.trim();
-            usersPage = 0;
-            perform(loadUsers);
-        });
-        node('users-previous').addEventListener('click', () => {
-            if (!busy && usersPage > 0) {
-                usersPage--;
-                perform(loadUsers);
-            }
-        });
-        node('users-next').addEventListener('click', () => {
-            if (!busy) {
-                usersPage++;
-                perform(loadUsers);
-            }
+            perform(() => loadUsers({ ...pager.query, page: 0 }));
         });
         node('user-roles-form').addEventListener('submit', (event) => {
             event.preventDefault();
-            if (busy || !selectedUser || node('user-roles-save').disabled) {
+            if (
+                busy ||
+                !selectedUser ||
+                node('user-roles-save').disabled ||
+                !window.VietRouteForms.validate(event.currentTarget)
+            ) {
                 return;
             }
             const target = selectedUser;

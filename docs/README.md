@@ -20,6 +20,7 @@ Lần đầu chạy local không bật migration/seed trên Neon để thử. Xi
 | Tài liệu | Khi nào đọc |
 |---|---|
 | [Tổng quan hệ thống](TONG_QUAN_HE_THONG.md) | Cửa vào kiến trúc, package, luồng và giới hạn nhiều node |
+| [Công nghệ và thư viện BE → UI](CONG_NGHE_VA_THU_VIEN.md) | Tra phiên bản trong source, vai trò thư viện, chỗ đọc code và câu hỏi bảo vệ đồ án |
 | [Luồng xử lý base](LUONG_XU_LY_BASE.md) | Học một request từ filter đến lỗi/response; đọc trước khi thêm controller/service |
 | [Nền tảng mở rộng](NEN_TANG_MO_RONG.md) | Trước khi thêm job/worker/mail, quota hoặc permission |
 | [Schema và phân quyền](SCHEMA_VA_PHAN_QUYEN.md) | Trước khi viết SQL, migration, CRUD hoặc đổi schema môi trường |
@@ -35,6 +36,7 @@ Lần đầu chạy local không bật migration/seed trên Neon để thử. Xi
 | [Hợp đồng API/base/auth](API_BASE.md) | Request/response/error, locale, JWT/cookie/CSRF, Swagger |
 | [Constants và cấu trúc web](CONSTANTS_VA_CAU_TRUC_WEB.md) | Khi thêm env/route/regex/header hoặc class common.web |
 | [Tab và modal](TAB_VA_MODAL.md) | Khi thêm trang nhiều nhóm, form thêm/sửa/gán/upload, lỗi và focus |
+| [Bảng và validation UI](BANG_VA_VALIDATION_UI.md) | Phân trang chung, cột icon cố định, nút bên phải và lỗi cạnh trường nhập |
 | [Cloudinary và IntelliJ](CLOUDINARY_VA_INTELLIJ.md) | Chạy app từ IDE hoặc tích hợp ảnh công khai; phần provider chỉ đọc khi cần |
 
 ## Nhóm C — Dùng màn hệ thống và debug
