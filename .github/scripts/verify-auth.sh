@@ -43,14 +43,14 @@ for port in 18080 18081; do
 done
 sql() { docker exec -e PGOPTIONS=-csearch_path=vietroute vietroute-db-ci psql -U vietroute_ci -d vietroute_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
 [[ "$(sql "SELECT count(*) FROM auth_users WHERE username='admin'")" == 1 ]]
-[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 9 ]]
+[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 10 ]]
 [[ "$(sql 'SELECT count(*) FROM catalog_items')" == 5 ]]
 [[ "$(sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','catalog_items','vietroute_schema_history')")" == 0 ]]
 [[ "$(sql "SELECT count(*) FROM pg_indexes WHERE schemaname='vietroute' AND indexname IN ('idx_auth_users_created_by','idx_auth_users_updated_by','idx_auth_user_roles_role_code','idx_catalog_created_by','idx_catalog_updated_by')")" == 5 ]]
 printf 'Audit stage: reserved actor, non-null seed and database guards\n'
 [[ "$(sql "SELECT count(*) FROM auth_users WHERE id=0 AND username='system' AND NOT active AND NOT must_change_password AND created_by=0 AND updated_by=0")" == 1 ]]
 [[ "$(sql "SELECT id FROM auth_users WHERE username='admin'")" == 1 ]]
-for audit_table in auth_users auth_roles auth_permissions auth_user_roles auth_role_permissions catalog_items system_jobs media_assets api_request_journal auth_access_policies system_visitor_presence system_activity_buckets; do
+for audit_table in auth_users auth_roles auth_permissions auth_user_roles auth_role_permissions catalog_items system_jobs media_assets api_request_journal auth_access_policies auth_access_resources system_visitor_presence system_activity_buckets; do
   [[ "$(sql "SELECT count(*) FROM $audit_table WHERE created_by IS NULL OR updated_by IS NULL")" == 0 ]]
   [[ "$(sql "SELECT count(*) FROM information_schema.columns WHERE table_schema='vietroute' AND table_name='$audit_table' AND column_name IN ('created_by','updated_by') AND is_nullable='NO'")" == 2 ]]
 done
@@ -239,6 +239,7 @@ assert_code AUTH004
 # Restart giữ nguyên hash đã đổi; không lấy mật khẩu bootstrap ghi đè lên tài khoản có sẵn.
 sql "SELECT password_hash FROM auth_users WHERE username='admin'" > "$work/hash-before"
 printf 'Auth stage: restart does not reset password\n'
+sql "INSERT INTO auth_access_resources(kind,target,handler,description,public_route,configurable) VALUES ('ENDPOINT','GET /retained-version-route','LegacyController#read','CI rolling deployment fixture',false,false)" >/dev/null
 docker restart vietroute-auth-ci >/dev/null
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 "$base/health" >/dev/null
@@ -393,6 +394,25 @@ call 403 PUT /api/v1/admin/access/users/1/roles "$work/roles.json" bearer
 token="$customer_token"
 call 401 GET /api/v1/auth/me '' bearer
 token="$admin_token"
+printf 'Resource discovery stage: persisted UI/API inventory, public classification and paging\n'
+[[ "$(sql 'SELECT count(*) FROM auth_access_resources')" -ge 20 ]]
+[[ "$(sql "SELECT count(*) FROM auth_access_resources WHERE target='GET /retained-version-route'")" == 1 ]]
+[[ "$(sql 'SELECT count(*) FROM auth_access_resources WHERE created_by<>0 OR updated_by<>0')" == 0 ]]
+[[ "$(sql "SELECT count(*) FROM auth_access_resources WHERE kind='MENU' AND target='GET /media'")" == 1 ]]
+[[ "$(sql "SELECT count(*) FROM auth_access_resources WHERE kind='ENDPOINT' AND target='GET /api/v1/catalogs/{type}' AND public_route AND NOT configurable")" == 1 ]]
+[[ "$(sql 'SELECT count(*) FROM auth_access_resources WHERE public_route AND configurable')" == 0 ]]
+call 200 GET '/api/v1/admin/access/resources?page=0&size=10' '' bearer
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["size"]==10 and len(d["content"])==10 and d["totalElements"]>=20; assert all(x["firstSeenAt"] and x["lastSeenAt"] for x in d["content"])' "$result"
+call 400 GET '/api/v1/admin/access/resources?size=101' '' bearer
+saved_admin_token="$token"
+# Role vừa thay đổi đã thu hồi customer_token ở ca trước; dùng token mới để kiểm 403 thay vì 401.
+refresh_csrf
+login_body customer "$next_password"
+call 200 POST /api/v1/auth/login "$work/login.json" cookie
+customer_token=$(field data.accessToken)
+token="$customer_token"
+call 403 GET '/api/v1/admin/access/resources' '' bearer
+token="$saved_admin_token"
 printf 'Foundation registry stage: dynamic roles, policy guards and live DB revocation\n'
 call 200 GET /api/v1/admin/access/targets '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert any(x["kind"]=="MENU" and x["target"]=="GET /media" for x in d); assert not any("/auth" in x["target"] or "/admin/access" in x["target"] for x in d)' "$result"
@@ -551,7 +571,7 @@ start_app vietroute-auth-ci2 18081 vietroute_legacy_ci 300 '' legacy_custom
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 http://127.0.0.1:18081/health >/dev/null
 legacy_sql() { docker exec -e PGOPTIONS=-csearch_path=legacy_custom vietroute-db-ci psql -U vietroute_ci -d vietroute_legacy_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(legacy_sql 'SELECT count(*) FROM vietroute_schema_history')" == 9 ]]
+[[ "$(legacy_sql 'SELECT count(*) FROM vietroute_schema_history')" == 10 ]]
 [[ "$(legacy_sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','catalog_items','vietroute_schema_history')")" == 0 ]]
 [[ "$(legacy_sql "SELECT display_name FROM auth_users WHERE id=1 AND username='admin'")" == 'Legacy admin retained' ]]
 [[ "$(legacy_sql "SELECT code FROM catalog_items WHERE id=1")" == LEGACY ]]
@@ -578,7 +598,7 @@ start_app vietroute-auth-ci 18080 vietroute_schema_ci 300 '' select
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 http://127.0.0.1:18080/health >/dev/null
 custom_sql() { docker exec -e 'PGOPTIONS=-csearch_path="select"' vietroute-db-ci psql -U vietroute_ci -d vietroute_schema_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(custom_sql 'SELECT count(*) FROM vietroute_schema_history')" == 9 ]]
+[[ "$(custom_sql 'SELECT count(*) FROM vietroute_schema_history')" == 10 ]]
 [[ "$(custom_sql 'SELECT count(*) FROM catalog_items')" == 5 ]]
 [[ "$(custom_sql "SELECT count(*) FROM pg_namespace WHERE nspname='vietroute'")" == 0 ]]
 for migration in src/main/resources/db/migration/V00*.sql; do
@@ -616,7 +636,7 @@ start_app vietroute-auth-ci 18080 vietroute_schema_ci 300 '' renamed_app
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 "$base/health" >/dev/null
 renamed_sql() { docker exec -e PGOPTIONS=-csearch_path=renamed_app vietroute-db-ci psql -U vietroute_ci -d vietroute_schema_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(renamed_sql 'SELECT count(*) FROM vietroute_schema_history')" == 9 ]]
+[[ "$(renamed_sql 'SELECT count(*) FROM vietroute_schema_history')" == 10 ]]
 [[ "$(renamed_sql 'SELECT count(*) FROM catalog_items')" == 6 ]]
 renamed_sql "SELECT password_hash FROM auth_users WHERE username='admin'" > "$work/renamed-hash"
 cmp --silent "$work/custom-hash" "$work/renamed-hash"

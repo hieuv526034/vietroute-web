@@ -64,6 +64,8 @@ services:
         value: vietroute
       - key: VIETROUTE_ENV
         value: production
+      - key: VIETROUTE_ACCESS_SYNC_ENABLED
+        value: "true"
       - key: VIETROUTE_DB_INIT_ENABLED
         value: "true"
       - key: VIETROUTE_COOKIE_SECURE

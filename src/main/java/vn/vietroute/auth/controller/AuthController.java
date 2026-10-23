@@ -6,7 +6,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,8 +26,8 @@ import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
-import vn.vietroute.common.web.response.ApiResponse;
 import vn.vietroute.common.web.response.ApiResponses;
+import vn.vietroute.common.web.response.ApiResult;
 
 /** Controller không tự xác minh JWT/password hoặc thực hiện SQL. */
 @RestController
@@ -56,11 +55,7 @@ public class AuthController extends BaseController {
         summary = "Lấy token CSRF",
         description = "Gọi trước login hoặc POST bằng cookie. Gửi token qua header trả về; giữ cookie XSRF-TOKEN tương ứng."
     )
-    public ResponseEntity<ApiResponse<CsrfResponse>> csrf(
-        CsrfToken token,
-        HttpServletRequest request,
-        HttpServletResponse response
-    ) {
+    public ApiResult<CsrfResponse> csrf(CsrfToken token, HttpServletRequest request, HttpServletResponse response) {
         // Truy cập token kích hoạt phát cookie CSRF; base bọc lỗi nếu việc tạo token không hoàn tất.
         return execute(SuccessCode.OK, request, () -> {
             response.setHeader(HttpHeaders.CACHE_CONTROL, Http.NO_STORE);
@@ -73,7 +68,7 @@ public class AuthController extends BaseController {
         summary = "Đăng nhập",
         description = "JWT có hạn 30 phút. Website nhận cookie HttpOnly; API client dùng accessToken với Bearer. Sai 5 lần sẽ khóa 15 phút."
     )
-    public ResponseEntity<ApiResponse<AuthResponse>> login(
+    public ApiResult<AuthResponse> login(
         @Valid @RequestBody LoginRequest body,
         HttpServletRequest request,
         HttpServletResponse response
@@ -93,7 +88,7 @@ public class AuthController extends BaseController {
         summary = "Xem tài khoản đang đăng nhập",
         description = "Yêu cầu Bearer JWT hoặc cookie auth hợp lệ; response không chứa password hash."
     )
-    public ResponseEntity<ApiResponse<UserResponse>> me(
+    public ApiResult<UserResponse> me(
         @AuthenticationPrincipal UserPrincipal user,
         HttpServletRequest request,
         HttpServletResponse response
@@ -108,7 +103,7 @@ public class AuthController extends BaseController {
         summary = "Đổi mật khẩu",
         description = "Xác minh mật khẩu hiện tại, thu hồi mọi token cũ và phát token mới cho phiên hiện tại."
     )
-    public ResponseEntity<ApiResponse<AuthResponse>> changePassword(
+    public ApiResult<AuthResponse> changePassword(
         @AuthenticationPrincipal UserPrincipal user,
         @Valid @RequestBody ChangePasswordRequest body,
         HttpServletRequest request,
@@ -128,7 +123,7 @@ public class AuthController extends BaseController {
         summary = "Đăng xuất",
         description = "Xóa cookie và tăng tokenVersion để thu hồi mọi token của tài khoản. Cookie mode yêu cầu CSRF."
     )
-    public ResponseEntity<ApiResponse<Void>> logout(
+    public ApiResult<Void> logout(
         @AuthenticationPrincipal UserPrincipal user,
         HttpServletRequest request,
         HttpServletResponse response

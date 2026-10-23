@@ -17,21 +17,25 @@ import vn.vietroute.common.media.storage.MediaStorage;
 @Configuration
 public class IntegrationConfig {
 
+    /** Validate cấu hình Cloudinary một lần; provider tắt không yêu cầu credential. */
     @Bean
     public MediaSettings mediaSettings(ConfigurationEnvironment environment) {
         return new MediaSettings(environment);
     }
 
+    /** Chọn adapter Cloudinary dùng chung cho mọi module cần ảnh công khai. */
     @Bean
     public MediaStorage mediaStorage(MediaSettings settings) {
         return new CloudinaryMediaStorage(settings);
     }
 
+    /** Đọc provider và credential gửi mail; không đưa giá trị nhạy cảm vào DTO quản trị. */
     @Bean
     public MailSettings mailSettings(ConfigurationEnvironment environment) {
         return new MailSettings(environment);
     }
 
+    /** Chọn Gmail HTTPS hoặc SMTP; không theo redirect để tránh gửi credential sang host khác. */
     @Bean
     public MailTransport mailTransport(MailSettings settings, ObjectMapper json, Clock clock) {
         return settings.getProvider().equals("smtp")
@@ -47,6 +51,7 @@ public class IntegrationConfig {
               );
     }
 
+    /** Giới hạn poll/thread/lease của worker; tạo settings không tự chạy job. */
     @Bean
     public JobSettings jobSettings(ConfigurationEnvironment environment) {
         return new JobSettings(environment);

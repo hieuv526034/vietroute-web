@@ -6,7 +6,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Locale;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,8 +28,8 @@ import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
-import vn.vietroute.common.web.response.ApiResponse;
 import vn.vietroute.common.web.response.ApiResponses;
+import vn.vietroute.common.web.response.ApiResult;
 
 /** API quản trị quyền gọi service bảo vệ theo chức năng; không nhận actor/audit từ JSON. */
 @RestController
@@ -47,16 +46,13 @@ public class AccessController extends BaseController {
 
     @GetMapping(Routes.PERMISSIONS_ACTION)
     @Operation(summary = "Liệt kê quyền chức năng", description = "Yêu cầu ACCESS_READ")
-    public ResponseEntity<ApiResponse<List<PermissionResponse>>> permissions(
-        Locale locale,
-        HttpServletRequest request
-    ) {
+    public ApiResult<List<PermissionResponse>> permissions(Locale locale, HttpServletRequest request) {
         return execute(SuccessCode.OK, request, () -> access.permissions(locale));
     }
 
     @GetMapping(Routes.ROLES_ACTION)
     @Operation(summary = "Xem quyền các role", description = "Yêu cầu ACCESS_READ; version dùng khi cập nhật")
-    public ResponseEntity<ApiResponse<List<RolePermissionsResponse>>> roles(HttpServletRequest request) {
+    public ApiResult<List<RolePermissionsResponse>> roles(HttpServletRequest request) {
         return execute(SuccessCode.OK, request, access::roles);
     }
 
@@ -65,7 +61,7 @@ public class AccessController extends BaseController {
         summary = "Tra tài khoản để gán role",
         description = "Chỉ ADMIN có ACCESS_READ; phân trang/prefix username, không trả credential. Gán role dùng API PUT riêng có version và kiểm quyền."
     )
-    public ResponseEntity<ApiResponse<PageResponse<AccessUserResponse>>> users(
+    public ApiResult<PageResponse<AccessUserResponse>> users(
         @Valid AccessUserSearchRequest page,
         HttpServletRequest request
     ) {
@@ -77,7 +73,7 @@ public class AccessController extends BaseController {
         summary = "Thay quyền chức năng của role",
         description = "Yêu cầu ACCESS_ASSIGN (hoặc ACCESS_WRITE tương thích); không sửa ADMIN; người được ủy quyền không gán quyền vượt tập quyền của mình; version cũ trả 409"
     )
-    public ResponseEntity<ApiResponse<RolePermissionsResponse>> replace(
+    public ApiResult<RolePermissionsResponse> replace(
         @PathVariable Role role,
         @Valid @RequestBody RolePermissionsRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
@@ -91,7 +87,7 @@ public class AccessController extends BaseController {
         summary = "Gán role cho tài khoản",
         description = "Yêu cầu ACCESS_ASSIGN (hoặc ACCESS_WRITE tương thích) và role ADMIN; thu hồi token cũ, không tự sửa role hoặc xóa admin cuối"
     )
-    public ResponseEntity<ApiResponse<UserResponse>> assign(
+    public ApiResult<UserResponse> assign(
         @PathVariable long id,
         @Valid @RequestBody UserRolesRequest body,
         @AuthenticationPrincipal UserPrincipal actor,

@@ -6,6 +6,7 @@ import vn.vietroute.common.constant.ApplicationConstants.Env;
 /** Đọc biến môi trường có kiểm tra khoảng; lỗi chỉ ghi tên key, không ghi giá trị/secret. */
 public final class ConfigValues {
 
+    /** Nguồn đọc cấu hình thống nhất; thông báo lỗi chỉ nêu tên key. */
     private final Function<String, String> source;
 
     public ConfigValues(Function<String, String> source) {
@@ -17,11 +18,13 @@ public final class ConfigValues {
         return source.apply(key.key());
     }
 
+    /** Chỉ dùng dự phòng khi thiếu biến; chuỗi rỗng tường minh vẫn được Settings kiểm tra theo hợp đồng. */
     public String text(Env key, String fallback) {
         String value = raw(key);
         return value == null ? fallback : value;
     }
 
+    /** Số nguyên ngoài khoảng hoặc sai định dạng làm startup dừng, không âm thầm dùng ngưỡng không an toàn. */
     public int number(Env key, int fallback, int min, int max) {
         try {
             int value = Integer.parseInt(text(key, Integer.toString(fallback)));
@@ -34,6 +37,7 @@ public final class ConfigValues {
         throw new IllegalStateException(key.key() + " is outside the allowed range");
     }
 
+    /** Chỉ nhận true/false, không hiểu nhầm typo thành false như Boolean.parseBoolean đơn thuần. */
     public boolean flag(Env key, boolean fallback) {
         String value = text(key, Boolean.toString(fallback));
         if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {

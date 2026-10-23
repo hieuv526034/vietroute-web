@@ -32,8 +32,8 @@ import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.constant.ValidationCode;
 import vn.vietroute.common.monitoring.service.ApiJournalState;
 import vn.vietroute.common.web.filter.RequestTraceFilter;
-import vn.vietroute.common.web.response.ApiResponse;
 import vn.vietroute.common.web.response.ApiResponses;
+import vn.vietroute.common.web.response.ApiResult;
 import vn.vietroute.common.web.response.FieldViolation;
 
 /** Đổi exception thành HTTP/mã lỗi/key dịch; base API và MVC advice dùng cùng một quy tắc. */
@@ -50,7 +50,7 @@ public class ApiExceptionMapper {
      * Exception chưa biết chỉ trả COM006, còn chi tiết được ghi phía server cùng traceId.
      * Không bắt Error của JVM và không trả exception.getMessage() cho client.
      */
-    public <T> ResponseEntity<ApiResponse<T>> toResponse(Exception error, HttpServletRequest request) {
+    public <T> ApiResult<T> toResponse(Exception error, HttpServletRequest request) {
         ApiJournalState.failure(request, error);
         if (error instanceof BusinessException business) {
             return result(business.getErrorCode(), business.getArguments(), List.of(), request);
@@ -89,13 +89,13 @@ public class ApiExceptionMapper {
         if (code == ErrorCode.INTERNAL_ERROR) {
             LOG.log(Level.SEVERE, "Request failed traceId=" + RequestTraceFilter.ensure(request, null), error);
         }
-        ResponseEntity<ApiResponse<T>> response = result(code, new Object[0], List.of(), request);
+        ApiResult<T> response = result(code, new Object[0], List.of(), request);
         // Giữ các header giao thức của MVC, đặc biệt Allow của HTTP 405 và Accept của HTTP 415.
         if (error instanceof ErrorResponse mvc && !mvc.getHeaders().isEmpty()) {
             HttpHeaders headers = new HttpHeaders();
             headers.putAll(response.getHeaders());
             headers.putAll(mvc.getHeaders());
-            return new ResponseEntity<>(response.getBody(), headers, response.getStatusCode());
+            return new ApiResult<>(response.getBody(), headers, response.getStatusCode());
         }
         return response;
     }
@@ -159,17 +159,19 @@ public class ApiExceptionMapper {
     }
 
     /** Phản hồi lỗi không được cache; locale và envelope giống lỗi từ filter bảo mật. */
-    private <T> ResponseEntity<ApiResponse<T>> result(
+    private <T> ApiResult<T> result(
         ErrorCode code,
         Object[] args,
         List<FieldViolation> fields,
         HttpServletRequest request
     ) {
-        return ResponseEntity.status(code.getStatus())
-            // Lỗi vẫn có envelope JSON kể cả khi client yêu cầu định dạng không hỗ trợ (HTTP 406).
-            .contentType(MediaType.APPLICATION_JSON)
-            .header(HttpHeaders.CONTENT_LANGUAGE, responses.locale(request).getLanguage())
-            .header(HttpHeaders.CACHE_CONTROL, Http.NO_STORE)
-            .body(responses.error(code, args, fields, request));
+        return ApiResult.from(
+            ResponseEntity.status(code.getStatus())
+                // Lỗi vẫn có envelope JSON kể cả khi client yêu cầu định dạng không hỗ trợ (HTTP 406).
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.CONTENT_LANGUAGE, responses.locale(request).getLanguage())
+                .header(HttpHeaders.CACHE_CONTROL, Http.NO_STORE)
+                .body(responses.<T>error(code, args, fields, request))
+        );
     }
 }

@@ -72,6 +72,13 @@
                         th:if="${adminUser}"
                         th:text="#{ui.foundation.policies}"
                     ></button>
+                    <button
+                        id="resources-tab"
+                        type="button"
+                        data-tab-target="access-resources-section"
+                        th:if="${adminUser}"
+                        th:text="#{ui.accessResources.title}"
+                    ></button>
                 </div>
                 <section
                     id="access-roles-section"
@@ -181,6 +188,55 @@
                         </table>
                     </div>
                     <div th:replace="~{fragments/pagination :: pager('users', 20)}"></div>
+                </section>
+                <section
+                    id="access-resources-section"
+                    class="card p-4"
+                    hidden
+                    th:if="${adminUser}"
+                    aria-labelledby="resources-title"
+                >
+                    <h2
+                        id="resources-title"
+                        class="h4"
+                        th:text="#{ui.accessResources.title}"
+                    ></h2>
+                    <p
+                        class="text-secondary"
+                        th:text="#{ui.accessResources.note}"
+                    ></p>
+                    <div class="toolbar-actions">
+                        <button
+                            id="resources-refresh"
+                            type="button"
+                            class="button button-outline"
+                            th:text="#{ui.foundation.refresh}"
+                        ></button>
+                    </div>
+                    <p
+                        id="resources-status"
+                        role="status"
+                    ></p>
+                    <div
+                        class="table-responsive"
+                        tabindex="0"
+                        role="region"
+                        th:attr="aria-label=#{ui.table.scroll}"
+                    >
+                        <table class="table align-middle access-resources-table">
+                            <thead>
+                                <tr>
+                                    <th th:text="#{ui.accessResources.kind}"></th>
+                                    <th th:text="#{ui.accessResources.target}"></th>
+                                    <th th:text="#{ui.accessResources.description}"></th>
+                                    <th th:text="#{ui.accessResources.access}"></th>
+                                    <th th:text="#{ui.accessResources.lastSeen}"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="resources-body"></tbody>
+                        </table>
+                    </div>
+                    <nav th:replace="~{fragments/pagination :: pager('resources', 20)}"></nav>
                 </section>
                 <section
                     id="access-registry-section"
@@ -661,7 +717,7 @@
             <div
                 id="foundation-labels"
                 hidden
-                th:attr="data-empty=#{ui.foundation.empty},data-edit=#{ui.foundation.edit},data-confirm=#{ui.foundation.confirm},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off}"
+                th:attr="data-empty=#{ui.foundation.empty},data-edit=#{ui.foundation.edit},data-confirm=#{ui.foundation.confirm},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off},data-public=#{ui.accessResources.public},data-protected=#{ui.accessResources.protected},data-reserved=#{ui.accessResources.reserved},data-menu=#{ui.accessResources.menu},data-api=#{ui.accessResources.api}"
             ></div>
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>

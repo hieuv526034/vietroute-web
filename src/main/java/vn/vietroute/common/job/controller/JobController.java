@@ -6,7 +6,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.UUID;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,8 +25,8 @@ import vn.vietroute.common.job.dto.request.RetryJobRequest;
 import vn.vietroute.common.job.dto.response.JobResponse;
 import vn.vietroute.common.job.model.JobStatus;
 import vn.vietroute.common.job.service.JobService;
-import vn.vietroute.common.web.response.ApiResponse;
 import vn.vietroute.common.web.response.ApiResponses;
+import vn.vietroute.common.web.response.ApiResult;
 
 @RestController
 @RequestMapping(Routes.JOBS)
@@ -43,7 +42,7 @@ public class JobController extends BaseController {
 
     @GetMapping
     @Operation(summary = "Danh sách job có phân trang", description = "Yêu cầu JOB_READ, không trả payload")
-    public ResponseEntity<ApiResponse<PageResponse<JobResponse>>> page(
+    public ApiResult<PageResponse<JobResponse>> page(
         @Valid PageRequest page,
         @Parameter(description = "Lọc trạng thái; bỏ trống để xem tất cả") @RequestParam(
             required = false
@@ -55,13 +54,13 @@ public class JobController extends BaseController {
 
     @GetMapping(Routes.BY_ID)
     @Operation(summary = "Xem trạng thái job", description = "Yêu cầu JOB_READ")
-    public ResponseEntity<ApiResponse<JobResponse>> find(@PathVariable UUID id, HttpServletRequest request) {
+    public ApiResult<JobResponse> find(@PathVariable UUID id, HttpServletRequest request) {
         return execute(SuccessCode.OK, request, () -> jobs.find(id));
     }
 
     @PostMapping(Routes.JOB_RETRY_ACTION)
     @Operation(summary = "Chạy lại job DEAD", description = "Yêu cầu JOB_RETRY và version hiện hành")
-    public ResponseEntity<ApiResponse<JobResponse>> retry(
+    public ApiResult<JobResponse> retry(
         @PathVariable UUID id,
         @Valid @RequestBody RetryJobRequest body,
         @AuthenticationPrincipal UserPrincipal actor,

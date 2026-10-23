@@ -8,6 +8,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -86,6 +87,14 @@ class AccessPolicyTest {
                 403,
                 mvc
                     .perform(get("/media").with(authentication(user)))
+                    .andReturn()
+                    .getResponse()
+                    .getStatus()
+            );
+            assertEquals(
+                403,
+                mvc
+                    .perform(head("/media").with(authentication(user)))
                     .andReturn()
                     .getResponse()
                     .getStatus()

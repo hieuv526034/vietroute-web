@@ -24,6 +24,39 @@
     const get = async (path) => (await app.api.get(base + path, { timeout: 8000 })).data.data;
     const canEdit = () => me?.permissions?.includes('ACCESS_UPDATE');
     const canCreate = () => me?.permissions?.includes('ACCESS_CREATE');
+    // Danh bạ phân trang tại DB; chỉ đọc metadata server, không render HTML từ chuỗi controller/Operation.
+    const resourcePager = window.VietRouteTable.pager('resources', {
+        onChange: (query) => renderResources(query).catch(app.failure),
+        busy: () => busy,
+    });
+    const renderResources = async (query = resourcePager.query) => {
+        const page = await window.VietRouteTable.readPage(
+            (params) => get('/resources?' + new URLSearchParams(params)),
+            query,
+        );
+        const body = node('resources-body');
+        body.replaceChildren();
+        node('resources-status').textContent = page.content.length ? '' : labels.empty;
+        for (const item of page.content) {
+            const row = document.createElement('tr');
+            const access = item.publicRoute ? labels.public : item.configurable ? labels.protected : labels.reserved;
+            for (const value of [
+                item.kind === 'MENU' ? labels.menu : labels.api,
+                item.target,
+                item.description,
+                access,
+                item.lastSeenAt
+                    ? new Date(item.lastSeenAt).toLocaleString(
+                          document.documentElement.lang === 'en' ? 'en-GB' : 'vi-VN',
+                      )
+                    : '—',
+            ])
+                row.append(text('td', value));
+            row.cells[1].title = item.handler;
+            body.append(row);
+        }
+        resourcePager.update(page);
+    };
     const renderRegistry = async () => {
         const values = await get('/registry/' + node('registry-kind').value),
             body = node('registry-body');
@@ -195,6 +228,7 @@
     node('registry-kind').addEventListener('change', () => renderRegistry().catch(app.failure));
     node('registry-refresh').addEventListener('click', () => renderRegistry().catch(app.failure));
     node('policies-refresh').addEventListener('click', () => renderPolicies().catch(app.failure));
+    node('resources-refresh').addEventListener('click', () => renderResources().catch(app.failure));
     app.api
         .get('/api/v1/auth/me')
         .then(async (response) => {
@@ -202,7 +236,7 @@
             node('registry-create').disabled = !canCreate();
             node('policies-create').disabled = !canCreate();
             node('policy-delete').disabled = !me.permissions.includes('ACCESS_DELETE');
-            await Promise.all([renderRegistry(), renderPolicies()]);
+            await Promise.all([renderRegistry(), renderPolicies(), renderResources()]);
         })
         .catch(app.failure);
 })();

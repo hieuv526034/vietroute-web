@@ -50,11 +50,13 @@ public class RootConfig {
         return Clock.systemUTC();
     }
 
+    /** Một nguồn cấu hình dùng chung giúp mọi Settings tuân cùng thứ tự ưu tiên OS/IDE rồi file local. */
     @Bean
     public ConfigurationEnvironment configurationEnvironment() {
         return new ConfigurationEnvironment();
     }
 
+    /** Đọc và validate cấu hình nền một lần, không in đối tượng chứa secret. */
     @Bean
     public AppSettings appSettings(ConfigurationEnvironment environment) {
         return new AppSettings(environment);
@@ -66,6 +68,7 @@ public class RootConfig {
         return new SupportedLocaleResolver();
     }
 
+    /** Nạp hai bundle UTF-8; không phụ thuộc locale của máy chạy hoặc tự dịch thông báo. */
     @Bean
     public MessageSource messageSource() {
         ReloadableResourceBundleMessageSource source = new ReloadableResourceBundleMessageSource();

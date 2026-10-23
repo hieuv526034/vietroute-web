@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,8 +18,8 @@ import vn.vietroute.common.monitoring.dto.response.ActivitySnapshot;
 import vn.vietroute.common.monitoring.dto.response.OnlineVisitorResponse;
 import vn.vietroute.common.monitoring.dto.response.RequestAnomalyResponse;
 import vn.vietroute.common.monitoring.service.ActivityService;
-import vn.vietroute.common.web.response.ApiResponse;
 import vn.vietroute.common.web.response.ApiResponses;
+import vn.vietroute.common.web.response.ApiResult;
 
 @RestController
 @Tag(
@@ -41,7 +40,7 @@ public class ActivityController extends BaseController {
         summary = "Nhịp hiện diện trình duyệt",
         description = "CSRF + quota vẫn bắt buộc; filter tự ghi định danh server, không nhận user/visitor từ body"
     )
-    public ResponseEntity<ApiResponse<Boolean>> heartbeat(HttpServletRequest request) {
+    public ApiResult<Boolean> heartbeat(HttpServletRequest request) {
         return execute(SuccessCode.OK, request, activity::enabled);
     }
 
@@ -50,7 +49,7 @@ public class ActivityController extends BaseController {
         summary = "Tổng quan online và request",
         description = "ADMIN + SYSTEM_READ; DB lỗi trả 503, không trả số 0 giả"
     )
-    public ResponseEntity<ApiResponse<ActivitySnapshot>> snapshot(HttpServletRequest request) {
+    public ApiResult<ActivitySnapshot> snapshot(HttpServletRequest request) {
         return execute(SuccessCode.OK, request, activity::snapshot);
     }
 
@@ -59,10 +58,7 @@ public class ActivityController extends BaseController {
         summary = "Phân trang trình duyệt online",
         description = "ADMIN + SYSTEM_READ; cửa sổ 3 phút, không chứa IP/cookie/token"
     )
-    public ResponseEntity<ApiResponse<PageResponse<OnlineVisitorResponse>>> online(
-        @Valid PageRequest page,
-        HttpServletRequest request
-    ) {
+    public ApiResult<PageResponse<OnlineVisitorResponse>> online(@Valid PageRequest page, HttpServletRequest request) {
         return execute(SuccessCode.OK, request, () -> activity.online(page));
     }
 
@@ -71,7 +67,7 @@ public class ActivityController extends BaseController {
         summary = "Tín hiệu request bất thường",
         description = "ADMIN + SYSTEM_READ; tối đa 100 phút/chủ thể trong 5 phút gần nhất, ngưỡng 401/403>=20,429>=10,5xx>=10 hoặc lượng request cấu hình"
     )
-    public ResponseEntity<ApiResponse<List<RequestAnomalyResponse>>> anomalies(HttpServletRequest request) {
+    public ApiResult<List<RequestAnomalyResponse>> anomalies(HttpServletRequest request) {
         return execute(SuccessCode.OK, request, activity::anomalies);
     }
 }

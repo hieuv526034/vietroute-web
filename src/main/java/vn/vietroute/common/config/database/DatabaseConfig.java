@@ -15,6 +15,7 @@ import vn.vietroute.common.jdbc.JdbcSchema;
 @Configuration
 public class DatabaseConfig {
 
+    /** Kiểm cấu hình JDBC và ngưỡng pool trước khi bean DataSource được sử dụng. */
     @Bean
     public DatabaseSettings databaseSettings(AppSettings settings, ConfigurationEnvironment environment) {
         return new DatabaseSettings(environment, settings.isProduction());
@@ -48,11 +49,13 @@ public class DatabaseConfig {
         return pool;
     }
 
+    /** Đóng gói tên schema đã validate; không dùng schema từ dữ liệu HTTP. */
     @Bean
     public JdbcSchema jdbcSchema(DatabaseSettings settings) {
         return new JdbcSchema(settings.getSchema());
     }
 
+    /** Mỗi connection mượn từ pool được đặt lại search_path để tránh dùng nhầm schema. */
     @Bean
     public JdbcConnectionFactory jdbcConnectionFactory(DataSource source, JdbcSchema schema) {
         return new JdbcConnectionFactory(source, schema);

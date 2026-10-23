@@ -18,22 +18,34 @@ import vn.vietroute.common.validation.StrongPasswordValidator;
 @Getter
 public final class AppSettings {
 
+    /** Chế độ production bật yêu cầu secret bền vững và cookie HTTPS mặc định. */
     private final boolean production;
 
+    /** Bật migration/seed tại startup; không có tác dụng trong Maven packaging. */
     private final boolean databaseInitEnabled;
 
+    /** Thu thập mapping sau khi servlet context sẵn sàng; mặc định đi cùng cờ migration startup. */
+    private final boolean accessSyncEnabled;
+
+    /** Cookie chỉ gửi qua HTTPS khi true; local HTTP dùng false. */
     private final boolean cookieSecure;
 
+    /** Tên admin chỉ dùng khi seed tài khoản mới, không đổi tên tài khoản đã có. */
     private final String bootstrapUsername;
 
+    /** Mật khẩu seed từ môi trường; không reset hash cũ hoặc ghi ra log. */
     private final String bootstrapPassword;
 
+    /** Khóa HMAC dùng ký/xác minh JWT, các node phải dùng cùng secret. */
     private final SecretKey jwtKey;
 
+    /** Issuer cố định được decoder kiểm để loại token của hệ thống khác. */
     private final String jwtIssuer = "vietroute";
 
+    /** Audience giới hạn token cho ứng dụng web này. */
     private final String jwtAudience = "vietroute-web";
 
+    /** JWT hết hạn sau 30 phút; chưa có refresh token. */
     private final Duration accessTokenLifetime = Duration.ofMinutes(30);
 
     public AppSettings(Function<String, String> source) {
@@ -44,6 +56,7 @@ public final class AppSettings {
         }
         production = environment.equals("production");
         databaseInitEnabled = values.flag(Env.DB_INIT_ENABLED, false);
+        accessSyncEnabled = values.flag(Env.ACCESS_SYNC_ENABLED, databaseInitEnabled);
         cookieSecure = values.flag(Env.COOKIE_SECURE, production);
         bootstrapUsername = values.text(Env.BOOTSTRAP_ADMIN_USERNAME, "admin");
         bootstrapPassword = values.text(Env.BOOTSTRAP_ADMIN_PASSWORD, "");

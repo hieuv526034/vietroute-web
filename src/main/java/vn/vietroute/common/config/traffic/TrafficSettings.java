@@ -9,20 +9,28 @@ import vn.vietroute.common.constant.ApplicationConstants.Env;
 @Getter
 public final class TrafficSettings {
 
+    /** Quota request mỗi phút theo chủ thể và node khi dùng memory store; mặc định 300. */
     private final int requestsPerMinute;
 
+    /** Quota thử đăng nhập mỗi phút, mặc định 20; khác khóa tài khoản do sai mật khẩu. */
     private final int loginsPerMinute;
 
+    /** Trần request đang xử lý trên mỗi node, mặc định 16, vượt trần trả 503. */
     private final int maxConcurrent;
 
+    /** Trần xử lý đăng nhập/BCrypt đồng thời, mặc định 2 để giữ CPU/RAM. */
     private final int maxConcurrentLogins;
 
+    /** Trần byte JSON/request thông thường, mặc định 65536; upload ảnh có giới hạn riêng. */
     private final int maxBodyBytes;
 
+    /** Trần số chủ thể giữ trong quota memory, mặc định 10000 để hạn chế RAM. */
     private final int maxKeys;
 
+    /** Adapter cũ tùy chọn; rỗng dùng memory theo node, hiện chưa triển khai Redis. */
     private final String redisUrl;
 
+    /** CIDR proxy được tin cậy khi đọc IP chuyển tiếp; rỗng dùng địa chỉ kết nối trực tiếp. */
     private final String proxyCidrs;
 
     public TrafficSettings(Function<String, String> source) {

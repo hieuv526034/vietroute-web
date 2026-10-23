@@ -6,7 +6,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,8 +29,8 @@ import vn.vietroute.common.constant.ApplicationConstants.CatalogType;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
-import vn.vietroute.common.web.response.ApiResponse;
 import vn.vietroute.common.web.response.ApiResponses;
+import vn.vietroute.common.web.response.ApiResult;
 
 /** Controller danh mục làm ví dụ hoàn chỉnh để các thành viên triển khai module sau theo cùng chuẩn. */
 @RestController
@@ -50,7 +49,7 @@ public class CatalogController extends BaseController {
         summary = "Tra cứu danh mục",
         description = "Công khai, chỉ trả mục đang hoạt động. page bắt đầu từ 0, size tối đa 100. Tên trả theo locale."
     )
-    public ResponseEntity<ApiResponse<PageResponse<CatalogResponse>>> page(
+    public ApiResult<PageResponse<CatalogResponse>> page(
         @PathVariable CatalogType type,
         @Valid @ModelAttribute PageRequest page,
         HttpServletRequest request
@@ -65,7 +64,7 @@ public class CatalogController extends BaseController {
         description = "Yêu cầu CATALOG_CREATE (hoặc CATALOG_WRITE tương thích). Server tự sinh mã nếu null; tên vi/en bắt buộc; code trùng trả 409; audit lấy từ principal."
     )
     @ResponseStatus(HttpStatus.CREATED)
-    public ResponseEntity<ApiResponse<CatalogResponse>> create(
+    public ApiResult<CatalogResponse> create(
         @Valid @RequestBody CatalogCreateRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
@@ -81,7 +80,7 @@ public class CatalogController extends BaseController {
         summary = "Đọc danh mục quản trị",
         description = "Yêu cầu CATALOG_READ; xem cả bản đã xóa mềm, không thay đổi API tra cứu công khai"
     )
-    public ResponseEntity<ApiResponse<CatalogResponse>> find(
+    public ApiResult<CatalogResponse> find(
         @PathVariable @Min(value = 1, message = "{validation.invalid}") long id,
         HttpServletRequest request
     ) {
@@ -93,7 +92,7 @@ public class CatalogController extends BaseController {
         summary = "Sửa danh mục",
         description = "Yêu cầu CATALOG_UPDATE (hoặc CATALOG_WRITE tương thích); version cũ trả COM008/409"
     )
-    public ResponseEntity<ApiResponse<CatalogResponse>> update(
+    public ApiResult<CatalogResponse> update(
         @PathVariable @Min(value = 1, message = "{validation.invalid}") long id,
         @Valid @RequestBody CatalogUpdateRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
@@ -107,7 +106,7 @@ public class CatalogController extends BaseController {
         summary = "Xóa mềm danh mục",
         description = "Yêu cầu CATALOG_DELETE, body chứa version; WRITE không có quyền xóa. Bản đã xóa biến mất khỏi tra cứu công khai, audit vẫn giữ."
     )
-    public ResponseEntity<ApiResponse<CatalogResponse>> delete(
+    public ApiResult<CatalogResponse> delete(
         @PathVariable @Min(value = 1, message = "{validation.invalid}") long id,
         @Valid @RequestBody CatalogDeleteRequest body,
         @AuthenticationPrincipal UserPrincipal actor,

@@ -27,6 +27,7 @@ import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -44,6 +45,7 @@ import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.web.response.ApiResponse;
+import vn.vietroute.common.web.response.ApiResult;
 import vn.vietroute.common.web.routing.WebRoutePolicy;
 
 /** Tạo OpenAPI từ mapping Spring MVC và @Operation/@Schema, không đưa Spring Boot vào WAR. */
@@ -203,7 +205,15 @@ public class OpenApiController {
                             .addSecurityItem(new SecurityRequirement().addList("cookieAuth"));
                     }
                     Type returnType = method.getGenericReturnType();
-                    if (returnType instanceof ParameterizedType type && type.getRawType() == ResponseEntity.class) {
+                    if (returnType instanceof ParameterizedType type && type.getRawType() == ApiResult.class) {
+                        // ApiResult<T> rút gọn chữ ký Java; hợp đồng JSON vẫn là ApiResponse<T> đầy đủ.
+                        returnType = ResolvableType.forClassWithGenerics(
+                            ApiResponse.class,
+                            ResolvableType.forType(type.getActualTypeArguments()[0])
+                        ).getType();
+                    } else if (
+                        returnType instanceof ParameterizedType type && type.getRawType() == ResponseEntity.class
+                    ) {
                         returnType = type.getActualTypeArguments()[0];
                     }
                     // @ResponseStatus mô tả HTTP thành công; ResponseEntity của base vẫn quyết định status khi lỗi.

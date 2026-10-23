@@ -12,15 +12,19 @@ import vn.vietroute.common.constant.ApplicationConstants.Http;
 /** Metrics dùng token riêng, không phụ thuộc DB/JWT; không cung cấp getter hoặc log token. */
 public final class MonitoringSettings {
 
+    /** Chỉ giữ SHA-256 token scrape để so sánh constant-time; không cung cấp getter. */
     private final byte[] tokenDigest;
 
     @Getter
+    /** Token hợp lệ không rỗng mới mở metrics; cookie/JWT không thay thế token này. */
     private final boolean scrapeEnabled;
 
     @Getter
+    /** Probe DB chủ động, mặc định false để không ping giữ Neon thức. */
     private final boolean databaseEnabled;
 
     @Getter
+    /** Chu kỳ UI đọc trạng thái, đơn vị giây, mặc định 30, tối thiểu 15. */
     private final int pollSeconds;
 
     public MonitoringSettings(Function<String, String> source) {

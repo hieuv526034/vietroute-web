@@ -1637,3 +1637,26 @@ body:has(dialog[open]) {
         min-height: 40px;
     }
 }
+
+/* Danh bạ có đường dẫn dài: giữ cột đọc được và chỉ cuộn trong bảng trên màn hình hẹp. */
+.access-resources-table {
+    min-width: 960px;
+}
+
+.access-resources-table th:first-child {
+    width: 110px;
+}
+
+.access-resources-table td:nth-child(2) {
+    min-width: 270px;
+    overflow-wrap: anywhere;
+}
+
+.access-resources-table td:nth-child(3) {
+    min-width: 220px;
+}
+
+.access-resources-table td:nth-child(4),
+.access-resources-table td:nth-child(5) {
+    min-width: 160px;
+}
