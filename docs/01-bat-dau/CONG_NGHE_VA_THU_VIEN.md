@@ -2,7 +2,7 @@
 
 Kho tài liệu Markdown của nhóm là thư mục **docs/** trong Git; cửa vào duy nhất là [mục lục và lộ trình đọc](../README.md). Trang này dùng để tra công nghệ, giải thích lựa chọn khi trao đổi/bảo vệ đồ án và tìm code minh họa. Đọc cùng [tổng quan kiến trúc](TONG_QUAN_HE_THONG.md), [luồng một request](../02-phat-trien/LUONG_XU_LY_BASE.md) và [tiến độ thực tế](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
 
-Đối chiếu source ngày **24/10/2026**, sau PR #41. Phiên bản bên dưới lấy từ [pom.xml](../../pom.xml), [Dockerfile](../../Dockerfile), [Maven Wrapper](../../.mvn/wrapper/maven-wrapper.properties) và [package-lock.json](../../package-lock.json), không phải tuyên bố các thư viện đều là bản mới nhất. Khi nâng dependency, cập nhật bảng cùng PR và kiểm tương thích trước merge. Dependency gián tiếp lấy theo BOM; dùng `mvnw dependency:tree` khi cần đối chiếu đầy đủ, không tự khóa thêm phiên bản chỉ để khớp tài liệu.
+Đối chiếu source ngày **24/10/2026**, sau PR #44. Phiên bản bên dưới lấy từ [pom.xml](../../pom.xml), [Dockerfile](../../Dockerfile), [Maven Wrapper](../../.mvn/wrapper/maven-wrapper.properties) và [package-lock.json](../../package-lock.json), không phải tuyên bố các thư viện đều là bản mới nhất. Khi nâng dependency, cập nhật bảng cùng PR và kiểm tương thích trước merge. Dependency gián tiếp lấy theo BOM; dùng `mvnw dependency:tree` khi cần đối chiếu đầy đủ, không tự khóa thêm phiên bản chỉ để khớp tài liệu.
 
 ## 1. Giới thiệu dự án trong một phút
 
@@ -46,7 +46,7 @@ Source giữ Spring MVC/JDBC thuần; không có Spring Boot, Spring Data hoặc
 | PostgreSQL JDBC driver | 42.7.14 | Mở connection, PreparedStatement/ResultSet; chuyển Timestamp/Instant tại biên JDBC |
 | HikariCP | 7.1.0 | Pool nghiệp vụ mặc định 4 connection/node; journal có pool riêng tối đa 1/node |
 | Neon | Dịch vụ PostgreSQL production do chủ dự án cấu hình | DB `neondb`; schema cấu hình một nơi qua `VIETROUTE_DB_SCHEMA`, mặc định vietroute; credential ngoài Git |
-| Migration/seed tự quản lý | V001–V011, checksum/history và transaction lock | Chạy lúc startup khi bật initializer; giữ mật khẩu cũ, không chạy khi Maven package |
+| Migration/seed tự quản lý | V001–V012, checksum/history và transaction lock | Chạy lúc startup khi bật initializer; giữ mật khẩu cũ, không chạy khi Maven package |
 | Job/outbox PostgreSQL | Code dự án, lease/ACK/NACK/retry/idempotency | Enqueue cùng transaction; nhiều worker/node chia việc qua SKIP LOCKED; handler cần chịu việc chạy lại |
 | Executor JVM | Số thread/lease/poll cấu hình qua JobSettings | Giới hạn worker đang xử lý, không tạo thread mới cho mỗi request; không tăng thread/pool vô hạn |
 | Nhật ký API | PostgreSQL, retention 7 ngày, mục tiêu 10.000 dòng | Snapshot được whitelist, query/paging trên DB; không queue/cache lịch sử trong RAM; có counter ghi lỡ khi DB/slot lỗi |
