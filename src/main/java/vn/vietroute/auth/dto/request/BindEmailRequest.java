@@ -1,5 +1,6 @@
 package vn.vietroute.auth.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -23,5 +24,6 @@ public class BindEmailRequest extends BaseRequest {
     @NotBlank(message = "{validation.required}")
     @Size(max = 72, message = "{validation.length}")
     @Schema(description = "Mật khẩu hiện tại để xác nhận chủ tài khoản")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String currentPassword;
 }

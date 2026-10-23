@@ -1,5 +1,6 @@
 package vn.vietroute.auth.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -25,5 +26,6 @@ public class ActivationRequest extends BaseRequest {
     @NotBlank(message = "{validation.required}")
     @Pattern(regexp = Regex.ACCOUNT_TOKEN, message = "{validation.invalid}")
     @Schema(description = "Mã ngẫu nhiên 43 ký tự trong email, không phải JWT")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String token;
 }

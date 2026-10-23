@@ -1,5 +1,6 @@
 package vn.vietroute.auth.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -26,10 +27,12 @@ public class ResetPasswordRequest extends BaseRequest {
     @NotBlank(message = "{validation.required}")
     @Pattern(regexp = Regex.ACCOUNT_TOKEN, message = "{validation.invalid}")
     @Schema(description = "Mã đặt lại một lần, hết hạn sau 15 phút")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String token;
 
     @NotBlank(message = "{validation.required}")
     @StrongPassword
     @Schema(description = "Mật khẩu mới không trùng hiện tại và hai mật khẩu trước")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String newPassword;
 }

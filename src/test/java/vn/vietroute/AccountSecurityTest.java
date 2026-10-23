@@ -21,6 +21,8 @@ import org.springframework.core.io.FileSystemResourceLoader;
 import org.springframework.mock.web.MockServletContext;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
+import vn.vietroute.auth.dto.request.RegisterRequest;
+import vn.vietroute.auth.dto.request.ResetPasswordRequest;
 import vn.vietroute.auth.security.AccountSecrets;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.application.AppSettings;
@@ -54,6 +56,23 @@ class AccountSecurityTest {
         tampered[tampered.length - 1] ^= 1;
         assertThrows(GeneralSecurityException.class, () -> first.decrypt(Base64.getEncoder().encodeToString(tampered)));
         assertEquals(64, first.hash(token).length());
+    }
+
+    @Test
+    void requestSecretsAreWriteOnlyEvenIfDtoIsSerializedAccidentally() throws Exception {
+        var json = new ObjectMapper();
+        var register = new RegisterRequest();
+        register.setPassword("UnitOnly@12345");
+        register.setUsername("fixture");
+        assertFalse(json.writeValueAsString(register).contains("UnitOnly"));
+        var reset = json.readValue(
+            "{\"email\":\"unit@example.invalid\",\"token\":\"abc\",\"newPassword\":\"UnitOnly@12345\"}",
+            ResetPasswordRequest.class
+        );
+        assertEquals("abc", reset.getToken());
+        String result = json.writeValueAsString(reset);
+        assertFalse(result.contains("abc"));
+        assertFalse(result.contains("UnitOnly"));
     }
 
     @Test
