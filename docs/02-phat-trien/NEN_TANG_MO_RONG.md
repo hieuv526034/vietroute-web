@@ -4,9 +4,9 @@ Cập nhật 22/10/2026, phụ trách hieuv526034. Đọc cùng [luồng base](L
 
 ## Kiến trúc và giới hạn chịu tải
 
-Giai đoạn hiện tại chưa dùng Kafka/Redis: quota mặc định memory theo từng node. Redis adapter ở phần dưới chỉ là khả năng tương thích tùy chọn, không phải dịch vụ đã bật. Đọc [tổng quan](TONG_QUAN_HE_THONG.md) và [giám sát/vận hành](GIAM_SAT_VA_VAN_HANH.md) cho cấu trúc job/mail mới và metrics/dashboard/cảnh báo.
+Giai đoạn hiện tại chưa dùng Kafka/Redis: quota mặc định memory theo từng node. Redis adapter ở phần dưới chỉ là khả năng tương thích tùy chọn, không phải dịch vụ đã bật. Đọc [tổng quan](../01-bat-dau/TONG_QUAN_HE_THONG.md) và [giám sát/vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md) cho cấu trúc job/mail mới và metrics/dashboard/cảnh báo.
 
-Giữ Java 17+ (Docker Java 21), **Spring MVC 6/Tomcat 10.1** theo quy ước chủ dự án vừa xác nhận; không có Boot/ORM. Không dùng bản milestone/snapshot để có nhãn “mới nhất”. Spring 6.2.19/Security 6.5.11 vẫn có rủi ro vòng đời đã ghi tại [RA_SOAT_BASE.md](RA_SOAT_BASE.md); yêu cầu stack hiện tại chưa cho phép kết luận đã dùng dòng framework OSS còn hỗ trợ. Bổ sung Lettuce 7.9.0.RELEASE và Angus Mail 2.0.5 bản stable từ Maven Central.
+Giữ Java 17+ (Docker Java 21), **Spring MVC 6/Tomcat 10.1** theo quy ước chủ dự án vừa xác nhận; không có Boot/ORM. Không dùng bản milestone/snapshot để có nhãn “mới nhất”. Spring 6.2.19/Security 6.5.11 vẫn có rủi ro vòng đời đã ghi tại [RA_SOAT_BASE.md](../99-luu-tru/RA_SOAT_BASE.md); yêu cầu stack hiện tại chưa cho phép kết luận đã dùng dòng framework OSS còn hỗ trợ. Bổ sung Lettuce 7.9.0.RELEASE và Angus Mail 2.0.5 bản stable từ Maven Central.
 
 Luồng HTTP: connector giới hạn tài nguyên → TrafficGuardFilter → CSRF/JWT → controller/base → service kiểm quyền chức năng → repository/transaction → response. Luồng việc nền: transaction lưu system_jobs → commit → poller nhận lease → handler chạy ngoài transaction nhận việc → ACK hoặc retry/dead.
 

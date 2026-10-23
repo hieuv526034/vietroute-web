@@ -1,8 +1,10 @@
 # Rà soát nền tảng trước khi triển khai nghiệp vụ
 
+> Bản rà soát lịch sử; trạng thái hiện tại xem [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md), không suy ra tính năng còn thiếu từ danh sách cũ bên dưới.
+
 Ngày rà soát: **22/10/2026**. Người phụ trách: **hieuv526034**. Phạm vi: common/auth/catalog mẫu, cấu hình Java/JDBC/Thymeleaf, schema, Swagger, Docker và CI/Render. Không kiểm tra hoặc sửa dữ liệu Neon production.
 
-Đây là kết quả tại PR #7. Bổ sung sau đó ở [nền tảng mở rộng](NEN_TANG_MO_RONG.md) và [schema/quyền theo hành động](SCHEMA_VA_PHAN_QUYEN.md): schema đã cấu hình tập trung, catalog đã có sửa/xóa mềm cùng optimistic version và quyền READ/CREATE/UPDATE/DELETE riêng.
+Đây là kết quả tại PR #7. Bổ sung sau đó ở [nền tảng mở rộng](../02-phat-trien/NEN_TANG_MO_RONG.md) và [schema/quyền theo hành động](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md): schema đã cấu hình tập trung, catalog đã có sửa/xóa mềm cùng optimistic version và quyền READ/CREATE/UPDATE/DELETE riêng.
 
 ## Đánh giá bộ công nghệ
 
@@ -55,4 +57,4 @@ Kết quả Docker/PostgreSQL phải xem check **Build and check production cont
 5. `mustChangePassword` hiện là cờ hướng dẫn đổi mật khẩu trên tài khoản; chưa phải chính sách chặn mọi API khi chưa đổi. Nếu yêu cầu bắt buộc, cần thống nhất các endpoint được phép trước khi thêm kiểm soát.
 6. Khi đưa vào sử dụng thực: nghiệm thu login/danh mục trên Render, quyền DB và quy trình backup/restore. `/health` chỉ kiểm web availability; không kiểm DB. Cấu hình production và kiểm thử vận hành không được suy ra từ việc build thành công.
 
-Thứ tự/người phụ trách nghiệp vụ xem [PHAN_CONG.md](PHAN_CONG.md); luồng học base xem [LUONG_XU_LY_BASE.md](LUONG_XU_LY_BASE.md).
+Thứ tự/người phụ trách nghiệp vụ xem [PHAN_CONG.md](../05-ke-hoach/PHAN_CONG.md); luồng học base xem [LUONG_XU_LY_BASE.md](../02-phat-trien/LUONG_XU_LY_BASE.md).

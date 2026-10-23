@@ -1,10 +1,8 @@
 # Làm nhóm và ghi nhận đóng góp
 
-Người mới theo [lộ trình đọc tài liệu](docs/README.md) trước khi nhận việc. Thiết lập [Code Style/EditorConfig và nút Format trong IntelliJ](docs/FORMAT_INTELLIJ.md); mọi lượt sửa source phải chốt format/check trước commit.
+Người mới theo [lộ trình đọc tài liệu](docs/README.md) trước khi nhận việc. Thiết lập [Code Style/EditorConfig và nút Format trong IntelliJ](docs/01-bat-dau/FORMAT_INTELLIJ.md); mọi lượt sửa source phải chốt format/check trước commit.
 
-Khi đổi máy hoặc quay lại task đang dở, theo [Bàn giao và tiếp tục](docs/BAN_GIAO_VA_TIEP_TUC.md). Ghi quyết định dùng lại, trạng thái và bằng chứng vào docs/PR; source chưa push hoặc cuộc chat trên máy cũ không phải bản bàn giao đầy đủ.
-
-Dùng AI theo [quy trình chung](docs/QUY_TRINH_AI.md): kiểm nguồn đã đọc trước khi sửa, giữ quy tắc ở AGENTS và chốt formatter/check thay vì tạo bộ quy tắc riêng theo công cụ. Stage file mới sau review, chạy `npm run check:rules` và `npm run check:docs` trước bàn giao; CI chạy lại theo phạm vi thay đổi.
+Khi dùng AI, chuyển máy hoặc quay lại task đang dở, theo [AI và bàn giao](docs/06-ai-va-ban-giao/AI_VA_BAN_GIAO.md). Kiểm nguồn đã đọc trước khi sửa, giữ quy tắc ở AGENTS và quyết định/trạng thái/bằng chứng ở docs/PR; không dựa riêng vào chat hoặc source chưa push. Stage file mới sau review, chạy `npm run check:rules` và `npm run check:docs` cùng formatter trước bàn giao; CI chạy lại theo phạm vi thay đổi.
 
 ## 1. Tác giả commit và tài khoản đăng nhập khác nhau
 
@@ -12,7 +10,7 @@ Git lưu Author (tác giả) và Committer (người tạo commit). GitHub liên
 
 Mỗi người thêm và xác minh email của mình trong GitHub → Settings → Emails. Nếu dùng chế độ ẩn email, lấy đúng địa chỉ `noreply` từ trang Settings của chính tài khoản đó; không tự đoán địa chỉ.
 
-Username GitHub và email của bốn thành viên được chủ dự án cung cấp ngày 22/10/2026 và lưu tại [Thông tin thành viên](docs/PHAN_CONG.md#thông-tin-thành-viên). Dùng đúng bảng này khi cấu hình Git hoặc tham chiếu thành viên trong Issue/PR. Tài khoản của Bang là `BangPhamIT`, email `bangpham.it@gmail.com`; tiền tố nhánh cũ `bangpham.it/` là nhãn đã có, không phải username.
+Username GitHub và email của bốn thành viên được chủ dự án cung cấp ngày 22/10/2026 và lưu tại [Thông tin thành viên](docs/05-ke-hoach/PHAN_CONG.md#thông-tin-thành-viên). Dùng đúng bảng này khi cấu hình Git hoặc tham chiếu thành viên trong Issue/PR. Tài khoản của Bang là `BangPhamIT`, email `bangpham.it@gmail.com`; tiền tố nhánh cũ `bangpham.it/` là nhãn đã có, không phải username.
 
 ## 2. Cấu hình một lần sau khi clone, trên máy từng người
 
@@ -48,9 +46,9 @@ git push -u origin hieuv526034/tracking-trip-progress
 
 Lệnh `git add` trên minh họa các thư mục sẽ được tạo khi có chức năng; chỉ thêm đường dẫn đã tồn tại và đúng thay đổi của mình. CSS/JS/SQL/tài liệu liên quan cũng được thêm rõ ràng. Không thêm `target/`, mật khẩu hoặc file IDE.
 
-Sau đó mở Pull request vào `main`, mô tả Issue, chức năng, cách kiểm tra và hình ảnh nếu có giao diện. Một thành viên khác review. Chỉ merge khi build và luồng liên quan chạy được. Nhánh theo mẫu `<người-phụ-trách>/<chức-năng>`, dùng đúng tiền tố trong `docs/PHAN_CONG.md`, không dùng `codex/`. Không commit source trực tiếp lên `main`. Nhánh nên gắn với chức năng nhỏ, không giữ một nhánh khổng lồ suốt 2 tuần.
+Sau đó mở Pull request vào `main`, mô tả Issue, chức năng, cách kiểm tra và hình ảnh nếu có giao diện. Một thành viên khác review. Chỉ merge khi build và luồng liên quan chạy được. Nhánh theo mẫu `<người-phụ-trách>/<chức-năng>`, dùng đúng tiền tố trong `docs/05-ke-hoach/PHAN_CONG.md`, không dùng `codex/`. Không commit source trực tiếp lên `main`. Nhánh nên gắn với chức năng nhỏ, không giữ một nhánh khổng lồ suốt 2 tuần.
 
-`npm ci` chỉ cần khi cài môi trường hoặc lockfile thay đổi. Format chạy ở máy phát triển; Docker/Render không cài npm. Giữ khoảng cách giữa field/method/khối nghiệp vụ; tên lớp dùng `DTO` viết hoa, các thời điểm Java dùng `Instant`, theo quy ước trong `docs/QUY_UOC_PHAT_TRIEN.md`.
+`npm ci` chỉ cần khi cài môi trường hoặc lockfile thay đổi. Format chạy ở máy phát triển; Docker/Render không cài npm. Giữ khoảng cách giữa field/method/khối nghiệp vụ; tên lớp dùng `DTO` viết hoa, các thời điểm Java dùng `Instant`, theo quy ước trong `docs/02-phat-trien/QUY_UOC_PHAT_TRIEN.md`.
 
 Nếu `git pull --ff-only` báo lịch sử khác nhau, dừng và đọc tình trạng; không dùng force push hoặc reset để bỏ thay đổi chưa hiểu. Trước khi bắt đầu chức năng mới, lấy `main` mới nhất.
 

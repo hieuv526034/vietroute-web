@@ -1,5 +1,7 @@
 # Tạo repository GitHub chung
 
+> Tài liệu khởi tạo ban đầu, không chạy lại trên repo hiện có. Quy trình làm việc hiện tại nằm ở [CONTRIBUTING](../../CONTRIBUTING.md) và [mục lục docs](../README.md).
+
 ## 1. Chủ repository tạo repo
 
 Trên GitHub tạo repository tên **vietroute-web**, mô tả: “Website quản lý nhà xe và đặt chỗ xe khách liên tỉnh bằng Spring MVC, Thymeleaf và JDBC thuần”.
@@ -12,7 +14,7 @@ Không cần chia thành bốn repo. Một repository chung và các nhánh ch�
 
 Repository → Settings → Collaborators → Add people. Dùng username GitHub thật của từng người hoặc email có thể mời được; họ phải nhận lời mời. Người tạo repo đã là owner, không cần mời lại chính mình.
 
-Username GitHub do chủ dự án cung cấp: `anhhoang104`, `BangPhamIT`, `hiencoi250404-design`, `hieuv526034` (owner). Email tương ứng được lưu tại [Thông tin thành viên](PHAN_CONG.md#thông-tin-thành-viên); dùng bảng này để tránh lấy nhầm email từ username.
+Username GitHub do chủ dự án cung cấp: `anhhoang104`, `BangPhamIT`, `hiencoi250404-design`, `hieuv526034` (owner). Email tương ứng được lưu tại [Thông tin thành viên](../05-ke-hoach/PHAN_CONG.md#thông-tin-thành-viên); dùng bảng này để tránh lấy nhầm email từ username.
 
 Mời vào repo cấp quyền cộng tác; chưa tạo commit hoặc ghi nhận một chức năng đã hoàn thành cho người đó. Không cần và không chia sẻ mật khẩu GitHub giữa các thành viên.
 
@@ -47,11 +49,11 @@ Xác minh email đó trong GitHub Settings → Emails, rồi làm theo CONTRIBUT
 ## 5. Thiết lập nhóm sau khi push
 
 - Dùng `main` làm default branch.
-- Tạo Issue theo docs/PHAN_CONG.md và assign đúng username đã nhận lời mời.
+- Tạo Issue theo docs/05-ke-hoach/PHAN_CONG.md và assign đúng username đã nhận lời mời.
 - Dùng PR vào main; ưu tiên Create a merge commit để giữ lịch sử commit gốc dễ theo dõi.
 - Nếu gói GitHub và loại repo cho phép ruleset/branch protection, chặn force push và yêu cầu review/build thành công. Dù không có tính năng này, nhóm vẫn có thể thống nhất quy trình PR.
 - Workflow build có sẵn trong `.github/workflows/build.yml`; GitHub Actions có thể cần bật/được cho phép theo thiết lập tài khoản hoặc tổ chức.
-- Username/email đã có trong `docs/PHAN_CONG.md`; chưa cấu hình CODEOWNERS tự động. Khi thiết lập quyền review, dùng đúng username và kiểm tra thành viên đã có quyền cộng tác.
+- Username/email đã có trong `docs/05-ke-hoach/PHAN_CONG.md`; chưa cấu hình CODEOWNERS tự động. Khi thiết lập quyền review, dùng đúng username và kiểm tra thành viên đã có quyền cộng tác.
 
 ## Nguồn
 

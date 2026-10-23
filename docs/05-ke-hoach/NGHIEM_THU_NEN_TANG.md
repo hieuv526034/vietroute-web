@@ -1,6 +1,6 @@
 # Nghiệm thu nền tảng trước nghiệp vụ
 
-Cập nhật 23/10/2026, đối chiếu main tại `d722089` sau [PR #30](https://github.com/hieuv526034/vietroute-web/pull/30). Phạm vi là source nền tảng và UI quản trị trên Spring MVC/JDBC hiện tại. Đọc cùng [quản trị hệ thống](QUAN_TRI_HE_THONG.md), [tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) và [vận hành](GIAM_SAT_VA_VAN_HANH.md). Kết quả trên nhánh chức năng chỉ trở thành bản bàn giao main sau khi PR qua CI và merge.
+Cập nhật 23/10/2026, đối chiếu main tại `d722089` sau [PR #30](https://github.com/hieuv526034/vietroute-web/pull/30). Phạm vi là source nền tảng và UI quản trị trên Spring MVC/JDBC hiện tại. Đọc cùng [quản trị hệ thống](../04-van-hanh/QUAN_TRI_HE_THONG.md), [tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) và [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md). Kết quả trên nhánh chức năng chỉ trở thành bản bàn giao main sau khi PR qua CI và merge.
 
 ## Các màn và chức năng đã có trong source
 
@@ -18,7 +18,7 @@ Cập nhật 23/10/2026, đối chiếu main tại `d722089` sau [PR #30](https:
 
 UI dùng layout xanh chung, menu không gạch chân ở trạng thái thường/hover, nền đánh dấu trang hiện tại và focus bàn phím. Menu đóng bằng Escape hoặc click ngoài. Bảng có vùng cuộn, ma trận quyền giữ header khi cuộn; form/loading/rỗng/lỗi dùng thông báo chung. Trang vận hành thu gọn cỡ tiêu đề, bảng và khoảng cách; không dùng cỡ chữ hero cho công cụ quản trị.
 
-Các trang nhiều nhóm đã chuyển sang tab và form ghi sang modal: xem [quy ước tab/modal](TAB_VA_MODAL.md). Danh mục/Tổng quan và Quyền role/Vai trò tài khoản tách riêng; cấu hình có sáu tab chỉ đọc. Form thêm/sửa danh mục, gán quyền/role, upload và đổi mật khẩu không còn chiếm cố định trên trang chính.
+Các trang nhiều nhóm đã chuyển sang tab và form ghi sang modal: xem [quy ước tab/modal](../03-giao-dien/QUY_UOC_UI.md). Danh mục/Tổng quan và Quyền role/Vai trò tài khoản tách riêng; cấu hình có sáu tab chỉ đọc. Form thêm/sửa danh mục, gán quyền/role, upload và đổi mật khẩu không còn chiếm cố định trên trang chính.
 
 ## Luồng danh mục để thành viên học theo
 
@@ -35,7 +35,7 @@ Các trang nhiều nhóm đã chuyển sang tab và form ghi sang modal: xem [qu
 `traceId` là mã đối chiếu một HTTP request, có trong JSON và header `X-Request-ID`. UI hiển thị mã lỗi ổn định như `[COM008]` cùng thông báo đã dịch và hướng dẫn gửi mã yêu cầu cho quản trị viên. Nó không phải mã đăng nhập, mật khẩu hay kết luận nguyên nhân lỗi.
 
 - IntelliJ: Console của đúng lần Run → tìm nguyên traceId.
-- Trong app: ADMIN có SYSTEM_READ → Hệ thống → [Nhật ký API](NHAT_KY_API_VA_DEBUG.md), lọc traceId → modal Request/Response/Xuất debug. Lịch sử PostgreSQL dùng chung, mặc định 7 ngày; record đã commit còn sau restart, chỉ có snapshot đã lọc từ lúc triển khai V005.
+- Trong app: ADMIN có SYSTEM_READ → Hệ thống → [Nhật ký API](../04-van-hanh/NHAT_KY_API_VA_DEBUG.md), lọc traceId → modal Request/Response/Xuất debug. Lịch sử PostgreSQL dùng chung, mặc định 7 ngày; record đã commit còn sau restart, chỉ có snapshot đã lọc từ lúc triển khai V005.
 - Render: service → Logs → tìm traceId trong đúng khoảng thời gian/node. Chưa có màn xem log tập trung trong app.
 - Trình duyệt: DevTools → Network → request lỗi → Response, xem `code`, `message`, `errors`; không chia sẻ cookie/token hoặc nội dung mật khẩu.
 
@@ -43,12 +43,12 @@ Log HTTP chậm/5xx được lấy mẫu tối đa một dòng/giây/node; khôn
 
 ## Bằng chứng kiểm tra và cửa vào nghiệp vụ
 
-Mốc mới nhất PR #29/#30: 91 test Java, 10 test Node, format và tài liệu đạt; ba check CI của PR #30 đã thành công, gồm container Docker và auth/bootstrap trên PostgreSQL tạm. Bảng/modal có phân trang chung, cột thao tác 96px, nút bên phải và validation cạnh field; Home/login chọn đích theo principal. Export cURL có URL thực nhưng giữ token placeholder. Menu con cách nhau 6px, bộ lọc danh mục cùng hàng nút và dấu `*` đỏ hiện ngay khi mở modal. Kiểm vi/en, desktop/mobile 390px, submit trống và reset không nhân đôi dấu bằng HTML thật + API fixture; không dùng Neon để kiểm giao diện. Xem [quy tắc UI và ảnh](BANG_VA_VALIDATION_UI.md).
+Mốc mới nhất PR #29/#30: 91 test Java, 10 test Node, format và tài liệu đạt; ba check CI của PR #30 đã thành công, gồm container Docker và auth/bootstrap trên PostgreSQL tạm. Bảng/modal có phân trang chung, cột thao tác 96px, nút bên phải và validation cạnh field; Home/login chọn đích theo principal. Export cURL có URL thực nhưng giữ token placeholder. Menu con cách nhau 6px, bộ lọc danh mục cùng hàng nút và dấu `*` đỏ hiện ngay khi mở modal. Kiểm vi/en, desktop/mobile 390px, submit trống và reset không nhân đôi dấu bằng HTML thật + API fixture; không dùng Neon để kiểm giao diện. Xem [quy tắc UI và ảnh](../03-giao-dien/QUY_UOC_UI.md).
 
 Các bằng chứng sau giữ nguyên theo mốc nhật ký API trước đó, không phải số test hiện tại:
 
 - Maven verify đợt nhật ký API: 85 test Java đạt, gồm mô hình root/servlet context tách biệt như WAR; không nạp `.env` production. Production package/kiểm WAR đạt và bỏ cả test compile/run; Docker CI phải đạt trước merge.
-- 5 test Node đạt (Swagger/CSRF và cURL/Postman). Test nhật ký kiểm permission, TTL/capacity/ghi đồng thời, omission secret/PII và SQLState cả trước controller. File tải từ UI hợp lệ theo schema Postman v2.1; UI 390px không tràn ngang và Escape trả focus đúng. Docker CI bổ sung request thực trên DB tạm. Chi tiết phạm vi trong [hướng dẫn nhật ký](NHAT_KY_API_VA_DEBUG.md).
+- 5 test Node đạt (Swagger/CSRF và cURL/Postman). Test nhật ký kiểm permission, TTL/capacity/ghi đồng thời, omission secret/PII và SQLState cả trước controller. File tải từ UI hợp lệ theo schema Postman v2.1; UI 390px không tràn ngang và Escape trả focus đúng. Docker CI bổ sung request thực trên DB tạm. Chi tiết phạm vi trong [hướng dẫn nhật ký](../04-van-hanh/NHAT_KY_API_VA_DEBUG.md).
 - HTML Thymeleaf: các trang quản trị/job/quyền/cấu hình/ảnh/giám sát/tài khoản/home/login render vi/en với principal thử, DB không tồn tại và initializer tắt.
 - Trình duyệt với HTML thật và API giả trong RAM: phân trang, PUT/DELETE/POST có CSRF/version, 409 giữ form/chỉ gửi một lần, mã trống tự sinh, menu không gạch chân/active và dịch vụ ảnh tắt. Đây là bằng chứng frontend, không thay thế kiểm SQL/auth của Docker CI.
 - Mobile 390px: quản trị, job, quyền, cấu hình, ảnh và giám sát không tràn ngang toàn trang. Bảng rộng được cuộn trong vùng riêng. Chưa kiểm mọi thiết bị/trình đọc màn hình.

@@ -46,11 +46,12 @@ const localTarget = (document, rawLink) => {
     return resolved;
 };
 
-/** Chỉ chấp nhận target được chia sẻ qua Git; mục lục phải dẫn tới mọi tài liệu trong docs. */
+/** Mục lục dẫn tới file hoặc cụm thư mục; tài liệu không được mọc rời ở gốc docs. */
 const checkDocs = (files, read) => {
     const failures = [];
     const tracked = new Set(files);
     const indexed = new Set();
+    const groups = new Set();
     let checked = 0;
     const documents = files.filter((file) => /\.(?:md|mdc)$/.test(file));
     for (const document of documents) {
@@ -62,14 +63,22 @@ const checkDocs = (files, read) => {
                 if (!tracked.has(target) && !files.some((file) => file.startsWith(target.replace(/\/$/, '') + '/'))) {
                     failures.push(`${document}: link chưa có trong Git: ${link}`);
                 }
-                if (document === 'docs/README.md') indexed.add(target);
+                if (document === 'docs/README.md') {
+                    indexed.add(target);
+                    if (/^docs\/\d{2}-[a-z0-9-]+\/?$/.test(target)) groups.add(target.replace(/\/$/, '') + '/');
+                }
             } catch (error) {
                 failures.push(`${document}: ${error.message}: ${link}`);
             }
         }
     }
     for (const document of documents.filter((file) => file.startsWith('docs/') && file !== 'docs/README.md')) {
-        if (!indexed.has(document)) failures.push(`${document}: thiếu link trong docs/README.md`);
+        if (!/^docs\/\d{2}-[a-z0-9-]+\//.test(document)) {
+            failures.push(`${document}: đặt tài liệu trong cụm có số thứ tự, gốc docs chỉ giữ README.md`);
+        }
+        if (!indexed.has(document) && !Array.from(groups).some((group) => document.startsWith(group))) {
+            failures.push(`${document}: thiếu đường đọc từ docs/README.md tới file hoặc cụm thư mục`);
+        }
     }
     return { failures, checked, documents: documents.length };
 };
@@ -79,9 +88,9 @@ const checkBridges = (files, read) => {
     const failures = [];
     const required = [
         'AGENTS.md',
-        'docs/QUY_TRINH_AI.md',
+        'docs/06-ai-va-ban-giao/AI_VA_BAN_GIAO.md',
         'docs/README.md',
-        'docs/TIEN_DO_VA_KE_HOACH_NHOM.md',
+        'docs/05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md',
         ...Object.keys(bridges),
     ];
     for (const file of required) {
@@ -95,7 +104,7 @@ const checkBridges = (files, read) => {
         if (!files.includes(file)) continue;
         const text = read(file);
         if (!pattern.test(text)) failures.push(`${file}: phải dẫn/import về AGENTS.md`);
-        if (!text.includes('QUY_TRINH_AI.md')) failures.push(`${file}: thiếu đường đọc quy trình AI`);
+        if (!text.includes('AI_VA_BAN_GIAO.md')) failures.push(`${file}: thiếu đường đọc quy trình AI`);
         if (Buffer.byteLength(text, 'utf8') > 2048)
             failures.push(`${file}: vượt 2 KiB, không sao chép quy tắc vào file công cụ`);
     }

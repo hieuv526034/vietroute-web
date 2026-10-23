@@ -1,29 +1,29 @@
 # Công nghệ và thư viện VietRoute
 
-Kho tài liệu Markdown của nhóm là thư mục **docs/** trong Git; cửa vào duy nhất là [mục lục và lộ trình đọc](README.md). Trang này dùng để tra công nghệ, giải thích lựa chọn khi trao đổi/bảo vệ đồ án và tìm code minh họa. Đọc cùng [tổng quan kiến trúc](TONG_QUAN_HE_THONG.md), [luồng một request](LUONG_XU_LY_BASE.md) và [tiến độ thực tế](TIEN_DO_VA_KE_HOACH_NHOM.md).
+Kho tài liệu Markdown của nhóm là thư mục **docs/** trong Git; cửa vào duy nhất là [mục lục và lộ trình đọc](../README.md). Trang này dùng để tra công nghệ, giải thích lựa chọn khi trao đổi/bảo vệ đồ án và tìm code minh họa. Đọc cùng [tổng quan kiến trúc](TONG_QUAN_HE_THONG.md), [luồng một request](../02-phat-trien/LUONG_XU_LY_BASE.md) và [tiến độ thực tế](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
 
-Đối chiếu source ngày **23/10/2026**. Phiên bản bên dưới lấy từ [pom.xml](../pom.xml), [Dockerfile](../Dockerfile), [Maven Wrapper](../.mvn/wrapper/maven-wrapper.properties) và [package-lock.json](../package-lock.json), không phải tuyên bố các thư viện đều là bản mới nhất. Khi nâng dependency, cập nhật bảng cùng PR và kiểm tương thích trước merge. Dependency gián tiếp lấy theo BOM; dùng `mvnw dependency:tree` khi cần đối chiếu đầy đủ, không tự khóa thêm phiên bản chỉ để khớp tài liệu.
+Đối chiếu source ngày **23/10/2026**. Phiên bản bên dưới lấy từ [pom.xml](../../pom.xml), [Dockerfile](../../Dockerfile), [Maven Wrapper](../../.mvn/wrapper/maven-wrapper.properties) và [package-lock.json](../../package-lock.json), không phải tuyên bố các thư viện đều là bản mới nhất. Khi nâng dependency, cập nhật bảng cùng PR và kiểm tương thích trước merge. Dependency gián tiếp lấy theo BOM; dùng `mvnw dependency:tree` khi cần đối chiếu đầy đủ, không tự khóa thêm phiên bản chỉ để khớp tài liệu.
 
 ## 1. Giới thiệu dự án trong một phút
 
-VietRoute là ứng dụng Java server render giao diện bằng Thymeleaf, cung cấp API JSON qua Spring MVC. Spring Security kiểm JWT/CSRF và quyền chức năng, service giữ transaction, repository dùng JDBC/PreparedStatement để đọc ghi PostgreSQL. Giao diện dùng Bootstrap, JavaScript và Axios. Ứng dụng đóng gói WAR, chạy Tomcat trong Docker, GitHub Actions kiểm tra trước khi Render triển khai nhánh main. Tác vụ nền/mail dùng hàng đợi PostgreSQL; ảnh công khai có adapter Cloudinary. Nền hệ thống đã có; nhà xe, tuyến/chuyến, đặt chỗ và Maps theo [kế hoạch nhóm](PHAN_CONG.md).
+VietRoute là ứng dụng Java server render giao diện bằng Thymeleaf, cung cấp API JSON qua Spring MVC. Spring Security kiểm JWT/CSRF và quyền chức năng, service giữ transaction, repository dùng JDBC/PreparedStatement để đọc ghi PostgreSQL. Giao diện dùng Bootstrap, JavaScript và Axios. Ứng dụng đóng gói WAR, chạy Tomcat trong Docker, GitHub Actions kiểm tra trước khi Render triển khai nhánh main. Tác vụ nền/mail dùng hàng đợi PostgreSQL; ảnh công khai có adapter Cloudinary. Nền hệ thống đã có; nhà xe, tuyến/chuyến, đặt chỗ và Maps theo [kế hoạch nhóm](../05-ke-hoach/PHAN_CONG.md).
 
 ## 2. Backend, HTTP và xử lý dữ liệu
 
 | Công nghệ/thư viện | Phiên bản trong source | Dùng để làm gì | Điểm đọc code |
 |---|---|---|---|
-| Java | Target 17; Docker build/runtime 21 | Ngôn ngữ backend, `Instant`, collections, executor và HTTP client | [pom](../pom.xml), [launcher local](../src/dev/java/vn/vietroute/dev/VietRouteApplication.java) |
-| Spring Framework / Spring MVC | 6.2.19 | Dependency injection, mapping controller, binding/validation, response, MVC và interceptor | [RootConfig](../src/main/java/vn/vietroute/common/config/RootConfig.java), [WebConfig](../src/main/java/vn/vietroute/common/config/WebConfig.java) |
-| Jakarta Servlet | 6.0.0 API, provided | Chuẩn request/response/filter/multipart; Tomcat cung cấp implementation | [khởi tạo WAR](../src/main/java/vn/vietroute/common/config/WebApplicationInitializer.java) |
-| Apache Tomcat | 10.1; embedded local 10.1.61 | Servlet container; chạy WAR production và Run/Debug local | [Dockerfile](../Dockerfile), [cấu hình local](CLOUDINARY_VA_INTELLIJ.md) |
-| Jackson | BOM 2.22.4 | JSON request/response, `JavaTimeModule` cho Instant; chặn field lạ/key trùng/JSON dư | [RootConfig](../src/main/java/vn/vietroute/common/config/RootConfig.java) |
-| Jakarta Bean Validation / Hibernate Validator | Hibernate Validator 8.0.6.Final | `@NotBlank`, `@Size`, `@Valid` và annotation kiểm mã/mật khẩu; chỉ là validation, không ORM | [validation](../src/main/java/vn/vietroute/common/validation/BusinessCode.java), [quy ước](QUY_UOC_PHAT_TRIEN.md) |
-| Expressly | 5.0.0 | Jakarta Expression Language phục vụ thư viện validation | [pom](../pom.xml) |
-| Lombok | 1.18.42, provided | Sinh getter/setter/builder/constructor khi compile; đọc annotation để hiểu code được sinh | [BaseEntity](../src/main/java/vn/vietroute/common/base/BaseEntity.java) |
-| Swagger Core Jakarta | 2.2.55 | `@Operation`/`@Schema` mô tả hợp đồng API và DTO; bộ generator trong source dựng OpenAPI | [OpenAPI](../src/main/java/vn/vietroute/common/web/openapi/OpenApiController.java), [API base](API_BASE.md) |
-| SLF4J + JDK logging | slf4j-jdk14 2.0.18 | Bridge log thư viện sang logging JVM; log theo traceId và dữ liệu đã lọc | [trace filter](../src/main/java/vn/vietroute/common/web/filter/RequestTraceFilter.java) |
+| Java | Target 17; Docker build/runtime 21 | Ngôn ngữ backend, `Instant`, collections, executor và HTTP client | [pom](../../pom.xml), [launcher local](../../src/dev/java/vn/vietroute/dev/VietRouteApplication.java) |
+| Spring Framework / Spring MVC | 6.2.19 | Dependency injection, mapping controller, binding/validation, response, MVC và interceptor | [RootConfig](../../src/main/java/vn/vietroute/common/config/RootConfig.java), [WebConfig](../../src/main/java/vn/vietroute/common/config/WebConfig.java) |
+| Jakarta Servlet | 6.0.0 API, provided | Chuẩn request/response/filter/multipart; Tomcat cung cấp implementation | [khởi tạo WAR](../../src/main/java/vn/vietroute/common/config/WebApplicationInitializer.java) |
+| Apache Tomcat | 10.1; embedded local 10.1.61 | Servlet container; chạy WAR production và Run/Debug local | [Dockerfile](../../Dockerfile), [cấu hình local](CHAY_LOCAL_VA_CLOUDINARY.md) |
+| Jackson | BOM 2.22.4 | JSON request/response, `JavaTimeModule` cho Instant; chặn field lạ/key trùng/JSON dư | [RootConfig](../../src/main/java/vn/vietroute/common/config/RootConfig.java) |
+| Jakarta Bean Validation / Hibernate Validator | Hibernate Validator 8.0.6.Final | `@NotBlank`, `@Size`, `@Valid` và annotation kiểm mã/mật khẩu; chỉ là validation, không ORM | [validation](../../src/main/java/vn/vietroute/common/validation/BusinessCode.java), [quy ước](../02-phat-trien/QUY_UOC_PHAT_TRIEN.md) |
+| Expressly | 5.0.0 | Jakarta Expression Language phục vụ thư viện validation | [pom](../../pom.xml) |
+| Lombok | 1.18.42, provided | Sinh getter/setter/builder/constructor khi compile; đọc annotation để hiểu code được sinh | [BaseEntity](../../src/main/java/vn/vietroute/common/base/BaseEntity.java) |
+| Swagger Core Jakarta | 2.2.55 | `@Operation`/`@Schema` mô tả hợp đồng API và DTO; bộ generator trong source dựng OpenAPI | [OpenAPI](../../src/main/java/vn/vietroute/common/web/openapi/OpenApiController.java), [API base](../02-phat-trien/API_BASE.md) |
+| SLF4J + JDK logging | slf4j-jdk14 2.0.18 | Bridge log thư viện sang logging JVM; log theo traceId và dữ liệu đã lọc | [trace filter](../../src/main/java/vn/vietroute/common/web/filter/RequestTraceFilter.java) |
 
-Source giữ Spring MVC/JDBC thuần; không có Spring Boot, Spring Data hoặc Hibernate ORM/JPA. `BaseController`, response factory, `BusinessException`, constants, DTO và locale là code nền tảng của dự án, không phải dependency riêng. Mỗi API/nghiệp vụ mới kế thừa và áp dụng quy ước này; đọc [API base](API_BASE.md).
+Source giữ Spring MVC/JDBC thuần; không có Spring Boot, Spring Data hoặc Hibernate ORM/JPA. `BaseController`, response factory, `BusinessException`, constants, DTO và locale là code nền tảng của dự án, không phải dependency riêng. Mỗi API/nghiệp vụ mới kế thừa và áp dụng quy ước này; đọc [API base](../02-phat-trien/API_BASE.md).
 
 ## 3. Xác thực và phân quyền
 
@@ -35,7 +35,7 @@ Source giữ Spring MVC/JDBC thuần; không có Spring Boot, Spring Data hoặc
 | Quyền chức năng | Enum Permission + resource/action và mapping PostgreSQL | READ/CREATE/UPDATE/DELETE/ASSIGN; role gom quyền, scope/owner kiểm riêng ở service/SQL |
 | Thu hồi JWT | tokenVersion và trạng thái tài khoản đọc từ DB | Logout/đổi mật khẩu/đổi role thu hồi token cũ; quyền cập nhật không chờ JWT hết hạn |
 
-Điểm bắt đầu: [SecurityConfig](../src/main/java/vn/vietroute/auth/config/SecurityConfig.java) → [JwtAuthenticationFilter](../src/main/java/vn/vietroute/auth/security/JwtAuthenticationFilter.java) → [JwtService](../src/main/java/vn/vietroute/auth/service/JwtService.java). Website dùng cookie HttpOnly; JavaScript không đọc cookie auth hoặc giữ access token trong localStorage. cURL/Postman xuất **URL thực + token placeholder** theo [hướng dẫn debug](NHAT_KY_API_VA_DEBUG.md); không mượn lại token của request lịch sử.
+Điểm bắt đầu: [SecurityConfig](../../src/main/java/vn/vietroute/auth/config/SecurityConfig.java) → [JwtAuthenticationFilter](../../src/main/java/vn/vietroute/auth/security/JwtAuthenticationFilter.java) → [JwtService](../../src/main/java/vn/vietroute/auth/service/JwtService.java). Website dùng cookie HttpOnly; JavaScript không đọc cookie auth hoặc giữ access token trong localStorage. cURL/Postman xuất **URL thực + token placeholder** theo [hướng dẫn debug](../04-van-hanh/NHAT_KY_API_VA_DEBUG.md); không mượn lại token của request lịch sử.
 
 ## 4. Database, transaction và tác vụ nền
 
@@ -50,7 +50,7 @@ Source giữ Spring MVC/JDBC thuần; không có Spring Boot, Spring Data hoặc
 | Executor JVM | Số thread/lease/poll cấu hình qua JobSettings | Giới hạn worker đang xử lý, không tạo thread mới cho mỗi request; không tăng thread/pool vô hạn |
 | Nhật ký API | PostgreSQL, retention 7 ngày, mục tiêu 10.000 dòng | Snapshot được whitelist, query/paging trên DB; không queue/cache lịch sử trong RAM; có counter ghi lỡ khi DB/slot lỗi |
 
-Đọc [database/migration](../database/README.md), [schema và quyền](SCHEMA_VA_PHAN_QUYEN.md), [audit system](AUDIT_VA_SYSTEM.md), [worker/outbox](NEN_TANG_MO_RONG.md) và [journal](NHAT_KY_API_VA_DEBUG.md). Code migration/transaction/queue là thành phần nội bộ; không dùng Flyway/Liquibase hoặc message broker trong luồng hiện tại.
+Đọc [database/migration](../../database/README.md), [schema và quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md), [audit system](../02-phat-trien/AUDIT_VA_SYSTEM.md), [worker/outbox](../02-phat-trien/NEN_TANG_MO_RONG.md) và [journal](../04-van-hanh/NHAT_KY_API_VA_DEBUG.md). Code migration/transaction/queue là thành phần nội bộ; không dùng Flyway/Liquibase hoặc message broker trong luồng hiện tại.
 
 ## 5. Giao diện từ server đến trình duyệt
 
@@ -67,7 +67,7 @@ Source giữ Spring MVC/JDBC thuần; không có Spring Boot, Spring Data hoặc
 | CSS app.css | Code dự án | Màu/nhịp chữ/layout; cột thao tác 96px, icon 32px, toolbar/footer căn phải |
 | WebJars | Đóng gói thư viện browser trong Maven/WAR | Tải Bootstrap/Axios/Swagger từ app; UI không phụ thuộc CDN |
 
-Layout/script chung tại [fragments/layout](../src/main/webapp/WEB-INF/views/fragments/layout.html), [app.js](../src/main/webapp/assets/js/app.js); module cụ thể dùng catalog.js/operations.js/media.js/api-journal.js. UI hiện không dùng React/Vue/Angular, jQuery hoặc DataTables. Thêm thư viện mới chỉ khi có nhu cầu chưa được component hiện tại đáp ứng; đọc [tab/modal](TAB_VA_MODAL.md) và [bảng/validation](BANG_VA_VALIDATION_UI.md).
+Layout/script chung tại [fragments/layout](../../src/main/webapp/WEB-INF/views/fragments/layout.html), [app.js](../../src/main/webapp/assets/js/app.js); module cụ thể dùng catalog.js/operations.js/media.js/api-journal.js. UI hiện không dùng React/Vue/Angular, jQuery hoặc DataTables. Thêm thư viện mới chỉ khi có nhu cầu chưa được component hiện tại đáp ứng; đọc [quy ước UI](../03-giao-dien/QUY_UOC_UI.md) cho tab/modal/bảng/validation.
 
 ## 6. Ảnh, email, quota và giám sát
 
@@ -82,7 +82,7 @@ Layout/script chung tại [fragments/layout](../src/main/webapp/WEB-INF/views/fr
 | UI giám sát/configuration | Code dự án | Đọc RAM/CPU/lưu lượng/pool/worker và cấu hình whitelist; DB probe opt-in |
 | Prometheus/Alertmanager/Grafana | Mẫu cấu hình trong repo | Collector/dashboard/cảnh báo bên ngoài chưa được coi đã triển khai chỉ vì có file mẫu |
 
-Kafka hiện chưa dùng. Cloudinary, Gmail, cảnh báo ngoài app và backup/restore cần cấu hình/nghiệm thu môi trường riêng; có adapter không có nghĩa provider đã kết nối production. Đọc [Cloudinary](CLOUDINARY_VA_INTELLIJ.md), [mail/worker](NEN_TANG_MO_RONG.md) và [giám sát/vận hành](GIAM_SAT_VA_VAN_HANH.md).
+Kafka hiện chưa dùng. Cloudinary, Gmail, cảnh báo ngoài app và backup/restore cần cấu hình/nghiệm thu môi trường riêng; có adapter không có nghĩa provider đã kết nối production. Đọc [Cloudinary](CHAY_LOCAL_VA_CLOUDINARY.md), [mail/worker](../02-phat-trien/NEN_TANG_MO_RONG.md) và [giám sát/vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md).
 
 ## 7. Build, kiểm thử và triển khai
 
@@ -99,7 +99,7 @@ Kafka hiện chưa dùng. Cloudinary, Gmail, cảnh báo ngoài app và backup/r
 | GitHub Actions | Workflow trong `.github/workflows` | Container/PostgreSQL tạm, format/helper test và liên kết docs; branch/PR tiếng Việt |
 | Render Blueprint | Docker, branch main, checksPass | Cấu hình build/deploy và env; triển khai thực tế phụ thuộc service được chủ dự án kết nối |
 
-Đọc [format IntelliJ](FORMAT_INTELLIJ.md), [quy trình Git/PR](../CONTRIBUTING.md) và [deploy Render](DEPLOY_RENDER.md). Không đưa Node/test/credential vào image để tiện chạy. Không seed/test/cleanup production để kiểm một PR.
+Đọc [format IntelliJ](FORMAT_INTELLIJ.md), [quy trình Git/PR](../../CONTRIBUTING.md) và [deploy Render](../04-van-hanh/DEPLOY_RENDER.md). Không đưa Node/test/credential vào image để tiện chạy. Không seed/test/cleanup production để kiểm một PR.
 
 ## 8. Các câu dễ được hỏi
 
@@ -115,4 +115,4 @@ Kafka hiện chưa dùng. Cloudinary, Gmail, cảnh báo ngoài app và backup/r
 | Ảnh và mail đang chạy thật chưa? | Source có adapter; xem cờ Environment/health và bằng chứng provider ở môi trường thực, không suy ra từ dependency. |
 | Vì sao export chưa có token thật? | Chủ dự án chọn URL thực + `{{accessToken}}`; token của tài khoản debug điền riêng trong Postman, journal không ghi JWT. |
 
-Khi được hỏi một tính năng “đã có chưa”, dẫn [tiến độ và PR bằng chứng](TIEN_DO_VA_KE_HOACH_NHOM.md) cùng màn/code liên quan. Không trình bày kế hoạch như tính năng đã hoàn thành; phiên bản dependency, khả năng chịu tải và trạng thái deploy là ba thông tin cần kiểm chứng riêng.
+Khi được hỏi một tính năng “đã có chưa”, dẫn [tiến độ và PR bằng chứng](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md) cùng màn/code liên quan. Không trình bày kế hoạch như tính năng đã hoàn thành; phiên bản dependency, khả năng chịu tải và trạng thái deploy là ba thông tin cần kiểm chứng riêng.

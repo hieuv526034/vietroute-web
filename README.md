@@ -16,29 +16,27 @@ Website quản lý nhà xe, tuyến/chuyến, đặt chỗ và theo dõi hành t
 
 ## Tài liệu phải đọc
 
-**Người mới mở [Bắt đầu tại đây — mục lục và thứ tự đọc](docs/README.md).** Lộ trình: tổng quan → chạy/format IntelliJ → luồng request/API → quy ước/schema/quyền → nhận việc → kiểm tra/PR. Mục lục chia sáu nhóm tài liệu và có hướng đọc theo từng thành viên; vận hành/provider đọc khi cần, không phải bước đầu tiên.
+**Người mới mở [Bắt đầu tại đây — mục lục và thứ tự đọc](docs/README.md).** Có 5 bước: tổng quan → chạy/format → luồng request/API → quy ước → nhận việc. Tài liệu đã chia thành thư mục 01–06 và 99 lưu trữ; chuyên đề vận hành/provider đọc theo phần việc.
 
-Ba nguồn dùng thường xuyên: [Tổng quan hệ thống](docs/TONG_QUAN_HE_THONG.md), [Tiến độ nhóm và PR bằng chứng](docs/TIEN_DO_VA_KE_HOACH_NHOM.md), [Nghiệm thu trước nghiệp vụ](docs/NGHIEM_THU_NEN_TANG.md). Phân công tương lai không được coi là đóng góp đã hoàn thành.
+Ba nguồn dùng thường xuyên: [Tổng quan hệ thống](docs/01-bat-dau/TONG_QUAN_HE_THONG.md), [Tiến độ nhóm và PR bằng chứng](docs/05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md), [Nghiệm thu trước nghiệp vụ](docs/05-ke-hoach/NGHIEM_THU_NEN_TANG.md). Phân công tương lai không được coi là đóng góp đã hoàn thành.
 
-Kho Markdown tập trung trong `docs/`; [công nghệ và thư viện BE → UI](docs/CONG_NGHE_VA_THU_VIEN.md) tổng hợp phiên bản từ source, vai trò, điểm đọc code và câu trả lời khi trình bày đồ án.
+Kho Markdown tập trung trong `docs/`; [công nghệ và thư viện BE → UI](docs/01-bat-dau/CONG_NGHE_VA_THU_VIEN.md) tổng hợp phiên bản từ source, vai trò, điểm đọc code và câu trả lời khi trình bày đồ án.
 
-Khi chuyển máy hoặc tiếp tục ở phiên mới, đọc [Bàn giao và tiếp tục](docs/BAN_GIAO_VA_TIEP_TUC.md): quy tắc/ngữ cảnh đi theo source Git; env, secret và thiết lập cá nhân được cấp lại riêng. File có thứ tự đọc lại, bản đồ code và mẫu bàn giao việc còn dở.
+Khi dùng AI, chuyển máy hoặc tiếp tục việc dở, đọc một hướng dẫn [AI và bàn giao](docs/06-ai-va-ban-giao/AI_VA_BAN_GIAO.md). Quy tắc/ngữ cảnh theo Git; env/secret cấp riêng. Chạy `npm run check:rules` / `npm run check:docs` cùng formatter để kiểm quy ước và cấu trúc tài liệu mà không cần khởi động app.
 
-[Quy trình AI dùng chung](docs/QUY_TRINH_AI.md) hướng dẫn Codex/Copilot/Cursor/Claude/Gemini cùng đọc AGENTS, kiểm ngữ cảnh trước khi sửa và ghi bàn giao vào docs/PR. Chạy `npm run check:rules` / `npm run check:docs` cùng formatter để phát hiện lệch quy ước mà không cần khởi động app.
+Menu **Hệ thống** có [quản lý job, ma trận quyền/gán role và xem cấu hình an toàn](docs/04-van-hanh/QUAN_TRI_HE_THONG.md). Các màn dùng quyền backend và CSRF chung; cấu hình chỉ đọc, secret vẫn ở Environment.
 
-Menu **Hệ thống** có [quản lý job, ma trận quyền/gán role và xem cấu hình an toàn](docs/QUAN_TRI_HE_THONG.md). Các màn dùng quyền backend và CSRF chung; cấu hình chỉ đọc, secret vẫn ở Environment.
+ADMIN có SYSTEM_READ có thể mở **Hệ thống → Nhật ký API** để tra traceId/controller/lỗi và xem request/response đã lọc; có copy cURL/xuất Postman. Lịch sử lưu PostgreSQL dùng chung giữa các node, mặc định 7 ngày và mục tiêu 10.000 bản ghi; bản ghi đã commit còn sau restart. Xem [hướng dẫn nhật ký và debug](docs/04-van-hanh/NHAT_KY_API_VA_DEBUG.md).
 
-ADMIN có SYSTEM_READ có thể mở **Hệ thống → Nhật ký API** để tra traceId/controller/lỗi và xem request/response đã lọc; có copy cURL/xuất Postman. Lịch sử lưu PostgreSQL dùng chung giữa các node, mặc định 7 ngày và mục tiêu 10.000 bản ghi; bản ghi đã commit còn sau restart. Xem [hướng dẫn nhật ký và debug](docs/NHAT_KY_API_VA_DEBUG.md).
-
-[Format IntelliJ dùng chung](docs/FORMAT_INTELLIJ.md): Project scheme + EditorConfig, nút **VietRoute Format / VietRoute Format Check** và cách bật format khi lưu. Chốt `npm run format:check` trước commit; các file IDE cá nhân vẫn bị ignore.
+[Format IntelliJ dùng chung](docs/01-bat-dau/FORMAT_INTELLIJ.md): Project scheme + EditorConfig, nút **VietRoute Format / VietRoute Format Check** và cách bật format khi lưu. Chốt `npm run format:check` trước commit; các file IDE cá nhân vẫn bị ignore.
 
 ## Chạy dự án
 
-**IntelliJ:** bật Maven profile `local`, Reload Maven, chọn **VietRoute Local** rồi Run/Debug. Có lớp `VietRouteApplication.main()` dùng Tomcat nhúng cho phát triển; production vẫn WAR. Hướng dẫn môi trường và phương án Tomcat Server nằm trong [Cloudinary và IntelliJ](docs/CLOUDINARY_VA_INTELLIJ.md).
+**IntelliJ:** bật Maven profile `local`, Reload Maven, chọn **VietRoute Local** rồi Run/Debug. Có lớp `VietRouteApplication.main()` dùng Tomcat nhúng cho phát triển; production vẫn WAR. Hướng dẫn môi trường và phương án Tomcat Server nằm trong [Cloudinary và IntelliJ](docs/01-bat-dau/CHAY_LOCAL_VA_CLOUDINARY.md).
 
 Cài JDK 17/21, đặt JAVA_HOME đúng thư mục JDK. Import pom.xml vào IDE. Java không tự đọc `.env`: đặt biến môi trường trong Tomcat/IDE hoặc dùng Docker `--env-file`.
 
-Khi phát triển, cài Node.js để chạy `npm ci`, `npm run format` và `npm run format:check`. Bộ format Java/HTML/CSS/JS/XML chỉ dùng ở máy phát triển; production Docker không cài Node. Tên lớp dùng `DTO` viết hoa, thời điểm Java dùng `Instant`. Mỗi người làm nhánh theo bảng [phân công](docs/PHAN_CONG.md), mở PR rồi mới merge vào `main`.
+Khi phát triển, cài Node.js để chạy `npm ci`, `npm run format` và `npm run format:check`. Bộ format Java/HTML/CSS/JS/XML chỉ dùng ở máy phát triển; production Docker không cài Node. Tên lớp dùng `DTO` viết hoa, thời điểm Java dùng `Instant`. Mỗi người làm nhánh theo bảng [phân công](docs/05-ke-hoach/PHAN_CONG.md), mở PR rồi mới merge vào `main`.
 
 ```powershell
 # Kiểm tra phát triển, bao gồm test local không dùng Neon
