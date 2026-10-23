@@ -52,3 +52,7 @@ Kiểm local bằng MockMvc cho quyền xem từng trang vi/en, quyền service,
 Chrome headless local với HTML Thymeleaf và fixture API riêng đã kiểm click role/user assignment có CSRF/version, chặn ADMIN/bản thân, conflict retry hiện trong dialog không tự retry, config chỉ đọc và mobile không tràn ngang. Đây là bằng chứng UI trên fixture; SQL/auth thật vẫn cần Docker CI, không coi fixture là kết quả database production.
 
 Các kiểm tra này không chứng minh provider production, cảnh báo thật, backup hoặc tải nhiều node. Tài liệu này mô tả chức năng source; kết quả CI và merge xem PR tương ứng. Không test trên Neon production. Khi bàn giao ghi đúng ca đã chạy và phân biệt HTML render, browser fixture với API/SQL thật.
+
+## Hoàn thiện trước nghiệp vụ
+
+Đợt tiếp theo bổ sung menu không gạch chân, active/focus/đóng Escape, lối tắt quản trị, UI danh mục sửa/xóa mềm/phân trang và trạng thái dịch vụ ảnh tắt. Đọc [nghiệm thu nền tảng](NGHIEM_THU_NEN_TANG.md) để xem phạm vi hoàn thành, ca kiểm giao diện và phần vận hành còn chờ cấu hình ngoài app. Không coi đã có đầy đủ tài khoản/scope nhà xe hoặc provider thật từ đợt UI này.

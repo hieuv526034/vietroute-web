@@ -25,6 +25,10 @@
             name="app-request-label"
             th:content="#{ui.requestId}"
         />
+        <meta
+            name="app-request-help"
+            th:content="#{ui.requestHelp}"
+        />
         <title th:text="${title} + ' · VietRoute'">VietRoute</title>
         <link
             rel="stylesheet"
@@ -43,6 +47,7 @@
             <nav
                 class="site-nav container-xl"
                 aria-label="Main navigation"
+                th:attr="aria-label=#{ui.navigation}"
             >
                 <a
                     class="brand"
@@ -60,12 +65,14 @@
                 <div class="nav-links">
                     <details
                         class="operations-menu"
+                        th:classappend="${operationsActive} ? 'is-current'"
                         th:if="${monitoringAllowed or jobsAllowed or accessAllowed}"
                     >
                         <summary th:text="#{ui.ops.menu}">Hệ thống</summary>
                         <div class="operations-menu-items">
                             <a
                                 th:if="${monitoringAllowed}"
+                                th:attr="aria-current=${navigation.monitoring} ? 'page' : null"
                                 th:href="@{/monitoring(lang=${currentLocale})}"
                                 th:text="#{ui.monitoring}"
                             >
@@ -73,6 +80,7 @@
                             </a>
                             <a
                                 th:if="${jobsAllowed}"
+                                th:attr="aria-current=${navigation.jobs} ? 'page' : null"
                                 th:href="@{/operations/jobs(lang=${currentLocale})}"
                                 th:text="#{ui.ops.jobs}"
                             >
@@ -80,6 +88,7 @@
                             </a>
                             <a
                                 th:if="${accessAllowed}"
+                                th:attr="aria-current=${navigation.access} ? 'page' : null"
                                 th:href="@{/operations/access(lang=${currentLocale})}"
                                 th:text="#{ui.ops.access}"
                             >
@@ -88,6 +97,7 @@
                             <a
                                 th:if="${monitoringAllowed}"
                                 th:href="@{/operations/configuration(lang=${currentLocale})}"
+                                th:attr="aria-current=${navigation.configuration} ? 'page' : null"
                                 th:text="#{ui.ops.configuration}"
                             >
                                 Cấu hình
@@ -95,14 +105,16 @@
                         </div>
                     </details>
                     <a
-                        th:if="${currentUser != null}"
+                        th:if="${mediaAllowed}"
                         th:href="@{/media(lang=${currentLocale})}"
+                        th:attr="aria-current=${navigation.media} ? 'page' : null"
                         th:text="#{ui.media}"
                     >
                         Ảnh
                     </a>
                     <a
                         th:href="@{/docs(lang=${currentLocale})}"
+                        th:attr="aria-current=${navigation.docs} ? 'page' : null"
                         th:text="#{ui.docs}"
                     >
                         API
@@ -110,6 +122,7 @@
                     <a
                         th:if="${adminUser}"
                         th:href="@{/admin(lang=${currentLocale})}"
+                        th:attr="aria-current=${navigation.admin} ? 'page' : null"
                         th:text="#{ui.admin}"
                     >
                         Quản trị
@@ -117,6 +130,7 @@
                     <a
                         th:if="${currentUser != null}"
                         th:href="@{/account(lang=${currentLocale})}"
+                        th:attr="aria-current=${navigation.account} ? 'page' : null"
                         th:text="#{ui.account}"
                     >
                         Tài khoản

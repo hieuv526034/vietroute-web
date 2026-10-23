@@ -103,6 +103,17 @@ for page_path in jobs access configuration; do
     if grep -q '??ui.ops' "$result"; then exit 1; fi
   done
 done
+for locale in vi en; do
+  call 200 GET "/admin?lang=$locale" '' cookie
+  grep -q 'catalog-workspace' "$result"
+  grep -q 'catalog-previous' "$result"
+  grep -q '/assets/js/catalog.js' "$result"
+  grep -q 'aria-current="page"' "$result"
+  if grep -q '??ui\.' "$result"; then exit 1; fi
+  call 200 GET "/media?lang=$locale" '' cookie
+  grep -q 'data-enabled="false"' "$result"
+  if grep -q '??ui\.' "$result"; then exit 1; fi
+done
 call 200 GET /api/v1/admin/system/configuration '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["readOnly"] is True; assert set(d["database"])=={"maximumPoolSize","acquisitionTimeoutMs","connectTimeoutSeconds","socketTimeoutSeconds"}; assert d["database"]["maximumPoolSize"]==4; assert d["worker"]["enabled"] is True; assert not any(k in json.dumps(d).lower() for k in ["password","refreshtoken","clientsecret","jdbc:postgresql","jwtkey"])' "$result"
 call 200 GET '/api/v1/admin/access/users?username=Ad&page=0&size=1' '' bearer

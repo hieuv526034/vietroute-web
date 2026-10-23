@@ -19,7 +19,7 @@ Dùng đúng bảng này khi tham chiếu thành viên, chuẩn bị phân công
 
 **hieuv526034 <hieuv526034@gmail.com>** đã triển khai source base, cấu hình/build/Docker/Render Blueprint, database/migration/audit, common/locale/error/validation, JWT/auth/bootstrap, quyền theo hành động, nền transaction/worker/mail/media và giám sát. Mốc đối chiếu là `b1f3cde` sau PR #13. Đây là code nền tảng có trên main, không phân bổ lại tác giả commit cho người khác; không tự coi Render/provider/cảnh báo production đã được kết nối.
 
-Các module nghiệp vụ bên dưới là kế hoạch triển khai tiếp, chưa phải các chức năng đã hoàn thành. Catalog có API CRUD và UI xem/tạo; UI sửa/xóa/phân trang còn ở CAT02. Thư viện ảnh public có API/UI nhưng cần credentials để thử Cloudinary thật. Đọc `QUY_UOC_PHAT_TRIEN.md` và `API_BASE.md` trước khi bắt đầu; dùng catalog làm ví dụ controller → service → repository → entity/response.
+Các module nghiệp vụ bên dưới là kế hoạch triển khai tiếp, chưa phải các chức năng đã hoàn thành. Catalog có API CRUD; UI sửa/xóa mềm/phân trang CAT02 đã được Hieu bổ sung trong đợt hoàn thiện nền tảng, trạng thái merge/kiểm tra xem bảng tiến độ. Anh tiếp tục nghiệm thu và tích hợp nghiệp vụ, không viết lại bộ CRUD. Thư viện ảnh public có API/UI nhưng cần credentials để thử Cloudinary thật. Đọc `QUY_UOC_PHAT_TRIEN.md` và `API_BASE.md` trước khi bắt đầu; dùng catalog làm ví dụ controller → service → repository → entity/response.
 
 ## Chia theo độ khó
 

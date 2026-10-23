@@ -20,6 +20,8 @@ Bắt đầu từ [Tổng quan hệ thống cho thành viên mới](docs/TONG_QU
 
 Theo dõi công việc tại [Tiến độ và kế hoạch của bốn thành viên](docs/TIEN_DO_VA_KE_HOACH_NHOM.md): đã làm/chưa làm, phần có API nhưng thiếu UI, người chủ trì, phụ thuộc và tiêu chí nghiệm thu. Đây là bảng cập nhật theo PR, không suy diễn đóng góp từ nhánh được chuẩn bị.
 
+Trước khi bắt đầu nghiệp vụ, xem [nghiệm thu nền tảng và giao diện](docs/NGHIEM_THU_NEN_TANG.md): chức năng đã có, giới hạn và cách tra mã yêu cầu.
+
 Menu **Hệ thống** có [quản lý job, ma trận quyền/gán role và xem cấu hình an toàn](docs/QUAN_TRI_HE_THONG.md). Các màn dùng quyền backend và CSRF chung; cấu hình chỉ đọc, secret vẫn ở Environment.
 
 1. [Quy ước phát triển và cấu trúc module](docs/QUY_UOC_PHAT_TRIEN.md).
