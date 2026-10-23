@@ -31,9 +31,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import vn.vietroute.common.config.MonitoringSettings;
 import vn.vietroute.common.config.RootConfig;
-import vn.vietroute.common.config.WebConfig;
+import vn.vietroute.common.config.monitoring.MonitoringSettings;
+import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.monitoring.filter.HttpMetricsFilter;
@@ -41,6 +41,7 @@ import vn.vietroute.common.monitoring.repository.MonitoringRepository;
 import vn.vietroute.common.monitoring.repository.MonitoringRepository.QueueSample;
 import vn.vietroute.common.monitoring.service.ApplicationMetrics;
 import vn.vietroute.common.monitoring.service.DatabaseProbe;
+import vn.vietroute.support.AccessTestConfig;
 
 /** Kiểm quyền metrics, lỗi trước MVC, giới hạn cardinality và mất DB; không kết nối database thật. */
 class MonitoringFoundationTest {
@@ -59,7 +60,7 @@ class MonitoringFoundationTest {
     private AnnotationConfigWebApplicationContext context(boolean token) {
         var context = new AnnotationConfigWebApplicationContext();
         context.setServletContext(new MockServletContext("src/main/webapp", new FileSystemResourceLoader()));
-        context.register(RootConfig.class, WebConfig.class);
+        context.register(RootConfig.class, AccessTestConfig.class, WebConfig.class);
         if (token) {
             context.register(TestSettings.class);
         }

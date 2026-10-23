@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
-import vn.vietroute.common.config.ConfigValues;
+import vn.vietroute.common.config.application.ConfigValues;
 import vn.vietroute.common.constant.ApplicationConstants.Env;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.web.routing.WebRoutePolicy;

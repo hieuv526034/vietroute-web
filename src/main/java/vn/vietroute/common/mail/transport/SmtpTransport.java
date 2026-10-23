@@ -4,7 +4,7 @@ import jakarta.mail.Session;
 import jakarta.mail.Transport;
 import java.util.Properties;
 import java.util.UUID;
-import vn.vietroute.common.config.MailSettings;
+import vn.vietroute.common.config.integration.MailSettings;
 import vn.vietroute.common.mail.model.MailPayload;
 
 /** SMTP STARTTLS bắt buộc và kiểm hostname; Gmail dùng App Password khi chạy local/hạ tầng cho phép SMTP. */

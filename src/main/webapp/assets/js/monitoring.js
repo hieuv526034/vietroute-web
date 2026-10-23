@@ -17,6 +17,11 @@
         if (loading || document.hidden) {
             return;
         }
+        // Khi đang xem tab truy cập, dừng gọi DB/JWT cho các số liệu tài nguyên bị ẩn.
+        if (document.getElementById('monitor-resources-panel')?.hidden) {
+            timer = setTimeout(load, 5000);
+            return;
+        }
         loading = true;
         button.disabled = true;
         try {

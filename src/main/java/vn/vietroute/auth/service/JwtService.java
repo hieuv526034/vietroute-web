@@ -22,8 +22,9 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.stereotype.Service;
 import vn.vietroute.auth.dto.response.AuthResponse;
 import vn.vietroute.auth.dto.response.UserResponse;
+import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
-import vn.vietroute.common.config.AppSettings;
+import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
@@ -75,7 +76,7 @@ public class JwtService {
             .expiresAt(expires)
             .id(UUID.randomUUID().toString())
             .claim("username", user.getUsername())
-            .claim("roles", user.getRoles().stream().map(Enum::name).sorted().toList())
+            .claim("roles", user.getRoles().stream().map(Role::name).sorted().toList())
             .claim("tokenVersion", user.getTokenVersion())
             .build();
         String token = encoder

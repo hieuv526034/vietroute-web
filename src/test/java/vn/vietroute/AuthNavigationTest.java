@@ -21,7 +21,8 @@ import org.springframework.web.context.support.AnnotationConfigWebApplicationCon
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.config.RootConfig;
-import vn.vietroute.common.config.WebConfig;
+import vn.vietroute.common.config.web.WebConfig;
+import vn.vietroute.support.AccessTestConfig;
 import vn.vietroute.support.JournalTestConfig;
 
 /** Kiểm nút Home và URL login với root/servlet tách biệt; không dùng DB hoặc tạo phiên đăng nhập thật. */
@@ -35,7 +36,7 @@ class AuthNavigationTest {
         ) {
             var web = new MockServletContext("src/main/webapp", new FileSystemResourceLoader());
             root.setServletContext(web);
-            root.register(RootConfig.class, JournalTestConfig.class);
+            root.register(RootConfig.class, AccessTestConfig.class, JournalTestConfig.class);
             root.refresh();
             servlet.setParent(root);
             servlet.setServletContext(web);

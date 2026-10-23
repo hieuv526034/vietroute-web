@@ -29,6 +29,7 @@ import vn.vietroute.common.web.filter.RequestTraceFilter;
 public final class ApiJournalFilter extends OncePerRequestFilter {
 
     private final ApiJournalStore store;
+
     private final Clock clock;
 
     @Override

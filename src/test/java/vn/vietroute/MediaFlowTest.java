@@ -20,16 +20,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.business.media.entity.MediaAsset;
-import vn.vietroute.business.media.repository.MediaRepository;
-import vn.vietroute.business.media.service.MediaService;
-import vn.vietroute.common.config.MediaSettings;
+import vn.vietroute.common.config.integration.MediaSettings;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.BaseRepository.SqlWork;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.job.repository.JobRepository;
-import vn.vietroute.common.media.MediaStorage;
+import vn.vietroute.common.media.entity.MediaAsset;
+import vn.vietroute.common.media.repository.MediaRepository;
+import vn.vietroute.common.media.service.MediaService;
+import vn.vietroute.common.media.storage.MediaStorage;
 import vn.vietroute.common.traffic.MemoryRateLimitStore;
 
 /** Kiểm thứ tự commit/provider và scope qua fake port; SQL thực chạy bằng PostgreSQL tạm trong CI. */

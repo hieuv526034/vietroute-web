@@ -81,6 +81,7 @@ public class AuthController extends BaseController {
         // Chỉ phát cookie sau khi service xác minh mật khẩu và cập nhật số lần đăng nhập sai.
         return execute(SuccessCode.LOGIN, request, () -> {
             AuthResponse result = auth.login(body);
+            request.setAttribute(Http.VERIFIED_USER_ATTRIBUTE, result.user().getId());
             cookies.set(request, response, result.accessToken());
             response.setHeader(HttpHeaders.CACHE_CONTROL, Http.NO_STORE);
             return result;
@@ -135,6 +136,7 @@ public class AuthController extends BaseController {
         // Thu hồi token ở DB trước; nếu DB lỗi, base trả lỗi thay vì báo đăng xuất thành công sai thực tế.
         return execute(SuccessCode.LOGOUT, request, () -> {
             auth.logout(user);
+            request.removeAttribute(Http.VERIFIED_USER_ATTRIBUTE);
             cookies.clear(request, response);
             response.setHeader(HttpHeaders.CACHE_CONTROL, Http.NO_STORE);
             return null;

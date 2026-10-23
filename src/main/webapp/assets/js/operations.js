@@ -473,6 +473,7 @@
 
     const load =
         root.dataset.operations === 'jobs' ? jobs() : root.dataset.operations === 'access' ? access() : configuration();
+    document.addEventListener('access-registry-changed', () => perform(load));
     node('ops-refresh').addEventListener('click', () =>
         perform(async () => {
             me = await get('/api/v1/auth/me');

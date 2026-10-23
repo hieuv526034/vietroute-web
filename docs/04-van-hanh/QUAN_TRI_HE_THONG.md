@@ -60,3 +60,12 @@ Các kiểm tra này không chứng minh provider production, cảnh báo thật
 Đợt tiếp theo bổ sung menu không gạch chân, active/focus/đóng Escape, lối tắt quản trị, UI danh mục sửa/xóa mềm/phân trang và trạng thái dịch vụ ảnh tắt. Đọc [nghiệm thu nền tảng](../05-ke-hoach/NGHIEM_THU_NEN_TANG.md) để xem phạm vi hoàn thành, ca kiểm giao diện và phần vận hành còn chờ cấu hình ngoài app. Không coi đã có đầy đủ tài khoản/scope nhà xe hoặc provider thật từ đợt UI này.
 
 Đợt tab/modal: [Tab và modal dùng chung](../03-giao-dien/QUY_UOC_UI.md) ghi các màn đã áp dụng, luồng mở/lưu/hủy, lỗi trong dialog và hướng dẫn để business kế thừa.
+
+
+## Quản trị role, quyền và menu/endpoint
+
+Vào **Hệ thống → Phân quyền** bằng ADMIN. Tab **Role và quyền** chọn loại role/quyền, thêm bằng modal, sửa tên/trạng thái bằng icon ở cột thao tác. Mã giữ nguyên sau tạo, tên có cả vi/en; mã lõi được bảo vệ. Tab gán quyền role và role user vẫn tách riêng. Mỗi thao tác kiểm quyền hành động và version ở backend; 409 cần đọc lại rồi đối chiếu, không tự gửi lại bản nháp.
+
+Tab **Menu và endpoint** chọn target từ inventory thật, chọn tất cả quyền bắt buộc và một trong các role cho phép. Để roles rỗng nếu không hạn chế theo role; permissions rỗng chỉ không thêm điều kiện quyền. Bỏ chọn cho phép sẽ chặn người thường. ADMIN có đường cứu hộ, còn guard nền trong code luôn giữ. Xóa policy trong modal chỉ bỏ điều kiện bổ sung. Nội dung và ca kiểm chi tiết ở [nền tảng mở rộng](../02-phat-trien/NEN_TANG_MO_RONG.md#registry-động-chính-sách-menuendpoint).
+
+**Giám sát → Truy cập và online** hiển thị cửa sổ 3 phút, phân trang trình duyệt và tín hiệu bất thường. Không dùng số này làm báo cáo lượt người chính xác tuyệt đối; đọc [giới hạn lưu trữ/đa node](GIAM_SAT_VA_VAN_HANH.md#truy-cập-người-online-và-tín-hiệu-bất-thường). Thư viện ảnh có modal sửa tên/mô tả; thêm/sửa/xóa vẫn kiểm owner, quyền riêng và version, lỗi giữ bản nháp trong modal.

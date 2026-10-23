@@ -1,12 +1,10 @@
 package vn.vietroute.auth.service;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.MessageSource;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,7 +16,6 @@ import vn.vietroute.auth.dto.response.AccessUserResponse;
 import vn.vietroute.auth.dto.response.PermissionResponse;
 import vn.vietroute.auth.dto.response.RolePermissionsResponse;
 import vn.vietroute.auth.dto.response.UserResponse;
-import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.repository.AccessRepository;
 import vn.vietroute.auth.repository.UserRepository;
@@ -40,28 +37,16 @@ public class AccessService {
 
     private final JdbcTransactions transactions;
 
-    private final MessageSource messages;
-
     /** Registry quyền được dịch theo locale; không truy vấn hay tiết lộ dữ liệu tài khoản. */
     @PreAuthorize("hasAuthority('ACCESS_READ')")
     public List<PermissionResponse> permissions(Locale locale) {
-        return Arrays.stream(Permission.values())
-            .map(permission ->
-                new PermissionResponse(
-                    permission,
-                    permission.resource(),
-                    permission.actions(),
-                    permission.messageKey(),
-                    messages.getMessage(permission.messageKey(), null, locale)
-                )
-            )
-            .toList();
+        return access.permissions(locale);
     }
 
-    /** Đọc cấu hình role hiện hành để UI lấy version trước khi sửa. */
+    /** Đọc role đang hoạt động để gán quyền/role; mã đã tắt vẫn quản lý tại registry, không gợi ý để gán mới. */
     @PreAuthorize("hasAuthority('ACCESS_READ')")
     public List<RolePermissionsResponse> roles() {
-        return Arrays.stream(Role.values()).map(access::role).toList();
+        return access.roles().stream().map(access::role).toList();
     }
 
     /** Danh sách tài khoản toàn hệ thống chỉ cho ADMIN; ACCESS_READ riêng không cho liệt kê người dùng. */
@@ -94,6 +79,8 @@ public class AccessService {
             }
         }
         return transactions.execute(connection -> {
+            access.lockRoleAssignments(connection);
+            access.validateMappings(connection, Set.of(role), request.getPermissions());
             access.replacePermissions(connection, role, request.getPermissions(), request.getVersion(), actor.id());
             return access.role(connection, role);
         });
@@ -112,6 +99,7 @@ public class AccessService {
         }
         return transactions.execute(connection -> {
             access.lockRoleAssignments(connection);
+            access.validateMappings(connection, request.getRoles(), Set.of());
             var target = users.findById(connection, id, true);
             if (target == null) {
                 throw new BusinessException(ErrorCode.NOT_FOUND);

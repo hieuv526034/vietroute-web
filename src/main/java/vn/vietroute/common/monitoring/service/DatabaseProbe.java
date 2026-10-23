@@ -8,7 +8,7 @@ import java.util.logging.Logger;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Component;
-import vn.vietroute.common.config.MonitoringSettings;
+import vn.vietroute.common.config.monitoring.MonitoringSettings;
 import vn.vietroute.common.monitoring.repository.MonitoringRepository;
 import vn.vietroute.common.monitoring.repository.MonitoringRepository.QueueSample;
 

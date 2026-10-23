@@ -27,14 +27,17 @@ import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.security.AuthCookies;
 import vn.vietroute.auth.security.JwtAuthenticationFilter;
 import vn.vietroute.auth.service.JwtService;
-import vn.vietroute.common.config.AppSettings;
-import vn.vietroute.common.config.MonitoringSettings;
+import vn.vietroute.common.config.application.AppSettings;
+import vn.vietroute.common.config.monitoring.MonitoringSettings;
+import vn.vietroute.common.config.traffic.TrafficSettings;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
+import vn.vietroute.common.monitoring.filter.ActivityFilter;
 import vn.vietroute.common.monitoring.filter.ApiJournalFilter;
 import vn.vietroute.common.monitoring.filter.HttpMetricsFilter;
 import vn.vietroute.common.monitoring.filter.MetricsScrapeFilter;
+import vn.vietroute.common.monitoring.service.ActivityService;
 import vn.vietroute.common.monitoring.service.ApiJournalStore;
 import vn.vietroute.common.monitoring.service.ApplicationMetrics;
 import vn.vietroute.common.traffic.TrafficGuardFilter;
@@ -82,6 +85,8 @@ public class SecurityConfig {
         AppSettings settings,
         TrafficGuardFilter traffic,
         ApplicationMetrics metrics,
+        ActivityService activity,
+        TrafficSettings trafficSettings,
         ApiJournalStore journal,
         Clock clock
     ) throws Exception {
@@ -157,7 +162,8 @@ public class SecurityConfig {
             )
             .addFilterBefore(new HttpMetricsFilter(metrics), SecurityContextHolderFilter.class)
             // Metrics bao cả thời gian I/O ghi log; journal vẫn đứng trước CSRF/JWT/authorization.
-            .addFilterAfter(new ApiJournalFilter(journal, clock), HttpMetricsFilter.class)
+            .addFilterAfter(new ActivityFilter(activity, settings, trafficSettings), HttpMetricsFilter.class)
+            .addFilterAfter(new ApiJournalFilter(journal, clock), ActivityFilter.class)
             .addFilterBefore(traffic, CsrfFilter.class)
             .addFilterBefore(
                 new JwtAuthenticationFilter(jwt, users, errors, cookies),

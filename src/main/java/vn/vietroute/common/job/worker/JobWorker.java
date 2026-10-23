@@ -16,7 +16,7 @@ import org.springframework.context.annotation.DependsOn;
 import org.springframework.core.task.TaskRejectedException;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
-import vn.vietroute.common.config.JobSettings;
+import vn.vietroute.common.config.integration.JobSettings;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.job.handler.JobHandler;
 import vn.vietroute.common.job.model.Job;

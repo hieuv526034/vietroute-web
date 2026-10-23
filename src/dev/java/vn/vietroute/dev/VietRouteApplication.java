@@ -8,8 +8,9 @@ import org.apache.catalina.startup.Tomcat;
 import org.apache.catalina.webresources.DirResourceSet;
 import org.apache.catalina.webresources.StandardRoot;
 import org.apache.tomcat.util.scan.StandardJarScanner;
-import vn.vietroute.common.config.ConfigValues;
 import vn.vietroute.common.config.WebApplicationInitializer;
+import vn.vietroute.common.config.application.ConfigValues;
+import vn.vietroute.common.config.application.ConfigurationEnvironment;
 import vn.vietroute.common.constant.ApplicationConstants.Env;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 
@@ -26,6 +27,16 @@ public final class VietRouteApplication {
             throw new IllegalStateException("Launcher chỉ dùng local; production triển khai bằng WAR/Docker.");
         }
         Path root = Path.of("").toAbsolutePath().normalize();
+        String configuredFile = System.getenv(Env.LOCAL_ENV_FILE.key());
+        Path defaultFile = root.resolve(".env");
+        if (configuredFile != null && !configuredFile.isBlank()) {
+            System.setProperty(Env.LOCAL_ENV_FILE.key(), configuredFile);
+        } else if (Files.isRegularFile(defaultFile)) {
+            System.setProperty(Env.LOCAL_ENV_FILE.key(), defaultFile.toString());
+        } else {
+            System.clearProperty(Env.LOCAL_ENV_FILE.key());
+        }
+        ConfigurationEnvironment environment = new ConfigurationEnvironment();
         Path web = root.resolve("src/main/webapp");
         // Dùng thư mục class thực tế của IDE/Maven, không buộc IntelliJ phải xuất vào target/classes.
         Path classes = Path.of(
@@ -34,7 +45,7 @@ public final class VietRouteApplication {
         if (!Files.isDirectory(web) || !Files.isDirectory(classes)) {
             throw new IllegalStateException("Chọn working directory là thư mục dự án và bật Build trước khi Run.");
         }
-        int port = new ConfigValues(System::getenv).number(Env.HTTP_PORT, 8080, 1, 65535);
+        int port = new ConfigValues(environment).number(Env.HTTP_PORT, 8080, 1, 65535);
         if (port < 1 || port > 65535) {
             throw new IllegalStateException(Env.HTTP_PORT.key() + " phải từ 1 đến 65535.");
         }

@@ -11,11 +11,11 @@ import com.zaxxer.hikari.HikariDataSource;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import vn.vietroute.common.base.PageRequest;
-import vn.vietroute.common.config.AppSettings;
-import vn.vietroute.common.config.DatabaseConfig;
-import vn.vietroute.common.config.DatabaseSettings;
-import vn.vietroute.common.config.MonitoringConfig;
 import vn.vietroute.common.config.RootConfig;
+import vn.vietroute.common.config.application.AppSettings;
+import vn.vietroute.common.config.database.DatabaseConfig;
+import vn.vietroute.common.config.database.DatabaseSettings;
+import vn.vietroute.common.config.monitoring.MonitoringConfig;
 import vn.vietroute.common.jdbc.JdbcSchema;
 
 /** Kiểm tra cấu hình lỗi dừng sớm và pool tạo lười; không truy cập database thật. */

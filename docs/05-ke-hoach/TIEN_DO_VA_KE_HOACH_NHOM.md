@@ -2,6 +2,8 @@
 
 Cập nhật 23/10/2026, đối chiếu main tại `d722089` sau [PR #30](https://github.com/hieuv526034/vietroute-web/pull/30). Nền tảng ban đầu ở [PR #13](https://github.com/hieuv526034/vietroute-web/pull/13), kế hoạch nhóm ở [PR #21](https://github.com/hieuv526034/vietroute-web/pull/21), UI quản trị ở [PR #22](https://github.com/hieuv526034/vietroute-web/pull/22); các đợt bổ sung gần nhất ghi bên dưới. Cửa nghiệm thu trước nghiệp vụ tại [NGHIEM_THU_NEN_TANG.md](NGHIEM_THU_NEN_TANG.md). Chức năng mới chỉ trở thành Đã có trên main khi PR tương ứng merge. Tài liệu này theo dõi trạng thái; [PHAN_CONG.md](PHAN_CONG.md) là nguồn username/email và phạm vi phụ trách, [đặc tả](DAC_TA_HE_THONG_XE_KHACH.md) là nguồn luồng F01–F19 và ca nghiệm thu T01–T21. Chuyển máy/tiếp tục phiên mới theo [hướng dẫn bàn giao](../06-ai-va-ban-giao/AI_VA_BAN_GIAO.md).
 
+FOUNDATION02 — **Đang kiểm CI**, `hieuv526034`, nhánh `hieuv526034/foundation-access-traffic-media`, gốc `de4053c`. Đã viết registry role/quyền và chính sách endpoint/menu, launcher đọc cấu hình DB local riêng, quy hoạch config/media dùng chung, online/bất thường. Kiểm local: `mvnw clean verify` đạt 100 test Java, 16 test Node đạt, format/rule/docs đạt; kiểm UI vi/en trên fixture 390px gồm validation, giữ modal khi 409, phân trang online, sửa ảnh. V007–V009 chỉ là source migration chưa áp dụng Neon; Docker/SQL thật chờ CI PostgreSQL tạm. Chưa triển khai nghiệp vụ, chưa xác nhận provider/Render hoặc benchmark production. Hợp đồng tại [nền tảng mở rộng](../02-phat-trien/NEN_TANG_MO_RONG.md); PR/bằng chứng merge cập nhật sau kiểm CI.
+
 ## 1. Cách đọc trạng thái
 
 | Trạng thái | Ý nghĩa |

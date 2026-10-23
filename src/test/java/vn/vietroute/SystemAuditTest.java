@@ -32,9 +32,9 @@ import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.AuthService;
 import vn.vietroute.auth.service.JwtService;
-import vn.vietroute.common.config.AppSettings;
 import vn.vietroute.common.config.RootConfig;
-import vn.vietroute.common.config.WebConfig;
+import vn.vietroute.common.config.application.AppSettings;
+import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.constant.ErrorCode;
@@ -44,6 +44,7 @@ import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.job.dto.response.JobResponse;
 import vn.vietroute.common.job.repository.JobRepository;
 import vn.vietroute.common.job.service.JobService;
+import vn.vietroute.support.AccessTestConfig;
 import vn.vietroute.support.JournalTestConfig;
 
 /** Kiểm actor kỹ thuật không có đường đăng nhập/cấp JWT; mọi port giả đều không kết nối DB. */
@@ -104,7 +105,7 @@ class SystemAuditTest {
         ) {
             var web = new MockServletContext("src/main/webapp", new FileSystemResourceLoader());
             root.setServletContext(web);
-            root.register(RootConfig.class, JournalTestConfig.class);
+            root.register(RootConfig.class, AccessTestConfig.class, JournalTestConfig.class);
             root.refresh();
             servlet.setParent(root);
             servlet.setServletContext(web);

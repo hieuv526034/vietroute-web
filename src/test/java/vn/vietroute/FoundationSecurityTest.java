@@ -37,11 +37,12 @@ import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.AccessService;
 import vn.vietroute.business.catalog.service.CatalogService;
-import vn.vietroute.business.media.service.MediaService;
 import vn.vietroute.common.config.RootConfig;
-import vn.vietroute.common.config.WebConfig;
+import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
+import vn.vietroute.common.media.service.MediaService;
+import vn.vietroute.support.AccessTestConfig;
 
 /** Kiểm tra biên bảo mật/locale mà không kết nối DB; nghiệp vụ SQL kiểm tra bằng PostgreSQL tạm ở CI. */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -57,7 +58,7 @@ class FoundationSecurityTest {
     void start() {
         context = new AnnotationConfigWebApplicationContext();
         context.setServletContext(new MockServletContext("src/main/webapp", new FileSystemResourceLoader()));
-        context.register(RootConfig.class, WebConfig.class);
+        context.register(RootConfig.class, AccessTestConfig.class, WebConfig.class);
         context.refresh();
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         json = context.getBean(ObjectMapper.class);

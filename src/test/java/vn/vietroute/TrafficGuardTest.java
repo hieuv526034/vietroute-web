@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import vn.vietroute.common.config.RootConfig;
-import vn.vietroute.common.config.TrafficSettings;
+import vn.vietroute.common.config.traffic.TrafficSettings;
 import vn.vietroute.common.monitoring.service.ApiJournalProjection;
 import vn.vietroute.common.traffic.ClientAddressResolver;
 import vn.vietroute.common.traffic.MemoryRateLimitStore;

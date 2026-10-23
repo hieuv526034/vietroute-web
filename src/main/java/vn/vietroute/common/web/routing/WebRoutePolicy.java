@@ -24,7 +24,8 @@ public final class WebRoutePolicy {
             Routes.OPENAPI,
             Routes.AUTH_LOGIN,
             Routes.AUTH_CSRF,
-            Routes.AUTH_LOGOUT
+            Routes.AUTH_LOGOUT,
+            Routes.PRESENCE
         );
     }
 
@@ -50,6 +51,7 @@ public final class WebRoutePolicy {
             path.equals(Routes.AUTH_LOGIN) ||
             path.equals(Routes.AUTH_CSRF) ||
             path.equals(Routes.AUTH_LOGOUT) ||
+            path.equals(Routes.PRESENCE) ||
             publicCatalog(path, method)
         );
     }
@@ -60,6 +62,7 @@ public final class WebRoutePolicy {
             path.equals(Routes.HOME) ||
             path.equals(Routes.LOGIN) ||
             path.equals(Routes.AUTH_LOGOUT) ||
+            path.equals(Routes.PRESENCE) ||
             publicCatalog(path, method)
         );
     }

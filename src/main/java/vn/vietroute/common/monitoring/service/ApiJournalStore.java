@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 import org.springframework.stereotype.Component;
-import vn.vietroute.common.config.ApiJournalSettings;
+import vn.vietroute.common.config.monitoring.ApiJournalSettings;
 import vn.vietroute.common.monitoring.dto.request.ApiJournalSearchRequest;
 import vn.vietroute.common.monitoring.dto.response.ApiJournalDetail;
 import vn.vietroute.common.monitoring.dto.response.ApiJournalResponse;

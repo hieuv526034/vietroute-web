@@ -47,7 +47,8 @@ Phần đã có: nền tảng locale/error/validation/audit/paging, auth/JWT/ph�
 | `common.monitoring` | `controller`, `dto/response`, `filter`, `repository`, `service`: đo HTTP/JVM/pool/worker và probe DB có chủ đích |
 | `common.media`, `traffic` | Adapter lưu ảnh, kiểm ảnh; giới hạn request/body/quota. Chưa chia lớp rỗng khi không cần |
 | `auth` | Credential, role/permission, principal, cookie/JWT và bootstrap tài khoản |
-| `business/catalog`, `business/media` | Module đang chạy; controller → service → repository → entity/response |
+| `business/catalog` | Danh mục nền đang chạy; controller → service → repository → entity/response |
+| `common/media`, `business/media/controller` | Lõi thư viện ảnh/upload dùng chung, controller public gọi service lõi |
 
 Đổi package chỉ đổi tổ chức code, không đổi route/schema/dữ liệu. Không tạo lớp ở package cũ để chuyển tiếp. Sau khi cập nhật nhánh lần đầu, dừng IDE server → Maven clean → Reload Maven → Rebuild Project rồi Run.
 

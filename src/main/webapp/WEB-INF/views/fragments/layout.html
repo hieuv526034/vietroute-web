@@ -70,7 +70,7 @@
                     <details
                         class="operations-menu"
                         th:classappend="${operationsActive} ? 'is-current'"
-                        th:if="${monitoringAllowed or jobsAllowed or accessAllowed}"
+                        th:if="${monitoringAllowed or configurationAllowed or jobsAllowed or accessAllowed}"
                     >
                         <summary th:text="#{ui.ops.menu}">Hệ thống</summary>
                         <div class="operations-menu-items">
@@ -105,7 +105,7 @@
                                 Phân quyền
                             </a>
                             <a
-                                th:if="${monitoringAllowed}"
+                                th:if="${configurationAllowed}"
                                 th:href="@{/operations/configuration(lang=${currentLocale})}"
                                 th:attr="aria-current=${navigation.configuration} ? 'page' : null"
                                 th:text="#{ui.ops.configuration}"
@@ -138,7 +138,7 @@
                         Quản trị
                     </a>
                     <a
-                        th:if="${currentUser != null}"
+                        th:if="${currentUser != null and accountAllowed}"
                         th:href="@{/account(lang=${currentLocale})}"
                         th:attr="aria-current=${navigation.account} ? 'page' : null"
                         th:text="#{ui.account}"
@@ -199,6 +199,7 @@
             <script th:src="@{/assets/js/table.js}"></script>
             <script th:src="@{/assets/js/forms.js}"></script>
             <script th:src="@{/assets/js/app.js}"></script>
+            <script th:src="@{/assets/js/presence.js}"></script>
         </th:block>
     </body>
 </html>

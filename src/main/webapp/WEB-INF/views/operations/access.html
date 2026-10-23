@@ -58,6 +58,20 @@
                         hidden
                         th:text="#{ui.ops.userRoles}"
                     ></button>
+                    <button
+                        id="registry-tab"
+                        type="button"
+                        data-tab-target="access-registry-section"
+                        th:if="${adminUser}"
+                        th:text="#{ui.foundation.registry}"
+                    ></button>
+                    <button
+                        id="policies-tab"
+                        type="button"
+                        data-tab-target="access-policies-section"
+                        th:if="${adminUser}"
+                        th:text="#{ui.foundation.policies}"
+                    ></button>
                 </div>
                 <section
                     id="access-roles-section"
@@ -167,6 +181,117 @@
                         </table>
                     </div>
                     <div th:replace="~{fragments/pagination :: pager('users', 20)}"></div>
+                </section>
+                <section
+                    id="access-registry-section"
+                    class="card p-4"
+                    th:if="${adminUser}"
+                >
+                    <h2
+                        class="h4"
+                        th:text="#{ui.foundation.registry}"
+                    ></h2>
+                    <p th:text="#{ui.foundation.registryNote}"></p>
+                    <div class="d-flex gap-3 justify-content-end mb-3">
+                        <label
+                            for="registry-kind"
+                            class="form-label"
+                            th:text="#{ui.foundation.kind}"
+                        ></label>
+                        <select
+                            id="registry-kind"
+                            class="form-select w-auto"
+                        >
+                            <option
+                                value="roles"
+                                th:text="#{ui.foundation.roles}"
+                            ></option>
+                            <option
+                                value="permissions"
+                                th:text="#{ui.foundation.permissions}"
+                            ></option>
+                        </select>
+                        <button
+                            id="registry-refresh"
+                            type="button"
+                            class="button button-outline"
+                            th:text="#{ui.foundation.refresh}"
+                        ></button>
+                        <button
+                            id="registry-create"
+                            type="button"
+                            class="button button-outline"
+                            th:text="#{ui.foundation.new}"
+                        ></button>
+                    </div>
+                    <p
+                        id="registry-status"
+                        role="status"
+                    ></p>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th th:text="#{ui.foundation.code}"></th>
+                                    <th th:text="#{ui.foundation.nameVi}"></th>
+                                    <th th:text="#{ui.foundation.nameEn}"></th>
+                                    <th th:text="#{ui.foundation.active}"></th>
+                                    <th th:text="#{ui.foundation.version}"></th>
+                                    <th
+                                        class="table-actions"
+                                        th:text="#{ui.foundation.actions}"
+                                    ></th>
+                                </tr>
+                            </thead>
+                            <tbody id="registry-body"></tbody>
+                        </table>
+                    </div>
+                </section>
+                <section
+                    id="access-policies-section"
+                    class="card p-4"
+                    th:if="${adminUser}"
+                >
+                    <h2
+                        class="h4"
+                        th:text="#{ui.foundation.policies}"
+                    ></h2>
+                    <p th:text="#{ui.foundation.policyNote}"></p>
+                    <div class="toolbar-actions mb-3">
+                        <button
+                            id="policies-refresh"
+                            type="button"
+                            class="button button-outline"
+                            th:text="#{ui.foundation.refresh}"
+                        ></button>
+                        <button
+                            id="policies-create"
+                            type="button"
+                            class="button button-outline"
+                            th:text="#{ui.foundation.new}"
+                        ></button>
+                    </div>
+                    <p
+                        id="policies-status"
+                        role="status"
+                    ></p>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th th:text="#{ui.foundation.kind}"></th>
+                                    <th th:text="#{ui.foundation.target}"></th>
+                                    <th th:text="#{ui.foundation.nameVi}"></th>
+                                    <th th:text="#{ui.foundation.active}"></th>
+                                    <th
+                                        class="table-actions"
+                                        th:text="#{ui.foundation.actions}"
+                                    ></th>
+                                </tr>
+                            </thead>
+                            <tbody id="policies-body"></tbody>
+                        </table>
+                    </div>
                 </section>
             </fieldset>
             <dialog
@@ -315,9 +440,236 @@
                 hidden
                 th:attr="data-empty=#{ui.ops.empty},data-loading=#{ui.ops.loading},data-saved=#{ui.ops.saved},data-confirm-retry=#{ui.ops.confirmRetry},data-confirm-permissions=#{ui.ops.confirmPermissions},data-confirm-roles=#{ui.ops.confirmRoles},data-details=#{ui.ops.details},data-retry=#{ui.ops.retry},data-select=#{ui.ops.select},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off},data-page=#{ui.ops.page},data-fixed=#{ui.ops.fixed},data-readonly=#{ui.ops.readonly},data-restricted=#{ui.ops.restricted},data-self=#{ui.ops.self},data-conflict=#{ui.ops.conflict}"
             ></div>
+            <th:block th:if="${adminUser}">
+                <dialog
+                    id="registry-dialog"
+                    class="workspace-dialog"
+                    aria-labelledby="registry-dialog-title"
+                >
+                    <fieldset class="dialog-controls">
+                        <div class="dialog-heading">
+                            <h2
+                                id="registry-dialog-title"
+                                class="h4"
+                                th:text="#{ui.foundation.registry}"
+                            ></h2>
+                            <button
+                                type="button"
+                                class="dialog-close"
+                                data-dialog-close
+                                th:attr="aria-label=#{ui.ops.close}"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <p
+                            id="registry-dialog-feedback"
+                            class="feedback"
+                            role="alert"
+                            hidden
+                        ></p>
+                        <form id="registry-form">
+                            <div class="mb-3">
+                                <label
+                                    class="form-label"
+                                    for="registry-code"
+                                    th:text="#{ui.foundation.code}"
+                                ></label>
+                                <input
+                                    id="registry-code"
+                                    name="code"
+                                    class="form-control"
+                                    required
+                                    maxlength="40"
+                                    pattern="[A-Z][A-Z0-9_]+"
+                                />
+                            </div>
+                            <div class="mb-3">
+                                <label
+                                    class="form-label"
+                                    for="registry-name-vi"
+                                    th:text="#{ui.foundation.nameVi}"
+                                ></label>
+                                <input
+                                    id="registry-name-vi"
+                                    name="nameVi"
+                                    class="form-control"
+                                    required
+                                    maxlength="120"
+                                />
+                            </div>
+                            <div class="mb-3">
+                                <label
+                                    class="form-label"
+                                    for="registry-name-en"
+                                    th:text="#{ui.foundation.nameEn}"
+                                ></label>
+                                <input
+                                    id="registry-name-en"
+                                    name="nameEn"
+                                    class="form-control"
+                                    required
+                                    maxlength="120"
+                                />
+                            </div>
+                            <label class="form-check mb-3">
+                                <input
+                                    name="active"
+                                    type="checkbox"
+                                    class="form-check-input"
+                                />
+                                <span th:text="#{ui.foundation.active}"></span>
+                            </label>
+                            <div class="dialog-actions">
+                                <button
+                                    type="button"
+                                    class="button button-outline"
+                                    data-dialog-close
+                                    th:text="#{ui.foundation.cancel}"
+                                ></button>
+                                <button
+                                    type="submit"
+                                    class="button"
+                                    th:text="#{ui.foundation.save}"
+                                ></button>
+                            </div>
+                        </form>
+                    </fieldset>
+                </dialog>
+                <dialog
+                    id="policy-dialog"
+                    class="workspace-dialog"
+                    aria-labelledby="policy-dialog-title"
+                >
+                    <fieldset class="dialog-controls">
+                        <div class="dialog-heading">
+                            <h2
+                                id="policy-dialog-title"
+                                class="h4"
+                                th:text="#{ui.foundation.policies}"
+                            ></h2>
+                            <button
+                                type="button"
+                                class="dialog-close"
+                                data-dialog-close
+                                th:attr="aria-label=#{ui.ops.close}"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <p
+                            id="policy-dialog-feedback"
+                            class="feedback"
+                            role="alert"
+                            hidden
+                        ></p>
+                        <form id="policy-form">
+                            <label
+                                for="policy-target"
+                                class="form-label"
+                                th:text="#{ui.foundation.target}"
+                            ></label>
+                            <select
+                                id="policy-target"
+                                name="target"
+                                class="form-select mb-3"
+                                required
+                            ></select>
+                            <div class="mb-3">
+                                <label
+                                    class="form-label"
+                                    for="policy-name-vi"
+                                    th:text="#{ui.foundation.nameVi}"
+                                ></label>
+                                <input
+                                    id="policy-name-vi"
+                                    name="nameVi"
+                                    class="form-control"
+                                    required
+                                    maxlength="160"
+                                />
+                            </div>
+                            <div class="mb-3">
+                                <label
+                                    class="form-label"
+                                    for="policy-name-en"
+                                    th:text="#{ui.foundation.nameEn}"
+                                ></label>
+                                <input
+                                    id="policy-name-en"
+                                    name="nameEn"
+                                    class="form-control"
+                                    required
+                                    maxlength="160"
+                                />
+                            </div>
+                            <label class="form-check mb-3">
+                                <input
+                                    name="enabled"
+                                    type="checkbox"
+                                    class="form-check-input"
+                                />
+                                <span th:text="#{ui.foundation.enabled}"></span>
+                            </label>
+                            <label
+                                for="policy-permissions"
+                                class="form-label"
+                                th:text="#{ui.foundation.allPermissions}"
+                            ></label>
+                            <select
+                                id="policy-permissions"
+                                name="permissions"
+                                multiple
+                                size="7"
+                                class="form-select mb-3"
+                            ></select>
+                            <label
+                                for="policy-roles"
+                                class="form-label"
+                                th:text="#{ui.foundation.anyRoles}"
+                            ></label>
+                            <select
+                                id="policy-roles"
+                                name="roles"
+                                multiple
+                                size="5"
+                                class="form-select mb-3"
+                            ></select>
+                            <div class="dialog-actions">
+                                <button
+                                    id="policy-delete"
+                                    type="button"
+                                    class="button button-outline"
+                                    th:text="#{ui.foundation.delete}"
+                                ></button>
+                                <button
+                                    type="button"
+                                    class="button button-outline"
+                                    data-dialog-close
+                                    th:text="#{ui.foundation.cancel}"
+                                ></button>
+                                <button
+                                    type="submit"
+                                    class="button"
+                                    th:text="#{ui.foundation.save}"
+                                ></button>
+                            </div>
+                        </form>
+                    </fieldset>
+                </dialog>
+            </th:block>
+            <div
+                id="foundation-labels"
+                hidden
+                th:attr="data-empty=#{ui.foundation.empty},data-edit=#{ui.foundation.edit},data-confirm=#{ui.foundation.confirm},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off}"
+            ></div>
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
         <script th:src="@{/assets/js/operations.js}"></script>
+        <script
+            th:if="${adminUser}"
+            th:src="@{/assets/js/access-management.js}"
+        ></script>
     </body>
 </html>

@@ -17,7 +17,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.support.RequestContextUtils;
 import vn.vietroute.common.config.RootConfig;
-import vn.vietroute.common.config.WebConfig;
+import vn.vietroute.common.config.web.WebConfig;
+import vn.vietroute.support.AccessTestConfig;
 
 class ApplicationSmokeTest {
 
@@ -25,7 +26,7 @@ class ApplicationSmokeTest {
     void springMvcRendersThymeleafAndServesStaticAssetsWithoutDatabase() throws Exception {
         try (AnnotationConfigWebApplicationContext context = new AnnotationConfigWebApplicationContext()) {
             context.setServletContext(new MockServletContext("src/main/webapp", new FileSystemResourceLoader()));
-            context.register(RootConfig.class, WebConfig.class);
+            context.register(RootConfig.class, AccessTestConfig.class, WebConfig.class);
             context.refresh();
             assertTrue(context.getBean(HikariDataSource.class).getHikariPoolMXBean() == null);
             MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();

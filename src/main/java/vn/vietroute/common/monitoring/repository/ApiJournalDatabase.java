@@ -3,7 +3,7 @@ package vn.vietroute.common.monitoring.repository;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
-import vn.vietroute.common.config.DatabaseSettings;
+import vn.vietroute.common.config.database.DatabaseSettings;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.jdbc.JdbcSchema;
 

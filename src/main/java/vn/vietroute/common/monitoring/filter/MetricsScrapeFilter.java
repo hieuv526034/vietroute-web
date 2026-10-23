@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.util.concurrent.Semaphore;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.filter.OncePerRequestFilter;
-import vn.vietroute.common.config.MonitoringSettings;
+import vn.vietroute.common.config.monitoring.MonitoringSettings;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 
 /** Chỉ gắn vào security chain đúng một route; token read-only riêng, không tin cookie hoặc JWT tài khoản. */

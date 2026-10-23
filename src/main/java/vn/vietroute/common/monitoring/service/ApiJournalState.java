@@ -11,8 +11,11 @@ public final class ApiJournalState {
     public String requestBody = "{\"capture\":\"OMITTED_OR_NO_BODY\"}";
     public String responseBody = "{\"capture\":\"NO_ENVELOPE\"}";
     public String code = "UNKNOWN";
+
     public String messageKey = "";
+
     public String diagnostic = "HTTP_STATUS_ONLY";
+
     public String sqlState = "";
 
     private ApiJournalState() {}

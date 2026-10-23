@@ -24,6 +24,10 @@
         />
         <envs>
             <env
+                name="VIETROUTE_ACTIVITY_ENABLED"
+                value="true"
+            />
+            <env
                 name="VIETROUTE_ENV"
                 value="development"
             />
@@ -32,19 +36,11 @@
                 value="false"
             />
             <env
-                name="VIETROUTE_DB_INIT_ENABLED"
-                value="false"
-            />
-            <env
                 name="VIETROUTE_WORKER_ENABLED"
                 value="false"
             />
             <env
                 name="VIETROUTE_MAIL_ENABLED"
-                value="false"
-            />
-            <env
-                name="VIETROUTE_MEDIA_ENABLED"
                 value="false"
             />
         </envs>
