@@ -2,6 +2,29 @@
 # Chỉ source sau verify-account.sh trong DB Docker tạm; không đọc .env hoặc gọi provider thật.
 printf 'Foundation stage: immutable ADMIN, mutable roles, annotations and own profile/avatar\n'
 foundation_admin_token="$token"
+# Giữ khóa quản trị từ session DB CI rồi đăng ký song song: request phải chờ cùng khóa trước khi tạo user.
+docker exec -e PGAPPNAME=foundation-role-lock vietroute-db-ci psql -U vietroute_ci -d vietroute_ci -v ON_ERROR_STOP=1 \
+  -c "BEGIN; SELECT pg_advisory_xact_lock(781205611); SELECT pg_sleep(60); COMMIT" > "$work/role-lock.log" 2>&1 &
+foundation_lock_pid=$!
+for attempt in {1..40}; do
+  if [[ "$(sql "SELECT count(*) FROM pg_stat_activity WHERE application_name='foundation-role-lock' AND wait_event='PgSleep'")" -gt 0 ]]; then break; fi
+  sleep 0.1
+done
+[[ "$(sql "SELECT count(*) FROM pg_stat_activity WHERE application_name='foundation-role-lock' AND wait_event='PgSleep'")" -gt 0 ]]
+CI_PASSWORD="$admin_password" python3 -c 'import json,os,sys; json.dump({"username":"rolelockci","displayName":"Role lock CI","email":"rolelockci@example.invalid","password":os.environ["CI_PASSWORD"]},sys.stdout)' > "$work/role-lock-register.json"
+(call 202 POST /api/v1/auth/register "$work/role-lock-register.json" cookie) > "$work/role-lock-request.log" 2>&1 &
+foundation_register_pid=$!
+for attempt in {1..40}; do
+  if [[ "$(sql "SELECT count(*) FROM pg_stat_activity WHERE application_name<>'foundation-role-lock' AND wait_event='advisory' AND query LIKE '%pg_advisory_xact_lock(781205611)%'")" -gt 0 ]]; then break; fi
+  sleep 0.1
+done
+[[ "$(sql "SELECT count(*) FROM pg_stat_activity WHERE application_name<>'foundation-role-lock' AND wait_event='advisory' AND query LIKE '%pg_advisory_xact_lock(781205611)%'")" -gt 0 ]]
+[[ "$(sql "SELECT count(*) FROM auth_users WHERE username='rolelockci'")" == 0 ]]
+sql "SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE application_name='foundation-role-lock'" >/dev/null
+wait "$foundation_lock_pid" || true # Session CI được chủ động hủy để giải phóng transaction lock.
+wait "$foundation_register_pid"
+[[ "$(sql "SELECT count(*) FROM auth_users WHERE username='rolelockci'")" == 1 ]]
+printf 'Registration waits for the shared role-assignment lock before creating CUSTOMER.\n'
 printf '%s\n' '{"nameVi":"Không được đổi","nameEn":"Immutable","active":true,"version":0}' > "$work/foundation-registry.json"
 call 403 PUT /api/v1/admin/access/registry/roles/ADMIN "$work/foundation-registry.json" bearer
 call 403 DELETE '/api/v1/admin/access/registry/roles/ADMIN?version=0' '' bearer
