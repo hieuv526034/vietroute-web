@@ -15,35 +15,69 @@
                     th:text="#{ui.accountDescription}"
                 ></p>
             </div>
-            <div class="workspace-grid">
-                <section class="panel">
-                    <h2
-                        id="account-name"
-                        th:text="#{ui.loading}"
-                    ></h2>
-                    <dl>
-                        <dt th:text="#{ui.username}"></dt>
-                        <dd id="account-username">—</dd>
-                        <dt th:text="#{ui.roles}"></dt>
-                        <dd id="account-roles">—</dd>
-                        <dt th:text="#{ui.createdAt}"></dt>
-                        <dd id="account-created">—</dd>
-                    </dl>
-                </section>
-                <section class="panel">
-                    <h2 th:text="#{ui.changePassword}"></h2>
+            <section class="panel">
+                <h2
+                    id="account-name"
+                    th:text="#{ui.loading}"
+                ></h2>
+                <dl>
+                    <dt th:text="#{ui.username}"></dt>
+                    <dd id="account-username">—</dd>
+                    <dt th:text="#{ui.roles}"></dt>
+                    <dd id="account-roles">—</dd>
+                    <dt th:text="#{ui.createdAt}"></dt>
+                    <dd id="account-created">—</dd>
+                </dl>
+
+                <p
+                    class="initial-password"
+                    id="initial-password"
+                    hidden
+                    th:text="#{ui.initialPassword}"
+                ></p>
+                <div
+                    id="form-feedback"
+                    class="feedback"
+                    role="alert"
+                    hidden
+                ></div>
+                <button
+                    id="password-open"
+                    class="button mt-3"
+                    type="button"
+                    th:text="#{ui.changePassword}"
+                ></button>
+            </section>
+            <dialog
+                id="password-dialog"
+                class="workspace-dialog"
+                aria-labelledby="password-dialog-title"
+            >
+                <fieldset
+                    id="password-dialog-controls"
+                    class="dialog-controls"
+                >
+                    <div class="dialog-heading">
+                        <h2
+                            id="password-dialog-title"
+                            class="h4"
+                            th:text="#{ui.changePassword}"
+                        ></h2>
+                        <button
+                            class="dialog-close"
+                            type="button"
+                            data-dialog-close
+                            th:attr="aria-label=#{ui.ops.close}"
+                        >
+                            <span aria-hidden="true">×</span>
+                        </button>
+                    </div>
                     <p
-                        class="initial-password"
-                        id="initial-password"
-                        hidden
-                        th:text="#{ui.initialPassword}"
-                    ></p>
-                    <div
-                        id="form-feedback"
+                        id="password-feedback"
                         class="feedback"
                         role="alert"
                         hidden
-                    ></div>
+                    ></p>
                     <form
                         id="password-form"
                         novalidate
@@ -87,8 +121,14 @@
                             th:text="#{ui.savePassword}"
                         ></button>
                     </form>
-                </section>
-            </div>
+                    <button
+                        class="button button-outline mt-3"
+                        type="button"
+                        data-dialog-close
+                        th:text="#{ui.catalog.cancel}"
+                    ></button>
+                </fieldset>
+            </dialog>
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>

@@ -13,7 +13,6 @@
     const status = document.getElementById('catalog-status');
     const conflict = document.getElementById('catalog-conflict');
     const save = document.getElementById('catalog-save');
-    const cancel = document.getElementById('catalog-cancel');
     const previous = document.getElementById('catalog-previous');
     const next = document.getElementById('catalog-next');
     const type = document.getElementById('catalog-type');
@@ -22,17 +21,26 @@
     let selected = null;
     let permissions = [];
     let busy = false;
+    const editor = window.VietRouteUI.modal('catalog-dialog', {
+        busy: () => busy,
+        onClose: () => {
+            resetEditor();
+            feedback('');
+            conflict.hidden = true;
+        },
+    });
     const can = (action) =>
         permissions.includes(`CATALOG_${action}`) ||
         (['CREATE', 'UPDATE'].includes(action) && permissions.includes('CATALOG_WRITE'));
 
     // Giữ nguyên trường đang sửa khi lỗi; không tự gửi lại mutation sau timeout hoặc conflict.
-    const perform = async (action, target = 'form-feedback') => {
+    const perform = async (action, target = editor.isOpen ? 'form-feedback' : 'catalog-feedback') => {
         if (busy) {
             return;
         }
         busy = true;
         controls.disabled = true;
+        document.getElementById('catalog-dialog-controls').disabled = true;
         root.setAttribute('aria-busy', 'true');
         status.textContent = root.dataset.loading;
         feedback('', false, target);
@@ -40,11 +48,12 @@
         try {
             await action();
         } catch (error) {
-            failure(error, target);
+            failure(error, editor.isOpen ? 'form-feedback' : 'catalog-feedback');
             conflict.hidden = error.response?.status !== 409;
         } finally {
             busy = false;
             controls.disabled = false;
+            document.getElementById('catalog-dialog-controls').disabled = false;
             root.setAttribute('aria-busy', 'false');
             status.textContent = '';
         }
@@ -58,7 +67,6 @@
         code.disabled = false;
         save.disabled = !can('CREATE');
         save.textContent = root.dataset.create;
-        cancel.hidden = true;
         document.getElementById('catalog-editor-title').textContent = root.dataset.create;
         const note = document.getElementById('catalog-editor-note');
         note.textContent = note.dataset.create;
@@ -69,12 +77,13 @@
         node.type = 'button';
         node.className = `button button-small ${danger ? 'button-danger' : 'button-outline'}`;
         node.textContent = label;
-        node.addEventListener('click', () => perform(action));
+        // Giữ nút mở trước khi fieldset bị khóa và trình duyệt chuyển focus ra body.
+        node.addEventListener('click', () => perform(() => action(node)));
         return node;
     };
 
     // Đọc bản mới nhất khi mở form; version được giữ ở bộ nhớ và gửi lại đúng một lần khi lưu.
-    const edit = async (item) => {
+    const edit = async (item, trigger) => {
         const current = (await api.get(`/api/v1/admin/catalogs/${item.id}`, { timeout: 10000 })).data.data;
         selected = current;
         type.value = current.type;
@@ -86,11 +95,10 @@
         form.elements.sortOrder.value = current.sortOrder;
         save.disabled = !current.active || !can('UPDATE');
         save.textContent = root.dataset.save;
-        cancel.hidden = false;
         document.getElementById('catalog-editor-title').textContent = root.dataset.edit;
         const note = document.getElementById('catalog-editor-note');
         note.textContent = note.dataset.edit;
-        document.getElementById('catalog-editor').scrollIntoView({ block: 'start' });
+        editor.open(trigger);
         // Focus được đặt sau khi fieldset mở lại, tránh focus vào control đang disabled.
         requestAnimationFrame(() => form.elements.nameVi.focus());
     };
@@ -103,7 +111,7 @@
         if (selected?.id === item.id) {
             resetEditor();
         }
-        feedback(response.data.message, true);
+        feedback(response.data.message, true, 'catalog-feedback');
         await load();
     };
 
@@ -127,7 +135,7 @@
             const group = document.createElement('div');
             group.className = 'catalog-actions';
             if (can('READ') && can('UPDATE')) {
-                group.append(button(root.dataset.edit, false, () => edit(item)));
+                group.append(button(root.dataset.edit, false, (trigger) => edit(item, trigger)));
             }
             if (can('DELETE')) {
                 group.append(button(root.dataset.delete, true, () => remove(item)));
@@ -174,14 +182,17 @@
             filter.value = selected?.type || type.value;
             page = 0;
             resetEditor();
-            feedback(response.data.message, true);
+            // Thành công mới đóng modal; lỗi/409 vẫn giữ bản nháp và phản hồi ngay trong modal.
+            document.getElementById('catalog-dialog').close();
+            feedback(response.data.message, true, 'catalog-feedback');
             await load();
         });
     });
-    cancel.addEventListener('click', () => {
-        resetEditor();
-        feedback('');
-        conflict.hidden = true;
+    document.getElementById('catalog-create').addEventListener('click', () => {
+        if (!busy && can('CREATE')) {
+            resetEditor();
+            editor.open();
+        }
     });
     filter.addEventListener('change', () =>
         perform(async () => {
@@ -205,12 +216,14 @@
     document.getElementById('catalog-refresh').addEventListener('click', () =>
         perform(async () => {
             permissions = (await api.get('/api/v1/auth/me', { timeout: 10000 })).data.data.permissions;
+            document.getElementById('catalog-create').disabled = !can('CREATE');
             resetEditor();
             await load();
         }, 'catalog-feedback'),
     );
     void perform(async () => {
         permissions = (await api.get('/api/v1/auth/me', { timeout: 10000 })).data.data.permissions;
+        document.getElementById('catalog-create').disabled = !can('CREATE');
         resetEditor();
         await load();
     }, 'catalog-feedback');

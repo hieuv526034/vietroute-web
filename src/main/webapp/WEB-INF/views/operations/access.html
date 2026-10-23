@@ -37,10 +37,31 @@
             ></p>
             <fieldset
                 id="ops-controls"
+                data-tabs
                 class="border-0 p-0 m-0 w-100"
             >
+                <div
+                    class="workspace-tabs"
+                    role="tablist"
+                    th:attr="aria-label=#{ui.ops.access}"
+                >
+                    <button
+                        id="permissions-tab"
+                        type="button"
+                        data-tab-target="access-roles-section"
+                        th:text="#{ui.ops.rolePermissions}"
+                    ></button>
+                    <button
+                        id="users-tab"
+                        type="button"
+                        data-tab-target="access-users-section"
+                        hidden
+                        th:text="#{ui.ops.userRoles}"
+                    ></button>
+                </div>
                 <section
-                    class="card p-4 mb-4"
+                    id="access-roles-section"
+                    class="card p-4"
                     aria-labelledby="role-title"
                 >
                     <h2
@@ -68,28 +89,17 @@
                         :
                         <strong id="role-version">—</strong>
                     </p>
-                    <form id="permissions-form">
-                        <div class="table-responsive permission-table">
-                            <table class="table align-middle">
-                                <thead>
-                                    <tr>
-                                        <th th:text="#{ui.ops.resource}"></th>
-                                        <th th:text="#{ui.ops.permission}"></th>
-                                        <th th:text="#{ui.ops.actions}"></th>
-                                        <th th:text="#{ui.ops.granted}"></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="permissions-body"></tbody>
-                            </table>
-                        </div>
-                        <button
-                            id="permissions-save"
-                            class="button"
-                            type="submit"
-                            disabled
-                            th:text="#{ui.ops.savePermissions}"
-                        ></button>
-                    </form>
+                    <div
+                        id="role-permission-summary"
+                        class="permission-summary"
+                    ></div>
+                    <button
+                        id="permissions-edit"
+                        class="button"
+                        type="button"
+                        disabled
+                        th:text="#{ui.workspace.editPermissions}"
+                    ></button>
                 </section>
                 <section
                     class="card p-4"
@@ -165,10 +175,104 @@
                             th:text="#{ui.mediaNext}"
                         ></button>
                     </nav>
+                </section>
+            </fieldset>
+            <dialog
+                id="permissions-dialog"
+                class="workspace-dialog workspace-dialog-wide"
+                aria-labelledby="permissions-dialog-title"
+            >
+                <fieldset
+                    class="dialog-controls"
+                    data-modal-controls
+                >
+                    <div class="dialog-heading">
+                        <h2
+                            id="permissions-dialog-title"
+                            class="h4"
+                            th:text="#{ui.workspace.editPermissions}"
+                        ></h2>
+                        <button
+                            class="dialog-close"
+                            type="button"
+                            data-dialog-close
+                            th:attr="aria-label=#{ui.ops.close}"
+                        >
+                            <span aria-hidden="true">×</span>
+                        </button>
+                    </div>
+                    <p
+                        id="permissions-target"
+                        class="muted"
+                    ></p>
+                    <p
+                        id="permissions-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></p>
+                    <form id="permissions-form">
+                        <div class="table-responsive permission-table">
+                            <table class="table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th th:text="#{ui.ops.resource}"></th>
+                                        <th th:text="#{ui.ops.permission}"></th>
+                                        <th th:text="#{ui.ops.actions}"></th>
+                                        <th th:text="#{ui.ops.granted}"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="permissions-body"></tbody>
+                            </table>
+                        </div>
+                        <button
+                            id="permissions-save"
+                            class="button"
+                            type="submit"
+                            disabled
+                            th:text="#{ui.ops.savePermissions}"
+                        ></button>
+                    </form>
+                    <button
+                        class="button button-outline mt-3"
+                        type="button"
+                        data-dialog-close
+                        th:text="#{ui.catalog.cancel}"
+                    ></button>
+                </fieldset>
+            </dialog>
+            <dialog
+                id="user-roles-dialog"
+                class="workspace-dialog"
+                aria-labelledby="selected-user"
+            >
+                <fieldset
+                    class="dialog-controls"
+                    data-modal-controls
+                >
+                    <div class="dialog-heading">
+                        <span
+                            class="eyebrow"
+                            th:text="#{ui.ops.userRoles}"
+                        ></span>
+                        <button
+                            class="dialog-close"
+                            type="button"
+                            data-dialog-close
+                            th:attr="aria-label=#{ui.ops.close}"
+                        >
+                            <span aria-hidden="true">×</span>
+                        </button>
+                    </div>
+                    <p
+                        id="user-roles-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></p>
                     <form
                         id="user-roles-form"
                         class="border rounded p-3"
-                        hidden
                     >
                         <h3
                             class="h5"
@@ -193,8 +297,14 @@
                             th:text="#{ui.ops.saveRoles}"
                         ></button>
                     </form>
-                </section>
-            </fieldset>
+                    <button
+                        class="button button-outline mt-3"
+                        type="button"
+                        data-dialog-close
+                        th:text="#{ui.catalog.cancel}"
+                    ></button>
+                </fieldset>
+            </dialog>
             <div
                 id="ops-labels"
                 hidden

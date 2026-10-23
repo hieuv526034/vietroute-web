@@ -14,6 +14,18 @@
     const enabled = root.dataset.enabled === 'true';
     let page = 0;
     let permissions = [];
+    let uploading = false;
+    const open = document.getElementById('media-open');
+    const uploadModal = window.VietRouteUI.modal('media-dialog', {
+        busy: () => uploading,
+        onClose: () => {
+            form.reset();
+            feedback('', false, 'media-upload-feedback');
+        },
+    });
+    open.addEventListener('click', () => {
+        if (!uploading && enabled && permissions.includes('MEDIA_CREATE')) uploadModal.open();
+    });
 
     const load = async () => {
         const result = (await api.get('/api/v1/media', { params: { page, size: 12 } })).data.data;
@@ -80,21 +92,27 @@
     // File đi qua backend để kiểm pixel/chuẩn hóa; trình duyệt không biết Cloudinary API secret.
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        if (!enabled || !permissions.includes('MEDIA_CREATE') || !form.reportValidity()) {
+        if (uploading || !enabled || !permissions.includes('MEDIA_CREATE') || !form.reportValidity()) {
             return;
         }
         upload.disabled = true;
-        feedback('');
+        const body = new FormData(form);
+        uploading = true;
+        document.getElementById('media-dialog-controls').disabled = true;
+        feedback('', false, 'media-upload-feedback');
         try {
-            const response = await mutate('/api/v1/media', new FormData(form));
+            const response = await mutate('/api/v1/media', body);
             feedback(response.data.message, true);
             form.reset();
+            document.getElementById('media-dialog').close();
             page = 0;
             await load();
         } catch (error) {
-            failure(error);
+            failure(error, document.getElementById('media-dialog').open ? 'media-upload-feedback' : 'form-feedback');
         } finally {
             upload.disabled = !enabled || !permissions.includes('MEDIA_CREATE');
+            uploading = false;
+            document.getElementById('media-dialog-controls').disabled = false;
         }
     });
     document.getElementById('media-refresh').addEventListener('click', () => load().catch(failure));
@@ -110,6 +128,7 @@
         .then(async (response) => {
             permissions = response.data.data.permissions;
             upload.disabled = !enabled || !permissions.includes('MEDIA_CREATE');
+            open.disabled = upload.disabled;
             await load();
         })
         .catch(failure);

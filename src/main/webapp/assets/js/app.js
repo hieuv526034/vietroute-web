@@ -48,7 +48,7 @@
     // Các màn hình mở rộng dùng cùng HTTP client và cơ chế CSRF/lỗi, không sao chép luồng xác thực.
     window.VietRoute = Object.freeze({ api, mutate, failure, feedback });
 
-    const bindForm = (id, action) => {
+    const bindForm = (id, action, feedbackId = 'form-feedback') => {
         const form = document.getElementById(id);
         if (!form) {
             return;
@@ -56,12 +56,18 @@
 
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
-            feedback('');
+            if (form.dataset.submitting === 'true') return;
+            feedback('', false, feedbackId);
             if (!form.reportValidity()) {
                 return;
             }
 
             const button = form.querySelector('button[type="submit"]');
+            // Lấy dữ liệu trước khi khóa fieldset, vì FormData bỏ các field đang disabled.
+            const body = Object.fromEntries(new FormData(form));
+            const controls = form.closest('.dialog-controls');
+            form.dataset.submitting = 'true';
+            if (controls) controls.disabled = true;
             const label = button.textContent;
             button.disabled = true;
             if (button.dataset.loading) {
@@ -69,12 +75,14 @@
             }
 
             try {
-                await action(Object.fromEntries(new FormData(form)), form);
+                await action(body, form);
             } catch (error) {
-                failure(error);
+                failure(error, feedbackId);
             } finally {
                 button.disabled = false;
                 button.textContent = label;
+                form.dataset.submitting = 'false';
+                if (controls) controls.disabled = false;
             }
         });
     };
@@ -109,12 +117,28 @@
         }
     };
 
-    bindForm('password-form', async (body, form) => {
-        const response = await mutate('/api/v1/auth/change-password', body);
-        form.reset();
-        feedback(response.data.message, true);
-        await loadAccount();
-    });
+    const passwordForm = document.getElementById('password-form');
+    if (passwordForm) {
+        const passwordModal = window.VietRouteUI.modal('password-dialog', {
+            busy: () => passwordForm.dataset.submitting === 'true',
+            onClose: () => {
+                passwordForm.reset();
+                feedback('', false, 'password-feedback');
+            },
+        });
+        document.getElementById('password-open').addEventListener('click', () => passwordModal.open());
+    }
+    bindForm(
+        'password-form',
+        async (body, form) => {
+            const response = await mutate('/api/v1/auth/change-password', body);
+            form.reset();
+            feedback(response.data.message, true);
+            document.getElementById('password-dialog').close();
+            await loadAccount();
+        },
+        'password-feedback',
+    );
 
     document.getElementById('logout-button')?.addEventListener('click', async () => {
         try {

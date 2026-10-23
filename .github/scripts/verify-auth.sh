@@ -107,11 +107,18 @@ for locale in vi en; do
   call 200 GET "/admin?lang=$locale" '' cookie
   grep -q 'catalog-workspace' "$result"
   grep -q 'catalog-previous' "$result"
+  grep -q 'catalog-dialog' "$result"
+  grep -q 'data-tab-target="overview-panel"' "$result"
+  grep -q '/assets/js/workspace.js' "$result"
   grep -q '/assets/js/catalog.js' "$result"
   grep -q 'aria-current="page"' "$result"
   if grep -q '??ui\.' "$result"; then exit 1; fi
   call 200 GET "/media?lang=$locale" '' cookie
   grep -q 'data-enabled="false"' "$result"
+  grep -q 'media-dialog' "$result"
+  if grep -q '??ui\.' "$result"; then exit 1; fi
+  call 200 GET "/account?lang=$locale" '' cookie
+  grep -q 'password-dialog' "$result"
   if grep -q '??ui\.' "$result"; then exit 1; fi
 done
 call 200 GET /api/v1/admin/system/configuration '' bearer

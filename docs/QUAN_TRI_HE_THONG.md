@@ -56,3 +56,5 @@ Các kiểm tra này không chứng minh provider production, cảnh báo thật
 ## Hoàn thiện trước nghiệp vụ
 
 Đợt tiếp theo bổ sung menu không gạch chân, active/focus/đóng Escape, lối tắt quản trị, UI danh mục sửa/xóa mềm/phân trang và trạng thái dịch vụ ảnh tắt. Đọc [nghiệm thu nền tảng](NGHIEM_THU_NEN_TANG.md) để xem phạm vi hoàn thành, ca kiểm giao diện và phần vận hành còn chờ cấu hình ngoài app. Không coi đã có đầy đủ tài khoản/scope nhà xe hoặc provider thật từ đợt UI này.
+
+Đợt tab/modal: [Tab và modal dùng chung](TAB_VA_MODAL.md) ghi các màn đã áp dụng, luồng mở/lưu/hủy, lỗi trong dialog và hướng dẫn để business kế thừa.

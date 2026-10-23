@@ -1180,6 +1180,147 @@ form .button {
     scroll-margin-top: 24px;
 }
 
+/* Tab và dialog là mẫu chung cho các trang nhiều nhóm chức năng. */
+.workspace-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 5px;
+    margin-bottom: 24px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #edf2eb;
+}
+
+.workspace-tabs button {
+    border: 0;
+    border-radius: 8px;
+    padding: 11px 18px;
+    min-height: 42px;
+    color: var(--muted);
+    background: transparent;
+    font-weight: 650;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.workspace-tabs button:hover {
+    color: var(--green);
+    background: #f7faf6;
+}
+
+.workspace-tabs button[aria-selected='true'] {
+    color: var(--green);
+    background: white;
+    box-shadow: 0 2px 6px #153e3710;
+}
+
+.workspace-dialog {
+    width: min(580px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    margin: auto;
+    padding: 28px;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: white;
+    box-shadow: 0 24px 90px #153e372f;
+    overflow: auto;
+}
+
+.workspace-dialog-wide {
+    width: min(900px, calc(100vw - 32px));
+}
+
+.workspace-dialog::backdrop {
+    background: #142d2470;
+}
+
+body:has(dialog[open]) {
+    overflow: hidden;
+}
+
+.dialog-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 18px;
+}
+
+.dialog-form-grid .catalog-actions {
+    grid-column: 1 / -1;
+}
+
+.dialog-form-grid label {
+    margin-top: 15px;
+}
+
+.dialog-controls {
+    min-width: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.dialog-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.dialog-heading h2,
+.dialog-heading .eyebrow {
+    margin: 0;
+}
+
+.dialog-close {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    color: var(--muted);
+    background: #f7faf6;
+    font-size: 23px;
+    cursor: pointer;
+}
+
+.workspace-dialog form .button {
+    margin-top: 16px;
+}
+
+.permission-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 8px 0 24px;
+}
+
+.permission-chip {
+    display: inline-block;
+    padding: 7px 10px;
+    border-radius: 7px;
+    background: var(--mint);
+    color: var(--green);
+    font-size: 12px;
+}
+
+@media (max-width: 700px) {
+    .workspace-dialog {
+        padding: 20px;
+    }
+
+    .dialog-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .workspace-tabs button {
+        padding: 10px 12px;
+    }
+}
+
 .catalog-table .button {
     white-space: nowrap;
 }
