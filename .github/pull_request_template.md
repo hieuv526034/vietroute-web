@@ -19,3 +19,9 @@ Kết quả thực tế:
 ## Hình ảnh
 
 <!-- Thêm nếu thay đổi giao diện. -->
+
+## Bàn giao và ngữ cảnh cho lượt tiếp theo
+
+<!-- Mã việc / người thực hiện / nhánh / commit đối chiếu. -->
+<!-- Đã làm; còn dở/lỗi/phụ thuộc; quyết định và tài liệu đã cập nhật; bước tiếp theo. -->
+<!-- Ghi kết quả format:check, check:rules, check:docs và test phù hợp; phần chưa kiểm ghi rõ. -->

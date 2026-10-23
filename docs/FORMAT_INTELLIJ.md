@@ -48,11 +48,15 @@ Mỗi lần hoàn tất thay đổi source:
 ```powershell
 npm run format
 npm run format:check
+npm run check:rules
+npm run check:docs
 git diff --check
 # Nếu có thay đổi Java/hành vi, chạy thêm Maven verify theo phạm vi thực tế.
 ```
 
 Người hỗ trợ code trong repo cũng phải thực hiện quy trình này ở các lượt sau theo `AGENTS.md`. Xem diff trước stage để bảo đảm không có sửa logic, migration hoặc file cá nhân ngoài phạm vi. Không gắn format vào startup app, Maven package hay Docker: thao tác deploy không được tự sửa source.
+
+Các check repository chỉ đọc file Git theo dõi; stage file mới sau khi review trước khi chạy. `check:rules` bổ sung kiểm tĩnh DTO/import/Date/FQN/Timestamp ở contract và điểm đọc AI; `check:docs` kiểm link nội bộ/ảnh/mục lục. Hai lệnh không thay thế formatter, kiểm nghiệp vụ hoặc review comment tiếng Việt. Xem [quy trình AI](QUY_TRINH_AI.md) để thống nhất cách nạp quy tắc và bàn giao giữa các công cụ/máy.
 
 Tham khảo chính thức: [Project code style scheme](https://www.jetbrains.com/help/idea/configuring-code-style.html), [EditorConfig](https://www.jetbrains.com/help/idea/editorconfig.html), [Reformat và Actions on Save](https://www.jetbrains.com/help/idea/reformat-and-rearrange-code.html). Tên menu có thể khác giữa phiên bản IDE; project hiện giữ rule độc lập với phiên bản IDE cài trên máy.
 

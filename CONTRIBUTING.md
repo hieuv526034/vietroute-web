@@ -4,6 +4,8 @@ Người mới theo [lộ trình đọc tài liệu](docs/README.md) trước kh
 
 Khi đổi máy hoặc quay lại task đang dở, theo [Bàn giao và tiếp tục](docs/BAN_GIAO_VA_TIEP_TUC.md). Ghi quyết định dùng lại, trạng thái và bằng chứng vào docs/PR; source chưa push hoặc cuộc chat trên máy cũ không phải bản bàn giao đầy đủ.
 
+Dùng AI theo [quy trình chung](docs/QUY_TRINH_AI.md): kiểm nguồn đã đọc trước khi sửa, giữ quy tắc ở AGENTS và chốt formatter/check thay vì tạo bộ quy tắc riêng theo công cụ. Stage file mới sau review, chạy `npm run check:rules` và `npm run check:docs` trước bàn giao; CI chạy lại theo phạm vi thay đổi.
+
 ## 1. Tác giả commit và tài khoản đăng nhập khác nhau
 
 Git lưu Author (tác giả) và Committer (người tạo commit). GitHub liên kết commit với tài khoản chủ yếu qua email tác giả. Tài khoản dùng để push chỉ xác thực quyền truy cập, không tự biến mọi commit thành của người push.

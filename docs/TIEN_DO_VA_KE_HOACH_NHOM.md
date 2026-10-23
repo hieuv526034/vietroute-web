@@ -23,6 +23,8 @@ UI dùng chung và tài liệu công nghệ đã merge tại `6f038ec` qua [PR #
 
 Mốc kiểm PR #30: 91 test Java và 10 test Node đạt, format/tài liệu đạt, ba check CI đạt gồm Docker/PostgreSQL tạm. Kiểm giao diện vi/en và mobile 390px bằng fixture riêng; không xác nhận provider/Render Live hoặc tải production từ kết quả này. Các số test tại mốc cũ bên dưới được giữ nguyên làm bằng chứng lịch sử.
 
+Ngữ cảnh bàn giao đã merge tại `ce2088e` qua [PR #31](https://github.com/hieuv526034/vietroute-web/pull/31). AI01 tiếp tục chuẩn hóa điểm đọc Codex/Copilot/Cursor/Claude/Gemini và checker phát triển tại [PR #32](https://github.com/hieuv526034/vietroute-web/pull/32), do `hieuv526034` thực hiện; kiểm trạng thái merge/CI của PR để xác nhận có trên main. [Quy trình AI](QUY_TRINH_AI.md) chốt thứ tự đọc, nguồn quy tắc/trạng thái/quyết định, mẫu bàn giao và giới hạn tự nạp. Mốc kiểm của đợt AI01: format đạt, rule checker đạt trên 182 file Java, 15 test Node và 303 link/36 tài liệu đạt trước bổ sung dòng tiến độ này; không chạy lại Maven hoặc thử trên Neon. Bộ checker chỉ kiểm tĩnh, không chứng minh AI thực sự hiểu hoặc branch protection đã được bật.
+
 ## 2. Nền tảng đã thực hiện và phần còn thiếu
 
 Phần code nền tảng bên dưới hiện được commit dưới định danh `hieuv526034 <hieuv526034@gmail.com>`. Không phân bổ lại các commit này cho người khác. Cột chủ trì tiếp theo ở mục 4 là kế hoạch, không phải tác giả đã hoàn thành.

@@ -8,6 +8,12 @@ on:
       - 'src/main/webapp/**/*.css'
       - 'src/main/webapp/**/*.js'
       - 'src/test/resources/dev/**'
+      - 'scripts/development/**'
+      - 'AGENTS.md'
+      - 'CLAUDE.md'
+      - 'GEMINI.md'
+      - '.github/copilot-instructions.md'
+      - '.cursor/rules/**'
       - '.idea/codeStyles/**'
       - '.run/**'
       - '.editorconfig'
@@ -48,3 +54,7 @@ jobs:
         run: npm run format:check
       - name: Check browser helper logic without database or production build
         run: node --test src/test/resources/dev/*.test.cjs
+      - name: Check shared AI entry points and Java conventions
+        run: npm run check:rules
+      - name: Check documentation still matches tracked source files
+        run: npm run check:docs

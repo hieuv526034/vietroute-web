@@ -4,6 +4,8 @@ Nếu mới vào nhóm, đọc theo **lộ trình 1 → 6** bên dưới; không
 
 **Quay lại dự án, chuyển máy hoặc mở phiên hỗ trợ code mới:** đọc [Bàn giao và tiếp tục](BAN_GIAO_VA_TIEP_TUC.md) trước. File chỉ rõ cần đọc lại gì, mốc source, chỗ tìm code, phần nào theo Git và phần nào phải cấp lại riêng. Quy tắc cho người hỗ trợ nằm trong [AGENTS.md](../AGENTS.md).
 
+**Dùng AI để code:** theo [Quy trình AI dùng chung](QUY_TRINH_AI.md), kiểm AI đã đọc đúng ngữ cảnh, dùng formatter/check của repo và ghi việc dở vào đúng tài liệu/PR. Codex/Copilot/Cursor/Claude/Gemini có điểm đọc riêng nhưng cùng dẫn về AGENTS.
+
 ## Lộ trình cho thành viên mới
 
 | Thứ tự | Đọc gì | Sau bước này cần hiểu/làm được |
@@ -35,6 +37,7 @@ Lần đầu chạy local không bật migration/seed trên Neon để thử. Xi
 |---|---|
 | [Quy ước phát triển](QUY_UOC_PHAT_TRIEN.md) | Trước mọi PR: package, base/audit, DTO/Instant, validation và comments |
 | [Format IntelliJ](FORMAT_INTELLIJ.md) | Thiết lập máy mới, reformat khi sửa và chốt format trước commit |
+| [Quy trình AI dùng chung](QUY_TRINH_AI.md) | Nạp quy tắc trên công cụ/máy mới, kiểm ngữ cảnh, chốt format/rule và bàn giao việc dở |
 | [Hợp đồng API/base/auth](API_BASE.md) | Request/response/error, locale, JWT/cookie/CSRF, Swagger |
 | [Constants và cấu trúc web](CONSTANTS_VA_CAU_TRUC_WEB.md) | Khi thêm env/route/regex/header hoặc class common.web |
 | [Tab và modal](TAB_VA_MODAL.md) | Khi thêm trang nhiều nhóm, form thêm/sửa/gán/upload, lỗi và focus |

@@ -4,6 +4,8 @@ Tài liệu dành cho thành viên quay lại dự án, chuyển máy hoặc m�
 
 Quy tắc và ngữ cảnh cần dùng lại được lưu trong repository và đẩy lên GitHub. Không giả định cuộc chat, file chưa push, thiết lập IDE hay dịch vụ đang chạy trên máy cũ sẽ có trên máy mới. Người hỗ trợ cần đọc lại tài liệu và code của đúng commit, không chỉ dựa vào lời kể rằng một phần đã xong.
 
+Khi dùng AI, theo [quy trình dùng chung](QUY_TRINH_AI.md): các file chỉ dẫn Codex/Copilot/Cursor/Claude/Gemini dẫn về cùng AGENTS; có mẫu kiểm AI đã đọc ngữ cảnh và check tĩnh để phát hiện lệch quy tắc. Việc tự nạp phụ thuộc công cụ/cài đặt, không bảo đảm mọi AI đã đọc chỉ vì clone repo.
+
 ## 1. Đọc gì trước khi tiếp tục
 
 | Thứ tự | Đọc / kiểm tra | Mục đích |
@@ -79,6 +81,8 @@ java -version
 node --version
 npm ci
 npm run format:check
+npm run check:rules
+npm run check:docs
 .\mvnw.cmd verify
 node --test src/test/resources/dev/*.test.cjs
 ```
@@ -109,7 +113,7 @@ Nếu công việc còn ở nhánh thành viên, fetch và checkout đúng nhán
 ```text
 Tiếp tục repo vietroute-web trên máy này.
 Đọc AGENTS.md, docs/README.md, docs/BAN_GIAO_VA_TIEP_TUC.md,
-docs/TIEN_DO_VA_KE_HOACH_NHOM.md và tài liệu liên quan đến mã việc bên dưới.
+docs/QUY_TRINH_AI.md, docs/TIEN_DO_VA_KE_HOACH_NHOM.md và tài liệu liên quan đến mã việc bên dưới.
 Kiểm tra git status/nhánh/commit và code thực tế trước khi sửa.
 
 Mã việc: <mã và mục tiêu cụ thể>.
