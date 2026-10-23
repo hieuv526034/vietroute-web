@@ -1,6 +1,6 @@
 # Tổng quan VietRoute cho thành viên mới
 
-Cập nhật 23/10/2026, source sau PR #38. Đọc tài liệu này trước, sau đó mở các tài liệu theo liên kết. Đây là bản đồ source đang có, không phải tuyên bố đã hoàn thành các nghiệp vụ đặt vé.
+Cập nhật 24/10/2026, source sau PR #41. Đọc tài liệu này trước, sau đó mở các tài liệu theo liên kết. Đây là bản đồ source đang có, không phải tuyên bố đã hoàn thành các nghiệp vụ đặt vé.
 
 Để biết ai làm gì tiếp theo và phần nào đã/chưa hoàn thành, xem [Tiến độ và kế hoạch nhóm](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md). Bảng tách trạng thái source/API/UI và cấu hình dịch vụ ngoài app, kèm PR và phụ thuộc để bàn giao.
 
@@ -20,7 +20,7 @@ flowchart LR
     Security --> Services[Service kiểm quyền và transaction]
     Services --> DB[(PostgreSQL: auth, policy, catalog, media, jobs, activity)]
     Worker[Worker nhận lease] --> DB
-    Worker --> Gmail[Gmail API HTTPS]
+    Worker --> Gmail[Gmail HTTPS hoặc SMTP TLS]
     Worker --> Cloudinary[Cloudinary cleanup]
     Services --> Cloudinary
     Monitor[Collector bên ngoài] -->|Token chỉ đọc| Metrics[Metrics JVM, HTTP, pool và worker]
@@ -46,7 +46,7 @@ Phần đã có: nền tảng locale/error/validation/audit/paging, auth/JWT/ph�
 | `common.mail` | `controller`, `dto/request`, `model`, `service`, `handler`, `transport`; provider chỉ ở transport |
 | `common.monitoring` | `controller`, `dto/response`, `filter`, `repository`, `service`: đo HTTP/JVM/pool/worker và probe DB có chủ đích |
 | `common.traffic` | Giới hạn request/body/quota, nhận địa chỉ qua trusted proxy; quota memory theo node |
-| `auth` | Credential, role/permission, principal, cookie/JWT và bootstrap tài khoản |
+| `auth` | Credential, role/permission, principal, cookie/JWT, bootstrap và vòng đời đăng ký/email/reset |
 | `business/catalog` | Danh mục nền đang chạy; controller → service → repository → entity/response |
 | `common/media` | Lõi thư viện ảnh/upload dùng chung, controller public gọi service lõi |
 
@@ -55,7 +55,7 @@ Phần đã có: nền tảng locale/error/validation/audit/paging, auth/JWT/ph�
 ## 3. Khởi động và dừng
 
 1. Tomcat khởi tạo root context và các bean hạ tầng; Settings kiểm env OS/IDE. WAR không tự đọc `.env`; launcher local chủ động đọc file riêng trước khi tạo context.
-2. DatabaseInitializer chỉ migrate/seed khi `VIETROUTE_DB_INIT_ENABLED=true`. V001–V010 có history/checksum, advisory transaction lock và kiểm metadata trước commit. Không reset admin đã tồn tại.
+2. DatabaseInitializer chỉ migrate/seed khi `VIETROUTE_DB_INIT_ENABLED=true`. V001–V011 có history/checksum, advisory transaction lock và kiểm metadata trước commit. Không reset admin đã tồn tại.
 3. Pool khởi tạo lười. Worker và DatabaseProbe chỉ bắt đầu sau initializer, mỗi loại bật bằng env riêng; tắt mặc định.
 4. MVC context đăng ký controller/advice/Thymeleaf/Swagger; hai context không tạo service/controller trùng. Sau khi mapping sẵn sàng, AccessResourceSynchronizer đồng bộ danh bạ UI/API vào DB nếu ACCESS_SYNC bật (mặc định theo DB_INIT khi không khai báo). Danh bạ không tự cấp quyền hoặc đổi public; xem [schema và phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md).
 5. Shutdown ngừng poll, chờ worker đang chạy theo timeout, đóng pool, GC listener và registry. Kill đột ngột có thể để lại lease; node khác nhận lại khi hết hạn.
@@ -77,6 +77,8 @@ JdbcTransactions mượn connection → đặt search_path → tắt autocommit 
 Outbox: transaction lưu `system_jobs` cùng thay đổi nghiệp vụ → commit → worker claim `SKIP LOCKED` và lease → commit claim → handler mạng → transaction ACK/NACK. Retry backoff+jitter, lỗi cuối DEAD; token lease ngăn worker cũ ghi đè. Đây là at least once: provider đã nhận nhưng ACK mất thì có thể gửi lặp. Handler cần idempotent và timeout nhỏ hơn lease; tác vụ dài cần thiết kế gia hạn riêng.
 
 Ảnh công khai: giữ metadata PENDING + job cleanup → upload ngoài transaction → metadata READY. Xóa qua DELETING/job/provider/DELETED; cleanup không xóa ảnh READY. Chỉ JPEG/PNG bytes thật, giới hạn byte/pixel, quyền và owner phía server. Không dùng module này cho giấy tờ riêng tư.
+
+Email auth: đăng ký CUSTOMER pending → transaction lưu challenge hash + outbox mã hóa → worker gửi mã → xác minh một lần. Reset đổi hash/lịch sử và thu hồi JWT atomically; giữ khóa tạm 5 sai/15 phút và không trùng hiện tại + hai mật khẩu cũ. Mặc định tắt, cần cấu hình provider; admin cũ không bị ép kích hoạt. Xem [API và giới hạn auth](../02-phat-trien/API_BASE.md).
 
 Chi tiết [worker/mail](../02-phat-trien/NEN_TANG_MO_RONG.md) và [Cloudinary](CHAY_LOCAL_VA_CLOUDINARY.md).
 
