@@ -2,14 +2,16 @@ name: Documentation
 
 on:
   pull_request:
-    paths:
+    paths: &docs-paths
       - '**/*.md'
+      - 'docs/**'
+      - '.cursor/rules/**'
+      - 'scripts/development/**'
+      - 'src/test/resources/dev/repository.test.cjs'
       - '.github/workflows/docs.yml'
   push:
     branches: [main]
-    paths:
-      - '**/*.md'
-      - '.github/workflows/docs.yml'
+    paths: *docs-paths
   workflow_dispatch:
 
 permissions:
@@ -24,30 +26,8 @@ jobs:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
-      - name: Check repository-relative Markdown links without network or app build
-        shell: python
-        run: |
-          from pathlib import Path
-          import re
-          import subprocess
-          from urllib.parse import unquote, urlsplit
-
-          root = Path.cwd().resolve()
-          files = subprocess.check_output(["git", "ls-files", "*.md"], text=True).splitlines()
-          failures = []
-          checked = 0
-          for name in files:
-              document = root / name
-              text = re.sub(r"```[\s\S]*?```", "", document.read_text(encoding="utf-8"))
-              for link in re.findall(r"(?<!!)\[[^\]\n]+\]\(([^)\n]+)\)", text):
-                  link = link.strip().strip("<>")
-                  if urlsplit(link).scheme or not link or link.startswith("#"):
-                      continue
-                  relative = unquote(link.split("#", 1)[0].split("?", 1)[0])
-                  target = (document.parent / relative).resolve()
-                  checked += 1
-                  if (root != target and root not in target.parents) or not target.exists():
-                      failures.append(f"{name}: missing or outside repository: {link}")
-          if failures:
-              raise SystemExit("\n".join(failures))
-          print(f"Validated {checked} internal links in {len(files)} Markdown files; no app build or production access.")
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Check tracked Markdown, images and documentation index without app build
+        run: node scripts/development/check-repository.cjs --docs

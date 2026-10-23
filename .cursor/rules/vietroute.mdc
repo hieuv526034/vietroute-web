@@ -1,0 +1,8 @@
+---
+description: Điểm đọc quy tắc và ngữ cảnh dùng chung cho VietRoute
+alwaysApply: true
+---
+
+@AGENTS.md
+
+Trước khi sửa file, mở AGENTS.md ở gốc repository và [quy trình AI](../../docs/QUY_TRINH_AI.md) theo đường dẫn tính từ gốc dự án: docs/QUY_TRINH_AI.md. Dùng quy tắc và nguồn trạng thái được dẫn từ đó; không lưu một bộ format/quy tắc hoặc backlog khác trong memory cá nhân. Chốt bằng formatter/check của repo và ghi bàn giao theo quy trình chung.

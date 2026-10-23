@@ -1,4 +1,14 @@
-# Project conventions
+# VietRoute — chỉ dẫn dùng chung cho AI
+
+## Bắt đầu mỗi phiên làm việc
+
+1. Đọc file này, [quy trình AI](docs/QUY_TRINH_AI.md), [bàn giao](docs/BAN_GIAO_VA_TIEP_TUC.md), [tiến độ](docs/TIEN_DO_VA_KE_HOACH_NHOM.md) và [phân công](docs/PHAN_CONG.md). Theo [mục lục](docs/README.md) để đọc thêm đúng chuyên đề trước khi sửa phần đó.
+2. Kiểm `git status --short --branch`, commit gần nhất và code/PR liên quan. Nêu ngắn gọn mã việc, phần đã có/còn thiếu, nhánh/người thực hiện và cách kiểm; tiếp tục công việc đã được người dùng cho phép. Giữ nguyên thay đổi có sẵn của người khác.
+3. Quy tắc repo nằm ở đây; trạng thái/bằng chứng nằm ở tiến độ/PR; quyết định dài hạn nằm trong tài liệu chuyên đề. File dành riêng cho từng công cụ chỉ dẫn về nguồn này, không sao chép một bộ quy tắc khác. Không coi chat, memory cá nhân hoặc kế hoạch là bằng chứng chức năng đã hoàn thành.
+4. Chốt source bằng formatter đã khóa: `npm ci`, `npm run format`, `npm run format:check`; chạy `npm run check:rules`, `npm run check:docs` và kiểm thử phù hợp thay đổi. Stage file mới trước kiểm repository vì checker chỉ đọc file được Git theo dõi. Không tự sửa rule/formatter để làm check xanh.
+5. Trước khi dừng, cập nhật tài liệu/PR theo mẫu bàn giao trong quy trình AI: đã làm, còn dở, quyết định và lý do, test đã chạy/chưa chạy, giới hạn và bước tiếp theo. Không ghi secret hoặc quyết định chỉ trong memory cá nhân. Chỉ ghi Đã có trên main khi có merge thật.
+
+## Project conventions
 
 - Stack: Java 17+, Spring MVC 6, Thymeleaf, plain JDBC, PostgreSQL, WAR on Tomcat 10.1. Do not introduce Spring Boot or an ORM without a task requiring it.
 - Production database is the user's Neon PostgreSQL `neondb`. Credentials are in the ignored local `.env` and Render environment variables. Do not print, commit, or bake credentials into images.
