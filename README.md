@@ -16,29 +16,15 @@ Website quản lý nhà xe, tuyến/chuyến, đặt chỗ và theo dõi hành t
 
 ## Tài liệu phải đọc
 
-Bắt đầu từ [Tổng quan hệ thống cho thành viên mới](docs/TONG_QUAN_HE_THONG.md), sau đó đọc [Giám sát và vận hành](docs/GIAM_SAT_VA_VAN_HANH.md). Hai tài liệu phân biệt phần đã có trong source, cấu hình cần bật và dịch vụ ngoài app chưa được kết nối.
+**Người mới mở [Bắt đầu tại đây — mục lục và thứ tự đọc](docs/README.md).** Lộ trình: tổng quan → chạy/format IntelliJ → luồng request/API → quy ước/schema/quyền → nhận việc → kiểm tra/PR. Mục lục chia sáu nhóm tài liệu và có hướng đọc theo từng thành viên; vận hành/provider đọc khi cần, không phải bước đầu tiên.
 
-Theo dõi công việc tại [Tiến độ và kế hoạch của bốn thành viên](docs/TIEN_DO_VA_KE_HOACH_NHOM.md): đã làm/chưa làm, phần có API nhưng thiếu UI, người chủ trì, phụ thuộc và tiêu chí nghiệm thu. Đây là bảng cập nhật theo PR, không suy diễn đóng góp từ nhánh được chuẩn bị.
-
-Trước khi bắt đầu nghiệp vụ, xem [nghiệm thu nền tảng và giao diện](docs/NGHIEM_THU_NEN_TANG.md): chức năng đã có, giới hạn và cách tra mã yêu cầu.
+Ba nguồn dùng thường xuyên: [Tổng quan hệ thống](docs/TONG_QUAN_HE_THONG.md), [Tiến độ nhóm và PR bằng chứng](docs/TIEN_DO_VA_KE_HOACH_NHOM.md), [Nghiệm thu trước nghiệp vụ](docs/NGHIEM_THU_NEN_TANG.md). Phân công tương lai không được coi là đóng góp đã hoàn thành.
 
 Menu **Hệ thống** có [quản lý job, ma trận quyền/gán role và xem cấu hình an toàn](docs/QUAN_TRI_HE_THONG.md). Các màn dùng quyền backend và CSRF chung; cấu hình chỉ đọc, secret vẫn ở Environment.
 
 ADMIN có SYSTEM_READ có thể mở **Hệ thống → Nhật ký API** để tra traceId/controller/lỗi và xem request/response đã lọc; có copy cURL/xuất Postman. Lịch sử RAM từng node, mặc định 300 bản ghi/30 phút, mất khi restart. Xem [hướng dẫn nhật ký và debug](docs/NHAT_KY_API_VA_DEBUG.md).
 
-1. [Quy ước phát triển và cấu trúc module](docs/QUY_UOC_PHAT_TRIEN.md).
-2. [Hợp đồng API/base/auth](docs/API_BASE.md).
-3. [Phân công theo độ khó và thứ tự triển khai](docs/PHAN_CONG.md).
-4. [Database và migration](database/README.md).
-5. [Docker/Render và biến môi trường](docs/DEPLOY_RENDER.md).
-6. [Quy trình Git và ghi nhận đóng góp](CONTRIBUTING.md).
-7. [Đặc tả nghiệp vụ và bộ ca nghiệm thu](docs/DAC_TA_HE_THONG_XE_KHACH.md).
-8. [Luồng xử lý base để thành viên học và mở rộng](docs/LUONG_XU_LY_BASE.md).
-9. [Rà soát nền tảng và các điểm cần chốt trước nghiệp vụ](docs/RA_SOAT_BASE.md).
-10. [Chống spam, quyền chức năng, worker và Gmail/Workspace](docs/NEN_TANG_MO_RONG.md).
-11. [Cấu hình schema một nơi và ma trận quyền theo hành động](docs/SCHEMA_VA_PHAN_QUYEN.md).
-12. [Cloudinary và nút Run/Debug trong IntelliJ](docs/CLOUDINARY_VA_INTELLIJ.md).
-13. [ApplicationConstants và quy hoạch package web](docs/CONSTANTS_VA_CAU_TRUC_WEB.md).
+[Format IntelliJ dùng chung](docs/FORMAT_INTELLIJ.md): Project scheme + EditorConfig, nút **VietRoute Format / VietRoute Format Check** và cách bật format khi lưu. Chốt `npm run format:check` trước commit; các file IDE cá nhân vẫn bị ignore.
 
 ## Chạy dự án
 

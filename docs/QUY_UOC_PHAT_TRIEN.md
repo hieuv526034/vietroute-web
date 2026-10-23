@@ -2,7 +2,7 @@
 
 ## Phạm vi và thứ tự triển khai
 
-Người mới đọc [tổng quan hệ thống](TONG_QUAN_HE_THONG.md) trước. Package job/mail đã chia controller, DTO, service và phần thực thi theo trách nhiệm; root wiring tách DatabaseConfig, IntegrationConfig, TrafficConfig, MonitoringConfig. Theo [giám sát/vận hành](GIAM_SAT_VA_VAN_HANH.md) khi thêm metrics hoặc handler. Không bật Kafka/Redis trong giai đoạn hiện tại; quota memory có phạm vi từng node.
+Người mới theo [mục lục và lộ trình đọc](README.md), bắt đầu từ [tổng quan hệ thống](TONG_QUAN_HE_THONG.md). Package job/mail đã chia controller, DTO, service và phần thực thi theo trách nhiệm; root wiring tách DatabaseConfig, IntegrationConfig, TrafficConfig, MonitoringConfig. Theo [giám sát/vận hành](GIAM_SAT_VA_VAN_HANH.md) khi thêm metrics hoặc handler. Không bật Kafka/Redis trong giai đoạn hiện tại; quota memory có phạm vi từng node.
 
 Lượt nền tảng: common → auth/JWT/bootstrap → danh mục mẫu → layout/Swagger → kiểm thử và CI. Sau đó mới triển khai lần lượt các nghiệp vụ theo `PHAN_CONG.md`. Không coi các module đặt vé, tuyến/chuyến hoặc Maps là đã hoàn thành khi mới có package.
 
@@ -76,6 +76,8 @@ npm run format:check
 ```
 
 Phiên bản Prettier cùng plugin Java/XML được khóa trong `package-lock.json`; cấu hình nằm ở `.prettierrc.json` và `.editorconfig`. Formatter áp dụng Java (kể cả test), HTML, CSS, JavaScript, `pom.xml` và cấu hình format. Không sửa SQL migration đã áp dụng vì có checksum. Node/npm chỉ phục vụ format; Maven WAR và Docker/Render vẫn build Java trực tiếp, không cài Node hay chạy test trong production.
+
+IntelliJ dùng Project scheme tại `.idea/codeStyles/Project.xml` cùng EditorConfig; chỉ chia sẻ code style, không chia sẻ workspace/env cá nhân. Đọc [thiết lập IntelliJ và nút Run Format](FORMAT_INTELLIJ.md). Native formatter hỗ trợ lúc soạn thảo; trước commit/bàn giao chạy `npm run format` và `npm run format:check` để có đầu ra chung, kể cả khi người hỗ trợ tự sửa code. Format không tự bổ sung comment nghiệp vụ hoặc sửa tên DTO/Instant.
 
 ## Kế thừa, audit và validation
 
