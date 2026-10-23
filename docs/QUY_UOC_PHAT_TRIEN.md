@@ -114,3 +114,7 @@ Nhánh theo mẫu `<người-phụ-trách>/<mã-việc-hoặc-chức-năng>` tro
 Tiêu đề và nội dung commit mới, merge commit và PR viết bằng tiếng Việt có dấu. Nêu rõ phần thay đổi, lý do và kết quả kiểm tra thực tế; giữ nguyên định danh kỹ thuật. Mẫu và hướng dẫn nằm trong [quy ước đóng góp](../CONTRIBUTING.md#viết-commit-và-pr-bằng-tiếng-việt).
 
 Test Java nằm trong src/test. Production dùng `-Pproduction` và chỉ copy src/main, không biên dịch/chạy/đóng gói test. `mvnw verify` local vẫn chạy các test hữu ích. CI kiểm tra container và auth bằng DB tạm; không seed hoặc sửa Neon khi build. Thay đổi schema chạy qua migration có phiên bản, không sửa SQL đã áp dụng.
+
+## Quy ước tab và modal
+
+Trang nhiều nhóm chức năng tách tab; thêm/sửa/gán và upload dùng modal theo [component tab/modal](TAB_VA_MODAL.md). Dùng workspace.js và HTTP/CSRF/lỗi chung, giữ focus/bàn phím/ARIA, phản hồi lỗi ngay trong modal và bản nháp khi 409. Không đóng trong lúc gửi request hoặc tự retry mutation.

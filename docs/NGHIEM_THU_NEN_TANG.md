@@ -18,6 +18,8 @@ Cập nhật 23/10/2026. Phạm vi là source nền tảng và UI quản trị t
 
 UI dùng layout xanh chung, menu không gạch chân ở trạng thái thường/hover, nền đánh dấu trang hiện tại và focus bàn phím. Menu đóng bằng Escape hoặc click ngoài. Bảng có vùng cuộn, ma trận quyền giữ header khi cuộn; form/loading/rỗng/lỗi dùng thông báo chung. Trang vận hành thu gọn cỡ tiêu đề, bảng và khoảng cách; không dùng cỡ chữ hero cho công cụ quản trị.
 
+Các trang nhiều nhóm đã chuyển sang tab và form ghi sang modal: xem [quy ước tab/modal](TAB_VA_MODAL.md). Danh mục/Tổng quan và Quyền role/Vai trò tài khoản tách riêng; cấu hình có sáu tab chỉ đọc. Form thêm/sửa danh mục, gán quyền/role, upload và đổi mật khẩu không còn chiếm cố định trên trang chính.
+
 ## Luồng danh mục để thành viên học theo
 
 1. Mở `/admin`: lấy quyền hiện hành từ `/auth/me`, tải danh mục active theo nhóm/page/size. UI không suy ra quyền xóa từ `CATALOG_WRITE`.

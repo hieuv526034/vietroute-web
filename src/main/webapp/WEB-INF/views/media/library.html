@@ -27,40 +27,22 @@
                     role="status"
                     th:text="#{ui.mediaDisabledNote}"
                 ></p>
-                <form
-                    id="media-upload-form"
-                    enctype="multipart/form-data"
-                >
-                    <label
-                        class="form-label"
-                        for="media-file"
-                        th:text="#{ui.mediaChoose}"
-                    ></label>
-                    <input
-                        id="media-file"
-                        name="file"
-                        type="file"
-                        class="form-control mb-3"
-                        accept="image/jpeg,image/png"
-                        required
-                        th:disabled="${!mediaEnabled}"
-                    />
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button
-                            id="media-upload"
-                            class="button"
-                            type="submit"
-                            disabled
-                            th:text="#{ui.mediaUpload}"
-                        ></button>
-                        <button
-                            id="media-refresh"
-                            class="button button-outline"
-                            type="button"
-                            th:text="#{ui.mediaRefresh}"
-                        ></button>
-                    </div>
-                </form>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button
+                        id="media-open"
+                        class="button"
+                        type="button"
+                        disabled
+                        th:text="#{ui.mediaUpload}"
+                    ></button>
+                    <button
+                        id="media-refresh"
+                        class="button button-outline"
+                        type="button"
+                        th:text="#{ui.mediaRefresh}"
+                    ></button>
+                </div>
+
                 <p
                     id="form-feedback"
                     class="feedback"
@@ -93,6 +75,76 @@
                     th:text="#{ui.mediaNext}"
                 ></button>
             </nav>
+            <dialog
+                id="media-dialog"
+                class="workspace-dialog"
+                aria-labelledby="media-dialog-title"
+            >
+                <fieldset
+                    id="media-dialog-controls"
+                    class="dialog-controls"
+                >
+                    <div class="dialog-heading">
+                        <h2
+                            id="media-dialog-title"
+                            class="h4"
+                            th:text="#{ui.mediaUpload}"
+                        ></h2>
+                        <button
+                            class="dialog-close"
+                            type="button"
+                            data-dialog-close
+                            th:attr="aria-label=#{ui.ops.close}"
+                        >
+                            <span aria-hidden="true">×</span>
+                        </button>
+                    </div>
+                    <p
+                        class="form-help"
+                        th:text="#{ui.mediaDescription}"
+                    ></p>
+                    <p
+                        id="media-upload-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></p>
+                    <form
+                        id="media-upload-form"
+                        enctype="multipart/form-data"
+                    >
+                        <label
+                            class="form-label"
+                            for="media-file"
+                            th:text="#{ui.mediaChoose}"
+                        ></label>
+                        <input
+                            id="media-file"
+                            name="file"
+                            type="file"
+                            class="form-control mb-3"
+                            accept="image/jpeg,image/png"
+                            required
+                            th:disabled="${!mediaEnabled}"
+                        />
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button
+                                id="media-upload"
+                                class="button"
+                                type="submit"
+                                disabled
+                                th:text="#{ui.mediaUpload}"
+                            ></button>
+                        </div>
+                    </form>
+                    <button
+                        class="button button-outline mt-3"
+                        type="button"
+                        data-dialog-close
+                        th:text="#{ui.catalog.cancel}"
+                    ></button>
+                </fieldset>
+            </dialog>
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>

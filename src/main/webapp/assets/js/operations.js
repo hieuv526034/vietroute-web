@@ -58,6 +58,9 @@
         }
         busy = true;
         node('ops-controls').disabled = true;
+        root.querySelectorAll('[data-modal-controls]').forEach((control) => {
+            control.disabled = true;
+        });
         node('ops-refresh').disabled = true;
         root.setAttribute('aria-busy', 'true');
         node('ops-status').textContent = labels.loading;
@@ -65,10 +68,19 @@
         if (node('job-feedback')) {
             app.feedback('', false, 'job-feedback');
         }
+        for (const id of ['permissions-feedback', 'user-roles-feedback']) {
+            app.feedback('', false, id);
+        }
         try {
             await action();
         } catch (error) {
-            const feedbackId = node('job-dialog')?.open ? 'job-feedback' : 'form-feedback';
+            const feedbackId = node('job-dialog')?.open
+                ? 'job-feedback'
+                : node('permissions-dialog')?.open
+                  ? 'permissions-feedback'
+                  : node('user-roles-dialog')?.open
+                    ? 'user-roles-feedback'
+                    : 'form-feedback';
             app.failure(error, feedbackId);
             if (error.response?.status === 409) {
                 // Không tự retry mutation; giữ dữ liệu đang xem để người dùng chủ động làm mới.
@@ -78,6 +90,9 @@
         } finally {
             busy = false;
             node('ops-controls').disabled = false;
+            root.querySelectorAll('[data-modal-controls]').forEach((control) => {
+                control.disabled = false;
+            });
             node('ops-refresh').disabled = false;
             root.setAttribute('aria-busy', 'false');
             node('ops-status').textContent = '';
@@ -89,6 +104,9 @@
         let selected;
         const body = node('jobs-body');
         const dialog = node('job-dialog');
+        dialog.addEventListener('cancel', (event) => {
+            if (busy) event.preventDefault();
+        });
         const renderDetail = (job) => {
             selected = job;
             const details = node('job-details');
@@ -144,7 +162,9 @@
             }
             pagination('jobs', data);
         };
-        node('job-close').addEventListener('click', () => dialog.close());
+        node('job-close').addEventListener('click', () => {
+            if (!busy) dialog.close();
+        });
         node('jobs-filter').addEventListener('submit', (event) => {
             event.preventDefault();
             page = 0;
@@ -199,6 +219,21 @@
         let prefix = '';
         const roleSelect = node('access-role');
         const permissionsBody = node('permissions-body');
+        const roleModal = window.VietRouteUI.modal('permissions-dialog', {
+            busy: () => busy,
+            onClose: () => {
+                app.feedback('', false, 'permissions-feedback');
+                drawRole();
+            },
+        });
+        const userModal = window.VietRouteUI.modal('user-roles-dialog', {
+            busy: () => busy,
+            onClose: () => {
+                selectedUser = undefined;
+                app.feedback('', false, 'user-roles-feedback');
+            },
+        });
+        const accessTabs = window.VietRouteUI.tabs(node('ops-controls'));
         const drawRole = () => {
             selectedRole = roles.find((role) => role.role === roleSelect.value);
             if (!selectedRole) {
@@ -236,7 +271,21 @@
                 permissionsBody.append(row);
             }
             node('permissions-save').disabled = !editable;
+            node('permissions-edit').disabled = !editable;
+            node('permissions-target').textContent = `${selectedRole.role} · ${selectedRole.version}`;
+            const summary = node('role-permission-summary');
+            summary.replaceChildren();
+            for (const permission of registry.filter((item) => selectedRole.permissions.includes(item.code))) {
+                summary.append(text('span', permission.name, 'permission-chip'));
+            }
+            if (!summary.childElementCount) summary.append(text('p', labels.empty));
         };
+        node('permissions-edit').addEventListener('click', () => {
+            if (!busy && !node('permissions-edit').disabled) {
+                drawRole();
+                roleModal.open();
+            }
+        });
         const loadRoles = async () => {
             const previous = roleSelect.value;
             [registry, roles] = await Promise.all([get(`${routes.access}/permissions`), get(`${routes.access}/roles`)]);
@@ -270,11 +319,13 @@
             }
             node('user-roles-save').disabled = !editable;
             if (user.id === me.id) {
-                app.feedback(labels.self);
+                app.feedback(labels.self, false, 'user-roles-feedback');
             }
+            userModal.open();
         };
         const loadUsers = async () => {
             if (!isAdmin()) {
+                accessTabs.show('access-users-section', false);
                 return;
             }
             selectedUser = undefined;
@@ -302,17 +353,12 @@
                 empty(body, 6);
             }
             pagination('users', data);
-            node('access-users-section').hidden = false;
+            accessTabs.show('access-users-section', true);
         };
         roleSelect.addEventListener('change', drawRole);
         node('permissions-form').addEventListener('submit', (event) => {
             event.preventDefault();
-            if (
-                busy ||
-                !selectedRole ||
-                node('permissions-save').disabled ||
-                !window.confirm(labels.confirmPermissions)
-            ) {
+            if (busy || !selectedRole || node('permissions-save').disabled) {
                 return;
             }
             const target = selectedRole;
@@ -333,6 +379,7 @@
                     return;
                 }
                 await loadRoles();
+                node('permissions-dialog').close();
                 app.feedback(labels.saved, true);
             });
         });
@@ -359,7 +406,7 @@
         });
         node('user-roles-form').addEventListener('submit', (event) => {
             event.preventDefault();
-            if (busy || !selectedUser || node('user-roles-save').disabled || !window.confirm(labels.confirmRoles)) {
+            if (busy || !selectedUser || node('user-roles-save').disabled) {
                 return;
             }
             const target = selectedUser;
@@ -374,6 +421,7 @@
                     'put',
                 );
                 await loadUsers();
+                node('user-roles-dialog').close();
                 app.feedback(labels.saved, true);
             });
         });
@@ -387,6 +435,7 @@
         const value = await get(routes.config);
         node('config-timestamp').textContent = value.timestamp;
         const container = node('configuration-sections');
+        const previousTab = container.querySelector('[role="tab"][aria-selected="true"]')?.dataset.tabTarget;
         const fieldLabels = Object.fromEntries(
             Array.from(node('configuration-labels').querySelectorAll('[data-field]'), (label) => [
                 label.dataset.field,
@@ -394,10 +443,23 @@
             ]),
         );
         container.replaceChildren();
+        const group = document.createElement('div');
+        group.dataset.tabs = '';
+        const tablist = document.createElement('div');
+        tablist.className = 'workspace-tabs';
+        tablist.setAttribute('role', 'tablist');
+        tablist.setAttribute('aria-label', root.querySelector('h1').textContent);
+        group.append(tablist);
         // Chỉ render các section định trước; không duyệt cả response để vô tình hiện field mới chưa review.
         for (const key of ['application', 'database', 'traffic', 'worker', 'features', 'monitoring']) {
             const column = document.createElement('section');
-            column.className = 'col-lg-6';
+            column.id = `config-${key}`;
+            const tab = text('button', container.dataset[key]);
+            tab.type = 'button';
+            tab.id = `config-tab-${key}`;
+            tab.dataset.tabTarget = column.id;
+            if (column.id === previousTab) tab.setAttribute('aria-selected', 'true');
+            tablist.append(tab);
             const card = document.createElement('div');
             card.className = 'card h-100 p-4';
             card.append(text('h2', container.dataset[key], 'h4'));
@@ -413,8 +475,10 @@
             }
             card.append(details);
             column.append(card);
-            container.append(column);
+            group.append(column);
         }
+        container.append(group);
+        window.VietRouteUI.initializeTabs(container);
     };
 
     const load =

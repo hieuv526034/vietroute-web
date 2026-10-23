@@ -19,62 +19,42 @@
                     th:text="#{ui.adminDescription}"
                 ></p>
             </div>
-            <nav
-                class="system-shortcuts"
-                th:attr="aria-label=#{ui.system.shortcuts}"
+            <div
+                data-tabs
+                id="admin-tabs"
             >
-                <a
-                    class="system-shortcut"
-                    th:if="${monitoringAllowed}"
-                    th:href="@{/monitoring(lang=${currentLocale})}"
+                <div
+                    class="workspace-tabs"
+                    role="tablist"
+                    th:attr="aria-label=#{ui.admin}"
                 >
-                    <strong th:text="#{ui.monitoring}"></strong>
-                    <span th:text="#{ui.system.monitoringDescription}"></span>
-                </a>
-                <a
-                    class="system-shortcut"
-                    th:if="${jobsAllowed}"
-                    th:href="@{/operations/jobs(lang=${currentLocale})}"
+                    <button
+                        id="catalog-tab"
+                        type="button"
+                        data-tab-target="catalog-panel"
+                        th:text="#{ui.catalogs}"
+                    ></button>
+                    <button
+                        id="overview-tab"
+                        type="button"
+                        data-tab-target="overview-panel"
+                        th:text="#{ui.workspace.overview}"
+                    ></button>
+                </div>
+                <p
+                    id="catalog-status"
+                    class="catalog-status"
+                    role="status"
+                    aria-live="polite"
+                ></p>
+                <fieldset
+                    id="catalog-controls"
+                    class="border-0 p-0 m-0 w-100"
                 >
-                    <strong th:text="#{ui.ops.jobs}"></strong>
-                    <span th:text="#{ui.system.jobsDescription}"></span>
-                </a>
-                <a
-                    class="system-shortcut"
-                    th:if="${accessAllowed}"
-                    th:href="@{/operations/access(lang=${currentLocale})}"
-                >
-                    <strong th:text="#{ui.ops.access}"></strong>
-                    <span th:text="#{ui.system.accessDescription}"></span>
-                </a>
-                <a
-                    class="system-shortcut"
-                    th:if="${monitoringAllowed}"
-                    th:href="@{/operations/configuration(lang=${currentLocale})}"
-                >
-                    <strong th:text="#{ui.ops.configuration}"></strong>
-                    <span th:text="#{ui.system.configurationDescription}"></span>
-                </a>
-            </nav>
-            <p
-                id="catalog-status"
-                class="catalog-status"
-                role="status"
-                aria-live="polite"
-            ></p>
-            <p
-                id="catalog-conflict"
-                class="feedback"
-                role="alert"
-                hidden
-                th:text="#{ui.ops.conflict}"
-            ></p>
-            <fieldset
-                id="catalog-controls"
-                class="border-0 p-0 m-0 w-100"
-            >
-                <div class="workspace-grid catalog-grid">
-                    <section class="panel">
+                    <section
+                        class="panel"
+                        id="catalog-panel"
+                    >
                         <div class="panel-heading">
                             <h2 th:text="#{ui.catalogs}"></h2>
                             <select
@@ -92,6 +72,13 @@
                                 ></option>
                             </select>
                         </div>
+                        <button
+                            id="catalog-create"
+                            class="button button-small mb-3"
+                            type="button"
+                            disabled
+                            th:text="#{ui.createCatalog}"
+                        ></button>
                         <button
                             id="catalog-refresh"
                             class="button button-outline button-small mb-3"
@@ -145,31 +132,100 @@
                             ></button>
                         </nav>
                     </section>
-                    <section
-                        class="panel catalog-editor"
-                        id="catalog-editor"
-                        aria-labelledby="catalog-editor-title"
+                </fieldset>
+                <section id="overview-panel">
+                    <nav
+                        class="system-shortcuts"
+                        th:attr="aria-label=#{ui.system.shortcuts}"
                     >
-                        <h2
-                            id="catalog-editor-title"
-                            th:text="#{ui.createCatalog}"
-                        ></h2>
-                        <p
-                            id="catalog-editor-note"
-                            class="form-help"
-                            th:text="#{ui.catalog.createNote}"
-                            th:attr="data-create=#{ui.catalog.createNote},data-edit=#{ui.catalog.editNote}"
-                        ></p>
-                        <div
-                            id="form-feedback"
-                            class="feedback"
-                            role="alert"
-                            hidden
-                        ></div>
-                        <form
-                            id="catalog-form"
-                            novalidate
+                        <a
+                            class="system-shortcut"
+                            th:if="${monitoringAllowed}"
+                            th:href="@{/monitoring(lang=${currentLocale})}"
                         >
+                            <strong th:text="#{ui.monitoring}"></strong>
+                            <span th:text="#{ui.system.monitoringDescription}"></span>
+                        </a>
+                        <a
+                            class="system-shortcut"
+                            th:if="${jobsAllowed}"
+                            th:href="@{/operations/jobs(lang=${currentLocale})}"
+                        >
+                            <strong th:text="#{ui.ops.jobs}"></strong>
+                            <span th:text="#{ui.system.jobsDescription}"></span>
+                        </a>
+                        <a
+                            class="system-shortcut"
+                            th:if="${accessAllowed}"
+                            th:href="@{/operations/access(lang=${currentLocale})}"
+                        >
+                            <strong th:text="#{ui.ops.access}"></strong>
+                            <span th:text="#{ui.system.accessDescription}"></span>
+                        </a>
+                        <a
+                            class="system-shortcut"
+                            th:if="${monitoringAllowed}"
+                            th:href="@{/operations/configuration(lang=${currentLocale})}"
+                        >
+                            <strong th:text="#{ui.ops.configuration}"></strong>
+                            <span th:text="#{ui.system.configurationDescription}"></span>
+                        </a>
+                    </nav>
+                </section>
+            </div>
+            <dialog
+                id="catalog-dialog"
+                class="workspace-dialog"
+                aria-labelledby="catalog-editor-title"
+                aria-describedby="catalog-editor-note"
+            >
+                <fieldset
+                    id="catalog-dialog-controls"
+                    class="dialog-controls"
+                >
+                    <div class="dialog-heading">
+                        <span
+                            class="eyebrow"
+                            th:text="#{ui.catalogs}"
+                        ></span>
+                        <button
+                            class="dialog-close"
+                            type="button"
+                            data-dialog-close
+                            th:attr="aria-label=#{ui.ops.close}"
+                        >
+                            <span aria-hidden="true">×</span>
+                        </button>
+                    </div>
+                    <h2
+                        id="catalog-editor-title"
+                        th:text="#{ui.createCatalog}"
+                    ></h2>
+                    <p
+                        id="catalog-editor-note"
+                        class="form-help"
+                        th:text="#{ui.catalog.createNote}"
+                        th:attr="data-create=#{ui.catalog.createNote},data-edit=#{ui.catalog.editNote}"
+                    ></p>
+                    <div
+                        id="form-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></div>
+                    <p
+                        id="catalog-conflict"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                        th:text="#{ui.ops.conflict}"
+                    ></p>
+                    <form
+                        id="catalog-form"
+                        class="dialog-form-grid"
+                        novalidate
+                    >
+                        <div>
                             <label
                                 for="catalog-type"
                                 th:text="#{ui.catalogType}"
@@ -188,6 +244,8 @@
                                     th:text="#{ui.bookingSource}"
                                 ></option>
                             </select>
+                        </div>
+                        <div>
                             <label
                                 for="catalog-code"
                                 th:text="#{ui.code}"
@@ -199,6 +257,8 @@
                                 maxlength="40"
                                 th:placeholder="#{ui.autoCode}"
                             />
+                        </div>
+                        <div>
                             <label
                                 for="catalog-vi"
                                 th:text="#{ui.nameVi}"
@@ -210,6 +270,8 @@
                                 maxlength="120"
                                 required
                             />
+                        </div>
+                        <div>
                             <label
                                 for="catalog-en"
                                 th:text="#{ui.nameEn}"
@@ -221,6 +283,8 @@
                                 maxlength="120"
                                 required
                             />
+                        </div>
+                        <div>
                             <label
                                 for="catalog-order"
                                 th:text="#{ui.order}"
@@ -235,26 +299,26 @@
                                 value="0"
                                 required
                             />
-                            <div class="catalog-actions mt-4">
-                                <button
-                                    id="catalog-save"
-                                    class="button"
-                                    type="submit"
-                                    disabled
-                                    th:text="#{ui.createCatalog}"
-                                ></button>
-                                <button
-                                    id="catalog-cancel"
-                                    class="button button-outline"
-                                    type="button"
-                                    hidden
-                                    th:text="#{ui.catalog.cancel}"
-                                ></button>
-                            </div>
-                        </form>
-                    </section>
-                </div>
-            </fieldset>
+                        </div>
+                        <div class="catalog-actions mt-4">
+                            <button
+                                id="catalog-save"
+                                class="button"
+                                type="submit"
+                                disabled
+                                th:text="#{ui.createCatalog}"
+                            ></button>
+                            <button
+                                id="catalog-cancel"
+                                class="button button-outline"
+                                type="button"
+                                data-dialog-close
+                                th:text="#{ui.catalog.cancel}"
+                            ></button>
+                        </div>
+                    </form>
+                </fieldset>
+            </dialog>
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
