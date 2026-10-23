@@ -1,13 +1,13 @@
 # Nghiệm thu nền tảng trước nghiệp vụ
 
-Cập nhật 23/10/2026. Phạm vi là source nền tảng và UI quản trị trên Spring MVC/JDBC hiện tại. Đọc cùng [quản trị hệ thống](QUAN_TRI_HE_THONG.md), [tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) và [vận hành](GIAM_SAT_VA_VAN_HANH.md). Kết quả trên nhánh chức năng chỉ trở thành bản bàn giao main sau khi PR qua CI và merge.
+Cập nhật 23/10/2026, đối chiếu main tại `d722089` sau [PR #30](https://github.com/hieuv526034/vietroute-web/pull/30). Phạm vi là source nền tảng và UI quản trị trên Spring MVC/JDBC hiện tại. Đọc cùng [quản trị hệ thống](QUAN_TRI_HE_THONG.md), [tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) và [vận hành](GIAM_SAT_VA_VAN_HANH.md). Kết quả trên nhánh chức năng chỉ trở thành bản bàn giao main sau khi PR qua CI và merge.
 
 ## Các màn và chức năng đã có trong source
 
 | Phần | Đầu ra dùng được | Giới hạn còn lại |
 |---|---|---|
 | Đăng nhập/tài khoản | Login, thông tin tài khoản, đổi mật khẩu, logout; JWT cookie HttpOnly, CSRF, khóa tạm và thu hồi token | Bootstrap không ghi đè mật khẩu đã đổi; quên mật khẩu/OTP là phạm vi riêng |
-| Trang quản trị `/admin` | Lối tắt giám sát/job/quyền/cấu hình; danh mục lọc nhóm, phân trang 10 dòng, tạo/sửa/xóa mềm, xác nhận và version | Chỉ liệt kê danh mục active; chưa có khôi phục/lịch sử chỉnh sửa trên UI. Không phải CRUD nhà xe/địa điểm |
+| Trang quản trị `/admin` | Lối tắt giám sát/job/quyền/cấu hình; danh mục lọc nhóm, phân trang server với chọn size/nhảy trang, tạo/sửa/xóa mềm, xác nhận và version | Chỉ liệt kê danh mục active; chưa có khôi phục/lịch sử chỉnh sửa trên UI. Không phải CRUD nhà xe/địa điểm |
 | Phân quyền | Ma trận quyền theo role, tra tài khoản và gán role; bảo vệ ADMIN, bản thân và tập quyền người được ủy quyền | Cấp tài khoản OPERATOR/DRIVER và membership chờ mô hình nhà xe; không coi role là tenant scope |
 | Công việc nền | Lọc trạng thái, phân trang, chi tiết metadata, retry DEAD có quyền và version | At least once; worker tắt mặc định; tác vụ dài cần cơ chế lease riêng |
 | Giám sát | Heap/CPU/HTTP/pool/worker, snapshot DB probe opt-in; scrape token riêng | Không có lưu lịch sử tập trung/receiver cảnh báo thật chỉ nhờ UI này |
@@ -42,6 +42,10 @@ Các trang nhiều nhóm đã chuyển sang tab và form ghi sang modal: xem [qu
 Log HTTP chậm/5xx được lấy mẫu tối đa một dòng/giây/node; không bảo đảm mọi request đều có dòng `http_completed`. HTTP 400 có thể từ validation hoặc thao tác đổi mật khẩu; chỉ `route=auth` không phân biệt login với các API auth khác. Khi báo lỗi cần thêm thời điểm, thao tác và mã lỗi. Không bật log body/header để tìm mật khẩu.
 
 ## Bằng chứng kiểm tra và cửa vào nghiệp vụ
+
+Mốc mới nhất PR #29/#30: 91 test Java, 10 test Node, format và tài liệu đạt; ba check CI của PR #30 đã thành công, gồm container Docker và auth/bootstrap trên PostgreSQL tạm. Bảng/modal có phân trang chung, cột thao tác 96px, nút bên phải và validation cạnh field; Home/login chọn đích theo principal. Export cURL có URL thực nhưng giữ token placeholder. Menu con cách nhau 6px, bộ lọc danh mục cùng hàng nút và dấu `*` đỏ hiện ngay khi mở modal. Kiểm vi/en, desktop/mobile 390px, submit trống và reset không nhân đôi dấu bằng HTML thật + API fixture; không dùng Neon để kiểm giao diện. Xem [quy tắc UI và ảnh](BANG_VA_VALIDATION_UI.md).
+
+Các bằng chứng sau giữ nguyên theo mốc nhật ký API trước đó, không phải số test hiện tại:
 
 - Maven verify đợt nhật ký API: 85 test Java đạt, gồm mô hình root/servlet context tách biệt như WAR; không nạp `.env` production. Production package/kiểm WAR đạt và bỏ cả test compile/run; Docker CI phải đạt trước merge.
 - 5 test Node đạt (Swagger/CSRF và cURL/Postman). Test nhật ký kiểm permission, TTL/capacity/ghi đồng thời, omission secret/PII và SQLState cả trước controller. File tải từ UI hợp lệ theo schema Postman v2.1; UI 390px không tràn ngang và Escape trả focus đúng. Docker CI bổ sung request thực trên DB tạm. Chi tiết phạm vi trong [hướng dẫn nhật ký](NHAT_KY_API_VA_DEBUG.md).

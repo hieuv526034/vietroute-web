@@ -2,6 +2,8 @@
 
 Người mới theo [lộ trình đọc tài liệu](docs/README.md) trước khi nhận việc. Thiết lập [Code Style/EditorConfig và nút Format trong IntelliJ](docs/FORMAT_INTELLIJ.md); mọi lượt sửa source phải chốt format/check trước commit.
 
+Khi đổi máy hoặc quay lại task đang dở, theo [Bàn giao và tiếp tục](docs/BAN_GIAO_VA_TIEP_TUC.md). Ghi quyết định dùng lại, trạng thái và bằng chứng vào docs/PR; source chưa push hoặc cuộc chat trên máy cũ không phải bản bàn giao đầy đủ.
+
 ## 1. Tác giả commit và tài khoản đăng nhập khác nhau
 
 Git lưu Author (tác giả) và Committer (người tạo commit). GitHub liên kết commit với tài khoản chủ yếu qua email tác giả. Tài khoản dùng để push chỉ xác thực quyền truy cập, không tự biến mọi commit thành của người push.

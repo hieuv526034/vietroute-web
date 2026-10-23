@@ -2,6 +2,8 @@
 
 Nếu mới vào nhóm, đọc theo **lộ trình 1 → 6** bên dưới; không cần đọc toàn bộ tài liệu vận hành trước khi chạy được app. Tài liệu được chia nhóm ở mục lục này; giữ đường dẫn file hiện có để link từ PR/Issue và hướng dẫn trong code tiếp tục dùng được.
 
+**Quay lại dự án, chuyển máy hoặc mở phiên hỗ trợ code mới:** đọc [Bàn giao và tiếp tục](BAN_GIAO_VA_TIEP_TUC.md) trước. File chỉ rõ cần đọc lại gì, mốc source, chỗ tìm code, phần nào theo Git và phần nào phải cấp lại riêng. Quy tắc cho người hỗ trợ nằm trong [AGENTS.md](../AGENTS.md).
+
 ## Lộ trình cho thành viên mới
 
 | Thứ tự | Đọc gì | Sau bước này cần hiểu/làm được |
@@ -11,7 +13,7 @@ Nếu mới vào nhóm, đọc theo **lộ trình 1 → 6** bên dưới; không
 | 3. Hiểu một request | [Luồng xử lý base](LUONG_XU_LY_BASE.md), [Hợp đồng API](API_BASE.md) | HTTP → security → controller → service/transaction → JDBC → envelope/locale/traceId |
 | 4. Viết đúng quy ước | [Quy ước phát triển](QUY_UOC_PHAT_TRIEN.md), [Constants/package web](CONSTANTS_VA_CAU_TRUC_WEB.md), [Schema và phân quyền](SCHEMA_VA_PHAN_QUYEN.md) | DTO/Instant/audit/version, SQL không hardcode schema, quyền theo hành động và scope |
 | 5. Nhận việc | [Tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md), [Phân công](PHAN_CONG.md), [Đặc tả nghiệp vụ](DAC_TA_HE_THONG_XE_KHACH.md) | Việc mình nhận, phụ thuộc, tiêu chí nghiệm thu; kế hoạch không phải đóng góp đã hoàn thành |
-| 6. Bàn giao | [Quy trình Git/PR](../CONTRIBUTING.md), [Nghiệm thu nền tảng](NGHIEM_THU_NEN_TANG.md) | Nhánh đúng người, commit/PR tiếng Việt, format/check và kiểm tra đúng phạm vi trước merge |
+| 6. Bàn giao | [Quy trình Git/PR](../CONTRIBUTING.md), [Nghiệm thu nền tảng](NGHIEM_THU_NEN_TANG.md), [Chuyển máy/tiếp tục](BAN_GIAO_VA_TIEP_TUC.md) | Nhánh đúng người, commit/PR tiếng Việt, kiểm tra đúng phạm vi và giữ ngữ cảnh trong repo |
 
 Lần đầu chạy local không bật migration/seed trên Neon để thử. Xin cấu hình môi trường riêng theo người phụ trách; không đưa secret vào Git/ảnh chụp/tài liệu. `/health` lên không chứng minh đăng nhập hoặc DB hoạt động. Build/test thường lệ dùng DB giả/tạm, không production.
 
@@ -69,6 +71,7 @@ Có adapter/config mẫu không đồng nghĩa Gmail/Cloudinary/cảnh báo/back
 | [Đặc tả hệ thống xe khách](DAC_TA_HE_THONG_XE_KHACH.md) | Luồng nghiệp vụ F01–F19 và ca nghiệm thu T01–T21 |
 | [Nghiệm thu nền tảng](NGHIEM_THU_NEN_TANG.md) | Màn đã có, kiểm tra thực tế và phần phải chốt trước nghiệp vụ |
 | [Quy trình đóng góp](../CONTRIBUTING.md) | Git identity, nhánh/PR/commit tiếng Việt và ghi nhận tác giả |
+| [Bàn giao và tiếp tục trên máy mới](BAN_GIAO_VA_TIEP_TUC.md) | Thứ tự đọc lại, bản đồ code, thiết lập máy, việc không đi theo Git và mẫu yêu cầu tiếp tục |
 
 ## Nhóm F — Bối cảnh và lịch sử quyết định
 
