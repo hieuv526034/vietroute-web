@@ -1,12 +1,12 @@
 # Nghiệm thu nền tảng trước nghiệp vụ
 
-Cập nhật 23/10/2026, đối chiếu main tại `2a2e410` sau [PR #38](https://github.com/hieuv526034/vietroute-web/pull/38). Phạm vi là source nền tảng và UI quản trị trên Spring MVC/JDBC hiện tại. Đọc cùng [quản trị hệ thống](../04-van-hanh/QUAN_TRI_HE_THONG.md), [tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) và [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md). Kết quả trên nhánh chức năng chỉ trở thành bản bàn giao main sau khi PR qua CI và merge.
+Cập nhật 24/10/2026, đối chiếu main tại `0237ad3` sau [PR #41](https://github.com/hieuv526034/vietroute-web/pull/41). Phạm vi là source nền tảng và UI quản trị trên Spring MVC/JDBC hiện tại. Đọc cùng [quản trị hệ thống](../04-van-hanh/QUAN_TRI_HE_THONG.md), [tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) và [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md). Kết quả trên nhánh chức năng chỉ trở thành bản bàn giao main sau khi PR qua CI và merge.
 
 ## Các màn và chức năng đã có trong source
 
 | Phần | Đầu ra dùng được | Giới hạn còn lại |
 |---|---|---|
-| Đăng nhập/tài khoản | Login, thông tin tài khoản, đổi mật khẩu, logout; JWT cookie HttpOnly, CSRF, khóa tạm và thu hồi token | Bootstrap không ghi đè mật khẩu đã đổi; quên mật khẩu/OTP là phạm vi riêng |
+| Đăng nhập/tài khoản | Login/me/đổi mật khẩu/logout, đăng ký CUSTOMER/xác minh email/quên/reset; JWT cookie HttpOnly, CSRF, khóa tạm và lịch sử mật khẩu | Bootstrap giữ mật khẩu cũ; email cần cấu hình provider + self-service/mail/worker, chưa thử inbox thật; SMS/phone OTP chưa triển khai |
 | Trang quản trị `/admin` | Lối tắt giám sát/job/quyền/cấu hình; danh mục lọc nhóm, phân trang server với chọn size/nhảy trang, tạo/sửa/xóa mềm, xác nhận và version | Chỉ liệt kê danh mục active; chưa có khôi phục/lịch sử chỉnh sửa trên UI. Không phải CRUD nhà xe/địa điểm |
 | Phân quyền | Registry role/quyền tùy chỉnh, ma trận/gán, inventory/policy menu/endpoint, kiểm URL trực tiếp và quyền nền; bảo vệ ADMIN/bản thân/admin cuối | Cấp tài khoản OPERATOR/DRIVER và membership chờ mô hình nhà xe; không coi role là tenant scope |
 | Công việc nền | Lọc trạng thái, phân trang, chi tiết metadata, retry DEAD có quyền và version | At least once; worker tắt mặc định; tác vụ dài cần cơ chế lease riêng |
@@ -43,7 +43,7 @@ Log HTTP chậm/5xx được lấy mẫu tối đa một dòng/giây/node; khôn
 
 ## Bằng chứng kiểm tra và cửa vào nghiệp vụ
 
-Mốc mới nhất PR #29/#30: 91 test Java, 10 test Node, format và tài liệu đạt; ba check CI của PR #30 đã thành công, gồm container Docker và auth/bootstrap trên PostgreSQL tạm. Bảng/modal có phân trang chung, cột thao tác 96px, nút bên phải và validation cạnh field; Home/login chọn đích theo principal. Export cURL có URL thực nhưng giữ token placeholder. Menu con cách nhau 6px, bộ lọc danh mục cùng hàng nút và dấu `*` đỏ hiện ngay khi mở modal. Kiểm vi/en, desktop/mobile 390px, submit trống và reset không nhân đôi dấu bằng HTML thật + API fixture; không dùng Neon để kiểm giao diện. Xem [quy tắc UI và ảnh](../03-giao-dien/QUY_UOC_UI.md).
+Mốc giao diện PR #29/#30 (lịch sử): 91 test Java, 10 test Node, format và tài liệu đạt; ba check CI của PR #30 đã thành công, gồm container Docker và auth/bootstrap trên PostgreSQL tạm. Bảng/modal có phân trang chung, cột thao tác 96px, nút bên phải và validation cạnh field; Home/login chọn đích theo principal. Export cURL có URL thực nhưng giữ token placeholder. Menu con cách nhau 6px, bộ lọc danh mục cùng hàng nút và dấu `*` đỏ hiện ngay khi mở modal. Kiểm vi/en, desktop/mobile 390px, submit trống và reset không nhân đôi dấu bằng HTML thật + API fixture; không dùng Neon để kiểm giao diện. Xem [quy tắc UI và ảnh](../03-giao-dien/QUY_UOC_UI.md).
 
 Các bằng chứng sau giữ nguyên theo mốc nhật ký API trước đó, không phải số test hiện tại:
 
@@ -65,3 +65,10 @@ Xem [tiến độ và CI của PR #35](TIEN_DO_VA_KE_HOACH_NHOM.md). Source đã
 ## Bằng chứng bổ sung FOUNDATION03
 
 [PR #38](https://github.com/hieuv526034/vietroute-web/pull/38) đã merge, 103 test Java/16 test Node và ba CI tại head 599b8a4 đạt; link chi tiết ở [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md). Media bao gồm controller/page nằm hoàn toàn trong common.media; API dùng ApiResult<T> nhưng giữ envelope/status/header/Swagger. Danh bạ UI/API có V010, sync startup và tab chỉ đọc/phân trang; role là nhóm quyền, public/cứu hộ không nhận policy tùy biến. Policy GET bảo vệ cả HEAD. Metadata không tự cấp authority hay ghi đè mapping, không xóa route node khác có thể còn dùng. Cần bật init để áp dụng V010; sync mặc định theo init nếu không khai báo riêng. Giới hạn provider/vận hành production bên trên vẫn còn.
+
+
+## Bằng chứng bổ sung FOUNDATION04
+
+[PR #41](https://github.com/hieuv526034/vietroute-web/pull/41) đã merge tại 0237ad3; 109 test Java/16 test Node và ba CI tại head b435d65 đạt, link ở [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md). PostgreSQL tạm kiểm đủ đăng ký pending/CUSTOMER, kích hoạt/reset/mã một lần/hết hạn, cửa sổ mật khẩu và thu hồi JWT, outbox mã hóa + retry SMTP loopback, actor journal/filter. Production WAR không có test/dev/env; không chạy ghi/migration trên Neon để kiểm.
+
+UI vi/en fixture kiểm tab/required, modal email giữ bản nháp khi lỗi, khóa thao tác trong lúc gửi và cột user/khách trên journal. Đây là dữ liệu UI kiểm thử; chưa nghiệm thu provider/inbox thật, tải production hoặc mọi thiết bị. Local Run có chẩn đoán nguồn DB, JVM property env-file và UTF-8 BOM; kiểm Neon chỉ đọc xác nhận kết nối/admin tại thời điểm chẩn đoán, chưa tái hiện lỗi IDE cụ thể. Runtime áp dụng V011 trước, rồi bật email có chủ đích; admin cũ không cần xác minh lại để đăng nhập. SMS/phone OTP chưa có. Bước kế tiếp là cấu hình/nghiệm thu provider và SCOPE01/hợp đồng cấp tài khoản theo phân công.
