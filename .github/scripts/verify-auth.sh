@@ -405,6 +405,11 @@ call 200 GET '/api/v1/admin/access/resources?page=0&size=10' '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["size"]==10 and len(d["content"])==10 and d["totalElements"]>=20; assert all(x["firstSeenAt"] and x["lastSeenAt"] for x in d["content"])' "$result"
 call 400 GET '/api/v1/admin/access/resources?size=101' '' bearer
 saved_admin_token="$token"
+# Role vừa thay đổi đã thu hồi customer_token ở ca trước; dùng token mới để kiểm 403 thay vì 401.
+refresh_csrf
+login_body customer "$next_password"
+call 200 POST /api/v1/auth/login "$work/login.json" cookie
+customer_token=$(field data.accessToken)
 token="$customer_token"
 call 403 GET '/api/v1/admin/access/resources' '' bearer
 token="$saved_admin_token"
