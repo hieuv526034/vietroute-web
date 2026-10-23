@@ -20,12 +20,18 @@
     const failure = (error, id) => {
         const data = error.response?.data;
         const lines = [data?.message || meta('app-network-error')];
+        if (data?.code) {
+            lines.push(`[${data.code}]`);
+        }
         for (const field of data?.errors || []) {
             lines.push(`${field.field}: ${field.message}`);
         }
 
         if (data?.traceId) {
             lines.push(`${meta('app-request-label')}: ${data.traceId}`);
+            if (meta('app-request-help')) {
+                lines.push(meta('app-request-help'));
+            }
         }
 
         feedback(lines.join('\n'), false, id);
@@ -119,52 +125,21 @@
         }
     });
 
-    const loadCatalog = async () => {
-        const body = document.getElementById('catalog-body');
-        if (!body) {
-            return;
-        }
-
-        try {
-            const type = document.getElementById('catalog-filter').value;
-            const page = (await api.get(`/api/v1/catalogs/${type}`, { params: { size: 100 } })).data.data;
-            body.replaceChildren();
-            for (const item of page.content) {
-                const row = document.createElement('tr');
-                for (const value of [item.code, item.name, item.sortOrder]) {
-                    const cell = document.createElement('td');
-                    cell.textContent = String(value);
-                    row.append(cell);
-                }
-                body.append(row);
+    // Menu native vẫn dùng được khi tắt JavaScript; Escape/click ngoài giúp đóng menu rõ ràng.
+    const systemMenu = document.querySelector('.operations-menu');
+    if (systemMenu) {
+        document.addEventListener('click', (event) => {
+            if (!systemMenu.contains(event.target)) {
+                systemMenu.open = false;
             }
-            if (!page.content.length) {
-                const row = document.createElement('tr');
-                const cell = document.createElement('td');
-                cell.colSpan = 3;
-                cell.textContent = body.dataset.empty;
-                row.append(cell);
-                body.append(row);
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && systemMenu.open) {
+                systemMenu.open = false;
+                systemMenu.querySelector('summary').focus();
             }
-            feedback('', false, 'catalog-feedback');
-        } catch (error) {
-            failure(error, 'catalog-feedback');
-        }
-    };
-    document.getElementById('catalog-filter')?.addEventListener('change', loadCatalog);
-    bindForm('catalog-form', async (body, form) => {
-        body.sortOrder = Number(body.sortOrder);
-        if (!body.code) {
-            delete body.code;
-        }
-
-        const response = await mutate('/api/v1/admin/catalogs', body);
-        document.getElementById('catalog-filter').value = body.type;
-        form.reset();
-        feedback(response.data.message, true);
-        await loadCatalog();
-    });
+        });
+    }
 
     void loadAccount();
-    void loadCatalog();
 })();

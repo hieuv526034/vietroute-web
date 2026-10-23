@@ -1,0 +1,50 @@
+# Nghiệm thu nền tảng trước nghiệp vụ
+
+Cập nhật 23/10/2026. Phạm vi là source nền tảng và UI quản trị trên Spring MVC/JDBC hiện tại. Đọc cùng [quản trị hệ thống](QUAN_TRI_HE_THONG.md), [tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) và [vận hành](GIAM_SAT_VA_VAN_HANH.md). Kết quả trên nhánh chức năng chỉ trở thành bản bàn giao main sau khi PR qua CI và merge.
+
+## Các màn và chức năng đã có trong source
+
+| Phần | Đầu ra dùng được | Giới hạn còn lại |
+|---|---|---|
+| Đăng nhập/tài khoản | Login, thông tin tài khoản, đổi mật khẩu, logout; JWT cookie HttpOnly, CSRF, khóa tạm và thu hồi token | Bootstrap không ghi đè mật khẩu đã đổi; quên mật khẩu/OTP là phạm vi riêng |
+| Trang quản trị `/admin` | Lối tắt giám sát/job/quyền/cấu hình; danh mục lọc nhóm, phân trang 10 dòng, tạo/sửa/xóa mềm, xác nhận và version | Chỉ liệt kê danh mục active; chưa có khôi phục/lịch sử chỉnh sửa trên UI. Không phải CRUD nhà xe/địa điểm |
+| Phân quyền | Ma trận quyền theo role, tra tài khoản và gán role; bảo vệ ADMIN, bản thân và tập quyền người được ủy quyền | Cấp tài khoản OPERATOR/DRIVER và membership chờ mô hình nhà xe; không coi role là tenant scope |
+| Công việc nền | Lọc trạng thái, phân trang, chi tiết metadata, retry DEAD có quyền và version | At least once; worker tắt mặc định; tác vụ dài cần cơ chế lease riêng |
+| Giám sát | Heap/CPU/HTTP/pool/worker, snapshot DB probe opt-in; scrape token riêng | Không có lưu lịch sử tập trung/receiver cảnh báo thật chỉ nhờ UI này |
+| Cấu hình | Whitelist thông số startup không nhạy cảm, chỉ đọc | Thay env ở IDE/Render rồi restart; không có nút sửa secret hoặc bật provider từ trình duyệt |
+| Ảnh công khai | Thư viện, phân trang, upload/xem/xóa theo quyền/owner, chuẩn hóa JPEG/PNG và cleanup | Khi dịch vụ tắt: hiện lý do, khóa file/upload và không hiện xóa; ảnh đã lưu vẫn xem được. Cần credentials Cloudinary và worker để nghiệm thu provider |
+| Tài liệu API | Swagger và DTO/schema/mã lỗi vi/en; thử cookie có CSRF | Dữ liệu trả về Swagger vẫn theo quyền thực của tài khoản |
+| Nền chạy | Schema cấu hình, transaction/checksum/lock/audit; Docker/CI, launcher IntelliJ; không Boot/ORM/Kafka/Redis mới | IDE phải nạp env; không tự đọc `.env`. Pool/quota cần đo theo hạ tầng thực |
+
+UI dùng layout xanh chung, menu không gạch chân ở trạng thái thường/hover, nền đánh dấu trang hiện tại và focus bàn phím. Menu đóng bằng Escape hoặc click ngoài. Bảng có vùng cuộn, ma trận quyền giữ header khi cuộn; form/loading/rỗng/lỗi dùng thông báo chung. Trang vận hành thu gọn cỡ tiêu đề, bảng và khoảng cách; không dùng cỡ chữ hero cho công cụ quản trị.
+
+## Luồng danh mục để thành viên học theo
+
+1. Mở `/admin`: lấy quyền hiện hành từ `/auth/me`, tải danh mục active theo nhóm/page/size. UI không suy ra quyền xóa từ `CATALOG_WRITE`.
+2. Tạo: tên vi/en, thứ tự và nhóm; mã để trống được bỏ khỏi JSON để server tự sinh. Audit lấy từ principal, không từ form.
+3. Sửa: đọc chi tiết quản trị mới nhất, giữ id/version trong RAM; khóa nhóm/mã, chỉ gửi tên/thứ tự/version khi PUT. Server chốt version bằng SQL.
+4. Xóa mềm: xác nhận tên/mã trước DELETE có version; không xóa vật lý. Nếu trang cuối hết bản ghi, tải lại trang hợp lệ trước đó.
+5. Mỗi mutation lấy CSRF mới, khóa fieldset khi xử lý. 409 giữ nội dung form, hiện hướng dẫn làm mới; không tự retry. Làm mới/hủy sửa bỏ bản nháp và đọc lại dữ liệu. Mất mạng sau mutation chưa chứng minh server đã rollback: kiểm danh sách trước khi thao tác lại.
+
+`catalog.js` chịu trách nhiệm danh mục, `app.js` chỉ giữ HTTP/CSRF/lỗi, auth và menu chung. Không có API/schema mới trong đợt UI này; API CRUD và method security hiện hành vẫn là nơi chốt quyền/dữ liệu.
+
+## Tra cứu mã yêu cầu
+
+`traceId` là mã đối chiếu một HTTP request, có trong JSON và header `X-Request-ID`. UI hiển thị mã lỗi ổn định như `[COM008]` cùng thông báo đã dịch và hướng dẫn gửi mã yêu cầu cho quản trị viên. Nó không phải mã đăng nhập, mật khẩu hay kết luận nguyên nhân lỗi.
+
+- IntelliJ: Console của đúng lần Run → tìm nguyên traceId.
+- Render: service → Logs → tìm traceId trong đúng khoảng thời gian/node. Chưa có màn xem log tập trung trong app.
+- Trình duyệt: DevTools → Network → request lỗi → Response, xem `code`, `message`, `errors`; không chia sẻ cookie/token hoặc nội dung mật khẩu.
+
+Log HTTP chậm/5xx được lấy mẫu tối đa một dòng/giây/node; không bảo đảm mọi request đều có dòng `http_completed`. HTTP 400 có thể từ validation hoặc thao tác đổi mật khẩu; chỉ `route=auth` không phân biệt login với các API auth khác. Khi báo lỗi cần thêm thời điểm, thao tác và mã lỗi. Không bật log body/header để tìm mật khẩu.
+
+## Bằng chứng kiểm tra và cửa vào nghiệp vụ
+
+- Maven verify: 78 test Java đạt; không nạp `.env` production. Production package/kiểm WAR và Docker CI phải đạt trước merge.
+- HTML Thymeleaf: các trang quản trị/job/quyền/cấu hình/ảnh/giám sát/tài khoản/home/login render vi/en với principal thử, DB không tồn tại và initializer tắt.
+- Trình duyệt với HTML thật và API giả trong RAM: phân trang, PUT/DELETE/POST có CSRF/version, 409 giữ form/chỉ gửi một lần, mã trống tự sinh, menu không gạch chân/active và dịch vụ ảnh tắt. Đây là bằng chứng frontend, không thay thế kiểm SQL/auth của Docker CI.
+- Mobile 390px: quản trị, job, quyền, cấu hình, ảnh và giám sát không tràn ngang toàn trang. Bảng rộng được cuộn trong vùng riêng. Chưa kiểm mọi thiết bị/trình đọc màn hình.
+
+Sau khi các kiểm tra/PR đạt, nền tảng source đủ để bắt đầu thiết kế và triển khai nghiệp vụ theo từng đợt. Điểm đầu tiếp theo là SCOPE01 và hợp đồng cấp tài khoản; chưa được xây CRUD nhà xe bỏ qua quyền dữ liệu. CAT02 đã có UI cơ bản trong đợt nền tảng này, Anh tiếp tục nghiệm thu/tích hợp danh mục với nghiệp vụ thay vì viết bộ CRUD thứ hai.
+
+Trước khi mở cho người dùng thật vẫn cần xác nhận Render Live/env, credentials Gmail/Cloudinary khi sử dụng, collector/receiver cảnh báo, backup/restore staging và tải staging. Không gọi các phần đó là đã vận hành chỉ vì source có adapter/file mẫu. Redis/Kafka vẫn chưa bật; quota bộ nhớ là từng node. Lượt này chưa triển khai nhà xe, tuyến, chuyến, booking hoặc tracking.

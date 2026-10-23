@@ -9,6 +9,7 @@
         <main
             class="container-xl workspace-page"
             id="media-library"
+            th:data-enabled="${mediaEnabled}"
             th:attr="data-empty=#{ui.mediaEmpty},data-view=#{ui.mediaView},data-delete=#{ui.mediaDelete},data-confirm=#{ui.mediaConfirm},data-pending=#{ui.mediaPending},data-ready=#{ui.mediaReady},data-deleting=#{ui.mediaDeleting},data-deleted=#{ui.mediaDeleted}"
         >
             <div class="page-heading">
@@ -20,6 +21,12 @@
                 ></p>
             </div>
             <section class="panel mb-4">
+                <p
+                    th:unless="${mediaEnabled}"
+                    class="notice mb-3"
+                    role="status"
+                    th:text="#{ui.mediaDisabledNote}"
+                ></p>
                 <form
                     id="media-upload-form"
                     enctype="multipart/form-data"
@@ -36,6 +43,7 @@
                         class="form-control mb-3"
                         accept="image/jpeg,image/png"
                         required
+                        th:disabled="${!mediaEnabled}"
                     />
                     <div class="d-flex gap-2 flex-wrap">
                         <button
@@ -55,7 +63,7 @@
                 </form>
                 <p
                     id="form-feedback"
-                    class="form-feedback"
+                    class="feedback"
                     role="status"
                     hidden
                 ></p>

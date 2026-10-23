@@ -11,6 +11,7 @@
     const upload = document.getElementById('media-upload');
     const previous = document.getElementById('media-prev');
     const next = document.getElementById('media-next');
+    const enabled = root.dataset.enabled === 'true';
     let page = 0;
     let permissions = [];
 
@@ -45,7 +46,7 @@
                 view.className = 'button button-outline button-small';
                 view.textContent = root.dataset.view;
                 card.append(view);
-                if (permissions.includes('MEDIA_DELETE')) {
+                if (enabled && permissions.includes('MEDIA_DELETE')) {
                     const remove = document.createElement('button');
                     remove.type = 'button';
                     remove.className = 'button button-outline button-small';
@@ -79,7 +80,7 @@
     // File đi qua backend để kiểm pixel/chuẩn hóa; trình duyệt không biết Cloudinary API secret.
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        if (!form.reportValidity()) {
+        if (!enabled || !permissions.includes('MEDIA_CREATE') || !form.reportValidity()) {
             return;
         }
         upload.disabled = true;
@@ -93,7 +94,7 @@
         } catch (error) {
             failure(error);
         } finally {
-            upload.disabled = !permissions.includes('MEDIA_CREATE');
+            upload.disabled = !enabled || !permissions.includes('MEDIA_CREATE');
         }
     });
     document.getElementById('media-refresh').addEventListener('click', () => load().catch(failure));
@@ -108,7 +109,7 @@
     api.get('/api/v1/auth/me')
         .then(async (response) => {
             permissions = response.data.data.permissions;
-            upload.disabled = !permissions.includes('MEDIA_CREATE');
+            upload.disabled = !enabled || !permissions.includes('MEDIA_CREATE');
             await load();
         })
         .catch(failure);

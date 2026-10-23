@@ -90,18 +90,27 @@ button:focus-visible {
 .nav-links {
     display: flex;
     align-items: center;
-    gap: 25px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
     font-size: 13px;
     font-weight: 600;
 }
 
-.nav-links > a:not(.button) {
+.nav-links a {
     text-decoration: none;
+}
+
+.nav-links > a:not(.button) {
+    padding: 9px 11px;
+    border-radius: 8px;
     color: var(--muted);
 }
 
-.nav-links > a:hover {
+.nav-links > a:not(.button):hover,
+.nav-links > a[aria-current='page'] {
     color: var(--green);
+    background: var(--mint);
 }
 
 .language-switch {
@@ -577,6 +586,7 @@ form .button {
 }
 
 .panel {
+    min-width: 0;
     border: 1px solid var(--line);
     background: white;
     padding: 30px;
@@ -939,15 +949,50 @@ form .button {
 }
 
 .operations-menu summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    list-style: none;
     cursor: pointer;
     font-weight: 600;
-    padding: 8px;
+    color: var(--muted);
+    padding: 9px 11px;
+    border-radius: 8px;
+}
+
+.operations-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+.operations-menu summary::after {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: translateY(-2px) rotate(45deg);
+}
+
+.operations-menu[open] summary,
+.operations-menu.is-current summary,
+.operations-menu summary:hover {
+    color: var(--green);
+    background: var(--mint);
+}
+
+.operations-menu[open] summary::after {
+    transform: translateY(2px) rotate(225deg);
+}
+
+.operations-menu summary:focus-visible {
+    outline: 3px solid #87b990;
+    outline-offset: 3px;
 }
 
 .operations-menu-items {
     position: absolute;
     right: 0;
-    top: 100%;
+    top: calc(100% + 8px);
     z-index: 20;
     min-width: 220px;
     padding: 8px;
@@ -960,6 +1005,19 @@ form .button {
 .operations-menu-items a {
     display: block;
     padding: 10px 12px;
+    border-radius: 7px;
+    color: var(--muted);
+    text-decoration: none;
+}
+
+.operations-menu-items a:hover,
+.operations-menu-items a[aria-current='page'] {
+    color: var(--green);
+    background: var(--mint);
+}
+
+.operations-menu-items a[aria-current='page'] {
+    font-weight: 750;
 }
 
 .operations-dialog {
@@ -987,4 +1045,194 @@ form .button {
 
 .operations-page th {
     white-space: nowrap;
+}
+
+/* Nhịp chữ, khoảng cách và trạng thái dùng chung cho các màn vận hành. */
+.operations-page h1 {
+    font-size: clamp(28px, 4vw, 38px);
+    letter-spacing: -1.3px;
+    margin: 0;
+}
+
+.operations-page > p.text-secondary {
+    max-width: 820px;
+    font-size: 14px;
+    line-height: 1.8;
+    margin-bottom: 24px;
+}
+
+.operations-page .card {
+    border-color: var(--line);
+    border-radius: 12px;
+}
+
+.operations-page .table {
+    font-size: 13px;
+    --bs-table-color: var(--ink);
+    --bs-table-border-color: #edf1e9;
+}
+
+.operations-page .table th {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 650;
+    padding-block: 14px;
+}
+
+.operations-page .table td {
+    padding-block: 14px;
+}
+
+.operations-page .table button {
+    min-height: 36px;
+    padding: 7px 12px;
+    font-size: 12px;
+}
+
+.operations-page select {
+    max-width: 360px;
+}
+
+.permission-table {
+    max-height: 520px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+}
+
+.permission-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f7faf6;
+}
+
+.system-shortcuts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
+    gap: 14px;
+    margin-bottom: 30px;
+}
+
+.system-shortcut {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 20px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: white;
+    color: var(--ink);
+    text-decoration: none;
+}
+
+.system-shortcut:hover {
+    color: var(--green);
+    border-color: #86ac89;
+    background: #f0f6ed;
+}
+
+.system-shortcut strong {
+    font-size: 15px;
+}
+
+.system-shortcut span {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.catalog-actions,
+.catalog-pagination {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.catalog-pagination {
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.catalog-pagination span,
+.catalog-status {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.catalog-actions .button {
+    margin-top: 0;
+}
+
+.button-danger {
+    color: #9b4337;
+    border-color: #e5c9bd;
+    background: #fff7f2;
+}
+
+.button-danger:hover {
+    color: #843529;
+    border-color: #d79988;
+    background: #fbe9e1;
+}
+
+.catalog-editor {
+    scroll-margin-top: 24px;
+}
+
+.catalog-table .button {
+    white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+    .site-nav {
+        flex-wrap: wrap;
+        gap: 12px;
+        padding-block: 16px;
+    }
+
+    .nav-links {
+        gap: 5px;
+    }
+}
+
+@media (max-width: 700px) {
+    .nav-links {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .nav-links > a:not(.button),
+    .operations-menu summary {
+        padding: 9px;
+        min-height: 38px;
+    }
+
+    .operations-menu-items {
+        left: 0;
+        right: auto;
+        max-width: calc(100vw - 44px);
+    }
+
+    .operations-details {
+        grid-template-columns: 1fr;
+        gap: 5px;
+    }
+
+    .operations-details dd {
+        margin-bottom: 14px;
+    }
+
+    .operations-dialog {
+        padding: 18px;
+    }
+
+    .catalog-grid .panel-heading {
+        flex-wrap: wrap;
+    }
+
+    .catalog-pagination .button {
+        min-height: 40px;
+        padding: 8px 12px;
+    }
 }
