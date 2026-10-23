@@ -64,6 +64,10 @@ services:
         value: vietroute
       - key: VIETROUTE_ENV
         value: production
+      - key: VIETROUTE_AUTH_SELF_SERVICE_ENABLED
+        value: "false"
+      - key: VIETROUTE_AUTH_REGISTRATIONS_PER_DAY
+        value: "100"
       - key: VIETROUTE_ACCESS_SYNC_ENABLED
         value: "true"
       - key: VIETROUTE_DB_INIT_ENABLED

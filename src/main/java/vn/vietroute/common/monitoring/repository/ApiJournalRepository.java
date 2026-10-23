@@ -32,11 +32,13 @@ public class ApiJournalRepository {
       AND (? = '' OR trace_id = ?) AND strpos(endpoint, ?) > 0
       AND (? = '' OR method = ?) AND (? = 0 OR http_status = ?)
       AND duration_ms >= ? AND (? = '' OR code = ?) AND (NOT ? OR http_status >= 400)
+      AND (? = 0 OR request_user_id = ?)
     """;
 
     private static final String METADATA = """
     id,started_at,instance_id,trace_id,method,endpoint,controller,http_status,
-    duration_ms,code,message_key,diagnostic,sql_state
+    duration_ms,code,message_key,diagnostic,sql_state,request_user_id,
+    (SELECT u.username FROM auth_users u WHERE u.id=api_request_journal.request_user_id) AS request_username
     """;
 
     /** Autocommit chỉ thành công khi PostgreSQL xác nhận insert; không giữ payload hoặc batch trong bộ nhớ. */
@@ -48,8 +50,8 @@ public class ApiJournalRepository {
                 """
                 INSERT INTO api_request_journal(id,started_at,instance_id,trace_id,method,endpoint,controller,
                     http_status,duration_ms,code,message_key,diagnostic,sql_state,replay_path,query_json,
-                    request_body,response_body,content_kind)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?::jsonb,?,?,?)
+                    request_body,response_body,content_kind,request_user_id)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?::jsonb,?,?,?,?)
                 """
             )
         ) {
@@ -72,6 +74,7 @@ public class ApiJournalRepository {
             query.setString(16, detail.requestBody());
             query.setString(17, detail.responseBody());
             query.setString(18, detail.contentKind());
+            query.setObject(19, e.userId());
             query.executeUpdate();
         } catch (SQLException exception) {
             throw BaseRepository.translate(exception);
@@ -103,8 +106,8 @@ public class ApiJournalRepository {
                 )
             ) {
                 bind(query, search, minutes);
-                query.setInt(13, search.getSize());
-                query.setLong(14, search.offset());
+                query.setInt(15, search.getSize());
+                query.setLong(16, search.offset());
                 try (ResultSet row = query.executeQuery()) {
                     while (row.next()) entries.add(entry(row));
                 }
@@ -121,7 +124,7 @@ public class ApiJournalRepository {
             PreparedStatement query = timed(
                 connection,
                 """
-                SELECT * FROM api_request_journal WHERE id=?
+                SELECT *, (SELECT u.username FROM auth_users u WHERE u.id=api_request_journal.request_user_id) AS request_username FROM api_request_journal WHERE id=?
                     AND recorded_at >= CURRENT_TIMESTAMP - (? * INTERVAL '1 minute')
                 """
             )
@@ -225,6 +228,8 @@ public class ApiJournalRepository {
         query.setString(10, search.getCode());
         query.setString(11, search.getCode());
         query.setBoolean(12, search.isErrorsOnly());
+        query.setLong(13, search.getUserId());
+        query.setLong(14, search.getUserId());
     }
 
     private static ApiJournalEntry entry(ResultSet row) throws SQLException {
@@ -240,7 +245,9 @@ public class ApiJournalRepository {
             row.getString("code"),
             row.getString("message_key"),
             row.getString("diagnostic"),
-            row.getString("sql_state")
+            row.getString("sql_state"),
+            row.getObject("request_user_id", Long.class),
+            row.getString("request_username")
         );
     }
 }

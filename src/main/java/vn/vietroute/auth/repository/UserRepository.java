@@ -12,6 +12,7 @@ import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Repository;
 import vn.vietroute.auth.dto.request.AccessUserSearchRequest;
 import vn.vietroute.auth.dto.response.AccessUserResponse;
@@ -20,8 +21,11 @@ import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
+import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.jdbc.BaseRepository;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
+import vn.vietroute.common.validation.BusinessRules;
+import vn.vietroute.common.validation.StrongPasswordValidator;
 
 /** SQL thuần cho auth; caller sở hữu connection khi thực hiện thay đổi trong transaction. */
 @Repository
@@ -118,6 +122,9 @@ public class UserRepository extends BaseRepository {
                     .id(result.getLong("id"))
                     .username(result.getString("username"))
                     .displayName(result.getString("display_name"))
+                    .email(result.getString("email"))
+                    .emailVerifiedAt(instant(result, "email_verified_at"))
+                    .activationPending(result.getBoolean("activation_pending"))
                     .passwordHash(result.getString("password_hash"))
                     .active(result.getBoolean("active"))
                     .mustChangePassword(result.getBoolean("must_change_password"))
@@ -176,15 +183,57 @@ public class UserRepository extends BaseRepository {
 
     /** Hash đã được BCrypt ở service; tăng tokenVersion để vô hiệu hóa toàn bộ JWT cũ sau commit. */
     public void changePassword(Connection connection, long id, String hash) throws SQLException {
+        changePassword(connection, id, hash, id);
+    }
+
+    /** Caller đã khóa user; lưu hash hiện tại rồi giữ đúng hai hash cũ trong cùng transaction đổi mật khẩu. */
+    public void changePassword(Connection connection, long id, String hash, long actor) throws SQLException {
+        try (
+            var history = connection.prepareStatement(
+                "INSERT INTO auth_password_history(user_id,password_hash,created_by,updated_by) SELECT id,password_hash,?,? FROM auth_users WHERE id=?"
+            )
+        ) {
+            history.setLong(1, actor);
+            history.setLong(2, actor);
+            history.setLong(3, id);
+            history.executeUpdate();
+        }
+        try (
+            var prune = connection.prepareStatement(
+                "DELETE FROM auth_password_history WHERE user_id=? AND id NOT IN (SELECT id FROM auth_password_history WHERE user_id=? ORDER BY id DESC LIMIT 2)"
+            )
+        ) {
+            prune.setLong(1, id);
+            prune.setLong(2, id);
+            prune.executeUpdate();
+        }
         try (
             PreparedStatement update = connection.prepareStatement(
                 "UPDATE auth_users SET password_hash=?, must_change_password=false, token_version=token_version+1, failed_login_attempts=0, locked_until=NULL, updated_by=?, updated_at=CURRENT_TIMESTAMP, version=version+1 WHERE id=?"
             )
         ) {
             update.setString(1, hash);
-            update.setLong(2, id);
+            update.setLong(2, actor);
             update.setLong(3, id);
             update.executeUpdate();
+        }
+    }
+
+    /** Không so sánh chuỗi hash vì BCrypt có salt; đối chiếu cả hash hiện tại và hai hash cũ dưới cùng khóa user. */
+    public void requireNewPassword(Connection connection, UserAccount user, String candidate, PasswordEncoder encoder)
+        throws SQLException {
+        BusinessRules.require(StrongPasswordValidator.valid(candidate), ErrorCode.VALIDATION_FAILED);
+        BusinessRules.require(!encoder.matches(candidate, user.getPasswordHash()), ErrorCode.PASSWORD_REUSED);
+        try (
+            var query = connection.prepareStatement(
+                "SELECT password_hash FROM auth_password_history WHERE user_id=? ORDER BY id DESC LIMIT 2"
+            )
+        ) {
+            query.setLong(1, user.getId());
+            try (ResultSet rows = query.executeQuery()) {
+                while (rows.next())
+                    BusinessRules.require(!encoder.matches(candidate, rows.getString(1)), ErrorCode.PASSWORD_REUSED);
+            }
         }
     }
 

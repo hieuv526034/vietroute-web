@@ -10,7 +10,9 @@ public enum SuccessCode {
     LOGOUT("OK002", "success.logout"),
     PASSWORD_CHANGED("OK003", "success.passwordChanged"),
     CREATED("OK004", "success.created"),
-    ACCEPTED("OK005", "success.accepted");
+    ACCEPTED("OK005", "success.accepted"),
+    ACCOUNT_REQUESTED("OK006", "success.accountRequested"),
+    ACCOUNT_VERIFIED("OK007", "success.accountVerified");
 
     private final String code;
 

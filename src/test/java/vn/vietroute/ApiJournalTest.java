@@ -43,6 +43,7 @@ import vn.vietroute.business.catalog.dto.request.CatalogCreateRequest;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.monitoring.ApiJournalSettings;
 import vn.vietroute.common.config.web.WebConfig;
+import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.jdbc.BaseRepository;
@@ -62,6 +63,30 @@ import vn.vietroute.support.JournalTestConfig.FakeJournalRepository;
 
 /** Chứng minh không giữ credential/PII, kiểm quyền/service/filter thật và không queue lịch sử trong RAM; không DB production. */
 class ApiJournalTest {
+
+    @Test
+    void journalUsesVerifiedActorAttributeAndKeepsItAfterLogoutPresenceIsCleared() throws Exception {
+        try (var context = context()) {
+            var store = context.getBean(ApiJournalStore.class);
+            var filter = new ApiJournalFilter(store, context.getBean(Clock.class));
+            var request = new MockHttpServletRequest("POST", Routes.AUTH_LOGOUT);
+            request.addHeader("X-User-ID", "999");
+            request.addHeader("X-Request-ID", "verified-actor-trace");
+            filter.doFilter(request, new MockHttpServletResponse(), (incoming, response) -> {
+                incoming.setAttribute(Http.JOURNAL_USER_ATTRIBUTE, 12L);
+                incoming.removeAttribute(Http.VERIFIED_USER_ATTRIBUTE);
+            });
+            var search = new ApiJournalSearchRequest();
+            search.setTraceId("verified-actor-trace");
+            assertEquals(12L, store.page(search).records().content().get(0).userId());
+            var anonymous = new MockHttpServletRequest("GET", Routes.CATALOG_PREFIX + "VEHICLE_TYPE");
+            anonymous.addHeader("X-User-ID", "999");
+            anonymous.addHeader("X-Request-ID", "untrusted-actor-trace");
+            filter.doFilter(anonymous, new MockHttpServletResponse(), (incoming, response) -> {});
+            search.setTraceId("untrusted-actor-trace");
+            assertNull(store.page(search).records().content().get(0).userId());
+        }
+    }
 
     @Test
     void databaseFailureDuringJwtValidationRecordsSqlStateWithoutCredentialOrController() throws Exception {
@@ -374,7 +399,9 @@ class ApiJournalTest {
             "OK000",
             "success.ok",
             "SUCCESS",
-            ""
+            "",
+            null,
+            null
         );
         return new ApiJournalDetail(e, "test-node", Routes.AUTH + "/me", Map.of(), "{}", "{}", "JSON");
     }

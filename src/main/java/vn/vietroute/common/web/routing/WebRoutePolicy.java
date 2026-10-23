@@ -17,6 +17,13 @@ public final class WebRoutePolicy {
             Routes.HOME,
             Routes.HEALTH,
             Routes.LOGIN,
+            Routes.AUTH_LIFECYCLE_PAGE,
+            Routes.AUTH + Routes.AUTH_OPTIONS,
+            Routes.AUTH + Routes.AUTH_REGISTER,
+            Routes.AUTH + Routes.AUTH_ACTIVATE,
+            Routes.AUTH + Routes.AUTH_RESEND,
+            Routes.AUTH + Routes.AUTH_FORGOT,
+            Routes.AUTH + Routes.AUTH_RESET,
             Routes.ASSET_MATCHER,
             Routes.WEBJAR_MATCHER,
             Routes.DOCS,
@@ -40,6 +47,7 @@ public final class WebRoutePolicy {
             skipsTrafficGuard(path) ||
             path.equals(Routes.AUTH_LOGIN) ||
             path.equals(Routes.AUTH_CSRF) ||
+            publicAccountFlow(path) ||
             path.startsWith(Routes.DOCS) ||
             path.equals(Routes.OPENAPI)
         );
@@ -52,6 +60,7 @@ public final class WebRoutePolicy {
             path.equals(Routes.AUTH_CSRF) ||
             path.equals(Routes.AUTH_LOGOUT) ||
             path.equals(Routes.PRESENCE) ||
+            publicAccountFlow(path) ||
             publicCatalog(path, method)
         );
     }
@@ -61,6 +70,8 @@ public final class WebRoutePolicy {
         return (
             path.equals(Routes.HOME) ||
             path.equals(Routes.LOGIN) ||
+            path.equals(Routes.AUTH_LIFECYCLE_PAGE) ||
+            publicAccountFlow(path) ||
             path.equals(Routes.AUTH_LOGOUT) ||
             path.equals(Routes.PRESENCE) ||
             publicCatalog(path, method)
@@ -69,5 +80,26 @@ public final class WebRoutePolicy {
 
     private static boolean publicCatalog(String path, String method) {
         return method.equals("GET") && path.startsWith(Routes.CATALOG_PREFIX);
+    }
+
+    /** Danh sách tường minh; email của user đang đăng nhập không thuộc nhóm public này. */
+    private static boolean publicAccountFlow(String path) {
+        return List.of(
+            Routes.AUTH_OPTIONS,
+            Routes.AUTH_REGISTER,
+            Routes.AUTH_ACTIVATE,
+            Routes.AUTH_RESEND,
+            Routes.AUTH_FORGOT,
+            Routes.AUTH_RESET
+        )
+            .stream()
+            .anyMatch(action -> path.equals(Routes.AUTH + action));
+    }
+
+    /** Các mutation dùng password/mã email cùng chịu quota và semaphore login để hạn chế spam/BCrypt CPU. */
+    public static boolean credentialMutation(String path) {
+        return (
+            path.equals(Routes.AUTH_LOGIN) || path.equals(Routes.AUTH + Routes.AUTH_EMAIL) || publicAccountFlow(path)
+        );
     }
 }

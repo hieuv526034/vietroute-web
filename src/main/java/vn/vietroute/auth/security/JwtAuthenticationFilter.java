@@ -109,6 +109,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 );
                 SecurityContextHolder.setContext(context);
                 request.setAttribute(Http.VERIFIED_USER_ATTRIBUTE, user.getId());
+                request.setAttribute(Http.JOURNAL_USER_ATTRIBUTE, user.getId());
             } catch (JwtException | IllegalArgumentException exception) {
                 // Token cookie cũ được xóa để trang công khai vẫn mở được; API cần đăng nhập phải trả AUTH004.
                 SecurityContextHolder.clearContext();

@@ -20,7 +20,7 @@
         />
         <option
             name="VM_PARAMETERS"
-            value="-Xms64m -Xmx512m -Dfile.encoding=UTF-8 -Djava.awt.headless=true"
+            value="-Xms64m -Xmx512m -Dfile.encoding=UTF-8 -Djava.awt.headless=true -DVIETROUTE_LOCAL_ENV_FILE=&quot;$PROJECT_DIR$/.env&quot;"
         />
         <envs>
             <env

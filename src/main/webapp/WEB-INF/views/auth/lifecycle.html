@@ -1,0 +1,355 @@
+<!doctype html>
+<html
+    th:lang="${currentLocale}"
+    xmlns:th="http://www.thymeleaf.org"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.accountFlow.title})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main class="container-xl workspace-page">
+            <div class="page-heading">
+                <h1 th:text="#{ui.accountFlow.title}"></h1>
+                <p th:text="#{ui.accountFlow.intro}"></p>
+            </div>
+            <p
+                id="account-flow-status"
+                role="status"
+                th:text="#{ui.loading}"
+                th:attr="data-disabled=#{ui.accountFlow.disabled},data-ready=#{ui.accountFlow.ready}"
+            ></p>
+            <section
+                id="account-flow-workspace"
+                data-tabs
+            >
+                <div
+                    class="workspace-tabs"
+                    role="tablist"
+                    th:attr="aria-label=#{ui.accountFlow.title}"
+                >
+                    <button
+                        id="register-tab"
+                        type="button"
+                        data-tab-target="register-panel"
+                        th:text="#{ui.accountFlow.register}"
+                    ></button>
+                    <button
+                        id="activate-tab"
+                        type="button"
+                        data-tab-target="activate-panel"
+                        th:text="#{ui.accountFlow.activate}"
+                    ></button>
+                    <button
+                        id="forgot-tab"
+                        type="button"
+                        data-tab-target="forgot-panel"
+                        th:text="#{ui.accountFlow.forgot}"
+                    ></button>
+                    <button
+                        id="reset-tab"
+                        type="button"
+                        data-tab-target="reset-panel"
+                        th:text="#{ui.accountFlow.reset}"
+                    ></button>
+                </div>
+                <section
+                    id="register-panel"
+                    class="card p-4"
+                    aria-labelledby="register-title"
+                >
+                    <h2
+                        id="register-title"
+                        class="h4"
+                        th:text="#{ui.accountFlow.register}"
+                    ></h2>
+                    <p
+                        id="register-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></p>
+                    <form
+                        id="account-register-form"
+                        data-account-action="register"
+                        novalidate
+                    >
+                        <fieldset disabled>
+                            <label
+                                for="register-username"
+                                class="form-label"
+                                th:text="#{ui.username}"
+                            ></label>
+                            <input
+                                class="form-control mb-3"
+                                id="register-username"
+                                name="username"
+                                type="text"
+                                required
+                                minlength="3"
+                                maxlength="32"
+                                pattern="[A-Za-z][A-Za-z0-9]{2,31}"
+                                autocomplete="username"
+                            />
+                            <label
+                                for="register-displayName"
+                                class="form-label"
+                                th:text="#{ui.accountFlow.displayName}"
+                            ></label>
+                            <input
+                                class="form-control mb-3"
+                                id="register-displayName"
+                                name="displayName"
+                                type="text"
+                                required
+                                maxlength="120"
+                                autocomplete="name"
+                            />
+                            <label
+                                for="register-email"
+                                class="form-label"
+                                th:text="#{ui.accountFlow.email}"
+                            ></label>
+                            <input
+                                class="form-control mb-3"
+                                id="register-email"
+                                name="email"
+                                type="email"
+                                required
+                                maxlength="254"
+                                autocomplete="email"
+                            />
+                            <label
+                                for="register-password"
+                                class="form-label"
+                                th:text="#{ui.accountFlow.password}"
+                            ></label>
+                            <input
+                                class="form-control mb-3"
+                                id="register-password"
+                                name="password"
+                                type="password"
+                                required
+                                minlength="8"
+                                maxlength="72"
+                                autocomplete="new-password"
+                            />
+                            <p
+                                class="text-secondary"
+                                th:text="#{ui.accountFlow.history}"
+                            ></p>
+                            <div class="toolbar-actions">
+                                <button
+                                    type="submit"
+                                    class="button"
+                                    th:text="#{ui.accountFlow.submit}"
+                                ></button>
+                            </div>
+                        </fieldset>
+                    </form>
+                </section>
+                <section
+                    id="activate-panel"
+                    class="card p-4"
+                    aria-labelledby="activate-title"
+                >
+                    <h2
+                        id="activate-title"
+                        class="h4"
+                        th:text="#{ui.accountFlow.activate}"
+                    ></h2>
+                    <p
+                        id="activate-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></p>
+                    <form
+                        id="account-activate-form"
+                        data-account-action="activate"
+                        novalidate
+                    >
+                        <fieldset disabled>
+                            <label
+                                for="activate-email"
+                                class="form-label"
+                                th:text="#{ui.accountFlow.email}"
+                            ></label>
+                            <input
+                                class="form-control mb-3"
+                                id="activate-email"
+                                name="email"
+                                type="email"
+                                required
+                                maxlength="254"
+                                autocomplete="email"
+                            />
+                            <label
+                                for="activate-token"
+                                class="form-label"
+                                th:text="#{ui.accountFlow.token}"
+                            ></label>
+                            <input
+                                class="form-control mb-3"
+                                id="activate-token"
+                                name="token"
+                                type="text"
+                                required
+                                minlength="43"
+                                maxlength="43"
+                                pattern="[A-Za-z0-9_-]{43}"
+                                autocomplete="one-time-code"
+                            />
+                            <div class="toolbar-actions">
+                                <button
+                                    type="button"
+                                    id="account-resend"
+                                    class="button button-outline"
+                                    th:text="#{ui.accountFlow.resend}"
+                                ></button>
+                                <button
+                                    type="submit"
+                                    class="button"
+                                    th:text="#{ui.accountFlow.verify}"
+                                ></button>
+                            </div>
+                        </fieldset>
+                    </form>
+                </section>
+                <section
+                    id="forgot-panel"
+                    class="card p-4"
+                    aria-labelledby="forgot-title"
+                >
+                    <h2
+                        id="forgot-title"
+                        class="h4"
+                        th:text="#{ui.accountFlow.forgot}"
+                    ></h2>
+                    <p
+                        id="forgot-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></p>
+                    <form
+                        id="account-forgot-form"
+                        data-account-action="forgot"
+                        novalidate
+                    >
+                        <fieldset disabled>
+                            <label
+                                for="forgot-email"
+                                class="form-label"
+                                th:text="#{ui.accountFlow.email}"
+                            ></label>
+                            <input
+                                class="form-control mb-3"
+                                id="forgot-email"
+                                name="email"
+                                type="email"
+                                required
+                                maxlength="254"
+                                autocomplete="email"
+                            />
+                            <div class="toolbar-actions">
+                                <button
+                                    type="submit"
+                                    class="button"
+                                    th:text="#{ui.accountFlow.submit}"
+                                ></button>
+                            </div>
+                        </fieldset>
+                    </form>
+                </section>
+                <section
+                    id="reset-panel"
+                    class="card p-4"
+                    aria-labelledby="reset-title"
+                >
+                    <h2
+                        id="reset-title"
+                        class="h4"
+                        th:text="#{ui.accountFlow.reset}"
+                    ></h2>
+                    <p
+                        id="reset-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></p>
+                    <form
+                        id="account-reset-form"
+                        data-account-action="reset"
+                        novalidate
+                    >
+                        <fieldset disabled>
+                            <label
+                                for="reset-email"
+                                class="form-label"
+                                th:text="#{ui.accountFlow.email}"
+                            ></label>
+                            <input
+                                class="form-control mb-3"
+                                id="reset-email"
+                                name="email"
+                                type="email"
+                                required
+                                maxlength="254"
+                                autocomplete="email"
+                            />
+                            <label
+                                for="reset-token"
+                                class="form-label"
+                                th:text="#{ui.accountFlow.token}"
+                            ></label>
+                            <input
+                                class="form-control mb-3"
+                                id="reset-token"
+                                name="token"
+                                type="text"
+                                required
+                                minlength="43"
+                                maxlength="43"
+                                pattern="[A-Za-z0-9_-]{43}"
+                                autocomplete="one-time-code"
+                            />
+                            <label
+                                for="reset-newPassword"
+                                class="form-label"
+                                th:text="#{ui.accountFlow.newPassword}"
+                            ></label>
+                            <input
+                                class="form-control mb-3"
+                                id="reset-newPassword"
+                                name="newPassword"
+                                type="password"
+                                required
+                                minlength="8"
+                                maxlength="72"
+                                autocomplete="new-password"
+                            />
+                            <p
+                                class="text-secondary"
+                                th:text="#{ui.accountFlow.history}"
+                            ></p>
+                            <div class="toolbar-actions">
+                                <button
+                                    type="submit"
+                                    class="button"
+                                    th:text="#{ui.accountFlow.submit}"
+                                ></button>
+                            </div>
+                        </fieldset>
+                    </form>
+                </section>
+            </section>
+            <a
+                class="button button-outline mt-3"
+                th:href="@{/login(lang=${currentLocale})}"
+                th:text="#{ui.accountFlow.login}"
+            ></a>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/account-lifecycle.js}"></script>
+    </body>
+</html>

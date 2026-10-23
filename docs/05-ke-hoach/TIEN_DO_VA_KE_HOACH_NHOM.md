@@ -1,5 +1,11 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
+## FOUNDATION04 — đang thực hiện, chưa có trên main
+
+[Issue #40](https://github.com/hieuv526034/vietroute-web/issues/40), hieuv526034, nhánh `hieuv526034/auth-lifecycle-journal-actor`. Bổ sung chẩn đoán nguồn DB/local JVM property/BOM; đăng ký CUSTOMER chờ email, resend/kích hoạt, bind email cho user cũ, quên/reset, lịch sử hai mật khẩu cũ; journal lưu/filter/hiển thị user đã xác minh. Giữ 5 sai/khóa 15 phút theo chủ dự án, role là nhóm quyền, không SMS/provider trả phí. V011 mới, giữ nguyên V001–V010.
+
+Kiểm Neon chỉ SELECT xác nhận kết nối/admin/hash/history, không ghi/seed/reset. Đã đạt 109 Java test/16 Node test gồm token mã hóa, BOM/nguồn cấu hình, hai context public/CSRF/mass assignment và journal actor. Local compile/production WAR sạch test/dev/env, formatter/rules/docs/actionlint/bash syntax đạt; UI fixture vi/en đã kiểm required/modal giữ bản nháp khi lỗi và journal người gửi. Docker CI đang kiểm lại sau khi rút gọn tên V011 để vừa cột history VARCHAR(40); có regression giới hạn tên, không sửa migration đã áp dụng. Luồng mail mặc định tắt, cần bật self-service/mail/worker và cấu hình Gmail; chưa nghiệm thu inbox thật. Bước tiếp: SQL cô lập, UI vi/en, package production, formatter/rules/docs, PR CI rồi merge khi đạt. Hợp đồng và giới hạn tại [API](../02-phat-trien/API_BASE.md), [chạy local](../01-bat-dau/CHAY_LOCAL_VA_CLOUDINARY.md), [nhật ký](../04-van-hanh/NHAT_KY_API_VA_DEBUG.md).
+
 Cập nhật 23/10/2026, đối chiếu main tại `2a2e410` sau [PR #38](https://github.com/hieuv526034/vietroute-web/pull/38). Nền tảng ban đầu ở [PR #13](https://github.com/hieuv526034/vietroute-web/pull/13), kế hoạch nhóm ở [PR #21](https://github.com/hieuv526034/vietroute-web/pull/21), UI quản trị ở [PR #22](https://github.com/hieuv526034/vietroute-web/pull/22); các đợt bổ sung gần nhất ghi bên dưới. Cửa nghiệm thu trước nghiệp vụ tại [NGHIEM_THU_NEN_TANG.md](NGHIEM_THU_NEN_TANG.md). Chức năng mới chỉ trở thành Đã có trên main khi PR tương ứng merge. Tài liệu này theo dõi trạng thái; [PHAN_CONG.md](PHAN_CONG.md) là nguồn username/email và phạm vi phụ trách, [đặc tả](DAC_TA_HE_THONG_XE_KHACH.md) là nguồn luồng F01–F19 và ca nghiệm thu T01–T21. Chuyển máy/tiếp tục phiên mới theo [hướng dẫn bàn giao](../06-ai-va-ban-giao/AI_VA_BAN_GIAO.md).
 
 ## FOUNDATION03 — Đã có trên main

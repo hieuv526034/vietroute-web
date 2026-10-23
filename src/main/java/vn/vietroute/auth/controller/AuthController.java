@@ -77,6 +77,7 @@ public class AuthController extends BaseController {
         return execute(SuccessCode.LOGIN, request, () -> {
             AuthResponse result = auth.login(body);
             request.setAttribute(Http.VERIFIED_USER_ATTRIBUTE, result.user().getId());
+            request.setAttribute(Http.JOURNAL_USER_ATTRIBUTE, result.user().getId());
             cookies.set(request, response, result.accessToken());
             response.setHeader(HttpHeaders.CACHE_CONTROL, Http.NO_STORE);
             return result;

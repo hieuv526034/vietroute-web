@@ -27,6 +27,9 @@ start_app() {
     -e VIETROUTE_ACTIVITY_ENABLED=true -e VIETROUTE_ACTIVITY_REQUEST_THRESHOLD=120 \
     -e VIETROUTE_METRICS_TOKEN="$metrics_token" -e VIETROUTE_MONITORING_DB_ENABLED=true -e VIETROUTE_MONITORING_POLL_SECONDS=15 \
     -e VIETROUTE_RATE_REQUESTS="${4:-1000}" -e VIETROUTE_RATE_LOGINS=200 \
+    -e VIETROUTE_AUTH_SELF_SERVICE_ENABLED="${7:-false}" -e VIETROUTE_MAIL_ENABLED="${7:-false}" \
+    -e VIETROUTE_MAIL_PROVIDER=smtp -e VIETROUTE_MAIL_FROM=noreply@example.invalid \
+    -e VIETROUTE_SMTP_HOST=127.0.0.1 -e VIETROUTE_SMTP_PORT=1 -e VIETROUTE_SMTP_USER=ci-only -e VIETROUTE_SMTP_PASSWORD=ci-only \
     -e VIETROUTE_REDIS_URL="${5:-}" \
     -e VIETROUTE_DB_SCHEMA="${6:-vietroute}" \
     -e VIETROUTE_DB_URL="jdbc:postgresql://vietroute-db-ci:5432/$database?currentSchema=public" \
@@ -43,14 +46,14 @@ for port in 18080 18081; do
 done
 sql() { docker exec -e PGOPTIONS=-csearch_path=vietroute vietroute-db-ci psql -U vietroute_ci -d vietroute_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
 [[ "$(sql "SELECT count(*) FROM auth_users WHERE username='admin'")" == 1 ]]
-[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 10 ]]
+[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 11 ]]
 [[ "$(sql 'SELECT count(*) FROM catalog_items')" == 5 ]]
 [[ "$(sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','catalog_items','vietroute_schema_history')")" == 0 ]]
 [[ "$(sql "SELECT count(*) FROM pg_indexes WHERE schemaname='vietroute' AND indexname IN ('idx_auth_users_created_by','idx_auth_users_updated_by','idx_auth_user_roles_role_code','idx_catalog_created_by','idx_catalog_updated_by')")" == 5 ]]
 printf 'Audit stage: reserved actor, non-null seed and database guards\n'
 [[ "$(sql "SELECT count(*) FROM auth_users WHERE id=0 AND username='system' AND NOT active AND NOT must_change_password AND created_by=0 AND updated_by=0")" == 1 ]]
 [[ "$(sql "SELECT id FROM auth_users WHERE username='admin'")" == 1 ]]
-for audit_table in auth_users auth_roles auth_permissions auth_user_roles auth_role_permissions catalog_items system_jobs media_assets api_request_journal auth_access_policies auth_access_resources system_visitor_presence system_activity_buckets; do
+for audit_table in auth_users auth_roles auth_permissions auth_user_roles auth_role_permissions catalog_items system_jobs media_assets api_request_journal auth_access_policies auth_access_resources auth_password_history auth_account_challenges system_visitor_presence system_activity_buckets; do
   [[ "$(sql "SELECT count(*) FROM $audit_table WHERE created_by IS NULL OR updated_by IS NULL")" == 0 ]]
   [[ "$(sql "SELECT count(*) FROM information_schema.columns WHERE table_schema='vietroute' AND table_name='$audit_table' AND column_name IN ('created_by','updated_by') AND is_nullable='NO'")" == 2 ]]
 done
@@ -208,7 +211,7 @@ journal_trace=$(field traceId)
 journal_retained_trace="$journal_trace"
 printf 'API journal stage: trace lookup, controller, filtered bodies and auth omission\n'
 call 200 GET "/api/v1/admin/system/api-journal?traceId=$journal_trace" '' bearer
-python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["capacity"]==10000 and d["retentionMinutes"]==10080 and d["storage"]=="POSTGRESQL"; r=d["records"]; assert r["totalElements"]==1; e=r["content"][0]; assert e["status"]==400 and e["code"]=="COM001" and "CatalogController#create" in e["controller"]' "$result"
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["capacity"]==10000 and d["retentionMinutes"]==10080 and d["storage"]=="POSTGRESQL"; r=d["records"]; assert r["totalElements"]==1; e=r["content"][0]; assert e["userId"]==1 and e["username"]=="admin"; assert e["status"]==400 and e["code"]=="COM001" and "CatalogController#create" in e["controller"]' "$result"
 # field() dùng key object; chỉ số mảng được đọc rõ ràng, không log snapshot chứa dữ liệu test.
 journal_id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["data"]["records"]["content"][0]["id"])' "$result")
 call 200 GET "/api/v1/admin/system/api-journal/$journal_id" '' bearer
@@ -571,7 +574,7 @@ start_app vietroute-auth-ci2 18081 vietroute_legacy_ci 300 '' legacy_custom
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 http://127.0.0.1:18081/health >/dev/null
 legacy_sql() { docker exec -e PGOPTIONS=-csearch_path=legacy_custom vietroute-db-ci psql -U vietroute_ci -d vietroute_legacy_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(legacy_sql 'SELECT count(*) FROM vietroute_schema_history')" == 10 ]]
+[[ "$(legacy_sql 'SELECT count(*) FROM vietroute_schema_history')" == 11 ]]
 [[ "$(legacy_sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','catalog_items','vietroute_schema_history')")" == 0 ]]
 [[ "$(legacy_sql "SELECT display_name FROM auth_users WHERE id=1 AND username='admin'")" == 'Legacy admin retained' ]]
 [[ "$(legacy_sql "SELECT code FROM catalog_items WHERE id=1")" == LEGACY ]]
@@ -598,7 +601,7 @@ start_app vietroute-auth-ci 18080 vietroute_schema_ci 300 '' select
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 http://127.0.0.1:18080/health >/dev/null
 custom_sql() { docker exec -e 'PGOPTIONS=-csearch_path="select"' vietroute-db-ci psql -U vietroute_ci -d vietroute_schema_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(custom_sql 'SELECT count(*) FROM vietroute_schema_history')" == 10 ]]
+[[ "$(custom_sql 'SELECT count(*) FROM vietroute_schema_history')" == 11 ]]
 [[ "$(custom_sql 'SELECT count(*) FROM catalog_items')" == 5 ]]
 [[ "$(custom_sql "SELECT count(*) FROM pg_namespace WHERE nspname='vietroute'")" == 0 ]]
 for migration in src/main/resources/db/migration/V00*.sql; do
@@ -636,7 +639,7 @@ start_app vietroute-auth-ci 18080 vietroute_schema_ci 300 '' renamed_app
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 "$base/health" >/dev/null
 renamed_sql() { docker exec -e PGOPTIONS=-csearch_path=renamed_app vietroute-db-ci psql -U vietroute_ci -d vietroute_schema_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(renamed_sql 'SELECT count(*) FROM vietroute_schema_history')" == 10 ]]
+[[ "$(renamed_sql 'SELECT count(*) FROM vietroute_schema_history')" == 11 ]]
 [[ "$(renamed_sql 'SELECT count(*) FROM catalog_items')" == 6 ]]
 renamed_sql "SELECT password_hash FROM auth_users WHERE username='admin'" > "$work/renamed-hash"
 cmp --silent "$work/custom-hash" "$work/renamed-hash"
@@ -714,4 +717,5 @@ grep -q '^vietroute_database_available 1' "$work/metrics.txt"
 docker stop vietroute-auth-ci2 >/dev/null
 scrape
 if curl --fail --silent --max-time 3 -H "Authorization: Bearer $metrics_token" http://127.0.0.1:18081/internal/metrics >/dev/null 2>&1; then exit 1; fi
+source "$(dirname "${BASH_SOURCE[0]}")/verify-account.sh"
 printf 'Function permissions, durable workers, per-node quota, metrics isolation and DB/node recovery checks passed.\n'

@@ -18,6 +18,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import vn.vietroute.auth.entity.AccessPolicy;
 import vn.vietroute.auth.entity.AccessResource;
+import vn.vietroute.auth.entity.AccountChallenge;
+import vn.vietroute.auth.entity.PasswordHistory;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
@@ -76,9 +78,12 @@ public class DatabaseInitializer implements InitializingBean {
         migrate(connection, "V008__media_metadata.sql");
         migrate(connection, "V009__activity_presence.sql");
         migrate(connection, "V010__access_resource_inventory.sql");
+        migrate(connection, "V011__account_and_request_actor.sql");
         JdbcSchemaValidator.verify(
             connection,
             UserAccount.class,
+            AccountChallenge.class,
+            PasswordHistory.class,
             CatalogItem.class,
             MediaAsset.class,
             Job.class,

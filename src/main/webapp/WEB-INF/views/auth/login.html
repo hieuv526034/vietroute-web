@@ -89,6 +89,11 @@
                         Đăng nhập
                     </button>
                 </form>
+                <a
+                    class="button button-outline full-width mt-3"
+                    th:href="@{/account-access(lang=${currentLocale})}"
+                    th:text="#{ui.accountFlow.title}"
+                ></a>
                 <p
                     class="form-help"
                     th:text="#{ui.loginHelp}"
