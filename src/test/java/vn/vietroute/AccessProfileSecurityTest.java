@@ -10,6 +10,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -75,6 +76,10 @@ class AccessProfileSecurityTest {
             child.register(WebConfig.class);
             child.refresh();
             var mvc = MockMvcBuilders.webAppContextSetup(child).apply(springSecurity()).build();
+            var spec = root
+                .getBean(ObjectMapper.class)
+                .readTree(mvc.perform(get("/v3/api-docs")).andReturn().getResponse().getContentAsString());
+            assertTrue(spec.path("paths").path("/api/v1/auth/avatar").path("post").path("responses").has("201"));
             String jwt = root.getBean(JwtService.class).issue(fixtureUser()).accessToken();
             String docs = mvc
                 .perform(get("/docs").param("lang", "vi").cookie(new Cookie(Http.AUTH_COOKIE, jwt)))

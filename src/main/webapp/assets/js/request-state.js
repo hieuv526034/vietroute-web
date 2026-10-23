@@ -49,6 +49,7 @@
             release();
         };
         api.interceptors.request.use((config) => {
+            if (config.uiSilent) return config;
             pending++;
             progress.hidden = false;
             document.body.classList.add('is-request-loading');

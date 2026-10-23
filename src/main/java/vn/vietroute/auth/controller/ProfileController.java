@@ -3,6 +3,7 @@ package vn.vietroute.auth.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.WebDataBinder;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.dto.request.ProfileUpdateRequest;
 import vn.vietroute.auth.dto.response.UserResponse;
@@ -68,6 +70,7 @@ public class ProfileController extends BaseController {
     }
 
     @PostMapping(value = Routes.AUTH_AVATAR, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
     @Operation(
         summary = "Upload ảnh đại diện của chính mình",
         description = "JPEG/PNG thật, quota và giới hạn media dùng chung; sau upload gắn ID qua profile/version"
@@ -77,6 +80,8 @@ public class ProfileController extends BaseController {
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
-        return execute(SuccessCode.CREATED, request, () -> images.uploadAvatar(body.getFile(), actor));
+        return execute(HttpStatus.CREATED, SuccessCode.CREATED, request, () ->
+            images.uploadAvatar(body.getFile(), actor)
+        );
     }
 }

@@ -53,15 +53,17 @@
         }
     };
     // CSRF lấy trước mỗi mutation; không đọc cookie auth hoặc ghi token vào storage.
-    const mutate = (path, body, method = 'post') =>
+    const mutate = (path, body, method = 'post', options = {}) =>
         runMutation(`${method}:${path}`, async () => {
             const uiTrigger = captureTrigger();
-            const csrf = (await api.get('/api/v1/auth/csrf', { uiTrigger })).data.data;
+            const uiSilent = options.uiSilent === true;
+            const csrf = (await api.get('/api/v1/auth/csrf', { uiTrigger, uiSilent })).data.data;
             return api.request({
                 url: path,
                 method,
                 data: body,
                 uiTrigger,
+                uiSilent,
                 headers: { [csrf.headerName]: csrf.token },
             });
         });
