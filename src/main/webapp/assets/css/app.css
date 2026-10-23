@@ -759,6 +759,10 @@ form .button {
 }
 
 @media (max-width: 700px) {
+    .site-nav {
+        position: relative;
+    }
+
     .container-xl {
         padding-inline: 22px;
     }
@@ -1794,7 +1798,15 @@ fieldset:disabled .button[type='submit']::before,
     .account-menu {
         margin-left: auto;
     }
+
+    .operations-menu {
+        position: static;
+    }
     .operations-menu-items {
-        min-width: min(240px, calc(100vw - 44px));
+        left: 12px;
+        right: 12px;
+        top: calc(100% - 4px);
+        min-width: 0;
+        max-width: none;
     }
 }
