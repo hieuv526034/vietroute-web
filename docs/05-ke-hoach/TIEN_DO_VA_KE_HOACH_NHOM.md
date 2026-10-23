@@ -1,5 +1,11 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
+## ACCESS02 — Đang làm: constants và phân tích cây quyền
+
+[Issue #46](https://github.com/hieuv526034/vietroute-web/issues/46), hieuv526034, nhánh `hieuv526034/access-function-constants`, đối chiếu main `442c73d`. Gom group/mã quyền của AccessFunction về common.constant.AccessConstants dùng chung với Permission, giữ nguyên mã/guard. Phân tích hiện trạng, mô hình menu → hành động → endpoint, bootstrap/sync/guard và màn gán tại [chuyên đề phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#phân-tích-cây-chức-năng-và-quyền-hành-động--access02). Đây là thiết kế cho bước tiếp theo, chưa triển khai cây, VIEW permission hay đổi cơ chế ủy quyền quản trị. Chưa đánh dấu source trên main trước khi PR qua kiểm tra và merge.
+
+Local đã đạt: npm ci/format/format:check/rules/docs, Maven verify (112 Java test), 18 Node test và git diff --check. Chưa có bằng chứng CI/merge cho đợt constants tại thời điểm commit; cần Docker/PostgreSQL qua PR trước merge. Không thay migration hoặc chạy ghi trên Neon. Không còn code constants dở; cây/function/action/VIEW và ủy quyền quản trị là thiết kế chưa triển khai. Bước tiếp: triển khai từng phần định nghĩa/sync → guard/capabilities → cây gán/UI theo tiêu chí chuyên đề; không bắt đầu nghiệp vụ trước khi nền quyền nghiệm thu.
+
 ## FOUNDATION05 — Đã có trên main
 
 [PR #44](https://github.com/hieuv526034/vietroute-web/pull/44), merge `46d0243`, head đã kiểm `6318e38`, [Issue #43](https://github.com/hieuv526034/vietroute-web/issues/43), hieuv526034. AccessFunction thu thập nhóm/quyền cùng mapping; quyền hiệu lực vẫn đọc DB/guard service. ADMIN bất biến, role khác sửa/tắt/xóa mềm có chặn user/policy, dọn mapping và giữ tombstone qua bootstrap. Đăng ký dùng chung khóa gán/xóa role. V012 bổ sung metadata và avatar FK/index, giữ nguyên V001–V011.

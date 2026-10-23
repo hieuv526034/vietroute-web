@@ -22,6 +22,7 @@ import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.auth.service.AccountLifecycleService;
 import vn.vietroute.common.base.BaseController;
+import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
@@ -32,7 +33,7 @@ import vn.vietroute.common.web.response.ApiResult;
 @RestController
 @RequestMapping(Routes.AUTH)
 @Tag(name = "Vòng đời tài khoản", description = "Đăng ký, xác minh email và đặt lại mật khẩu qua mail/worker")
-@AccessFunction(group = "AUTH")
+@AccessFunction(group = Groups.AUTH)
 public class AccountLifecycleController extends BaseController {
 
     private final AccountLifecycleService accounts;

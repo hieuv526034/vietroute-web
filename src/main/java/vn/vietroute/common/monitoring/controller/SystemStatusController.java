@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.common.base.BaseController;
+import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
@@ -21,7 +22,7 @@ import vn.vietroute.common.web.response.ApiResult;
 
 @RestController
 @Tag(name = "Vận hành", description = "Quan sát pool/worker/quota và kiểm tra database thật")
-@AccessFunction(group = "SYSTEM")
+@AccessFunction(group = Groups.SYSTEM)
 public class SystemStatusController extends BaseController {
 
     private final SystemStatusService system;

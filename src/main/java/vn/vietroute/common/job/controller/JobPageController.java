@@ -4,11 +4,12 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import vn.vietroute.auth.security.annotation.AccessFunction;
+import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 
 /** Trang vận hành chỉ lấy metadata từ API đã kiểm quyền; không render payload của handler. */
 @Controller
-@AccessFunction(group = "SYSTEM")
+@AccessFunction(group = Groups.SYSTEM)
 public class JobPageController {
 
     @GetMapping(Routes.JOBS_PAGE)

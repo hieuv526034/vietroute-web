@@ -6,12 +6,13 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import vn.vietroute.auth.security.annotation.AccessFunction;
+import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ApplicationConstants;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 
 @Controller
-@AccessFunction(group = "API")
+@AccessFunction(group = Groups.API)
 public class HomeController {
 
     @GetMapping(Routes.HOME)

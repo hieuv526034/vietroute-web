@@ -17,6 +17,8 @@ Phụ trách: hieuv526034. Lượt này quy hoạch source để nhóm tìm đú
 
 Header có sẵn trong Spring dùng `HttpHeaders.AUTHORIZATION`, `CONTENT_LANGUAGE`, `RETRY_AFTER`... Không tạo thêm tên khác cho header chuẩn. Mã lỗi/thành công ở enum chuyên trách `ErrorCode`, `SuccessCode`; `Permission` là value object mã quyền với hằng lõi và registry DB; không gom các trách nhiệm nghiệp vụ khác nhau thành một enum khổng lồ.
 
+`common/constant/AccessConstants.java` giữ `Groups` (mã nhóm/tài nguyên) và `Permissions` (mã quyền lõi) dùng chung cho `@AccessFunction` và `Permission`. Annotation dùng chuỗi compile-time, không gọi `Permission.name()` trong annotation. Đây là mã định danh ổn định, không chứa danh sách role/user được cấp quyền; mapping hiệu lực vẫn ở DB. Quyền tùy chỉnh không bị giới hạn bởi các constants lõi. Đổi mã đã lưu cần migration tương thích, không chỉ sửa một hằng rồi làm mất mapping cũ. Nhóm metadata hiện tại chưa phải quan hệ cha-con của cây chức năng; thiết kế tiếp theo ở [schema và phân quyền](SCHEMA_VA_PHAN_QUYEN.md#phân-tích-cây-chức-năng-và-quyền-hành-động--access02).
+
 `Env` lưu tên key thực bằng `key()`. Các Settings nhận `ConfigValues`, chỉ truyền enum; không dùng chuỗi tùy ý hoặc đọc `System.getenv` rải rác trong service/controller. Giá trị mặc định, giới hạn và điều kiện bắt buộc vẫn thuộc Settings của module. Điều này giữ mỗi module có trách nhiệm kiểm cấu hình riêng. `ConfigValues` chỉ đưa tên key vào lỗi, không đưa giá trị bị từ chối hoặc secret vào log.
 
 Ví dụ:

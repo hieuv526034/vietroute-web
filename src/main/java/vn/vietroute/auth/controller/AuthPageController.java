@@ -9,12 +9,13 @@ import org.springframework.web.util.UriComponentsBuilder;
 import vn.vietroute.auth.security.AuthNavigation;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessFunction;
+import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 
 /** Các trang Thymeleaf chỉ render giao diện; submit bằng Axios vào API auth dùng chung. */
 @Controller
-@AccessFunction(group = "AUTH")
+@AccessFunction(group = Groups.AUTH)
 public class AuthPageController {
 
     /** Trang public không chứa token trên URL; mọi xác minh gửi POST JSON có CSRF. */
