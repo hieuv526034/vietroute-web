@@ -1,8 +1,8 @@
 # Hợp đồng API nền tảng
 
-Quản trị hệ thống bổ sung: `GET /api/v1/admin/system/configuration` dùng SYSTEM_READ và DTO whitelist chỉ đọc; `GET /api/v1/admin/access/users` dùng ADMIN + ACCESS_READ, prefix username/page/size; list jobs có query status tùy chọn. UI và hợp đồng chi tiết tại [QUAN_TRI_HE_THONG.md](QUAN_TRI_HE_THONG.md). Không có API ghi env/credential.
+Quản trị hệ thống bổ sung: `GET /api/v1/admin/system/configuration` dùng SYSTEM_READ và DTO whitelist chỉ đọc; `GET /api/v1/admin/access/users` dùng ADMIN + ACCESS_READ, prefix username/page/size; list jobs có query status tùy chọn. UI và hợp đồng chi tiết tại [QUAN_TRI_HE_THONG.md](../04-van-hanh/QUAN_TRI_HE_THONG.md). Không có API ghi env/credential.
 
-Giám sát bổ sung: `GET /api/v1/admin/system/runtime` dùng SYSTEM_READ và envelope chung; `GET /monitoring` là trang chỉ đọc cùng quyền. `GET /internal/metrics` là Prometheus text, token vận hành riêng, không bọc envelope/JWT và không truy vấn DB. Token rỗng đóng endpoint. Xem [giám sát và vận hành](GIAM_SAT_VA_VAN_HANH.md) và [tổng quan](TONG_QUAN_HE_THONG.md).
+Giám sát bổ sung: `GET /api/v1/admin/system/runtime` dùng SYSTEM_READ và envelope chung; `GET /monitoring` là trang chỉ đọc cùng quyền. `GET /internal/metrics` là Prometheus text, token vận hành riêng, không bọc envelope/JWT và không truy vấn DB. Token rỗng đóng endpoint. Xem [giám sát và vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md) và [tổng quan](../01-bat-dau/TONG_QUAN_HE_THONG.md).
 
 ## Endpoint đang có
 
@@ -120,4 +120,4 @@ Render sinh JWT secret cố định từ Blueprint, yêu cầu nhập bootstrap 
 - [PostgreSQL explicit locking](https://www.postgresql.org/docs/current/explicit-locking.html)
 ## Ảnh công khai và chạy local
 
-API ảnh ở `/api/v1/media` có upload multipart, đọc/phân trang và xóa qua worker; quyền MEDIA_READ/CREATE/DELETE cùng kiểm owner. Cấu hình, giới hạn file, luồng phục hồi và hướng dẫn Run/Debug IntelliJ nằm trong [Cloudinary và IntelliJ](CLOUDINARY_VA_INTELLIJ.md).
+API ảnh ở `/api/v1/media` có upload multipart, đọc/phân trang và xóa qua worker; quyền MEDIA_READ/CREATE/DELETE cùng kiểm owner. Cấu hình, giới hạn file, luồng phục hồi và hướng dẫn Run/Debug IntelliJ nằm trong [Cloudinary và IntelliJ](../01-bat-dau/CHAY_LOCAL_VA_CLOUDINARY.md).

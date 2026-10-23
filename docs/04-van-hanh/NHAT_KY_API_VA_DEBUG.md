@@ -8,9 +8,9 @@ Mở **Chi tiết** để xem controller/method, status, thời gian, mã lỗi/
 
 Ảnh kiểm giao diện với HTML thật và dữ liệu giả, không phải request hoặc lỗi production:
 
-![Danh sách nhật ký API trên desktop](images/api-journal.png)
+![Danh sách nhật ký API trên desktop](../images/api-journal.png)
 
-[Modal trên màn hình 390px](images/api-journal-mobile.png).
+[Modal trên màn hình 390px](../images/api-journal-mobile.png).
 
 `traceId` dùng để đối chiếu request, không phải nguyên nhân lỗi. Một HTTP 503 kéo dài 20 giây chưa đủ kết luận DB quá tải: có thể hết connection pool, lỗi mạng, DB chưa sẵn sàng hoặc admission guard. Đối chiếu nhóm chẩn đoán với pool waiting, heap/CPU, log server và tình trạng DB tại thời điểm đó.
 
@@ -39,7 +39,7 @@ SQLState chỉ là gợi ý phân nhóm; không có SQL, parameter, stack trace 
 
 Collection có URL môi trường đang xem, không có script/secret/cookie. URL lấy từ origin + meta app-base, không lấy host/Forwarded header từ request lịch sử; chỉ chấp nhận HTTP/HTTPS, không URL có user/password. Token giữ placeholder theo lựa chọn của chủ dự án, không có API cấp token debug mới. Giữ token/password trong môi trường riêng hoặc Vault của công cụ, không commit collection đã điền secret. cURL dùng cú pháp shell POSIX; Windows có thể import trực tiếp vào Postman, không dán nguyên cú pháp này vào PowerShell.
 
-![Xuất debug có URL ứng dụng, token placeholder; dữ liệu thử riêng](images/journal-export-url.png)
+![Xuất debug có URL ứng dụng, token placeholder; dữ liệu thử riêng](../images/journal-export-url.png)
 
 ## Chính sách dữ liệu
 

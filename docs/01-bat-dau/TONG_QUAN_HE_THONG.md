@@ -2,11 +2,11 @@
 
 Cập nhật 22/10/2026. Đọc tài liệu này trước, sau đó mở các tài liệu theo liên kết. Đây là bản đồ source đang có, không phải tuyên bố đã hoàn thành các nghiệp vụ đặt vé.
 
-Để biết ai làm gì tiếp theo và phần nào đã/chưa hoàn thành, xem [Tiến độ và kế hoạch nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md). Bảng tách trạng thái source/API/UI và cấu hình dịch vụ ngoài app, kèm PR và phụ thuộc để bàn giao.
+Để biết ai làm gì tiếp theo và phần nào đã/chưa hoàn thành, xem [Tiến độ và kế hoạch nhóm](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md). Bảng tách trạng thái source/API/UI và cấu hình dịch vụ ngoài app, kèm PR và phụ thuộc để bàn giao.
 
 Để tra công nghệ từ BE đến UI và giải thích vai trò từng thư viện, đọc [danh mục công nghệ](CONG_NGHE_VA_THU_VIEN.md); phiên bản lấy từ source và được cập nhật cùng PR nâng dependency.
 
-Phần hoàn thiện ngày 23/10 có UI quản trị job/quyền và xem cấu hình whitelist trong menu Hệ thống; xem [hướng dẫn quản trị](QUAN_TRI_HE_THONG.md). Các màn này chưa phải nghiệp vụ nhà xe/chuyến/booking và không sửa secret từ trình duyệt.
+Phần hoàn thiện ngày 23/10 có UI quản trị job/quyền và xem cấu hình whitelist trong menu Hệ thống; xem [hướng dẫn quản trị](../04-van-hanh/QUAN_TRI_HE_THONG.md). Các màn này chưa phải nghiệp vụ nhà xe/chuyến/booking và không sửa secret từ trình duyệt.
 
 ## 1. Hệ thống gồm những gì
 
@@ -28,9 +28,9 @@ flowchart LR
     Monitor --> Dashboard[Dashboard và cảnh báo bên ngoài]
 ```
 
-Phần đã có: nền tảng locale/error/validation/audit/paging, auth/JWT/phân quyền, migration/seed, catalog CRUD, hàng đợi PostgreSQL, Gmail/SMTP, Cloudinary và giám sát. Nhà xe, tuyến/chuyến, booking/tồn chỗ và Maps là giai đoạn tiếp theo trong [PHAN_CONG.md](PHAN_CONG.md).
+Phần đã có: nền tảng locale/error/validation/audit/paging, auth/JWT/phân quyền, migration/seed, catalog CRUD, hàng đợi PostgreSQL, Gmail/SMTP, Cloudinary và giám sát. Nhà xe, tuyến/chuyến, booking/tồn chỗ và Maps là giai đoạn tiếp theo trong [PHAN_CONG.md](../05-ke-hoach/PHAN_CONG.md).
 
-[Nhật ký API và debug](NHAT_KY_API_VA_DEBUG.md) nằm trong `common.monitoring`: filter trước Security → projection DTO/response → PostgreSQL (V005) → API/page có kiểm quyền. Dùng để tra traceId/controller và xuất Postman đã che dữ liệu; lịch sử dùng chung DB/schema giữa các node, không phải gateway/audit bất biến.
+[Nhật ký API và debug](../04-van-hanh/NHAT_KY_API_VA_DEBUG.md) nằm trong `common.monitoring`: filter trước Security → projection DTO/response → PostgreSQL (V005) → API/page có kiểm quyền. Dùng để tra traceId/controller và xuất Postman đã che dữ liệu; lịch sử dùng chung DB/schema giữa các node, không phải gateway/audit bất biến.
 
 ## 2. Tìm code ở đâu
 
@@ -59,7 +59,7 @@ Phần đã có: nền tảng locale/error/validation/audit/paging, auth/JWT/ph�
 4. MVC context đăng ký controller/advice/Thymeleaf/Swagger; hai context không tạo service/controller trùng.
 5. Shutdown ngừng poll, chờ worker đang chạy theo timeout, đóng pool, GC listener và registry. Kill đột ngột có thể để lại lease; node khác nhận lại khi hết hạn.
 
-Xem [schema và quyền](SCHEMA_VA_PHAN_QUYEN.md), [IntelliJ](CLOUDINARY_VA_INTELLIJ.md) và [deploy](DEPLOY_RENDER.md).
+Xem [schema và quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md), [IntelliJ](CHAY_LOCAL_VA_CLOUDINARY.md) và [deploy](../04-van-hanh/DEPLOY_RENDER.md).
 
 ## 4. Luồng request và lỗi
 
@@ -67,7 +67,7 @@ Tomcat giới hạn connection/header/body → HttpMetricsFilter gắn request I
 
 JWT kiểm chữ ký/hạn dùng rồi tra DB để cập nhật active/tokenVersion/quyền trên từng request. Cookie HttpOnly cần CSRF khi ghi; Bearer tách khỏi cơ chế cookie. Quyền READ/CREATE/UPDATE/DELETE/ASSIGN theo resource ở service; scope dữ liệu phải kiểm thêm khi module nghiệp vụ ra đời. Ẩn nút UI không thay quyền server.
 
-Lỗi trước controller vào GlobalExceptionHandler, lỗi trong execute vào ApiExceptionMapper, lỗi filter dùng ApiErrorWriter; đều giữ HTTP status, code, messageKey, locale và traceId. Không trả stacktrace/SQL/password. Thời điểm là Instant/UTC. Xem [luồng base](LUONG_XU_LY_BASE.md) và [API_BASE.md](API_BASE.md).
+Lỗi trước controller vào GlobalExceptionHandler, lỗi trong execute vào ApiExceptionMapper, lỗi filter dùng ApiErrorWriter; đều giữ HTTP status, code, messageKey, locale và traceId. Không trả stacktrace/SQL/password. Thời điểm là Instant/UTC. Xem [luồng base](../02-phat-trien/LUONG_XU_LY_BASE.md) và [API_BASE.md](../02-phat-trien/API_BASE.md).
 
 ## 5. Transaction, job và provider
 
@@ -77,11 +77,11 @@ Outbox: transaction lưu `system_jobs` cùng thay đổi nghiệp vụ → commi
 
 Ảnh công khai: giữ metadata PENDING + job cleanup → upload ngoài transaction → metadata READY. Xóa qua DELETING/job/provider/DELETED; cleanup không xóa ảnh READY. Chỉ JPEG/PNG bytes thật, giới hạn byte/pixel, quyền và owner phía server. Không dùng module này cho giấy tờ riêng tư.
 
-Chi tiết [worker/mail](NEN_TANG_MO_RONG.md) và [Cloudinary](CLOUDINARY_VA_INTELLIJ.md).
+Chi tiết [worker/mail](../02-phat-trien/NEN_TANG_MO_RONG.md) và [Cloudinary](CHAY_LOCAL_VA_CLOUDINARY.md).
 
 ## 6. Vận hành và nhiều node
 
-`/health` kiểm web sống; `/api/v1/admin/system/status` kiểm DB thật theo yêu cầu; `/api/v1/admin/system/runtime` và `/monitoring` đọc runtime/cache với SYSTEM_READ; `/internal/metrics` dùng token vận hành riêng và không cần DB/JWT. Dashboard bền vững/cảnh báo nằm bên ngoài app. Xem [GIAM_SAT_VA_VAN_HANH.md](GIAM_SAT_VA_VAN_HANH.md).
+`/health` kiểm web sống; `/api/v1/admin/system/status` kiểm DB thật theo yêu cầu; `/api/v1/admin/system/runtime` và `/monitoring` đọc runtime/cache với SYSTEM_READ; `/internal/metrics` dùng token vận hành riêng và không cần DB/JWT. Dashboard bền vững/cảnh báo nằm bên ngoài app. Xem [GIAM_SAT_VA_VAN_HANH.md](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md).
 
 Nhiều node dùng cùng DB/schema/JWT secret và cấu hình provider. Không cần sticky session cho đăng nhập. Quota memory áp dụng từng node, tổng mức có thể tăng theo số node; phải đặt quota toàn cụm tại ingress khi scale. Tổng connection = tổng pool mọi node và worker. Job chia qua DB, mỗi node tự có metrics; collector phải scrape từng instance thực, không qua load balancer ngẫu nhiên. Queue counts là dữ liệu chung: dùng max, không sum giữa node.
 
@@ -91,4 +91,4 @@ Nhiều node dùng cùng DB/schema/JWT secret và cấu hình provider. Không c
 
 Đọc quy ước/phân công → tạo nhánh member/task → chốt API, quyền, scope và SQL migration mới → DTO @Schema/Validation + bundle vi/en → service transaction + quyền → DAO PreparedStatement → controller BaseController + @Operation → UI gọi client CSRF chung → kiểm thử bằng DB tạm → format → PR/CI → merge. Không sửa migration đã áp dụng hoặc test trên Neon production.
 
-Local: `mvnw verify`, Node test Swagger và formatter. Production: `-Pproduction` chỉ main, bỏ test/launcher/Node; CI Docker dùng PostgreSQL tạm. Xem [CONTRIBUTING.md](../CONTRIBUTING.md). Khi đọc kết quả kiểm tra trong tài liệu cũ, xem commit/PR tương ứng, không coi số test lịch sử là số hiện tại.
+Local: `mvnw verify`, Node test Swagger và formatter. Production: `-Pproduction` chỉ main, bỏ test/launcher/Node; CI Docker dùng PostgreSQL tạm. Xem [CONTRIBUTING.md](../../CONTRIBUTING.md). Khi đọc kết quả kiểm tra trong tài liệu cũ, xem commit/PR tương ứng, không coi số test lịch sử là số hiện tại.

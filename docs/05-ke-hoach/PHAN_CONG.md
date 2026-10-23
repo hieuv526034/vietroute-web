@@ -72,7 +72,7 @@ Trước giai đoạn 2 phải chốt SCOPE01 (membership/scope nhà xe) và h�
 
 Không làm tất cả cùng lúc. Chốt schema và hợp đồng trước mỗi giai đoạn; chức năng tiếp theo chỉ bắt đầu khi phần phụ thuộc đã có API dùng được. Bảng này là kế hoạch, chưa tạo Issue/assign trên GitHub. Backlog UI quản lý job/quyền/cấu hình, triển khai provider/cảnh báo/backup được ghi riêng, không đánh dấu xong bằng API hoặc mẫu cấu hình.
 
-Yêu cầu ngày 23/10: ưu tiên hoàn thiện nền tảng trước nghiệp vụ. Hieu bổ sung UI quản trị job/quyền/xem cấu hình an toàn; xem [quản trị hệ thống](QUAN_TRI_HE_THONG.md) và trạng thái OPSUI01/ACCESSUI01/CONFIGUI01 trong bảng tiến độ. Không ghi phần UI này thành đóng góp đã hoàn thành của Anh/Hien chỉ vì có tên phối hợp dự kiến.
+Yêu cầu ngày 23/10: ưu tiên hoàn thiện nền tảng trước nghiệp vụ. Hieu bổ sung UI quản trị job/quyền/xem cấu hình an toàn; xem [quản trị hệ thống](../04-van-hanh/QUAN_TRI_HE_THONG.md) và trạng thái OPSUI01/ACCESSUI01/CONFIGUI01 trong bảng tiến độ. Không ghi phần UI này thành đóng góp đã hoàn thành của Anh/Hien chỉ vì có tên phối hợp dự kiến.
 
 ## Quy tắc bàn giao và commit
 

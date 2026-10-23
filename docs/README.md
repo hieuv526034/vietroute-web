@@ -1,97 +1,37 @@
-# Bắt đầu tại đây — tài liệu VietRoute
+# Bắt đầu đọc tài liệu VietRoute
 
-Nếu mới vào nhóm, đọc theo **lộ trình 1 → 6** bên dưới; không cần đọc toàn bộ tài liệu vận hành trước khi chạy được app. Tài liệu được chia nhóm ở mục lục này; giữ đường dẫn file hiện có để link từ PR/Issue và hướng dẫn trong code tiếp tục dùng được.
+Người mới chỉ cần đi theo **5 bước** dưới đây. Các tài liệu chuyên sâu mở khi làm đúng phần việc, không cần đọc hết docs trước khi chạy app.
 
-**Quay lại dự án, chuyển máy hoặc mở phiên hỗ trợ code mới:** đọc [Bàn giao và tiếp tục](BAN_GIAO_VA_TIEP_TUC.md) trước. File chỉ rõ cần đọc lại gì, mốc source, chỗ tìm code, phần nào theo Git và phần nào phải cấp lại riêng. Quy tắc cho người hỗ trợ nằm trong [AGENTS.md](../AGENTS.md).
+## Đọc trước, đọc sau
 
-**Dùng AI để code:** theo [Quy trình AI dùng chung](QUY_TRINH_AI.md), kiểm AI đã đọc đúng ngữ cảnh, dùng formatter/check của repo và ghi việc dở vào đúng tài liệu/PR. Codex/Copilot/Cursor/Claude/Gemini có điểm đọc riêng nhưng cùng dẫn về AGENTS.
-
-## Lộ trình cho thành viên mới
-
-| Thứ tự | Đọc gì | Sau bước này cần hiểu/làm được |
+| Bước | Mở tài liệu | Đầu ra cần đạt |
 |---|---|---|
-| 1. Hiểu dự án | [README dự án](../README.md), [Tổng quan hệ thống](TONG_QUAN_HE_THONG.md) | Stack MVC/JDBC/WAR, common/auth/business, phần đã có và chưa triển khai |
-| 2. Chạy và format | [Chạy trong IntelliJ](CLOUDINARY_VA_INTELLIJ.md), [Format IntelliJ](FORMAT_INTELLIJ.md) | Bật profile local, cấp env riêng, Run/Debug app và Run Format; biết build không tự đọc `.env` |
-| 3. Hiểu một request | [Luồng xử lý base](LUONG_XU_LY_BASE.md), [Hợp đồng API](API_BASE.md) | HTTP → security → controller → service/transaction → JDBC → envelope/locale/traceId |
-| 4. Viết đúng quy ước | [Quy ước phát triển](QUY_UOC_PHAT_TRIEN.md), [Constants/package web](CONSTANTS_VA_CAU_TRUC_WEB.md), [Schema và phân quyền](SCHEMA_VA_PHAN_QUYEN.md) | DTO/Instant/audit/version, SQL không hardcode schema, quyền theo hành động và scope |
-| 5. Nhận việc | [Tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md), [Phân công](PHAN_CONG.md), [Đặc tả nghiệp vụ](DAC_TA_HE_THONG_XE_KHACH.md) | Việc mình nhận, phụ thuộc, tiêu chí nghiệm thu; kế hoạch không phải đóng góp đã hoàn thành |
-| 6. Bàn giao | [Quy trình Git/PR](../CONTRIBUTING.md), [Nghiệm thu nền tảng](NGHIEM_THU_NEN_TANG.md), [Chuyển máy/tiếp tục](BAN_GIAO_VA_TIEP_TUC.md) | Nhánh đúng người, commit/PR tiếng Việt, kiểm tra đúng phạm vi và giữ ngữ cảnh trong repo |
+| 1 | [Tổng quan hệ thống](01-bat-dau/TONG_QUAN_HE_THONG.md) | Hiểu stack và phần nền tảng/nghiệp vụ đã có, còn thiếu |
+| 2 | [Chạy IntelliJ](01-bat-dau/CHAY_LOCAL_VA_CLOUDINARY.md#nút-rundebug-trong-intellij), [Format](01-bat-dau/FORMAT_INTELLIJ.md) | Chạy app bằng môi trường riêng và dùng format chung; phần Cloudinary đọc khi làm ảnh |
+| 3 | [Luồng request](02-phat-trien/LUONG_XU_LY_BASE.md), [API base](02-phat-trien/API_BASE.md) | Hiểu security → controller → service/transaction → JDBC → response/lỗi |
+| 4 | [Quy ước phát triển](02-phat-trien/QUY_UOC_PHAT_TRIEN.md) | Nắm package, DTO/Instant, audit, quyền, validation và cách viết code |
+| 5 | [Tiến độ](05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md), [Phân công](05-ke-hoach/PHAN_CONG.md) | Chọn việc/phụ thuộc và nhánh đúng người trước khi code |
 
-Lần đầu chạy local không bật migration/seed trên Neon để thử. Xin cấu hình môi trường riêng theo người phụ trách; không đưa secret vào Git/ảnh chụp/tài liệu. `/health` lên không chứng minh đăng nhập hoặc DB hoạt động. Build/test thường lệ dùng DB giả/tạm, không production.
+Dùng AI hoặc chuyển máy: đọc thêm **[AI và bàn giao](06-ai-va-ban-giao/AI_VA_BAN_GIAO.md)** cùng [AGENTS.md](../AGENTS.md). Quy trình Git/PR nằm ở [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-## Nhóm A — Kiến trúc và nền tảng
+## Tra cứu theo thư mục
 
-| Tài liệu | Khi nào đọc |
-|---|---|
-| [Tổng quan hệ thống](TONG_QUAN_HE_THONG.md) | Cửa vào kiến trúc, package, luồng và giới hạn nhiều node |
-| [Công nghệ và thư viện BE → UI](CONG_NGHE_VA_THU_VIEN.md) | Tra phiên bản trong source, vai trò thư viện, chỗ đọc code và câu hỏi bảo vệ đồ án |
-| [Luồng xử lý base](LUONG_XU_LY_BASE.md) | Học một request từ filter đến lỗi/response; đọc trước khi thêm controller/service |
-| [Nền tảng mở rộng](NEN_TANG_MO_RONG.md) | Trước khi thêm job/worker/mail, quota hoặc permission |
-| [Schema và phân quyền](SCHEMA_VA_PHAN_QUYEN.md) | Trước khi viết SQL, migration, CRUD hoặc đổi schema môi trường |
-| [Audit và system](AUDIT_VA_SYSTEM.md) | Chọn actor người dùng/hệ thống, hiểu ID 0, migration dữ liệu cũ và quy tắc worker |
-| [Database và migration](../database/README.md) | Chạy migration lúc startup, history/checksum/lock và quy trình dữ liệu |
+| Cụm | Khi nào mở | Mở đầu bằng |
+|---|---|---|
+| [01-bat-dau](01-bat-dau/) | Hiểu dự án, công nghệ, chạy/format trên máy mới | Tổng quan → chạy local → format; [thư viện BE/UI](01-bat-dau/CONG_NGHE_VA_THU_VIEN.md) để tra cứu |
+| [02-phat-trien](02-phat-trien/) | Viết API/service/SQL, schema/quyền/audit, constants, job/mail | Luồng request → API → quy ước; chuyên đề mở theo task |
+| [03-giao-dien](03-giao-dien/) | Làm bảng, phân trang, tab, modal và validation | [Quy ước UI](03-giao-dien/QUY_UOC_UI.md) |
+| [04-van-hanh](04-van-hanh/) | Dùng màn hệ thống, debug traceId, giám sát hoặc deploy | [Quản trị](04-van-hanh/QUAN_TRI_HE_THONG.md); có lỗi đọc [nhật ký API](04-van-hanh/NHAT_KY_API_VA_DEBUG.md) |
+| [05-ke-hoach](05-ke-hoach/) | Nhận việc, xem đặc tả, trạng thái và nghiệm thu | Tiến độ → phân công → đặc tả/ca nghiệm thu |
+| [06-ai-va-ban-giao](06-ai-va-ban-giao/) | Tiếp tục task bằng AI hoặc đổi máy/người làm | Một hướng dẫn AI và bàn giao dùng chung |
+| [99-luu-tru](99-luu-tru/) | Tra quyết định/rà soát cũ | Chỉ đọc khi cần lịch sử; không chạy lại hướng dẫn khởi tạo repo |
 
-## Nhóm B — Viết code và giao diện
+Ảnh minh họa ở `images/`, không phải tài liệu bắt buộc đọc. Provider/Render/cảnh báo/backup chỉ được coi hoạt động khi có bằng chứng vận hành; có adapter/file mẫu chưa chứng minh đã chạy thật.
 
-| Tài liệu | Khi nào đọc |
-|---|---|
-| [Quy ước phát triển](QUY_UOC_PHAT_TRIEN.md) | Trước mọi PR: package, base/audit, DTO/Instant, validation và comments |
-| [Format IntelliJ](FORMAT_INTELLIJ.md) | Thiết lập máy mới, reformat khi sửa và chốt format trước commit |
-| [Quy trình AI dùng chung](QUY_TRINH_AI.md) | Nạp quy tắc trên công cụ/máy mới, kiểm ngữ cảnh, chốt format/rule và bàn giao việc dở |
-| [Hợp đồng API/base/auth](API_BASE.md) | Request/response/error, locale, JWT/cookie/CSRF, Swagger |
-| [Constants và cấu trúc web](CONSTANTS_VA_CAU_TRUC_WEB.md) | Khi thêm env/route/regex/header hoặc class common.web |
-| [Tab và modal](TAB_VA_MODAL.md) | Khi thêm trang nhiều nhóm, form thêm/sửa/gán/upload, lỗi và focus |
-| [Bảng và validation UI](BANG_VA_VALIDATION_UI.md) | Phân trang chung, cột icon cố định, nút bên phải và lỗi cạnh trường nhập |
-| [Cloudinary và IntelliJ](CLOUDINARY_VA_INTELLIJ.md) | Chạy app từ IDE hoặc tích hợp ảnh công khai; phần provider chỉ đọc khi cần |
+## Giữ docs gọn
 
-## Nhóm C — Dùng màn hệ thống và debug
-
-| Tài liệu | Khi nào đọc |
-|---|---|
-| [Quản trị hệ thống](QUAN_TRI_HE_THONG.md) | Dùng UI job/retry, phân quyền/gán role và snapshot cấu hình chỉ đọc |
-| [Nhật ký API/Postman](NHAT_KY_API_VA_DEBUG.md) | Có traceId/lỗi API: tra controller/status, request/response đã lọc, copy cURL/import collection |
-| [Giám sát và vận hành](GIAM_SAT_VA_VAN_HANH.md) | Đọc heap/CPU/pool/HTTP, xử lý 503, metrics/cảnh báo; phân biệt cấu hình mẫu với dịch vụ thật |
-
-Trang nhật ký cần ADMIN + SYSTEM_READ; lịch sử lưu PostgreSQL dùng chung, mặc định 7 ngày; không cache/queue lịch sử trong RAM hoặc thay thế gateway/audit bất biến. Nếu DB hỏng khiến JWT không xác thực được, dùng Logs đúng node/metrics vận hành, không bỏ qua kiểm quyền để mở nhật ký.
-
-## Nhóm D — Triển khai và vận hành
-
-| Tài liệu | Khi nào đọc |
-|---|---|
-| [Deploy Render](DEPLOY_RENDER.md) | Người phụ trách deploy: Docker, env, CI/build filters và cách bật dịch vụ |
-| [Giám sát và vận hành](GIAM_SAT_VA_VAN_HANH.md) | Collector/receiver, nhiều node, sự cố, backup/restore staging |
-| [Cloudinary và IntelliJ](CLOUDINARY_VA_INTELLIJ.md) | Thiết lập ảnh/provider và phân biệt môi trường local với Render |
-| [Nền tảng mở rộng](NEN_TANG_MO_RONG.md) | Bật worker/Gmail có kiểm soát; queue/retry/idempotency |
-
-Có adapter/config mẫu không đồng nghĩa Gmail/Cloudinary/cảnh báo/backup đã chạy thật. Không tăng pool/thread theo cảm tính; tổng connection tính mọi node và worker. Kafka/Redis chưa bật trong giai đoạn hiện tại.
-
-## Nhóm E — Kế hoạch, nghiệp vụ và nghiệm thu
-
-| Tài liệu | Nguồn sự thật cho nội dung nào |
-|---|---|
-| [Tiến độ và kế hoạch nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) | Đã làm/chưa làm, phụ thuộc/điều kiện bàn giao và PR bằng chứng |
-| [Phân công thành viên](PHAN_CONG.md) | Username/email đúng, người chủ trì và nhánh của từng phần |
-| [Đặc tả hệ thống xe khách](DAC_TA_HE_THONG_XE_KHACH.md) | Luồng nghiệp vụ F01–F19 và ca nghiệm thu T01–T21 |
-| [Nghiệm thu nền tảng](NGHIEM_THU_NEN_TANG.md) | Màn đã có, kiểm tra thực tế và phần phải chốt trước nghiệp vụ |
-| [Quy trình đóng góp](../CONTRIBUTING.md) | Git identity, nhánh/PR/commit tiếng Việt và ghi nhận tác giả |
-| [Bàn giao và tiếp tục trên máy mới](BAN_GIAO_VA_TIEP_TUC.md) | Thứ tự đọc lại, bản đồ code, thiết lập máy, việc không đi theo Git và mẫu yêu cầu tiếp tục |
-
-## Nhóm F — Bối cảnh và lịch sử quyết định
-
-| Tài liệu | Cách đọc |
-|---|---|
-| [Rà soát base](RA_SOAT_BASE.md) | Danh sách rà soát tại mốc ghi trong file; đối chiếu tiến độ/PR mới trước khi coi còn thiếu |
-| [Khởi tạo GitHub](KHOI_TAO_GITHUB.md) | Hướng dẫn bootstrap repo ban đầu; không chạy lại để ghi đè repo/tác giả hiện có |
-
-Các file có ngày/commit đối chiếu giữ bối cảnh ở thời điểm đó. Muốn biết hiện đã merge hay đang chờ, xem tiến độ cùng PR, không suy ra trạng thái từ một đề xuất cũ.
-
-## Đọc thêm theo người phụ trách
-
-| Người | Sau lộ trình chung, ưu tiên |
-|---|---|
-| `hieuv526034` | Schema/transaction/scope, worker và tích hợp, Render/monitoring/debug; chốt hợp đồng dùng chung trước CRUD nghiệp vụ |
-| `BangPhamIT` | Đặc tả trip/booking, API và quyền/scope, hợp đồng tồn chỗ/khóa do Hieu phụ trách; không tự tạo cơ chế tồn chỗ thứ hai |
-| `anhhoang104` | Mẫu catalog, carrier/xe/tài xế theo scope, validation/audit/version và tab/modal |
-| `hiencoi250404-design` | Địa điểm/tuyến/điểm dừng, UI search/chi tiết/lịch sử, locale/tab/modal và hợp đồng API từ Bang/Hieu |
-
-Bảng này là hướng đọc theo phân công, không khẳng định nghiệp vụ đã làm xong. Khi thêm tài liệu, đưa link vào đúng nhóm ở đây và cập nhật nguồn phụ trách; không sao chép nhiều bản quy tắc dễ lệch nhau.
+- Gốc `docs/` chỉ giữ README này. Tài liệu đặt trong cụm phù hợp, không tạo README/mục lục thứ hai cho từng nhóm nhỏ.
+- Sửa tài liệu hiện có trước; chỉ thêm file khi chủ đề có trách nhiệm riêng. Nội dung trùng thì gộp, phần lịch sử đưa vào `99-luu-tru`.
+- Quy tắc ở AGENTS/chuyên đề, trạng thái ở tiến độ, việc dở ở PR/Issue. Không sao chép backlog hoặc kết quả kiểm thử sang nhiều file.
+- Khi chuyển/gộp file, cập nhật cả link, prompt AI, đường dẫn trong checker và mọi chỗ tham chiếu. Chạy `npm run check:docs` sau khi stage file mới để kiểm link/ảnh, cụm thư mục và đường đọc từ mục lục.
+- Lịch sử tên/đường dẫn cũ tra qua Git/PR, không giữ các file chuyển hướng rỗng làm thư mục phình trở lại.

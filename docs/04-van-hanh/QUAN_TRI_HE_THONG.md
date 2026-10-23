@@ -19,7 +19,7 @@ API giữ hợp đồng list/detail/retry hiện hành; list thêm query `status
 
 Chọn Chi tiết để đọc ID/type/status/attempts, availableAt/lease, mã lỗi, thời điểm/audit/version. Không trả payload, email người nhận, dedup key hoặc response provider. Chỉ DEAD và JOB_RETRY mới hiện thao tác retry khả dụng; UI yêu cầu xác nhận rồi gửi `POST /api/v1/admin/jobs/{id}/retry` với `{"version":<version đang xem>}`. Backend tiếp tục kiểm trạng thái/version trong SQL.
 
-Chi tiết job có cả createdBy/updatedBy; ID 0 hiển thị system. Retry ghi người bấm từ principal; worker nhận/chạy xong sẽ cập nhật người sửa thành system. Xem [quy tắc audit](AUDIT_VA_SYSTEM.md); không suy diễn đây là lịch sử mọi lần thay đổi.
+Chi tiết job có cả createdBy/updatedBy; ID 0 hiển thị system. Retry ghi người bấm từ principal; worker nhận/chạy xong sẽ cập nhật người sửa thành system. Xem [quy tắc audit](../02-phat-trien/AUDIT_VA_SYSTEM.md); không suy diễn đây là lịch sử mọi lần thay đổi.
 
 409 nghĩa dữ liệu/trạng thái đã đổi: UI hiển thị lỗi trong hộp chi tiết, không tự retry, người dùng làm mới rồi xem lại. Thành công giữ ID/dedup, queue nhận lại khi worker bật. At least once vẫn có thể lặp tác động provider nếu ACK trước đó mất; kiểm receipt/kết quả gửi trước khi retry. Không có nút retry hàng loạt hoặc xóa job/PII tùy ý.
 
@@ -37,7 +37,7 @@ GET /api/v1/admin/access/users?username=Ad&page=0&size=20
 
 `username` là prefix không phân biệt hoa/thường, chữ/số tối đa 32 ký tự; rỗng để xem tất cả. Chọn tường minh id/username/displayName/active/roles/version/createdAt/updatedAt; không đọc password hash vào DTO hoặc trả token/credential. Người có ACCESS_READ nhưng không ADMIN không được liệt kê tài khoản. Query dùng PreparedStatement, không wildcard do người dùng cung cấp và không N+1 theo từng user. Nếu dữ liệu lớn cần đo query plan và cân nhắc index prefix qua migration mới, không sửa migration đã áp dụng.
 
-Chọn tài khoản để sửa các role; không tự sửa role bản thân. Ghi dùng API PUT đã có, cần thêm ACCESS_ASSIGN/ACCESS_WRITE và role ADMIN, version hiện hành; backend bảo vệ admin cuối và thu hồi token cũ của user đích. UI không cấp tài khoản mới, đổi mật khẩu người khác, gắn nhà xe hoặc thay scope; các phần đó theo AUTH02/AUTH03/SCOPE01 trong [kế hoạch nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md).
+Chọn tài khoản để sửa các role; không tự sửa role bản thân. Ghi dùng API PUT đã có, cần thêm ACCESS_ASSIGN/ACCESS_WRITE và role ADMIN, version hiện hành; backend bảo vệ admin cuối và thu hồi token cũ của user đích. UI không cấp tài khoản mới, đổi mật khẩu người khác, gắn nhà xe hoặc thay scope; các phần đó theo AUTH02/AUTH03/SCOPE01 trong [kế hoạch nhóm](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
 
 ## Trang cấu hình an toàn
 
@@ -57,6 +57,6 @@ Các kiểm tra này không chứng minh provider production, cảnh báo thật
 
 ## Hoàn thiện trước nghiệp vụ
 
-Đợt tiếp theo bổ sung menu không gạch chân, active/focus/đóng Escape, lối tắt quản trị, UI danh mục sửa/xóa mềm/phân trang và trạng thái dịch vụ ảnh tắt. Đọc [nghiệm thu nền tảng](NGHIEM_THU_NEN_TANG.md) để xem phạm vi hoàn thành, ca kiểm giao diện và phần vận hành còn chờ cấu hình ngoài app. Không coi đã có đầy đủ tài khoản/scope nhà xe hoặc provider thật từ đợt UI này.
+Đợt tiếp theo bổ sung menu không gạch chân, active/focus/đóng Escape, lối tắt quản trị, UI danh mục sửa/xóa mềm/phân trang và trạng thái dịch vụ ảnh tắt. Đọc [nghiệm thu nền tảng](../05-ke-hoach/NGHIEM_THU_NEN_TANG.md) để xem phạm vi hoàn thành, ca kiểm giao diện và phần vận hành còn chờ cấu hình ngoài app. Không coi đã có đầy đủ tài khoản/scope nhà xe hoặc provider thật từ đợt UI này.
 
-Đợt tab/modal: [Tab và modal dùng chung](TAB_VA_MODAL.md) ghi các màn đã áp dụng, luồng mở/lưu/hủy, lỗi trong dialog và hướng dẫn để business kế thừa.
+Đợt tab/modal: [Tab và modal dùng chung](../03-giao-dien/QUY_UOC_UI.md) ghi các màn đã áp dụng, luồng mở/lưu/hủy, lỗi trong dialog và hướng dẫn để business kế thừa.

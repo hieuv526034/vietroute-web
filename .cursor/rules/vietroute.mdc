@@ -5,4 +5,4 @@ alwaysApply: true
 
 @AGENTS.md
 
-Trước khi sửa file, mở AGENTS.md ở gốc repository và [quy trình AI](../../docs/QUY_TRINH_AI.md) theo đường dẫn tính từ gốc dự án: docs/QUY_TRINH_AI.md. Dùng quy tắc và nguồn trạng thái được dẫn từ đó; không lưu một bộ format/quy tắc hoặc backlog khác trong memory cá nhân. Chốt bằng formatter/check của repo và ghi bàn giao theo quy trình chung.
+Trước khi sửa file, mở AGENTS.md ở gốc repository và [quy trình AI](../../docs/06-ai-va-ban-giao/AI_VA_BAN_GIAO.md) theo đường dẫn tính từ gốc dự án: docs/06-ai-va-ban-giao/AI_VA_BAN_GIAO.md. Dùng quy tắc và nguồn trạng thái được dẫn từ đó; không lưu một bộ format/quy tắc hoặc backlog khác trong memory cá nhân. Chốt bằng formatter/check của repo và ghi bàn giao theo quy trình chung.

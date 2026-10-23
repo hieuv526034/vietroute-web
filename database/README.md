@@ -2,7 +2,7 @@
 
 1. Dùng **PostgreSQL**. Production dùng Neon với database `neondb` đã có sẵn; không chạy `000-create-database.sql` trên Neon. File này chỉ tạo database `vietroute` cho PostgreSQL local, chạy một lần bằng tài khoản quản trị.
 2. Đặt `VIETROUTE_DB_URL`, `VIETROUTE_DB_USER`, `VIETROUTE_DB_PASSWORD` trong cấu hình chạy Tomcat/IDE hoặc Render. Thông tin Neon của dự án đã lưu trong `.env` local bị Git bỏ qua; không dùng giá trị mẫu local khi deploy production.
-3. Auth và catalog đã có migration `src/main/resources/db/migration/V001__auth_and_catalog.sql`. Bật `VIETROUTE_DB_INIT_ENABLED=true` khi khởi động để ứng dụng chạy DDL + seed trong transaction có khóa. Cần cấu hình password bootstrap mạnh và JWT secret; xem `docs/API_BASE.md`.
+3. Auth và catalog đã có migration `src/main/resources/db/migration/V001__auth_and_catalog.sql`. Bật `VIETROUTE_DB_INIT_ENABLED=true` khi khởi động để ứng dụng chạy DDL + seed trong transaction có khóa. Cần cấu hình password bootstrap mạnh và JWT secret; xem `docs/02-phat-trien/API_BASE.md`.
 4. Thay đổi schema mới đặt trong resource migration có version mới và thêm vào danh sách runner `DatabaseInitializer`. File đã áp dụng được kiểm checksum, không sửa lại. Các bảng nghiệp vụ trong đặc tả chưa được tạo; thống nhất thiết kế trước khi thêm migration.
 5. Dữ liệu demo, tên nhà xe, giờ và giá phải được ghi rõ là minh họa.
 
@@ -20,9 +20,9 @@ Initializer tạo `auth_roles`, `auth_users`, `auth_user_roles`, `catalog_items`
 
 ## Schema bắt buộc và nâng cấp
 
-V003 tạo `auth_permissions`, `auth_role_permissions`, audit/version quyền trên `auth_roles` và `system_jobs` có index nhận việc/lease/retention/audit. V001/V002 giữ nguyên checksum. Seed role thường chỉ cấp mặc định một lần, không ghi đè quyền đã sửa; ADMIN là role cứu hộ cố định. `JobRepository.enqueue` nhận Connection của service để outbox commit/rollback cùng dữ liệu nghiệp vụ. Worker dùng SKIP LOCKED và lease token; xem [NEN_TANG_MO_RONG.md](../docs/NEN_TANG_MO_RONG.md).
+V003 tạo `auth_permissions`, `auth_role_permissions`, audit/version quyền trên `auth_roles` và `system_jobs` có index nhận việc/lease/retention/audit. V001/V002 giữ nguyên checksum. Seed role thường chỉ cấp mặc định một lần, không ghi đè quyền đã sửa; ADMIN là role cứu hộ cố định. `JobRepository.enqueue` nhận Connection của service để outbox commit/rollback cùng dữ liệu nghiệp vụ. Worker dùng SKIP LOCKED và lease token; xem [NEN_TANG_MO_RONG.md](../docs/02-phat-trien/NEN_TANG_MO_RONG.md).
 
-Database production vẫn là neondb. **Schema cấu hình bằng VIETROUTE_DB_SCHEMA**, mặc định vietroute từ db.schema trong database.properties. Mỗi connection mượn pool đặt lại search_path; query runtime chỉ ghi tên bảng, entity không ghi schema. Bật initializer để bootstrap schema cấu hình. Giữ byte V001–V003, LegacyMigrationSql render hai migration lịch sử ở RAM trước thực thi với checksum nguồn. Đọc [schema và quyền theo hành động](../docs/SCHEMA_VA_PHAN_QUYEN.md) để đổi schema mới hoặc rename schema đang có dữ liệu; startup chặn history khác nơi để tránh seed nhầm.
+Database production vẫn là neondb. **Schema cấu hình bằng VIETROUTE_DB_SCHEMA**, mặc định vietroute từ db.schema trong database.properties. Mỗi connection mượn pool đặt lại search_path; query runtime chỉ ghi tên bảng, entity không ghi schema. Bật initializer để bootstrap schema cấu hình. Giữ byte V001–V003, LegacyMigrationSql render hai migration lịch sử ở RAM trước thực thi với checksum nguồn. Đọc [schema và quyền theo hành động](../docs/02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md) để đổi schema mới hoặc rename schema đang có dữ liệu; startup chặn history khác nơi để tránh seed nhầm.
 
 - DB mới: tạo schema cấu hình và bảng vietroute_schema_history, chạy V001–V006 theo path/render tương thích, kiểm chứng metadata rồi seed. V004 thêm metadata ảnh công khai `media_assets`, không lưu file nhị phân trong DB.
 - DB cũ V001 ở public: chuyển history sang schema cấu hình giữ checksum, bỏ qua V001; V002 chuyển bốn bảng ứng dụng theo OID, giữ ID/FK/sequence/index/dữ liệu, V003 bổ sung quyền/job. Không reset admin/hash.
@@ -50,8 +50,8 @@ CI kiểm tra DB mới, khởi động đồng thời/restart và DB legacy tạ
 
 Mặc định retention **10080 phút = 7 ngày**, mục tiêu **10000 dòng toàn bảng**. Mỗi phút có request ghi thành công, hoặc job `SYSTEM_CLEANUP`, dọn tối đa 500 dòng hết hạn và 500 dòng vượt mục tiêu, có advisory transaction lock chống các node dọn chồng. API không trả dòng quá hạn dù cleanup vật lý chưa chạy. Khi không có traffic/worker/job, dữ liệu chờ lượt bảo trì tiếp theo; không cam kết xóa vật lý đúng giây hết hạn. Mục tiêu dung lượng có thể vượt tạm thời dưới tải cao; theo dõi dung lượng DB/autovacuum và lịch bảo trì, không lưu vĩnh viễn.
 
-Bật initializer trên đúng DB/schema khi triển khai để V005 chạy một lần; không sửa V001–V005. Chỉ chạy kiểm tra migration/seed/cleanup trên PostgreSQL tạm, không Neon. Xem [nhật ký và debug](../docs/NHAT_KY_API_VA_DEBUG.md).
+Bật initializer trên đúng DB/schema khi triển khai để V005 chạy một lần; không sửa V001–V005. Chỉ chạy kiểm tra migration/seed/cleanup trên PostgreSQL tạm, không Neon. Xem [nhật ký và debug](../docs/04-van-hanh/NHAT_KY_API_VA_DEBUG.md).
 
 ## Audit system (V006)
 
-V006 tạo actor kỹ thuật `system` (ID 0, không đăng nhập/role), lấp audit NULL và đặt NOT NULL/DEFAULT 0. Giữ actor người dùng và mật khẩu cũ; xem [quy tắc và nâng cấp audit](../docs/AUDIT_VA_SYSTEM.md). Không sửa V001–V005.
+V006 tạo actor kỹ thuật `system` (ID 0, không đăng nhập/role), lấp audit NULL và đặt NOT NULL/DEFAULT 0. Giữ actor người dùng và mật khẩu cũ; xem [quy tắc và nâng cấp audit](../docs/02-phat-trien/AUDIT_VA_SYSTEM.md). Không sửa V001–V005.

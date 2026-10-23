@@ -4,11 +4,11 @@
 
 | File | Vai trò |
 |---|---|
-| [`.editorconfig`](../.editorconfig) | UTF-8, LF, indent 4, dòng 120; các key `ij_java_*` cho Java trong IntelliJ |
-| [`.idea/codeStyles/Project.xml`](../.idea/codeStyles/Project.xml) | Project scheme để IntelliJ dùng/import: indent, dòng trống, annotation, import tường minh |
-| [`.idea/codeStyles/codeStyleConfig.xml`](../.idea/codeStyles/codeStyleConfig.xml) | Chọn cấu hình cấp project khi clone, không dùng scheme cá nhân của người khác |
-| [`.prettierrc.json`](../.prettierrc.json) và [`package-lock.json`](../package-lock.json) | Formatter Java/HTML/CSS/JS/XML đã khóa phiên bản, đầu ra cuối trước commit |
-| [Run Format](../.run/VietRoute%20Format.run.xml) / [Run Format Check](../.run/VietRoute%20Format%20Check.run.xml) | Nút Run các npm script trong IntelliJ có hỗ trợ Node/npm |
+| [`.editorconfig`](../../.editorconfig) | UTF-8, LF, indent 4, dòng 120; các key `ij_java_*` cho Java trong IntelliJ |
+| [`.idea/codeStyles/Project.xml`](../../.idea/codeStyles/Project.xml) | Project scheme để IntelliJ dùng/import: indent, dòng trống, annotation, import tường minh |
+| [`.idea/codeStyles/codeStyleConfig.xml`](../../.idea/codeStyles/codeStyleConfig.xml) | Chọn cấu hình cấp project khi clone, không dùng scheme cá nhân của người khác |
+| [`.prettierrc.json`](../../.prettierrc.json) và [`package-lock.json`](../../package-lock.json) | Formatter Java/HTML/CSS/JS/XML đã khóa phiên bản, đầu ra cuối trước commit |
+| [Run Format](../../.run/VietRoute%20Format.run.xml) / [Run Format Check](../../.run/VietRoute%20Format%20Check.run.xml) | Nút Run các npm script trong IntelliJ có hỗ trợ Node/npm |
 
 Git chỉ chia sẻ hai file `codeStyles` trên; `.idea/workspace.xml`, cấu hình chạy cá nhân có env và các file IDE khác tiếp tục bị ignore. Không đưa mật khẩu/token vào cấu hình chia sẻ. Bộ format chỉ dùng lúc phát triển; Docker/Render vẫn chỉ build `src/main` bằng Maven production.
 
@@ -33,7 +33,7 @@ Git chỉ chia sẻ hai file `codeStyles` trên; `.idea/workspace.xml`, cấu h�
 | Comment | Tiếng Việt giải thích luồng/transaction và nhánh khó; format không tự sinh mô tả nghiệp vụ |
 | Lambda | IDE inspection đề xuất method reference khi chỉ chuyển tiếp; chỉ đổi khi không thay hành vi |
 
-`Ctrl+Alt+L` format file/vùng chọn bằng formatter native của IntelliJ; `Ctrl+Alt+O` optimize imports. Không chạy cleanup/refactor toàn repository chỉ để xóa cảnh báo. Formatter không tự kiểm đúng quyền, scope, transaction, tên DTO, kiểu Instant hoặc nội dung comment; reviewer vẫn đối chiếu [quy ước phát triển](QUY_UOC_PHAT_TRIEN.md).
+`Ctrl+Alt+L` format file/vùng chọn bằng formatter native của IntelliJ; `Ctrl+Alt+O` optimize imports. Không chạy cleanup/refactor toàn repository chỉ để xóa cảnh báo. Formatter không tự kiểm đúng quyền, scope, transaction, tên DTO, kiểu Instant hoặc nội dung comment; reviewer vẫn đối chiếu [quy ước phát triển](../02-phat-trien/QUY_UOC_PHAT_TRIEN.md).
 
 Native IntelliJ và Prettier Java có khác biệt ở wrap chain/annotation/record. **Không cam kết hai formatter cho đầu ra giống từng byte.** Dùng IntelliJ để soạn code dễ đọc; trước commit, bấm **VietRoute Format** rồi **VietRoute Format Check** để chốt một kết quả chung, tránh hai người liên tục đổi format qua lại. Khi đổi rule, cập nhật cả `.editorconfig`, Project scheme và cấu hình Prettier liên quan rồi xem diff; không thay rule chỉ trên máy cá nhân.
 
@@ -56,7 +56,7 @@ git diff --check
 
 Người hỗ trợ code trong repo cũng phải thực hiện quy trình này ở các lượt sau theo `AGENTS.md`. Xem diff trước stage để bảo đảm không có sửa logic, migration hoặc file cá nhân ngoài phạm vi. Không gắn format vào startup app, Maven package hay Docker: thao tác deploy không được tự sửa source.
 
-Các check repository chỉ đọc file Git theo dõi; stage file mới sau khi review trước khi chạy. `check:rules` bổ sung kiểm tĩnh DTO/import/Date/FQN/Timestamp ở contract và điểm đọc AI; `check:docs` kiểm link nội bộ/ảnh/mục lục. Hai lệnh không thay thế formatter, kiểm nghiệp vụ hoặc review comment tiếng Việt. Xem [quy trình AI](QUY_TRINH_AI.md) để thống nhất cách nạp quy tắc và bàn giao giữa các công cụ/máy.
+Các check repository chỉ đọc file Git theo dõi; stage file mới sau khi review trước khi chạy. `check:rules` bổ sung kiểm tĩnh DTO/import/Date/FQN/Timestamp ở contract và điểm đọc AI; `check:docs` kiểm link nội bộ/ảnh/mục lục. Hai lệnh không thay thế formatter, kiểm nghiệp vụ hoặc review comment tiếng Việt. Xem [quy trình AI](../06-ai-va-ban-giao/AI_VA_BAN_GIAO.md) để thống nhất cách nạp quy tắc và bàn giao giữa các công cụ/máy.
 
 Tham khảo chính thức: [Project code style scheme](https://www.jetbrains.com/help/idea/configuring-code-style.html), [EditorConfig](https://www.jetbrains.com/help/idea/editorconfig.html), [Reformat và Actions on Save](https://www.jetbrains.com/help/idea/reformat-and-rearrange-code.html). Tên menu có thể khác giữa phiên bản IDE; project hiện giữ rule độc lập với phiên bản IDE cài trên máy.
 
