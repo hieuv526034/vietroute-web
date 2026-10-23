@@ -2,8 +2,8 @@ package vn.vietroute.common.job.handler;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import vn.vietroute.common.config.ApiJournalSettings;
-import vn.vietroute.common.config.JobSettings;
+import vn.vietroute.common.config.integration.JobSettings;
+import vn.vietroute.common.config.monitoring.ApiJournalSettings;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.job.model.Job;
 import vn.vietroute.common.job.repository.JobRepository;

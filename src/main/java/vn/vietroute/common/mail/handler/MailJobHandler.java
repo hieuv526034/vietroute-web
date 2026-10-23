@@ -3,7 +3,7 @@ package vn.vietroute.common.mail.handler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import vn.vietroute.common.config.MailSettings;
+import vn.vietroute.common.config.integration.MailSettings;
 import vn.vietroute.common.job.handler.JobHandler;
 import vn.vietroute.common.job.model.Job;
 import vn.vietroute.common.job.model.JobFailure;

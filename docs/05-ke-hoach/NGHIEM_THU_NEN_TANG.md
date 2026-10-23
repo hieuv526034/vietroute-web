@@ -14,7 +14,7 @@ Cập nhật 23/10/2026, đối chiếu main tại `d722089` sau [PR #30](https:
 | Cấu hình | Whitelist thông số startup không nhạy cảm, chỉ đọc | Thay env ở IDE/Render rồi restart; không có nút sửa secret hoặc bật provider từ trình duyệt |
 | Ảnh công khai | Thư viện, phân trang, upload/xem/xóa theo quyền/owner, chuẩn hóa JPEG/PNG và cleanup | Khi dịch vụ tắt: hiện lý do, khóa file/upload và không hiện xóa; ảnh đã lưu vẫn xem được. Cần credentials Cloudinary và worker để nghiệm thu provider |
 | Tài liệu API | Swagger và DTO/schema/mã lỗi vi/en; thử cookie có CSRF | Dữ liệu trả về Swagger vẫn theo quyền thực của tài khoản |
-| Nền chạy | Schema cấu hình, transaction/checksum/lock/audit; Docker/CI, launcher IntelliJ; không Boot/ORM/Kafka/Redis mới | IDE phải nạp env; không tự đọc `.env`. Pool/quota cần đo theo hạ tầng thực |
+| Nền chạy | Schema cấu hình, transaction/checksum/lock/audit; Docker/CI, launcher IntelliJ; không Boot/ORM/Kafka/Redis mới | IDE dùng launcher đọc `.env` riêng hoặc env OS/IDE; WAR dùng env. Pool/quota cần đo theo hạ tầng thực |
 
 UI dùng layout xanh chung, menu không gạch chân ở trạng thái thường/hover, nền đánh dấu trang hiện tại và focus bàn phím. Menu đóng bằng Escape hoặc click ngoài. Bảng có vùng cuộn, ma trận quyền giữ header khi cuộn; form/loading/rỗng/lỗi dùng thông báo chung. Trang vận hành thu gọn cỡ tiêu đề, bảng và khoảng cách; không dùng cỡ chữ hero cho công cụ quản trị.
 

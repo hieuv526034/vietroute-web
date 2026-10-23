@@ -14,21 +14,23 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.business.media.dto.request.MediaDeleteRequest;
-import vn.vietroute.business.media.dto.request.MediaUploadRequest;
-import vn.vietroute.business.media.dto.response.MediaResponse;
-import vn.vietroute.business.media.service.MediaService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
+import vn.vietroute.common.media.dto.request.MediaDeleteRequest;
+import vn.vietroute.common.media.dto.request.MediaUpdateRequest;
+import vn.vietroute.common.media.dto.request.MediaUploadRequest;
+import vn.vietroute.common.media.dto.response.MediaResponse;
+import vn.vietroute.common.media.service.MediaService;
 import vn.vietroute.common.web.response.ApiResponse;
 import vn.vietroute.common.web.response.ApiResponses;
 
@@ -75,6 +77,20 @@ public class MediaController extends BaseController {
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> media.find(id, actor));
+    }
+
+    @PutMapping(Routes.BY_ID)
+    @Operation(
+        summary = "Sửa tên và mô tả ảnh",
+        description = "MEDIA_UPDATE + owner/ADMIN; chỉ READY, kiểm version, không thay URL/provider ID"
+    )
+    public ResponseEntity<ApiResponse<MediaResponse>> update(
+        @PathVariable long id,
+        @Valid @RequestBody MediaUpdateRequest body,
+        @AuthenticationPrincipal UserPrincipal actor,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () -> media.update(id, body, actor));
     }
 
     @PostMapping(consumes = "multipart/form-data")

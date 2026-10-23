@@ -18,6 +18,12 @@ import org.springframework.context.support.ReloadableResourceBundleMessageSource
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import vn.vietroute.auth.config.SecurityConfig;
+import vn.vietroute.common.config.application.AppSettings;
+import vn.vietroute.common.config.application.ConfigurationEnvironment;
+import vn.vietroute.common.config.database.DatabaseConfig;
+import vn.vietroute.common.config.integration.IntegrationConfig;
+import vn.vietroute.common.config.monitoring.MonitoringConfig;
+import vn.vietroute.common.config.traffic.TrafficConfig;
 import vn.vietroute.common.web.locale.SupportedLocaleResolver;
 
 /** Root context quản lý service/repository và hạ tầng; không quét controller để tránh tạo bean hai lần. */
@@ -45,8 +51,13 @@ public class RootConfig {
     }
 
     @Bean
-    public AppSettings appSettings() {
-        return new AppSettings(System::getenv);
+    public ConfigurationEnvironment configurationEnvironment() {
+        return new ConfigurationEnvironment();
+    }
+
+    @Bean
+    public AppSettings appSettings(ConfigurationEnvironment environment) {
+        return new AppSettings(environment);
     }
 
     @Bean

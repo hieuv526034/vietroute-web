@@ -1,5 +1,16 @@
 # Nền tảng chống spam, phân quyền, worker và mail
 
+## Mở rộng nền tảng 23/10/2026 — hợp đồng triển khai
+
+Đợt FOUNDATION02 trên nhánh `hieuv526034/foundation-access-traffic-media` bổ sung registry role/quyền, chính sách endpoint/menu, thống kê hiện diện/bất thường và media dùng chung trước nghiệp vụ. Quyền cấu hình chỉ siết thêm kiểm tra backend; không biến route công khai hoặc bỏ `@PreAuthorize`. ADMIN là đường cứu hộ; không sửa role ADMIN, không gán system, không tự gán role hoặc bỏ admin cuối. Mã role/quyền đã được tham chiếu không đổi tên; vô hiệu hóa thay vì xóa lịch sử.
+
+Launcher local được phép đọc `.env` riêng để kết nối cùng Neon của chủ dự án. Biến OS/IDE ưu tiên, WAR/Render chỉ đọc env. Chạy local mặc định development/cookie HTTP, không ghi secret vào Git. Chỉ startup với DB_INIT bật rõ ràng mới migration/seed; kiểm thử dùng DB tạm/giả, không dùng Neon để thử ghi.
+
+Lõi media thuộc `common.media`, giữ adapter storage và validation riêng, service kiểm quyền + owner/version; controller public mỏng ở `business.media.controller` theo quy tắc public media, gọi duy nhất service chung. Các module nghiệp vụ sau gọi lại service, không tạo bộ upload thứ hai. Cấu hình chia application/database/integration/traffic/monitoring/web, root chỉ lắp ghép.
+
+Thống kê online là cửa sổ hoạt động, không khẳng định số người thật tuyệt đối. Bản ghi hiện diện và bộ đếm theo phút nằm PostgreSQL để nhiều node dùng chung; không queue lịch sử trong RAM. Chỉ lưu định danh băm, user ID đã xác thực và bộ đếm trạng thái; không IP/UA/token/payload thô. Ghi quan sát có timeout/backoff và công bố missed-write khi DB lỗi; phát hiện bất thường là tín hiệu cần xem xét, không tự kết luận tấn công.
+
+
 Cập nhật 22/10/2026, phụ trách hieuv526034. Đọc cùng [luồng base](LUONG_XU_LY_BASE.md) và [API_BASE.md](API_BASE.md). Các phần dưới đây là code đã triển khai, còn kết quả chạy Docker xem PR/Actions tương ứng. Không chạy thử trên Neon production hoặc gửi thư thật trong CI.
 
 ## Kiến trúc và giới hạn chịu tải
@@ -58,6 +69,28 @@ Sửa mapping lấy khóa role qua UPDATE có version, rồi xóa/chèn mapping 
 
 Quyền chức năng **không thay quyền trên dữ liệu**. Khi có nhà xe/chuyến/booking, service phải tra quan hệ nhà xe/owner từ DB theo principal, đưa scope vào WHERE, kiểm quan hệ cha/con và tenant ở cả đọc/ghi. Chưa có bảng membership/module nghiệp vụ thì không dựng companyId giả hoặc tin companyId HTTP. Không dùng permission để bỏ qua kiểm quyền đối tượng. Thêm Permission mới phải có bundle vi/en, migration khi cần đổi cấu trúc và kiểm thử deny/allow ở service cùng kiểm tra scope của module.
 
+
+## Registry động, chính sách menu/endpoint
+
+`Role` và `Permission` là value object JSON chuỗi, giữ hằng lõi cho source cũ. `values()` chỉ liệt kê hằng bootstrap; danh sách quản trị phải đọc registry DB. Role tùy chỉnh có mã in hoa 2–24 ký tự; quyền tối đa 40 ký tự dạng RESOURCE_ACTION (READ/CREATE/UPDATE/DELETE/ASSIGN/RETRY/SEND). Không cho mã quyền `ROLE_...` giả authority role, hoặc WRITE tùy chỉnh; CATALOG_WRITE/ACCESS_WRITE cũ giữ phạm vi đã mô tả. Tên vi/en nằm trên DB, khóa dịch quyền tùy chỉnh dùng `permission.custom`; không cần build lại để đổi tên.
+
+| API dưới `/api/v1/admin/access` | Quyền thêm vào role ADMIN | Hợp đồng |
+|---|---|---|
+| GET `/registry/{kind}` | ACCESS_READ | kind chỉ roles/permissions, tối đa 512 mã mỗi loại, gồm active/builtIn/registry version/audit |
+| POST `/registry/{kind}/{code}` | ACCESS_CREATE | Tạo mã bất biến; quyền mới tự gán ADMIN trong cùng transaction |
+| PUT `/registry/{kind}/{code}` | ACCESS_UPDATE | Sửa tên/trạng thái với version; không vô hiệu hóa mã lõi; giữ FK/lịch sử thay vì xóa vật lý |
+| GET `/targets` | ACCESS_READ | Inventory từ RequestMappingHandlerMapping, chỉ menu/endpoint có thật và được phép cấu hình |
+| GET `/policies` | ACCESS_READ | Tối đa 256 chính sách bổ sung |
+| POST `/policies` | ACCESS_CREATE | MENU hoặc ENDPOINT, target nguyên dạng inventory, all-of permissions và any-of roles |
+| PUT `/policies/{id}` | ACCESS_UPDATE | Version chống ghi đè; enabled=false chặn target với user thường |
+| DELETE `/policies/{id}?version=...` | ACCESS_DELETE | Xóa điều kiện bổ sung, giữ nguyên guard bắt buộc của code |
+
+Mapping role/quyền và gán role user tiếp tục dùng ACCESS_ASSIGN (ACCESS_WRITE chỉ alias tương thích cho gán). Quản trị registry/chính sách không nhận quyền từ ACCESS_ASSIGN. Cùng advisory lock bảo vệ quota/cập nhật registry và mapping trên nhiều node; registry version tách permission_version của mapping. Tắt role/quyền có hiệu lực ở request kế tiếp vì JWT filter join registry active từ DB; claim role/token cũ không tự cấp quyền. User system và admin cuối vẫn được bảo vệ.
+
+`AccessPolicyInterceptor` chạy ở MVC servlet context, so khớp method + template server, không so path do client tự khai báo. Snapshot policy dùng lại cho layout/menu trong một request. Nhập URL trực tiếp vẫn bị chặn; UI chỉ phản ánh quyết định đó. Route public/auth/metrics và trang/API cấu hình quyền không nhận chính sách tùy biến để tránh khóa đường đăng nhập/cứu hộ. ADMIN bỏ qua điều kiện tùy biến nhưng **vẫn phải có quyền nền ở service/controller**. Cần cho role tùy chỉnh dùng chức năng hiện có thì gán cả quyền nền của chức năng đó; policy rỗng không mở chức năng vốn bị chặn. Không tạo route hoặc handler mới chỉ bằng bản ghi DB.
+
+Thư viện ảnh cũng có `@PreAuthorize(MEDIA_READ)` trên page controller, bảo vệ cả nhập URL trực tiếp. Regression Java dựng root/servlet context riêng, kiểm ẩn menu, role policy, endpoint policy, bật/tắt live và người thiếu quyền nền. SQL/Docker kiểm riêng bằng PostgreSQL tạm; không suy từ test giả ra khả năng tải production.
+
 ## Worker, lịch và transaction outbox
 
 `system_jobs` lưu UUID, loại handler, dedup_key duy nhất, payload JSONB, QUEUED/RUNNING/SUCCEEDED/DEAD, số lần chạy, available_at, lease_token/locked_until, mã lỗi sạch, audit và version. Entity metadata khai báo table/PK/index; DDL ở V003, không sửa V001/V002.
@@ -100,7 +133,7 @@ Provider `smtp` là tùy chọn cho local/hạ tầng cho SMTP, STARTTLS bắt b
 
 ## Cấu hình và cách học/mở rộng
 
-Tất cả biến có mẫu trong `.env.example`. Java không tự đọc .env. Render Blueprint để mail/worker tắt ban đầu; thêm OAuth secrets rồi bật trong Environment. Worker có thể chạy ở cùng web cho đồ án hoặc cùng WAR/image ở service luôn chạy riêng; web không cần sticky session, các instance dùng cùng PostgreSQL/Redis/JWT secret và ingress đáng tin. Không tự cấp tài nguyên Render trả phí trong source.
+Tất cả biến có mẫu trong `.env.example`. WAR không tự đọc .env; launcher local chủ động đọc theo [hướng dẫn chạy](../01-bat-dau/CHAY_LOCAL_VA_CLOUDINARY.md). Render Blueprint để mail/worker tắt ban đầu; thêm OAuth secrets rồi bật trong Environment. Worker có thể chạy ở cùng web cho đồ án hoặc cùng WAR/image ở service luôn chạy riêng; web không cần sticky session, các instance dùng cùng PostgreSQL/JWT secret; quota memory vẫn riêng từng node và ingress đáng tin. Không tự cấp tài nguyên Render trả phí trong source.
 
 - TrafficSettings: RATE_REQUESTS 1–100000, RATE_LOGINS 1–1000, RATE_MAX_KEYS 100–100000, HTTP_IN_FLIGHT 1–512, LOGIN_IN_FLIGHT 1–16, HTTP_MAX_BODY_BYTES 1024–1048576. Đây là dải kiểm tra cấu hình, không phải giá trị đề nghị tăng tối đa.
 - JobSettings: WORKER_THREADS 1–8, POLL_SECONDS 1–300, LEASE_SECONDS 120–900, RETENTION_DAYS 1–90. Khi tắt worker không có polling DB; khi bật, poller sẽ giữ Neon hoạt động hơn và tính chi phí tương ứng.

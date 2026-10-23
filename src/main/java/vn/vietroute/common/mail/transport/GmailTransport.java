@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import org.springframework.http.HttpHeaders;
-import vn.vietroute.common.config.MailSettings;
+import vn.vietroute.common.config.integration.MailSettings;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.job.model.JobFailure;
 import vn.vietroute.common.mail.model.MailPayload;

@@ -13,7 +13,7 @@ VietRoute là ứng dụng Java server render giao diện bằng Thymeleaf, cung
 | Công nghệ/thư viện | Phiên bản trong source | Dùng để làm gì | Điểm đọc code |
 |---|---|---|---|
 | Java | Target 17; Docker build/runtime 21 | Ngôn ngữ backend, `Instant`, collections, executor và HTTP client | [pom](../../pom.xml), [launcher local](../../src/dev/java/vn/vietroute/dev/VietRouteApplication.java) |
-| Spring Framework / Spring MVC | 6.2.19 | Dependency injection, mapping controller, binding/validation, response, MVC và interceptor | [RootConfig](../../src/main/java/vn/vietroute/common/config/RootConfig.java), [WebConfig](../../src/main/java/vn/vietroute/common/config/WebConfig.java) |
+| Spring Framework / Spring MVC | 6.2.19 | Dependency injection, mapping controller, binding/validation, response, MVC và interceptor | [RootConfig](../../src/main/java/vn/vietroute/common/config/RootConfig.java), [WebConfig](../../src/main/java/vn/vietroute/common/config/web/WebConfig.java) |
 | Jakarta Servlet | 6.0.0 API, provided | Chuẩn request/response/filter/multipart; Tomcat cung cấp implementation | [khởi tạo WAR](../../src/main/java/vn/vietroute/common/config/WebApplicationInitializer.java) |
 | Apache Tomcat | 10.1; embedded local 10.1.61 | Servlet container; chạy WAR production và Run/Debug local | [Dockerfile](../../Dockerfile), [cấu hình local](CHAY_LOCAL_VA_CLOUDINARY.md) |
 | Jackson | BOM 2.22.4 | JSON request/response, `JavaTimeModule` cho Instant; chặn field lạ/key trùng/JSON dư | [RootConfig](../../src/main/java/vn/vietroute/common/config/RootConfig.java) |

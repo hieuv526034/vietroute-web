@@ -15,6 +15,36 @@
         busy: () => uploading || loading,
         onChange: (query) => load(query).catch(failure),
     });
+    let editing = false,
+        selectedImage;
+    const editForm = document.getElementById('media-edit-form');
+    const editModal = window.VietRouteUI.modal('media-edit-dialog', { busy: () => editing });
+    editForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (editing || !selectedImage || !window.VietRouteForms.validate(editForm)) return;
+        const body = {
+            title: editForm.elements.title.value,
+            altText: editForm.elements.altText.value,
+            version: selectedImage.version,
+        };
+        editing = true;
+        const controls = document.querySelector('#media-edit-dialog fieldset');
+        controls.disabled = true;
+        feedback('', false, 'media-edit-dialog-feedback');
+        try {
+            await mutate('/api/v1/media/' + selectedImage.id, body, 'put');
+            document.getElementById('media-edit-dialog').close();
+            await load();
+        } catch (error) {
+            failure(
+                error,
+                document.getElementById('media-edit-dialog').open ? 'media-edit-dialog-feedback' : 'form-feedback',
+            );
+        } finally {
+            editing = false;
+            controls.disabled = false;
+        }
+    });
     let loading = false;
     let permissions = [];
     let uploading = false;
@@ -46,10 +76,16 @@
             const status = document.createElement('p');
             status.textContent = `#${image.id} · ${root.dataset[image.status.toLowerCase()] || image.status}`;
             card.append(status);
+            if (image.title) {
+                const title = document.createElement('h2');
+                title.className = 'h6';
+                title.textContent = image.title;
+                card.append(title);
+            }
             if (image.status === 'READY') {
                 const preview = document.createElement('img');
                 preview.src = image.thumbnailUrl;
-                preview.alt = `#${image.id}`;
+                preview.alt = image.altText || image.title || `#${image.id}`;
                 preview.loading = 'lazy';
                 preview.width = 640;
                 preview.height = 480;
@@ -61,6 +97,22 @@
                 view.className = 'button button-outline button-small';
                 view.textContent = root.dataset.view;
                 card.append(view);
+                if (permissions.includes('MEDIA_UPDATE')) {
+                    const edit = document.createElement('button');
+                    edit.type = 'button';
+                    edit.className = 'button button-outline button-small';
+                    edit.textContent = root.dataset.edit;
+                    edit.addEventListener('click', () => {
+                        if (editing) return;
+                        selectedImage = image;
+                        editForm.elements.title.value = image.title || '';
+                        editForm.elements.altText.value = image.altText || '';
+                        feedback('', false, 'media-edit-dialog-feedback');
+                        window.VietRouteForms.clear(editForm);
+                        editModal.open();
+                    });
+                    card.append(edit);
+                }
                 if (enabled && permissions.includes('MEDIA_DELETE')) {
                     const remove = document.createElement('button');
                     remove.type = 'button';

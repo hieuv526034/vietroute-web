@@ -25,7 +25,9 @@ import vn.vietroute.common.web.response.ApiResponse;
 public class ApiJournalProjection {
 
     public static final int MAX_SNAPSHOT = 4096;
+
     private final ObjectMapper mapper;
+
     private static final Set<Class<?>> REQUEST_TYPES = Set.of(
         CatalogCreateRequest.class,
         CatalogUpdateRequest.class,
@@ -44,6 +46,7 @@ public class ApiJournalProjection {
         "totalPages"
     );
     private static final Set<String> FLAGS = Set.of("active", "hasNext", "hasPrevious");
+
     private static final Set<String> ENUMS = Set.of("type", "roles", "permissions");
 
     public boolean supports(Class<?> type) {

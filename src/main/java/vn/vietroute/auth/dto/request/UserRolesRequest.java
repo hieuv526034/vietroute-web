@@ -16,7 +16,7 @@ import vn.vietroute.common.base.BaseRequest;
 public class UserRolesRequest extends BaseRequest {
 
     @NotNull(message = "{validation.required}")
-    @Size(min = 1, max = 4, message = "{validation.length}")
+    @Size(min = 1, max = 32, message = "{validation.length}")
     @Schema(description = "Danh sách role mới")
     private Set<@NotNull Role> roles;
 

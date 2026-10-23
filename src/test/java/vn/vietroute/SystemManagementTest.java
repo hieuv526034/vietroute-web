@@ -28,17 +28,19 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import vn.vietroute.auth.dto.request.AccessUserSearchRequest;
 import vn.vietroute.auth.service.AccessService;
-import vn.vietroute.common.config.AppSettings;
-import vn.vietroute.common.config.DatabaseSettings;
-import vn.vietroute.common.config.JobSettings;
-import vn.vietroute.common.config.MailSettings;
-import vn.vietroute.common.config.MediaSettings;
-import vn.vietroute.common.config.MonitoringSettings;
 import vn.vietroute.common.config.RootConfig;
-import vn.vietroute.common.config.TrafficSettings;
-import vn.vietroute.common.config.WebConfig;
+import vn.vietroute.common.config.application.AppSettings;
+import vn.vietroute.common.config.database.DatabaseSettings;
+import vn.vietroute.common.config.integration.JobSettings;
+import vn.vietroute.common.config.integration.MailSettings;
+import vn.vietroute.common.config.integration.MediaSettings;
+import vn.vietroute.common.config.monitoring.ActivitySettings;
+import vn.vietroute.common.config.monitoring.MonitoringSettings;
+import vn.vietroute.common.config.traffic.TrafficSettings;
+import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.monitoring.service.SystemConfigurationService;
+import vn.vietroute.support.AccessTestConfig;
 
 /** Kiểm quyền UI/API và whitelist cấu hình trước khi mở DB; SQL integration chạy trên PostgreSQL CI tạm. */
 class SystemManagementTest {
@@ -46,7 +48,7 @@ class SystemManagementTest {
     private AnnotationConfigWebApplicationContext context() {
         var context = new AnnotationConfigWebApplicationContext();
         context.setServletContext(new MockServletContext("src/main/webapp", new FileSystemResourceLoader()));
-        context.register(RootConfig.class, WebConfig.class);
+        context.register(RootConfig.class, AccessTestConfig.class, WebConfig.class);
         context.refresh();
         return context;
     }
@@ -237,6 +239,7 @@ class SystemManagementTest {
             new MailSettings(source::get),
             new MediaSettings(source::get),
             new MonitoringSettings(source::get),
+            new ActivitySettings(source::get),
             Clock.systemUTC()
         );
         String json = new RootConfig().objectMapper().writeValueAsString(service.read());

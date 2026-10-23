@@ -13,7 +13,11 @@ Phụ trách nền tảng: hieuv526034. Stack giữ Spring MVC 6, JDBC, Thymelea
 
 Nếu cấu hình chưa hiện, mở `src/dev/java/vn/vietroute/dev/VietRouteApplication.java`, bấm Run ở `main()`. Bật **Add dependencies with provided scope to classpath** trong cấu hình Application để có Tomcat/Servlet API. Cấu hình chia sẻ đã bật tùy chọn này. Không thấy nút Run thì kiểm tra Maven profile local, Sources Root và Project SDK.
 
-Trong **Run → Edit Configurations → VietRoute Local → Environment variables**, khai báo `VIETROUTE_DB_URL`, `VIETROUTE_DB_USER`, `VIETROUTE_DB_PASSWORD`, `VIETROUTE_DB_SCHEMA` và `VIETROUTE_JWT_SECRET` cho DB development. Không lưu secrets vào file `.run` được commit; dùng cấu hình cá nhân trong workspace IDE. Java không tự đọc `.env`; nhập biến qua giao diện hoặc dùng Environment files nếu phiên bản IDE hỗ trợ.
+Launcher `VietRouteApplication` của profile `local` chủ động đọc `.env` tại working directory dự án nếu file tồn tại. Đây là tiện ích riêng của launcher; WAR/Tomcat ngoài IDE và Render vẫn chỉ nhận biến môi trường. Tạo file riêng theo [.env.example](../../.env.example), hoặc dùng file riêng đã được chủ dự án cấp; không commit secret. Có thể đặt `VIETROUTE_LOCAL_ENV_FILE` trong Environment variables để chọn file khác. Biến OS/IDE ưu tiên hơn file. Giá trị `VIETROUTE_ENV` và cookie trong file được chuyển về development/HTTP khi chạy launcher; lựa chọn OS/IDE rõ ràng vẫn ưu tiên.
+
+Chủ dự án hiện chỉ có **một Neon `neondb`**: giữ URL/user/password/schema trong `.env` riêng để local dùng đúng DB đó. Chạy giao diện local sẽ tác động dữ liệu thật khi thêm/sửa/xóa. Không tạo DB thứ hai tự động. Maven/test/CI không đọc file này; CI dựng PostgreSQL tạm để kiểm migration/seed/SQL.
+
+Run lần đầu của bản source có migration mới cần `VIETROUTE_DB_INIT_ENABLED=true` trong file riêng để startup áp dụng V001–V009 và seed thiếu. Initializer có khóa/checksum và không reset mật khẩu admin đã tồn tại. Không bật initializer chỉ để kiểm build. Cấu hình `.run` không ép INIT=false nữa, còn worker/mail mặc định tắt; bật provider và worker có chủ đích khi đã chuẩn bị credentials. Chưa có `.env` vẫn có thể khai báo các biến DB/JWT trực tiếp trong **Run → Edit Configurations → Environment variables**. Không lưu giá trị bí mật vào file `.run` chia sẻ.
 
 Cấu hình mặc định tắt migration/worker/mail/ảnh: chạy trang chủ, đăng nhập và Swagger mà chưa chạm DB. Muốn đăng nhập cần DB đã migrate. Chỉ bật `VIETROUTE_DB_INIT_ENABLED=true` khi chủ động khởi tạo môi trường và đã đặt `VIETROUTE_BOOTSTRAP_ADMIN_PASSWORD`. Không chạy migration/seed lên Neon production chỉ để thử launcher. `VIETROUTE_HTTP_PORT` đổi port local, mặc định 8080; launcher chỉ bind 127.0.0.1.
 
@@ -66,3 +70,10 @@ Module nhà xe/xe phải kiểm owner/tenant và READY khi gắn mediaId, bổ s
 V004 dùng schema cấu hình; không sửa V001–V003. Học theo MediaController → MediaService → ImageValidator → CloudinaryMediaStorage → MediaCleanupHandler/MediaRepository.
 
 Nguồn: [Cloudinary Java](https://cloudinary.com/documentation/java_integration), [Upload API](https://cloudinary.com/documentation/image_upload_api_reference), [Tomcat nhúng](https://tomcat.apache.org/tomcat-10.1-doc/api/org/apache/catalina/startup/Tomcat.html).
+
+
+## Tích hợp thư viện ảnh dùng chung
+
+`common.media` giữ `service`, `repository`, `entity`, `dto`, `storage`, `validation`. Controller public mỏng ở `business.media.controller` để giữ entry point hiện có; chỉ gọi `MediaService`, không chứa bộ upload thứ hai. Module sau tiêm service chung và lưu media ID phía server, kiểm quan hệ owner/tenant riêng của module; không nhận public ID hoặc URL từ client để quản trị Cloudinary.
+
+Upload file mới dùng `MEDIA_CREATE`, xem dùng `MEDIA_READ`, sửa tên/alt text dùng `MEDIA_UPDATE`, yêu cầu xóa dùng `MEDIA_DELETE`. PUT `/api/v1/media/{id}` nhận title, altText, version; chỉ ảnh READY và owner/ADMIN, có kiểm version ngay SQL. Sửa metadata không cần gọi Cloudinary và vẫn dùng được khi upload tắt. Muốn đổi nội dung file: upload ảnh mới rồi thay liên kết theo transaction nghiệp vụ sau; chưa có luồng thay thế giấy tờ riêng tư.

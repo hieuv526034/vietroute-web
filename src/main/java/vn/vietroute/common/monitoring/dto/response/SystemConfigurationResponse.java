@@ -64,6 +64,8 @@ public record SystemConfigurationResponse(
     public record Monitoring(
         @Schema(description = "Endpoint scrape được bật bằng token") boolean scrapeEnabled,
         @Schema(description = "Probe DB được bật") boolean databaseProbeEnabled,
-        @Schema(description = "Chu kỳ probe DB, giây") int pollSeconds
+        @Schema(description = "Chu kỳ probe DB, giây") int pollSeconds,
+        @Schema(description = "Ghi hiện diện/bộ đếm request vào DB được bật") boolean activityEnabled,
+        @Schema(description = "Ngưỡng request/phút/chủ thể để phát tín hiệu") int activityRequestThreshold
     ) {}
 }

@@ -10,7 +10,7 @@ Biến `VIETROUTE_DB_SCHEMA` là nơi cấu hình schema của ứng dụng. M�
 VIETROUTE_DB_SCHEMA=project_2026
 ```
 
-Java không tự đọc `.env`; đặt biến trong Environment Render hoặc cấu hình IDE/Tomcat. Giá trị môi trường ưu tiên hơn `db.schema` trong `src/main/resources/database.properties`. Render Blueprint có key này; service tạo thủ công phải đặt trong Dashboard. Không cần sửa/rebuild Java để chọn schema khác trên cùng image.
+WAR không tự đọc `.env`; launcher local chủ động đọc file riêng theo hướng dẫn chạy IntelliJ; đặt biến trong Environment Render hoặc cấu hình IDE/Tomcat. Giá trị môi trường ưu tiên hơn `db.schema` trong `src/main/resources/database.properties`. Render Blueprint có key này; service tạo thủ công phải đặt trong Dashboard. Không cần sửa/rebuild Java để chọn schema khác trên cùng image.
 
 Tên schema chỉ nhận chữ thường ASCII/số/underscore, bắt đầu bằng chữ, dài tối đa 63, không dùng public, information_schema hoặc tiền tố pg_. Giá trị từ HTTP, role, tenant hoặc request không được dùng làm schema. `JdbcSchema` whitelist trước khi quote identifier; các giá trị SQL nghiệp vụ vẫn bind bằng PreparedStatement. Một schema triển khai không phải cơ chế tenant theo từng request.
 

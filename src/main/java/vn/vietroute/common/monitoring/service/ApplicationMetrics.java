@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.LongAdder;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
-import vn.vietroute.common.config.MonitoringSettings;
+import vn.vietroute.common.config.monitoring.MonitoringSettings;
 import vn.vietroute.common.job.worker.JobWorker;
 import vn.vietroute.common.monitoring.dto.response.RuntimeStatusResponse;
 

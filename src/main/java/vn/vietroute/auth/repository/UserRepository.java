@@ -134,7 +134,7 @@ public class UserRepository extends BaseRepository {
                 user.setPermissions(new LinkedHashSet<>());
                 try (
                     PreparedStatement roles = connection.prepareStatement(
-                        "SELECT r.role_code, p.permission_code FROM auth_user_roles r LEFT JOIN auth_role_permissions p ON p.role_code=r.role_code WHERE r.user_id=? ORDER BY r.role_code, p.permission_code"
+                        "SELECT r.role_code, p.permission_code FROM auth_user_roles r JOIN auth_roles ar ON ar.code=r.role_code AND ar.active LEFT JOIN (auth_role_permissions rp JOIN auth_permissions ap ON ap.code=rp.permission_code AND ap.active) p ON p.role_code=r.role_code WHERE r.user_id=? ORDER BY r.role_code, p.permission_code"
                     )
                 ) {
                     roles.setLong(1, user.getId());

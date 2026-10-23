@@ -15,14 +15,14 @@ Phụ trách: hieuv526034. Lượt này quy hoạch source để nhóm tìm đú
 | `DatabaseProperties` | Key của file mặc định database.properties | `DatabaseProperties.SCHEMA` |
 | `LocaleCode`, `CatalogType` | Enum giá trị dùng trong hợp đồng hiện hành | `CatalogType.VEHICLE_TYPE` |
 
-Header có sẵn trong Spring dùng `HttpHeaders.AUTHORIZATION`, `CONTENT_LANGUAGE`, `RETRY_AFTER`... Không tạo thêm tên khác cho header chuẩn. Mã lỗi/thành công/permission vẫn ở enum chuyên trách `ErrorCode`, `SuccessCode`, `Permission`; không gom các trách nhiệm nghiệp vụ khác nhau thành một enum khổng lồ.
+Header có sẵn trong Spring dùng `HttpHeaders.AUTHORIZATION`, `CONTENT_LANGUAGE`, `RETRY_AFTER`... Không tạo thêm tên khác cho header chuẩn. Mã lỗi/thành công/permission vẫn ở enum chuyên trách `ErrorCode`, `SuccessCode`; `Permission` là value object mã quyền với hằng lõi và registry DB; không gom các trách nhiệm nghiệp vụ khác nhau thành một enum khổng lồ.
 
 `Env` lưu tên key thực bằng `key()`. Các Settings nhận `ConfigValues`, chỉ truyền enum; không dùng chuỗi tùy ý hoặc đọc `System.getenv` rải rác trong service/controller. Giá trị mặc định, giới hạn và điều kiện bắt buộc vẫn thuộc Settings của module. Điều này giữ mỗi module có trách nhiệm kiểm cấu hình riêng. `ConfigValues` chỉ đưa tên key vào lỗi, không đưa giá trị bị từ chối hoặc secret vào log.
 
 Ví dụ:
 
 ```java
-import vn.vietroute.common.config.ConfigValues;
+import vn.vietroute.common.config.application.ConfigValues;
 import vn.vietroute.common.constant.ApplicationConstants.Env;
 
 ConfigValues values = new ConfigValues(System::getenv);
@@ -74,3 +74,19 @@ Java constants không tự đổi tên Environment trên Render, script shell ho
 Không tạo lớp Constants/web cũ làm bản sao chuyển tiếp; code nội bộ phải cập nhật import sang cấu trúc mới. Giữ lịch sử SQL migration nguyên trạng.
 
 Sau khi lấy source đổi package lần đầu, dừng server, chọn Maven → Lifecycle → **clean**, Reload Maven rồi **Build → Rebuild Project** trước khi Run. Bước này loại class cũ trong thư mục build để Spring không nhìn thấy cả package cũ lẫn mới. Không cần gõ lệnh terminal trong IntelliJ.
+
+
+## Cấu hình theo trách nhiệm và lõi media
+
+`common.config` chỉ giữ `RootConfig` và `WebApplicationInitializer` làm điểm lắp ghép. Không tạo bản sao compatibility ở vị trí cũ.
+
+| Package con | Trách nhiệm |
+|---|---|
+| `application` | AppSettings, ConfigValues, ConfigurationEnvironment (env OS/IDE và file chỉ khi launcher bật) |
+| `database` | DatabaseConfig/Settings/Initializer, migration/seed startup |
+| `integration` | IntegrationConfig, JobSettings/MailSettings/MediaSettings |
+| `traffic` | TrafficConfig/TrafficSettings, quota/filter |
+| `monitoring` | MonitoringConfig, MonitoringSettings/ApiJournalSettings/ActivitySettings, pool quan sát |
+| `web` | WebConfig cho MVC/Thymeleaf/interceptor và method security servlet context |
+
+Auth giữ SecurityConfig, registry/chính sách/controller/service/repository riêng; không chuyển logic phân quyền vào config. `common.media` chứa service/repository/entity/DTO cùng `storage` và `validation`. Public controller/page ở `business.media.controller` chỉ là adapter mỏng gọi lõi chung, không có upload implementation thứ hai. Phân biệt `common.monitoring` cho dữ liệu quan sát với `common.web` cho HTTP plumbing.

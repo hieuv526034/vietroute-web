@@ -11,140 +11,345 @@
             class="container-xl py-5 operations-page"
             id="monitoring-dashboard"
         >
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-                <h1 th:text="#{ui.monitoring}">Giám sát ứng dụng</h1>
-                <button
-                    type="button"
-                    id="monitoring-refresh"
-                    class="button"
-                    th:text="#{ui.monitoring.refresh}"
+            <div data-tabs>
+                <div
+                    class="workspace-tabs"
+                    role="tablist"
+                    th:attr="aria-label=#{ui.monitoring}"
                 >
-                    Làm mới
-                </button>
+                    <button
+                        id="monitor-resources-tab"
+                        type="button"
+                        data-tab-target="monitor-resources-panel"
+                        th:text="#{ui.foundation.resources}"
+                    ></button>
+                    <button
+                        id="activity-tab"
+                        type="button"
+                        data-tab-target="activity-panel"
+                        th:if="${adminUser}"
+                        th:text="#{ui.foundation.traffic}"
+                    ></button>
+                </div>
+                <section id="monitor-resources-panel">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                        <h1 th:text="#{ui.monitoring}">Giám sát ứng dụng</h1>
+                        <button
+                            type="button"
+                            id="monitoring-refresh"
+                            class="button"
+                            th:text="#{ui.monitoring.refresh}"
+                        >
+                            Làm mới
+                        </button>
+                    </div>
+                    <p
+                        class="text-secondary"
+                        th:text="#{ui.monitoring.note}"
+                    >
+                        Chỉ số của instance đang trả lời; lịch sử trình duyệt không thay dashboard vận hành.
+                    </p>
+                    <p
+                        id="form-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></p>
+                    <p>
+                        <span th:text="#{ui.monitoring.instance}">Instance</span>
+                        :
+                        <code id="monitor-instance">—</code>
+                    </p>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <div class="card p-3">
+                                <h2
+                                    class="h6"
+                                    th:text="#{ui.monitoring.heap}"
+                                >
+                                    Heap đang dùng / tối đa
+                                </h2>
+                                <strong id="monitor-heap">—</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card p-3">
+                                <h2
+                                    class="h6"
+                                    th:text="#{ui.monitoring.cpu}"
+                                >
+                                    CPU tiến trình
+                                </h2>
+                                <strong id="monitor-cpu">—</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card p-3">
+                                <h2
+                                    class="h6"
+                                    th:text="#{ui.monitoring.active}"
+                                >
+                                    Request đang xử lý
+                                </h2>
+                                <strong id="monitor-active">—</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card p-3">
+                                <h2
+                                    class="h6"
+                                    th:text="#{ui.monitoring.errors}"
+                                >
+                                    5xx / 429 / 503
+                                </h2>
+                                <strong id="monitor-errors">—</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card p-3">
+                                <h2
+                                    class="h6"
+                                    th:text="#{ui.monitoring.pool}"
+                                >
+                                    Connection dùng / chờ
+                                </h2>
+                                <strong id="monitor-pool">—</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card p-3">
+                                <h2
+                                    class="h6"
+                                    th:text="#{ui.monitoring.worker}"
+                                >
+                                    Worker / job đang chạy
+                                </h2>
+                                <strong id="monitor-worker">—</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <p>
+                        <span th:text="#{ui.monitoring.database}">Probe DB</span>
+                        :
+                        <strong id="monitor-database">—</strong>
+                    </p>
+                    <p>
+                        <span th:text="#{ui.monitoring.jobs}">Job đến hạn / DEAD / lag (giây)</span>
+                        :
+                        <strong id="monitor-jobs">—</strong>
+                    </p>
+                    <p
+                        th:text="#{ui.monitoring.memoryNote}"
+                        class="text-secondary"
+                    >
+                        Heap không bao gồm toàn bộ RAM container. CPU/RAM tổng xem tại Render Metrics.
+                    </p>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th th:text="#{ui.monitoring.time}">Thời điểm</th>
+                                    <th th:text="#{ui.monitoring.uptime}">Uptime (s)</th>
+                                    <th th:text="#{ui.monitoring.rps}">Request/s giữa hai mẫu</th>
+                                    <th th:text="#{ui.monitoring.total}">Tổng request</th>
+                                    <th th:text="#{ui.monitoring.mean}">Độ trễ TB (ms)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monitor-history"></tbody>
+                        </table>
+                    </div>
+                    <div
+                        id="monitor-labels"
+                        hidden
+                        th:attr="data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off},data-unknown=#{ui.monitoring.unknown},data-up=#{ui.monitoring.up},data-down=#{ui.monitoring.down}"
+                    ></div>
+                </section>
+                <section
+                    id="activity-panel"
+                    th:if="${adminUser}"
+                >
+                    <div
+                        id="activity-dashboard"
+                        th:attr="data-guest=#{ui.foundation.guest},data-empty=#{ui.foundation.empty},data-disabled=#{ui.foundation.disabled}"
+                    >
+                        <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+                            <h1
+                                class="h3"
+                                th:text="#{ui.foundation.traffic}"
+                            ></h1>
+                            <button
+                                id="activity-refresh"
+                                type="button"
+                                class="button button-outline"
+                                th:text="#{ui.foundation.refresh}"
+                            ></button>
+                        </div>
+                        <p
+                            class="muted"
+                            th:text="#{ui.foundation.trafficNote}"
+                        ></p>
+                        <p
+                            id="activity-feedback"
+                            class="feedback"
+                            role="alert"
+                            hidden
+                        ></p>
+                        <p
+                            id="activity-status"
+                            role="status"
+                        ></p>
+                        <div class="row g-3 mb-4">
+                            <div class="col-sm-6 col-lg-3">
+                                <div class="card p-3 h-100">
+                                    <span th:text="#{ui.foundation.onlineUsers}"></span>
+                                    <strong
+                                        id="activity-onlineUsers"
+                                        class="h4 mt-2"
+                                    >
+                                        —
+                                    </strong>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-lg-3">
+                                <div class="card p-3 h-100">
+                                    <span th:text="#{ui.foundation.onlineBrowsers}"></span>
+                                    <strong
+                                        id="activity-onlineBrowsers"
+                                        class="h4 mt-2"
+                                    >
+                                        —
+                                    </strong>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-lg-3">
+                                <div class="card p-3 h-100">
+                                    <span th:text="#{ui.foundation.onlineGuests}"></span>
+                                    <strong
+                                        id="activity-onlineGuests"
+                                        class="h4 mt-2"
+                                    >
+                                        —
+                                    </strong>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-lg-3">
+                                <div class="card p-3 h-100">
+                                    <span th:text="#{ui.foundation.visitors}"></span>
+                                    <strong
+                                        id="activity-visitors"
+                                        class="h4 mt-2"
+                                    >
+                                        —
+                                    </strong>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-lg-3">
+                                <div class="card p-3 h-100">
+                                    <span th:text="#{ui.foundation.requests}"></span>
+                                    <strong
+                                        id="activity-requests"
+                                        class="h4 mt-2"
+                                    >
+                                        —
+                                    </strong>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-lg-3">
+                                <div class="card p-3 h-100">
+                                    <span th:text="#{ui.foundation.denied}"></span>
+                                    <strong
+                                        id="activity-denied"
+                                        class="h4 mt-2"
+                                    >
+                                        —
+                                    </strong>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-lg-3">
+                                <div class="card p-3 h-100">
+                                    <span th:text="#{ui.foundation.limited}"></span>
+                                    <strong
+                                        id="activity-limited"
+                                        class="h4 mt-2"
+                                    >
+                                        —
+                                    </strong>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-lg-3">
+                                <div class="card p-3 h-100">
+                                    <span th:text="#{ui.foundation.failures}"></span>
+                                    <strong
+                                        id="activity-failures"
+                                        class="h4 mt-2"
+                                    >
+                                        —
+                                    </strong>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-lg-3">
+                                <div class="card p-3 h-100">
+                                    <span th:text="#{ui.foundation.missed}"></span>
+                                    <strong
+                                        id="activity-missed"
+                                        class="h4 mt-2"
+                                    >
+                                        —
+                                    </strong>
+                                </div>
+                            </div>
+                        </div>
+                        <section class="panel mb-4">
+                            <h2
+                                class="h4"
+                                th:text="#{ui.foundation.onlineBrowsers}"
+                            ></h2>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th th:text="#{ui.foundation.user}"></th>
+                                            <th th:text="#{ui.foundation.subject}"></th>
+                                            <th th:text="#{ui.foundation.lastSeen}"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="activity-online-body"></tbody>
+                                </table>
+                            </div>
+                            <div th:replace="~{fragments/pagination :: pager('activity-online', 20)}"></div>
+                        </section>
+                        <section class="panel">
+                            <h2
+                                class="h4"
+                                th:text="#{ui.foundation.anomalies}"
+                            ></h2>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th th:text="#{ui.foundation.user}"></th>
+                                            <th th:text="#{ui.foundation.subject}"></th>
+                                            <th th:text="#{ui.foundation.minute}"></th>
+                                            <th th:text="#{ui.foundation.requestsMinute}"></th>
+                                            <th th:text="#{ui.foundation.denied}"></th>
+                                            <th th:text="#{ui.foundation.limited}"></th>
+                                            <th th:text="#{ui.foundation.failures}"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="activity-anomaly-body"></tbody>
+                                </table>
+                            </div>
+                        </section>
+                    </div>
+                </section>
             </div>
-            <p
-                class="text-secondary"
-                th:text="#{ui.monitoring.note}"
-            >
-                Chỉ số của instance đang trả lời; lịch sử trình duyệt không thay dashboard vận hành.
-            </p>
-            <p
-                id="form-feedback"
-                class="feedback"
-                role="alert"
-                hidden
-            ></p>
-            <p>
-                <span th:text="#{ui.monitoring.instance}">Instance</span>
-                :
-                <code id="monitor-instance">—</code>
-            </p>
-            <div class="row g-3 mb-4">
-                <div class="col-md-4">
-                    <div class="card p-3">
-                        <h2
-                            class="h6"
-                            th:text="#{ui.monitoring.heap}"
-                        >
-                            Heap đang dùng / tối đa
-                        </h2>
-                        <strong id="monitor-heap">—</strong>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card p-3">
-                        <h2
-                            class="h6"
-                            th:text="#{ui.monitoring.cpu}"
-                        >
-                            CPU tiến trình
-                        </h2>
-                        <strong id="monitor-cpu">—</strong>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card p-3">
-                        <h2
-                            class="h6"
-                            th:text="#{ui.monitoring.active}"
-                        >
-                            Request đang xử lý
-                        </h2>
-                        <strong id="monitor-active">—</strong>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card p-3">
-                        <h2
-                            class="h6"
-                            th:text="#{ui.monitoring.errors}"
-                        >
-                            5xx / 429 / 503
-                        </h2>
-                        <strong id="monitor-errors">—</strong>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card p-3">
-                        <h2
-                            class="h6"
-                            th:text="#{ui.monitoring.pool}"
-                        >
-                            Connection dùng / chờ
-                        </h2>
-                        <strong id="monitor-pool">—</strong>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card p-3">
-                        <h2
-                            class="h6"
-                            th:text="#{ui.monitoring.worker}"
-                        >
-                            Worker / job đang chạy
-                        </h2>
-                        <strong id="monitor-worker">—</strong>
-                    </div>
-                </div>
-            </div>
-            <p>
-                <span th:text="#{ui.monitoring.database}">Probe DB</span>
-                :
-                <strong id="monitor-database">—</strong>
-            </p>
-            <p>
-                <span th:text="#{ui.monitoring.jobs}">Job đến hạn / DEAD / lag (giây)</span>
-                :
-                <strong id="monitor-jobs">—</strong>
-            </p>
-            <p
-                th:text="#{ui.monitoring.memoryNote}"
-                class="text-secondary"
-            >
-                Heap không bao gồm toàn bộ RAM container. CPU/RAM tổng xem tại Render Metrics.
-            </p>
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th th:text="#{ui.monitoring.time}">Thời điểm</th>
-                            <th th:text="#{ui.monitoring.uptime}">Uptime (s)</th>
-                            <th th:text="#{ui.monitoring.rps}">Request/s giữa hai mẫu</th>
-                            <th th:text="#{ui.monitoring.total}">Tổng request</th>
-                            <th th:text="#{ui.monitoring.mean}">Độ trễ TB (ms)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="monitor-history"></tbody>
-                </table>
-            </div>
-            <div
-                id="monitor-labels"
-                hidden
-                th:attr="data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off},data-unknown=#{ui.monitoring.unknown},data-up=#{ui.monitoring.up},data-down=#{ui.monitoring.down}"
-            ></div>
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
         <script th:src="@{/assets/js/monitoring.js}"></script>
+        <script
+            th:if="${adminUser}"
+            th:src="@{/assets/js/activity.js}"
+        ></script>
     </body>
 </html>

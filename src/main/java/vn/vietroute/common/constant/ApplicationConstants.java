@@ -25,6 +25,7 @@ public final class ApplicationConstants {
     public enum Env {
         // Môi trường, JWT và tài khoản bootstrap.
         ENV("VIETROUTE_ENV"),
+        LOCAL_ENV_FILE("VIETROUTE_LOCAL_ENV_FILE"),
         COOKIE_SECURE("VIETROUTE_COOKIE_SECURE"),
         JWT_SECRET("VIETROUTE_JWT_SECRET"),
         BOOTSTRAP_ADMIN_USERNAME("VIETROUTE_BOOTSTRAP_ADMIN_USERNAME"),
@@ -83,6 +84,8 @@ public final class ApplicationConstants {
         MONITORING_DB_ENABLED("VIETROUTE_MONITORING_DB_ENABLED"),
         MONITORING_POLL_SECONDS("VIETROUTE_MONITORING_POLL_SECONDS"),
         API_JOURNAL_ENABLED("VIETROUTE_API_JOURNAL_ENABLED"),
+        ACTIVITY_ENABLED("VIETROUTE_ACTIVITY_ENABLED"),
+        ACTIVITY_REQUEST_THRESHOLD("VIETROUTE_ACTIVITY_REQUEST_THRESHOLD"),
         API_JOURNAL_CAPACITY("VIETROUTE_API_JOURNAL_CAPACITY"),
         API_JOURNAL_MINUTES("VIETROUTE_API_JOURNAL_MINUTES");
 
@@ -99,6 +102,16 @@ public final class ApplicationConstants {
 
     /** Route đầy đủ dùng chung cho mapping, security, filter và OpenAPI; phần con ghép từ cùng gốc. */
     public static final class Routes {
+
+        public static final String PRESENCE = "/api/v1/activity/heartbeat";
+        public static final String ACTIVITY = "/api/v1/admin/system/activity";
+        public static final String ACTIVITY_ONLINE = ACTIVITY + "/online";
+        public static final String ACTIVITY_ANOMALIES = ACTIVITY + "/anomalies";
+        public static final String ACCESS_REGISTRY = "/registry/{kind}";
+        public static final String ACCESS_REGISTRY_ITEM = "/registry/{kind}/{code}";
+        public static final String ACCESS_TARGETS = "/targets";
+        public static final String ACCESS_POLICIES = "/policies";
+        public static final String ACCESS_POLICY_ITEM = "/policies/{id}";
 
         public static final String HOME = "/";
 
@@ -218,6 +231,13 @@ public final class ApplicationConstants {
     /** Regex chỉ mô tả từng loại dữ liệu cụ thể; không áp quy tắc mã cho tên người/địa chỉ/mật khẩu. */
     public static final class Regex {
 
+        public static final String POLICY_KIND = "MENU|ENDPOINT";
+
+        public static final String ENV_KEY = "[A-Z][A-Z0-9_]*";
+
+        public static final String ROLE_CODE = "[A-Z][A-Z0-9_]{1,23}";
+        public static final String PERMISSION_CODE = "[A-Z][A-Z0-9_]{1,38}_[A-Z]+";
+
         public static final String BUSINESS_CODE = "^[A-Z][A-Z0-9]{2,39}$";
 
         public static final String USERNAME = "^[A-Za-z][A-Za-z0-9]{2,31}$";
@@ -279,6 +299,10 @@ public final class ApplicationConstants {
 
     /** Tên cookie/header/attribute là hợp đồng HTTP, không phải key Environment. */
     public static final class Http {
+
+        public static final String VISITOR_COOKIE = "VIETROUTE_VISITOR";
+        public static final String VERIFIED_USER_ATTRIBUTE = "vietroute.verifiedUserId";
+        public static final String ACCESS_POLICY_ATTRIBUTE = "vietroute.accessPolicies";
 
         public static final String JOURNAL_STATE = "vietroute.apiJournalState";
 

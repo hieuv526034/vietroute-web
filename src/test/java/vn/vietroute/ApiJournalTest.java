@@ -2,7 +2,6 @@ package vn.vietroute;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -41,9 +40,9 @@ import vn.vietroute.auth.security.AuthCookies;
 import vn.vietroute.auth.security.JwtAuthenticationFilter;
 import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.business.catalog.dto.request.CatalogCreateRequest;
-import vn.vietroute.common.config.ApiJournalSettings;
 import vn.vietroute.common.config.RootConfig;
-import vn.vietroute.common.config.WebConfig;
+import vn.vietroute.common.config.monitoring.ApiJournalSettings;
+import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.jdbc.BaseRepository;
@@ -57,6 +56,7 @@ import vn.vietroute.common.monitoring.service.ApiJournalStore;
 import vn.vietroute.common.web.response.ApiErrorWriter;
 import vn.vietroute.common.web.response.ApiResponse;
 import vn.vietroute.common.web.response.FieldViolation;
+import vn.vietroute.support.AccessTestConfig;
 import vn.vietroute.support.JournalTestConfig;
 import vn.vietroute.support.JournalTestConfig.FakeJournalRepository;
 
@@ -105,7 +105,7 @@ class ApiJournalTest {
     private AnnotationConfigWebApplicationContext context() {
         var context = new AnnotationConfigWebApplicationContext();
         context.setServletContext(new MockServletContext("src/main/webapp", new FileSystemResourceLoader()));
-        context.register(RootConfig.class, JournalTestConfig.class, WebConfig.class);
+        context.register(RootConfig.class, AccessTestConfig.class, JournalTestConfig.class, WebConfig.class);
         context.refresh();
         return context;
     }
@@ -118,7 +118,7 @@ class ApiJournalTest {
         ) {
             var servletContext = new MockServletContext("src/main/webapp", new FileSystemResourceLoader());
             root.setServletContext(servletContext);
-            root.register(RootConfig.class, JournalTestConfig.class);
+            root.register(RootConfig.class, AccessTestConfig.class, JournalTestConfig.class);
             root.refresh();
             servlet.setParent(root);
             servlet.setServletContext(servletContext);

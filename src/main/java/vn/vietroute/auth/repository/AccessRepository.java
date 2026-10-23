@@ -4,9 +4,13 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import org.springframework.stereotype.Repository;
+import vn.vietroute.auth.dto.response.PermissionResponse;
 import vn.vietroute.auth.dto.response.RolePermissionsResponse;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
@@ -21,6 +25,71 @@ public class AccessRepository extends BaseRepository {
 
     public AccessRepository(JdbcConnectionFactory connections) {
         super(connections);
+    }
+
+    public List<Role> roles() {
+        return read(connection -> {
+            List<Role> roles = new ArrayList<>();
+            try (
+                PreparedStatement query = connection.prepareStatement(
+                    "SELECT code FROM auth_roles ORDER BY code LIMIT 512"
+                );
+                ResultSet rows = query.executeQuery()
+            ) {
+                while (rows.next()) {
+                    roles.add(Role.valueOf(rows.getString(1)));
+                }
+            }
+            return List.copyOf(roles);
+        });
+    }
+
+    public List<PermissionResponse> permissions(Locale locale) {
+        return read(connection -> {
+            List<PermissionResponse> permissions = new ArrayList<>();
+            try (
+                PreparedStatement query = connection.prepareStatement(
+                    "SELECT code,name_vi,name_en FROM auth_permissions WHERE active ORDER BY code LIMIT 512"
+                );
+                ResultSet rows = query.executeQuery()
+            ) {
+                while (rows.next()) {
+                    Permission permission = Permission.valueOf(rows.getString(1));
+                    permissions.add(
+                        new PermissionResponse(
+                            permission,
+                            permission.resource(),
+                            permission.actions(),
+                            permission.messageKey(),
+                            rows.getString("en".equals(locale.getLanguage()) ? 3 : 2)
+                        )
+                    );
+                }
+            }
+            return List.copyOf(permissions);
+        });
+    }
+
+    /** Kiểm tập mapping tồn tại/đang bật trong cùng transaction, chặn mã tự chế hoặc role đã ngừng. */
+    public void validateMappings(Connection connection, Set<Role> roles, Set<Permission> permissions)
+        throws SQLException {
+        for (Role role : roles) {
+            requireActive(connection, "SELECT 1 FROM auth_roles WHERE code=? AND active", role.name());
+        }
+        for (Permission permission : permissions) {
+            requireActive(connection, "SELECT 1 FROM auth_permissions WHERE code=? AND active", permission.name());
+        }
+    }
+
+    private void requireActive(Connection connection, String sql, String code) throws SQLException {
+        try (PreparedStatement query = connection.prepareStatement(sql)) {
+            query.setString(1, code);
+            try (ResultSet rows = query.executeQuery()) {
+                if (!rows.next()) {
+                    throw new BusinessException(ErrorCode.INVALID_REQUEST);
+                }
+            }
+        }
     }
 
     public RolePermissionsResponse role(Role role) {

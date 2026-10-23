@@ -17,6 +17,7 @@ import vn.vietroute.common.monitoring.service.ApiJournalState;
 public class ApiJournalBodyAdvice extends RequestBodyAdviceAdapter {
 
     private final HttpServletRequest request;
+
     private final ApiJournalProjection projection;
 
     @Override

@@ -10,7 +10,7 @@
             class="container-xl workspace-page"
             id="media-library"
             th:data-enabled="${mediaEnabled}"
-            th:attr="data-empty=#{ui.mediaEmpty},data-view=#{ui.mediaView},data-delete=#{ui.mediaDelete},data-confirm=#{ui.mediaConfirm},data-pending=#{ui.mediaPending},data-ready=#{ui.mediaReady},data-deleting=#{ui.mediaDeleting},data-deleted=#{ui.mediaDeleted}"
+            th:attr="data-edit=#{ui.foundation.mediaEdit},data-empty=#{ui.mediaEmpty},data-view=#{ui.mediaView},data-delete=#{ui.mediaDelete},data-confirm=#{ui.mediaConfirm},data-pending=#{ui.mediaPending},data-ready=#{ui.mediaReady},data-deleting=#{ui.mediaDeleting},data-deleted=#{ui.mediaDeleted}"
         >
             <div class="page-heading">
                 <p class="eyebrow">VIETROUTE / MEDIA</p>
@@ -121,6 +121,77 @@
                                 type="submit"
                                 disabled
                                 th:text="#{ui.mediaUpload}"
+                            ></button>
+                        </div>
+                    </form>
+                </fieldset>
+            </dialog>
+            <dialog
+                id="media-edit-dialog"
+                class="workspace-dialog"
+                aria-labelledby="media-edit-dialog-title"
+            >
+                <fieldset class="dialog-controls">
+                    <div class="dialog-heading">
+                        <h2
+                            id="media-edit-dialog-title"
+                            class="h4"
+                            th:text="#{ui.foundation.mediaEdit}"
+                        ></h2>
+                        <button
+                            type="button"
+                            class="dialog-close"
+                            data-dialog-close
+                            th:attr="aria-label=#{ui.ops.close}"
+                        >
+                            ×
+                        </button>
+                    </div>
+                    <p
+                        id="media-edit-dialog-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></p>
+                    <form id="media-edit-form">
+                        <div class="mb-3">
+                            <label
+                                class="form-label"
+                                for="media-title"
+                                th:text="#{ui.foundation.mediaTitle}"
+                            ></label>
+                            <input
+                                id="media-title"
+                                name="title"
+                                class="form-control"
+                                required
+                                maxlength="160"
+                            />
+                        </div>
+                        <div class="mb-3">
+                            <label
+                                class="form-label"
+                                for="media-alt"
+                                th:text="#{ui.foundation.mediaAlt}"
+                            ></label>
+                            <input
+                                id="media-alt"
+                                name="altText"
+                                class="form-control"
+                                maxlength="300"
+                            />
+                        </div>
+                        <div class="dialog-actions">
+                            <button
+                                type="button"
+                                class="button button-outline"
+                                data-dialog-close
+                                th:text="#{ui.foundation.cancel}"
+                            ></button>
+                            <button
+                                type="submit"
+                                class="button"
+                                th:text="#{ui.catalog.save}"
                             ></button>
                         </div>
                     </form>

@@ -60,7 +60,7 @@ Linux/macOS dùng `./mvnw` hoặc `sh ./mvnw`. Cấu hình Git identity của ch
 | Test chia sẻ ở `src/test`, CI và bằng chứng PR | Dựng lại `target/`, `node_modules/`, cache; `.tools/` và process localhost máy cũ không phải công cụ/dịch vụ bàn giao |
 | Cấu hình mẫu và adapter | Quyền/dữ liệu PostgreSQL, Cloudinary, Gmail, Render thuộc dịch vụ ngoài Git; có mẫu không đồng nghĩa đã hoạt động |
 
-Java không tự đọc `.env`. Các node cùng môi trường cần cấu hình JWT tương thích; không tạo lại khóa production chỉ vì đổi máy, development dùng secret riêng. Bootstrap không đặt lại mật khẩu admin đã đổi. Port thử 18095 trong ảnh cũ không phải service luôn chạy; launcher local mặc định 8080. Không ghi secret/token/payload riêng tư vào docs, PR hoặc ảnh chụp.
+WAR không tự đọc `.env`; launcher local chủ động đọc file riêng theo hướng dẫn chạy IntelliJ. Các node cùng môi trường cần cấu hình JWT tương thích; không tạo lại khóa production chỉ vì đổi máy, development dùng secret riêng. Bootstrap không đặt lại mật khẩu admin đã đổi. Port thử 18095 trong ảnh cũ không phải service luôn chạy; launcher local mặc định 8080. Không ghi secret/token/payload riêng tư vào docs, PR hoặc ảnh chụp.
 
 ## 4. Chốt thay đổi và lưu việc còn dở
 
