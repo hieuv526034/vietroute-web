@@ -14,6 +14,7 @@ import vn.vietroute.auth.dto.response.AccessTargetResponse;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.annotation.AccessFunction;
+import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.web.routing.WebRoutePolicy;
 
@@ -68,7 +69,7 @@ public final class AccessTargets {
                 handler.getBeanType(),
                 AccessFunction.class
             );
-            String group = declared == null ? "GENERAL" : declared.group();
+            String group = declared == null ? Groups.GENERAL : declared.group();
             Role.valueOf(group); // Cùng allowlist mã in hoa; chặn metadata sai ngay lúc startup.
             List<String> declaredPermissions =
                 declared == null

@@ -23,6 +23,7 @@ import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.auth.service.AuthService;
 import vn.vietroute.common.base.BaseController;
+import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
@@ -34,7 +35,7 @@ import vn.vietroute.common.web.response.ApiResult;
 @RestController
 @RequestMapping(Routes.AUTH)
 @Tag(name = "Auth", description = "Đăng nhập JWT, tài khoản hiện tại, CSRF, đổi mật khẩu và logout")
-@AccessFunction(group = "AUTH")
+@AccessFunction(group = Groups.AUTH)
 public class AuthController extends BaseController {
 
     private final AuthService auth;

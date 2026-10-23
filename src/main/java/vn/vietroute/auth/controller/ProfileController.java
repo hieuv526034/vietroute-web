@@ -21,6 +21,7 @@ import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.auth.service.ProfileService;
 import vn.vietroute.common.base.BaseController;
+import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
@@ -33,7 +34,7 @@ import vn.vietroute.common.web.response.ApiResult;
 /** API tự phục vụ; dùng MediaService chung, không triển khai upload/Cloudinary lần thứ hai trong auth. */
 @RestController
 @RequestMapping(Routes.AUTH)
-@AccessFunction(group = "PROFILE")
+@AccessFunction(group = Groups.PROFILE)
 public class ProfileController extends BaseController {
 
     private final ProfileService profiles;

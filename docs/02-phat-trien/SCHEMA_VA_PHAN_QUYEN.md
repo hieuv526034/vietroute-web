@@ -106,10 +106,80 @@ Không cần bảng nhóm quyền nữa vì Role đã làm nhiệm vụ đó. Kh
 
 ## Annotation và vòng đời role — FOUNDATION05
 
-`@AccessFunction(group = "CATALOG", permissions = {"CATALOG_UPDATE", "CATALOG_WRITE"})` đặt trên class hoặc method controller; method ghi đè class. Startup vẫn lấy HTTP method/template thật từ Spring, mô tả từ Operation và thêm group/declaredPermissions từ annotation vào danh bạ (V012). Chưa annotation thì GENERAL. Mã metadata được validate khi discover; public chỉ từ WebRoutePolicy. Danh sách permission trên annotation dùng để tra cứu, không phải biểu thức all-of và không tự cấp quyền. Biểu thức any/all và scope bắt buộc thực thi tại service; policy DB chỉ siết thêm. Thêm module cần cả annotation mô tả lẫn guard nghiệp vụ, không được coi metadata là authorization.
+`@AccessFunction(group = Groups.CATALOG, permissions = {Permissions.CATALOG_UPDATE, Permissions.CATALOG_WRITE})` đặt trên class hoặc method controller; method ghi đè class. Import tường minh `AccessConstants.Groups` và `AccessConstants.Permissions` từ `common.constant`; `Permission` cũng dùng nguồn mã này. Startup vẫn lấy HTTP method/template thật từ Spring, mô tả từ Operation và thêm group/declaredPermissions từ annotation vào danh bạ (V012). Chưa annotation thì GENERAL. Mã metadata được validate khi discover; public chỉ từ WebRoutePolicy. Danh sách permission trên annotation dùng để tra cứu, không phải biểu thức all-of và không tự cấp quyền. Biểu thức any/all và scope bắt buộc thực thi tại service; policy DB chỉ siết thêm. Thêm module cần cả annotation mô tả lẫn guard nghiệp vụ, không được coi metadata là authorization.
 
 UserRepository đọc role active/chưa deleted và permission active từ DB mỗi request; giá trị Role/Permission là mã chuỗi, values() chỉ phục vụ bootstrap. Role tùy chỉnh có CATALOG_READ có thể vào `/admin`; trang danh mục không còn bắt ROLE_ADMIN. Các luồng quản trị quyền, journal và cứu hộ vẫn cần ADMIN cùng quyền hành động tương ứng. CUSTOMER là role mặc định của hợp đồng đăng ký public, không phải quyền do client chọn.
 
 ADMIN không được sửa tên/trạng thái/mã, xóa hay thay mapping qua API. Role khác, kể cả OPERATOR/DRIVER/CUSTOMER, được sửa tên/tắt qua registry version. DELETE `/api/v1/admin/access/registry/roles/{code}?version=...` cần ADMIN + ACCESS_DELETE: giữ advisory lock cùng gán role/policy, chặn COM015/409 nếu còn bất kỳ user hoặc policy tham chiếu (kể cả policy tắt). Khi hợp lệ, xóa mapping quyền và tombstone role (`deleted=true`, active=false), audit principal; mã không được tái sử dụng và startup không tạo lại. Đây là xóa mềm để giữ lịch sử, không tự rút role khỏi user hay làm policy mở quyền. Role CUSTOMER bị tắt/xóa thì đăng ký mới không tạo được CUSTOMER; cần cân nhắc hợp đồng đăng ký trước khi thao tác. Quyền lõi vẫn không được tắt; custom permission hiện vô hiệu hóa, chưa có API xóa quyền.
 
 Đăng ký public cũng lấy cùng advisory lock gán/xóa role trước registration/user; BCrypt ở ngoài transaction. CI dùng session giữ khóa riêng, xác nhận request đăng ký phải chờ trước INSERT user. Nhờ đó xóa CUSTOMER và tạo mapping mới không chạy lọt nhau giữa node.
+
+## Phân tích cây chức năng và quyền hành động — ACCESS02
+
+Phân tích ngày 24/10/2026 theo yêu cầu chủ dự án, đối chiếu FOUNDATION05 trên main `442c73d`, [Issue #46](https://github.com/hieuv526034/vietroute-web/issues/46). Phần này là **thiết kế cần triển khai tiếp**, chưa phải chức năng đã nghiệm thu. Đợt constants chỉ tập trung mã định danh, không thay guard hoặc quyền đang cấp.
+
+### Hiện trạng và khoảng trống
+
+| Yêu cầu | Code đã có | Còn thiếu |
+|---|---|---|
+| Khởi tạo DB trống và admin dùng được | DatabaseInitializer seed registry, admin và quyền lõi ADMIN khi bật DB_INIT; không reset password cũ | Đồng bộ định nghĩa chức năng/hành động mới theo hợp đồng thống nhất |
+| Thu thập Java khi app chạy | AccessResourceSynchronizer → AccessTargets → AccessResourceService/Repository upsert auth_access_resources | Quan hệ function/menu/parent/action; kiểm metadata đủ cho mọi endpoint được bảo vệ |
+| Quyền của user lấy DB | JwtAuthenticationFilter → UserRepository mỗi request; hợp role active và permission active | Response cây/capabilities thống nhất cho menu, nút và màn gán |
+| Chặn API không đủ quyền | Service/controller guard, policy siết thêm, owner/version | Dùng cùng định nghĩa action để kiểm chéo endpoint/service/UI, tránh metadata lệch guard |
+| Màn gán role | Ma trận permission và form policy theo route | Cây có cha-con, checkbox ba trạng thái, phụ thuộc quyền và xem trước thay đổi |
+
+Danh sách `declaredPermissions` hiện chỉ là metadata. Không suy ra all-of/any-of từ mảng này, không coi mọi API cùng `group` là cùng một menu. Policy MENU/ENDPOINT hiện tại chỉ siết thêm; chọn role ở policy không cấp permission bắt buộc mà role đó chưa có. Một permission tùy chỉnh trong registry cũng chưa có tác dụng nghiệp vụ nếu không được một chức năng/guard tham chiếu.
+
+### Mô hình quyền cần đạt
+
+```text
+User ── nhiều Role ── nhiều Permission chức năng/hành động
+                             │
+Hệ thống                     │
+└── Danh mục                 │
+    ├── VIEW    vào màn hình │  GET /admin
+    ├── READ    đọc quản trị │  GET /api/v1/admin/catalogs/{id}
+    ├── CREATE  tạo dữ liệu  │  POST /api/v1/admin/catalogs
+    ├── UPDATE  sửa dữ liệu  │  PUT /api/v1/admin/catalogs/{id}
+    └── DELETE  xóa dữ liệu  │  DELETE /api/v1/admin/catalogs/{id}
+```
+
+VIEW là quyền vào màn hình, khác READ dữ liệu quản trị. Hiện VIEW chưa có trong PermissionAction/registry; cần migration và hợp đồng chuyển tiếp, không đổi nghĩa READ đã cấp. Một hành động có thể gắn nhiều endpoint; một endpoint dùng chung có thể được nhiều chức năng tham chiếu nhưng phải có điều kiện quyền tường minh, không suy ra từ URL hoặc method DELETE/POST đơn thuần. Phân nhóm điều hướng chỉ tổ chức cây, không tạo thêm một tầng nhóm quyền trùng Role.
+
+Ví dụ role NHAP_LIEU có CATALOG_VIEW + CATALOG_CREATE: hiện menu Danh mục, cho mở trang và nút Thêm, ẩn Sửa/Xóa; gọi PUT/DELETE trực tiếp vẫn trả 403 với envelope/mã lỗi/traceId chung. Trang chỉ tải API mà người dùng được phép gọi, không tự gọi API READ rồi hiện lỗi. Nếu form cần dữ liệu lookup, khai báo lookup public hoặc permission phụ thuộc cụ thể, hiển thị lý do khi gán; không tự cấp READ toàn bộ. CREATE không kéo theo UPDATE/DELETE. Menu cha xuất hiện nếu có ít nhất một con được vào, không tự cấp hết quyền con khi tích cha.
+
+User nhiều role nhận hợp các quyền cho phép. Bỏ CREATE ở một role chưa chắc user mất CREATE nếu role khác vẫn cấp; màn xem quyền hiệu lực phải chỉ rõ quyền đến từ role nào. Phạm vi nhà xe/owner vẫn kiểm riêng theo principal và đối tượng, kể cả có permission; không đồng nhất full quyền chức năng của ADMIN với bỏ mọi ràng buộc dữ liệu nghiệp vụ. Đợt cây này ưu tiên allow-only; chưa thêm deny trộn nhiều role vì cần quy tắc ưu tiên riêng.
+
+### Nguồn định nghĩa và luồng startup đề xuất
+
+1. Khai báo định nghĩa chức năng ổn định: code, parentCode, nameKey vi/en, loại GROUP/PAGE, menu route, icon/thứ tự và VIEW permission. Code/permission đặt ở common constants; cấu hình ai có quyền nằm ở DB.
+2. Endpoint khai báo rõ functionCode và permission hành động chuẩn qua annotation, có biểu thức any/all tường minh nếu thực sự cần. Path/method lấy từ mapping Spring. Endpoint public/self-service/kỹ thuật/cứu hộ phân loại tường minh; public do WebRoutePolicy quyết định, không lấy cờ public trong DB để bỏ guard.
+3. Sau migration và khi bật sync, Java validate trùng code, cha không tồn tại/chu trình, permission không định nghĩa, endpoint bảo vệ thiếu binding, va chạm mapping. Chỉ publish cây hoàn chỉnh trong một transaction có advisory lock; startup lỗi rõ ràng khi định nghĩa sai.
+4. Upsert định nghĩa function/action/endpoint và permission registry mà module chủ động khai báo. Giữ ID/mapping/audit đã có, không sửa migration cũ. Không parse tùy tiện chuỗi SpEL làm nguồn quyền. Tái sử dụng auth_access_resources, auth_permissions, auth_role_permissions và auth_user_roles; chỉ thêm quan hệ chức năng/action/binding cần thiết bằng migration mới. Thiết kế DDL cụ thể thực hiện sau phân tích này.
+5. Bootstrap bảo đảm ADMIN bất biến có đủ quyền chức năng lõi đã đăng ký hợp lệ; custom permission đang được cơ chế tạo registry cấp ADMIN cũng phải được kiểm trong migration. Role thường không tự nhận quyền mới khi deploy. Restart không reset password hoặc khôi phục quyền đã thu hồi. Không tự mở mọi URL chỉ vì được discovery nhìn thấy.
+6. Nhiều node dùng cùng mã ổn định/lock, không xóa binding vắng ở một node đang rolling deploy. Lộ trình ngừng endpoint/quyền cũ phải có mốc phiên bản và kiểm mọi node trước dọn; chưa thể suy ra "đang sống" chỉ từ lastSeenAt.
+
+### Guard và dữ liệu DB
+
+`@PreAuthorize("hasAuthority('CATALOG_CREATE')")` khai báo API/service đòi quyền nào; role nào được quyền đó do DB quyết định. Vì vậy authority code ổn định trong code không đồng nghĩa hardcode quyền của từng user. `hasRole('ADMIN') and hasAuthority('ACCESS_READ')` hiện cố ý chặn màn registry/cứu hộ cho ADMIN; nếu muốn ủy quyền quản trị cho role tùy chỉnh thì đây là giới hạn cần đổi có chủ đích, không thể chỉ gán ACCESS_READ rồi kỳ vọng vượt điều kiện ADMIN.
+
+Thiết kế tiếp theo dùng bộ kiểm quyền tập trung và cùng định nghĩa function/action cho endpoint, menu và UI. Guard service dùng mã/constant chung để bảo vệ cả lời gọi bean từ worker hoặc service khác; vẫn kiểm scope/version trong luồng nghiệp vụ. Tách rõ quyền quản trị có thể ủy quyền với invariant bảo vệ ADMIN/system/last-admin. Chỉ bỏ điều kiện ROLE_ADMIN khỏi thao tác được xác định là có thể ủy quyền sau khi có guard thay thế và regression. Không xóa toàn bộ @PreAuthorize chỉ vì có annotation danh bạ hay DB policy.
+
+Request đã xác thực vẫn đọc role/quyền hiện tại từ DB; không tin role trong JWT/client. Chuỗi kiểm phải nhất quán: JWT/trạng thái/tokenVersion → authorities DB → function/action và policy bổ sung → guard service → scope đối tượng. Thiếu đăng nhập trả 401, đủ đăng nhập nhưng thiếu quyền trả 403; frontend ẩn nút chỉ phục vụ trải nghiệm. Chưa thêm cache quyền/Redis hoặc claim rằng DB hiện tại đã được nghiệm thu tải cao.
+
+### Màn gán quyền cần triển khai
+
+- Chọn role, tìm chức năng; cây nhóm/menu bên trái, bảng hành động VIEW/READ/CREATE/UPDATE/DELETE/ASSIGN ở vùng chính, nhãn theo locale. Chỉ hiện action chức năng thực sự có; RETRY/SEND hiển thị khi phù hợp.
+- Checkbox cha có trạng thái chưa chọn/chọn một phần/chọn hết, mở rộng/thu gọn và hỗ trợ bàn phím/ARIA. Thao tác "Chọn tất cả" phải thể hiện rõ phạm vi và số quyền sẽ cấp, không chọn nhầm các dòng bị lọc ẩn.
+- Mỗi action mở chi tiết endpoint method/path/mô tả để kiểm tra; endpoint public/self-service/cứu hộ thể hiện riêng và không cho gán sai. ADMIN khóa sửa/xóa/mapping như hiện tại.
+- Chọn thao tác cần quyền vào trang thì UI đề nghị thêm VIEW và trình bày phụ thuộc; request lưu phải validate ở backend, không tự tin frontend. Trước lưu hiển thị quyền thêm/bỏ và người dùng chịu ảnh hưởng; quyền hiệu lực nhiều role có nguồn cấp rõ ràng.
+- Lưu transaction có version/audit/principal và giới hạn ủy quyền, tránh cấp quyền ngoài tập được phép gán. Nút lưu bên phải có loading/chặn bấm lặp; lỗi 403/409 giữ bản nháp và thông báo ngay trong modal. Không tải mọi user trong RAM để tính tác động.
+
+### Tiêu chí nghiệm thu trước khi gọi hoàn thiện
+
+1. DB trống/bootstrap lặp: admin đăng nhập, có đủ function/action lõi; không reset password, không tự cấp quyền mới cho role thường.
+2. Java sync thật trên PostgreSQL tạm: parent/action/endpoint đúng, metadata sai fail startup, hai node/restart/rolling không mất mapping hoặc nới quyền; không kiểm ghi trên Neon.
+3. Role chỉ VIEW+CREATE: menu/nút đúng; POST thành công; GET quản trị/PUT/DELETE không được gán trả 403 kể cả gọi trực tiếp. Endpoint public/lookup chỉ trả projection được phép.
+4. User nhiều role, role inactive/deleted, thu hồi quyền khi JWT còn hạn, thiếu VIEW, HEAD/GET và route template phải nhất quán. Guard root + servlet context và lời gọi service trực tiếp đều được kiểm.
+5. Gán vượt quyền, sửa ADMIN, gỡ admin cuối, tự nâng quyền, payload giả owner/audit/version đều bị chặn; rollback/409 không làm mất bản nháp hoặc cấp nửa bộ.
+6. UI vi/en và màn hẹp: cây/checkbox ba trạng thái/keyboard, lọc/chọn phạm vi/chi tiết endpoint, modal/loading/error rõ ràng. Có ảnh và kiểm tương tác, không nghiệm thu chỉ bằng source HTML.

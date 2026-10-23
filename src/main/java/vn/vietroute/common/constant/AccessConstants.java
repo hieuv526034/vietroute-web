@@ -1,0 +1,83 @@
+package vn.vietroute.common.constant;
+
+/**
+ * Mã ổn định dùng chung cho danh bạ chức năng và registry quyền.
+ * Hằng chuỗi compile-time dùng được trong annotation; mapping user/role/quyền vẫn đọc từ DB.
+ * Không đổi mã đã lưu chỉ bằng sửa hằng số: cần migration tương thích và giữ quyền hiện có.
+ */
+public final class AccessConstants {
+
+    private AccessConstants() {}
+
+    /** Nhóm mô tả/tài nguyên hiện tại; chưa biểu diễn quan hệ cha-con của cây menu. */
+    public static final class Groups {
+
+        public static final String GENERAL = "GENERAL";
+
+        public static final String AUTH = "AUTH";
+
+        public static final String PROFILE = "PROFILE";
+
+        public static final String ACCESS = "ACCESS";
+
+        public static final String CATALOG = "CATALOG";
+
+        public static final String MEDIA = "MEDIA";
+
+        public static final String SYSTEM = "SYSTEM";
+
+        public static final String API = "API";
+
+        public static final String JOB = "JOB";
+
+        public static final String MAIL = "MAIL";
+
+        private Groups() {}
+    }
+
+    /** Mã quyền lõi dùng chung giữa AccessFunction và Permission; không giới hạn registry tùy chỉnh trong DB. */
+    public static final class Permissions {
+
+        public static final String CATALOG_READ = Groups.CATALOG + "_READ";
+
+        public static final String CATALOG_CREATE = Groups.CATALOG + "_CREATE";
+
+        public static final String CATALOG_UPDATE = Groups.CATALOG + "_UPDATE";
+
+        public static final String CATALOG_DELETE = Groups.CATALOG + "_DELETE";
+
+        /** Tương thích dữ liệu cũ: chỉ tạo/sửa danh mục, không bao gồm đọc hoặc xóa. */
+        public static final String CATALOG_WRITE = Groups.CATALOG + "_WRITE";
+
+        public static final String ACCESS_READ = Groups.ACCESS + "_READ";
+
+        public static final String ACCESS_CREATE = Groups.ACCESS + "_CREATE";
+
+        public static final String ACCESS_UPDATE = Groups.ACCESS + "_UPDATE";
+
+        public static final String ACCESS_DELETE = Groups.ACCESS + "_DELETE";
+
+        public static final String ACCESS_ASSIGN = Groups.ACCESS + "_ASSIGN";
+
+        /** Tương thích dữ liệu cũ: chỉ thao tác gán quyền, giữ nguyên giới hạn ủy quyền. */
+        public static final String ACCESS_WRITE = Groups.ACCESS + "_WRITE";
+
+        public static final String JOB_READ = Groups.JOB + "_READ";
+
+        public static final String JOB_RETRY = Groups.JOB + "_RETRY";
+
+        public static final String MAIL_SEND = Groups.MAIL + "_SEND";
+
+        public static final String SYSTEM_READ = Groups.SYSTEM + "_READ";
+
+        public static final String MEDIA_READ = Groups.MEDIA + "_READ";
+
+        public static final String MEDIA_CREATE = Groups.MEDIA + "_CREATE";
+
+        public static final String MEDIA_UPDATE = Groups.MEDIA + "_UPDATE";
+
+        public static final String MEDIA_DELETE = Groups.MEDIA + "_DELETE";
+
+        private Permissions() {}
+    }
+}

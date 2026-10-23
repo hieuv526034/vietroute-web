@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Set;
+import vn.vietroute.common.constant.AccessConstants.Groups;
+import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.jdbc.JdbcIndex;
 import vn.vietroute.common.jdbc.JdbcTable;
@@ -22,84 +24,121 @@ import vn.vietroute.common.jdbc.JdbcTable;
 public final class Permission {
 
     public static final Permission CATALOG_READ = new Permission(
-        "CATALOG_READ",
-        "CATALOG",
+        Permissions.CATALOG_READ,
+        Groups.CATALOG,
         Set.of(PermissionAction.READ)
     );
+
     public static final Permission CATALOG_CREATE = new Permission(
-        "CATALOG_CREATE",
-        "CATALOG",
+        Permissions.CATALOG_CREATE,
+        Groups.CATALOG,
         Set.of(PermissionAction.CREATE)
     );
+
     public static final Permission CATALOG_UPDATE = new Permission(
-        "CATALOG_UPDATE",
-        "CATALOG",
+        Permissions.CATALOG_UPDATE,
+        Groups.CATALOG,
         Set.of(PermissionAction.UPDATE)
     );
+
     public static final Permission CATALOG_DELETE = new Permission(
-        "CATALOG_DELETE",
-        "CATALOG",
+        Permissions.CATALOG_DELETE,
+        Groups.CATALOG,
         Set.of(PermissionAction.DELETE)
     );
+
     // Giữ mã cũ để không làm mất quyền role đang dùng: WRITE chỉ gồm tạo/sửa, không ngầm được đọc/xóa/gán.
     public static final Permission CATALOG_WRITE = new Permission(
-        "CATALOG_WRITE",
-        "CATALOG",
+        Permissions.CATALOG_WRITE,
+        Groups.CATALOG,
         Set.of(PermissionAction.CREATE, PermissionAction.UPDATE)
     );
-    public static final Permission ACCESS_READ = new Permission("ACCESS_READ", "ACCESS", Set.of(PermissionAction.READ));
+
+    public static final Permission ACCESS_READ = new Permission(
+        Permissions.ACCESS_READ,
+        Groups.ACCESS,
+        Set.of(PermissionAction.READ)
+    );
 
     public static final Permission ACCESS_ASSIGN = new Permission(
-        "ACCESS_ASSIGN",
-        "ACCESS",
+        Permissions.ACCESS_ASSIGN,
+        Groups.ACCESS,
         Set.of(PermissionAction.ASSIGN)
     );
+
     // ACCESS_WRITE là mã tương thích cũ cho thao tác gán; API mới hướng dẫn dùng ACCESS_ASSIGN.
     public static final Permission ACCESS_WRITE = new Permission(
-        "ACCESS_WRITE",
-        "ACCESS",
+        Permissions.ACCESS_WRITE,
+        Groups.ACCESS,
         Set.of(PermissionAction.ASSIGN)
     );
-    public static final Permission JOB_READ = new Permission("JOB_READ", "JOB", Set.of(PermissionAction.READ));
 
-    public static final Permission JOB_RETRY = new Permission("JOB_RETRY", "JOB", Set.of(PermissionAction.RETRY));
+    public static final Permission JOB_READ = new Permission(
+        Permissions.JOB_READ,
+        Groups.JOB,
+        Set.of(PermissionAction.READ)
+    );
 
-    public static final Permission MAIL_SEND = new Permission("MAIL_SEND", "MAIL", Set.of(PermissionAction.SEND));
+    public static final Permission JOB_RETRY = new Permission(
+        Permissions.JOB_RETRY,
+        Groups.JOB,
+        Set.of(PermissionAction.RETRY)
+    );
 
-    public static final Permission SYSTEM_READ = new Permission("SYSTEM_READ", "SYSTEM", Set.of(PermissionAction.READ));
+    public static final Permission MAIL_SEND = new Permission(
+        Permissions.MAIL_SEND,
+        Groups.MAIL,
+        Set.of(PermissionAction.SEND)
+    );
 
-    public static final Permission MEDIA_READ = new Permission("MEDIA_READ", "MEDIA", Set.of(PermissionAction.READ));
+    public static final Permission SYSTEM_READ = new Permission(
+        Permissions.SYSTEM_READ,
+        Groups.SYSTEM,
+        Set.of(PermissionAction.READ)
+    );
+
+    public static final Permission MEDIA_READ = new Permission(
+        Permissions.MEDIA_READ,
+        Groups.MEDIA,
+        Set.of(PermissionAction.READ)
+    );
 
     public static final Permission MEDIA_CREATE = new Permission(
-        "MEDIA_CREATE",
-        "MEDIA",
+        Permissions.MEDIA_CREATE,
+        Groups.MEDIA,
         Set.of(PermissionAction.CREATE)
     );
+
     public static final Permission MEDIA_DELETE = new Permission(
-        "MEDIA_DELETE",
-        "MEDIA",
+        Permissions.MEDIA_DELETE,
+        Groups.MEDIA,
         Set.of(PermissionAction.DELETE)
     );
+
     public static final Permission MEDIA_UPDATE = new Permission(
-        "MEDIA_UPDATE",
-        "MEDIA",
+        Permissions.MEDIA_UPDATE,
+        Groups.MEDIA,
         Set.of(PermissionAction.UPDATE)
     );
+
     public static final Permission ACCESS_CREATE = new Permission(
-        "ACCESS_CREATE",
-        "ACCESS",
+        Permissions.ACCESS_CREATE,
+        Groups.ACCESS,
         Set.of(PermissionAction.CREATE)
     );
+
     public static final Permission ACCESS_UPDATE = new Permission(
-        "ACCESS_UPDATE",
-        "ACCESS",
+        Permissions.ACCESS_UPDATE,
+        Groups.ACCESS,
         Set.of(PermissionAction.UPDATE)
     );
+
     public static final Permission ACCESS_DELETE = new Permission(
-        "ACCESS_DELETE",
-        "ACCESS",
+        Permissions.ACCESS_DELETE,
+        Groups.ACCESS,
         Set.of(PermissionAction.DELETE)
     );
+
     private final String code;
 
     private final String resource;

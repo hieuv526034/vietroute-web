@@ -42,6 +42,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.common.base.PageRequest;
+import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
@@ -51,7 +52,7 @@ import vn.vietroute.common.web.routing.WebRoutePolicy;
 
 /** Tạo OpenAPI từ mapping Spring MVC và @Operation/@Schema, không đưa Spring Boot vào WAR. */
 @RestController
-@AccessFunction(group = "API")
+@AccessFunction(group = Groups.API)
 public class OpenApiController {
 
     private final RequestMappingHandlerMapping mappings;
