@@ -13,11 +13,11 @@ Cập nhật 23/10/2026. Nền tảng đối chiếu tại `b1f3cde` sau [PR #13
 
 Không tính phần trăm tiến độ bằng số dòng code, số nhánh hoặc số task. Có nhánh chuẩn bị, đặc tả, enum/role hoặc adapter không đồng nghĩa đã có nghiệp vụ hoàn chỉnh. Tài liệu chỉ xác nhận những gì có trên main tại mốc nêu trên, không kết luận về công việc chưa push hoặc nhánh riêng của thành viên.
 
-APIJOURNAL01 đã có trên main tại `eeecd3c` qua [PR #25](https://github.com/hieuv526034/vietroute-web/pull/25), do `hieuv526034` thực hiện trên `hieuv526034/api-request-journal`: UI lịch sử/filter/modal, metadata controller/trace/lỗi, projection request/response và xuất cURL/Postman. Có kiểm quyền ADMIN + SYSTEM_READ, TTL/capacity từng node; không lưu bền vững/toàn cụm, không gateway hay body nguyên trạng. 85 test Java, 5 test Node, production WAR, Docker/PostgreSQL tạm và kiểm liên kết tài liệu đạt trước merge. Xem [hợp đồng và cách dùng](NHAT_KY_API_VA_DEBUG.md). Không chuyển việc nền tảng này thành đóng góp đã hoàn thành của thành viên khác.
+APIJOURNAL01 đã có trên main qua [PR #25](https://github.com/hieuv526034/vietroute-web/pull/25), sau đó chuyển lịch sử từ RAM sang PostgreSQL tại `dee2af5` qua [PR #27](https://github.com/hieuv526034/vietroute-web/pull/27), do `hieuv526034` thực hiện. V005, retention mặc định 7 ngày, mục tiêu 10.000 dòng, filter/paging SQL và cleanup batch/lock; không cache/queue lịch sử trong RAM. Có UI filter/modal và xuất cURL/Postman, kiểm ADMIN + SYSTEM_READ. Không coi journal là gateway/audit bất biến hoặc cam kết ghi đủ khi storage lỗi; xem [hợp đồng và giới hạn](NHAT_KY_API_VA_DEBUG.md).
 
-Đợt tiếp theo `hieuv526034/api-journal-postgresql` chuyển lịch sử từ RAM sang PostgreSQL theo yêu cầu mới: V005, retention 7 ngày, mục tiêu 10.000 dòng, query/filter SQL và cleanup batch/lock. Chỉ xác nhận có trên main sau PR tương ứng qua CI và merge; phạm vi triển khai trong [nhật ký API](NHAT_KY_API_VA_DEBUG.md).
+Onboarding và rule format IntelliJ đã merge qua [PR #26](https://github.com/hieuv526034/vietroute-web/pull/26): [mục lục đọc theo nhóm/thứ tự](README.md), [Format IntelliJ](FORMAT_INTELLIJ.md), codeStyles/EditorConfig và Run Format/Format Check. Mọi lượt sửa source chạy format/check trước commit. Không đổi người phụ trách/tác giả của module hoặc coi bổ sung tài liệu là nghiệp vụ đã triển khai.
 
-Onboarding và rule format IDE tập trung tại [mục lục đọc theo nhóm/thứ tự](README.md) và [Format IntelliJ](FORMAT_INTELLIJ.md). Phần này giữ nguyên người phụ trách/tác giả của các module; không coi bổ sung tài liệu là đã triển khai nghiệp vụ.
+Đợt `hieuv526034/system-audit` bổ sung V006, actor system (ID 0), audit không NULL cho seed/tác vụ tự động và chặn đăng nhập/gán role cho định danh kỹ thuật. Quy tắc học và triển khai nằm tại [audit và system](AUDIT_VA_SYSTEM.md); trạng thái main theo PR của đợt này sau khi kiểm tra/merge.
 
 ## 2. Nền tảng đã thực hiện và phần còn thiếu
 

@@ -21,6 +21,7 @@ import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.business.catalog.entity.CatalogItem;
 import vn.vietroute.business.media.entity.MediaAsset;
+import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.jdbc.JdbcSchemaValidator;
 import vn.vietroute.common.jdbc.JdbcTransactions;
@@ -65,6 +66,7 @@ public class DatabaseInitializer implements InitializingBean {
         migrate(connection, "V003__permissions_and_jobs.sql");
         migrate(connection, "V004__media_assets.sql");
         migrate(connection, "V005__api_request_journal.sql");
+        migrate(connection, "V006__system_audit.sql");
         JdbcSchemaValidator.verify(
             connection,
             UserAccount.class,
@@ -129,10 +131,11 @@ public class DatabaseInitializer implements InitializingBean {
             }
             try (
                 PreparedStatement update = connection.prepareStatement(
-                    "UPDATE auth_roles SET permissions_initialized=true WHERE code=?"
+                    "UPDATE auth_roles SET permissions_initialized=true,updated_at=CURRENT_TIMESTAMP,updated_by=? WHERE code=? AND NOT permissions_initialized"
                 )
             ) {
-                update.setString(1, role.name());
+                update.setLong(1, SystemActor.ID);
+                update.setString(2, role.name());
                 update.executeUpdate();
             }
         }

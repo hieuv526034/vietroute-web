@@ -24,6 +24,7 @@ import vn.vietroute.auth.repository.AccessRepository;
 import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.base.PageResponse;
+import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.JdbcTransactions;
@@ -101,7 +102,8 @@ public class AccessService {
     /** Gán role, tăng tokenVersion trong cùng transaction để thu hồi mọi token cũ của user đích. */
     @PreAuthorize("hasAnyAuthority('ACCESS_ASSIGN','ACCESS_WRITE')")
     public UserResponse assign(long id, UserRolesRequest request, UserPrincipal actor) {
-        if (actor.id() == id) {
+        // Actor kỹ thuật chỉ tham chiếu audit, không được biến thành tài khoản có quyền.
+        if (actor.id() == id || id == SystemActor.ID) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }
         // Gán role cấp quyền gián tiếp; giới hạn cho ADMIN để người có quyền gán mapping không tự nâng vai trò.

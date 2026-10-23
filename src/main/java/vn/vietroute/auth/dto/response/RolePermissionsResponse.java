@@ -12,5 +12,5 @@ public record RolePermissionsResponse(
     @Schema(description = "Các quyền chức năng") Set<Permission> permissions,
     @Schema(description = "Version chống ghi đè thay đổi đồng thời") long version,
     @Schema(description = "Thời điểm cập nhật UTC") Instant updatedAt,
-    @Schema(description = "Người cập nhật, null nếu bootstrap") Long updatedBy
+    @Schema(description = "ID người cập nhật; 0 là system khi bootstrap") Long updatedBy
 ) {}

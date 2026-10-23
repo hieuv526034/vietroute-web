@@ -92,12 +92,14 @@ public class AccessRepository extends BaseRepository {
         }
         try (
             PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO auth_role_permissions(role_code,permission_code) VALUES (?,?)"
+                "INSERT INTO auth_role_permissions(role_code,permission_code,created_by,updated_by) VALUES (?,?,?,?)"
             )
         ) {
             for (Permission permission : permissions) {
                 insert.setString(1, role.name());
                 insert.setString(2, permission.name());
+                insert.setLong(3, actor);
+                insert.setLong(4, actor);
                 insert.addBatch();
             }
             insert.executeBatch();
@@ -145,12 +147,14 @@ public class AccessRepository extends BaseRepository {
         }
         try (
             PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO auth_user_roles(user_id,role_code) VALUES (?,?)"
+                "INSERT INTO auth_user_roles(user_id,role_code,created_by,updated_by) VALUES (?,?,?,?)"
             )
         ) {
             for (Role role : roles) {
                 insert.setLong(1, id);
                 insert.setString(2, role.name());
+                insert.setLong(3, actor);
+                insert.setLong(4, actor);
                 insert.addBatch();
             }
             insert.executeBatch();

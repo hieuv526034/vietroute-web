@@ -52,7 +52,7 @@ Phần đã có: nền tảng locale/error/validation/audit/paging, auth/JWT/ph�
 ## 3. Khởi động và dừng
 
 1. Tomcat khởi tạo root context và các bean hạ tầng; Settings kiểm giá trị env. Không có tự đọc `.env`.
-2. DatabaseInitializer chỉ migrate/seed khi `VIETROUTE_DB_INIT_ENABLED=true`. V001–V004 có history/checksum, advisory transaction lock và kiểm metadata trước commit. Không reset admin đã tồn tại.
+2. DatabaseInitializer chỉ migrate/seed khi `VIETROUTE_DB_INIT_ENABLED=true`. V001–V006 có history/checksum, advisory transaction lock và kiểm metadata trước commit. Không reset admin đã tồn tại.
 3. Pool khởi tạo lười. Worker và DatabaseProbe chỉ bắt đầu sau initializer, mỗi loại bật bằng env riêng; tắt mặc định.
 4. MVC context đăng ký controller/advice/Thymeleaf/Swagger; hai context không tạo service/controller trùng.
 5. Shutdown ngừng poll, chờ worker đang chạy theo timeout, đóng pool, GC listener và registry. Kill đột ngột có thể để lại lease; node khác nhận lại khi hết hạn.

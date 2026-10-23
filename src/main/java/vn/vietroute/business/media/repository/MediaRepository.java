@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import vn.vietroute.business.media.entity.MediaAsset;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
+import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.BaseRepository;
@@ -143,10 +144,11 @@ public class MediaRepository extends BaseRepository {
     public MediaAsset claimCleanup(Connection connection, long id) throws SQLException {
         try (
             PreparedStatement update = connection.prepareStatement(
-                "UPDATE media_assets SET status='DELETING',updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=? AND (status='DELETING' OR (status='PENDING' AND created_at<=CURRENT_TIMESTAMP-INTERVAL '1 hour')) RETURNING *"
+                "UPDATE media_assets SET status='DELETING',updated_at=CURRENT_TIMESTAMP,updated_by=?,version=version+1 WHERE id=? AND (status='DELETING' OR (status='PENDING' AND created_at<=CURRENT_TIMESTAMP-INTERVAL '1 hour')) RETURNING *"
             )
         ) {
-            update.setLong(1, id);
+            update.setLong(1, SystemActor.ID);
+            update.setLong(2, id);
             try (ResultSet row = update.executeQuery()) {
                 return row.next() ? map(row) : null;
             }
@@ -157,10 +159,11 @@ public class MediaRepository extends BaseRepository {
     public void deleted(Connection connection, long id) throws SQLException {
         try (
             PreparedStatement update = connection.prepareStatement(
-                "UPDATE media_assets SET status='DELETED',url=NULL,thumbnail_url=NULL,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=? AND status IN ('PENDING','DELETING')"
+                "UPDATE media_assets SET status='DELETED',url=NULL,thumbnail_url=NULL,updated_at=CURRENT_TIMESTAMP,updated_by=?,version=version+1 WHERE id=? AND status IN ('PENDING','DELETING')"
             )
         ) {
-            update.setLong(1, id);
+            update.setLong(1, SystemActor.ID);
+            update.setLong(2, id);
             update.executeUpdate();
         }
     }

@@ -19,6 +19,7 @@ import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
+import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.monitoring.service.ApiJournalState;
@@ -77,7 +78,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UserAccount user = users.findById(Long.valueOf(decoded.getSubject()));
                 // Không tin role trong JWT: trạng thái/quyền/tokenVersion hiện tại luôn lấy lại từ DB.
                 if (
-                    user == null || !user.isActive() || version == null || user.getTokenVersion() != version.longValue()
+                    user == null ||
+                    user.getId() == SystemActor.ID ||
+                    !user.isActive() ||
+                    version == null ||
+                    user.getTokenVersion() != version.longValue()
                 ) {
                     throw new IllegalArgumentException("Token revoked");
                 }

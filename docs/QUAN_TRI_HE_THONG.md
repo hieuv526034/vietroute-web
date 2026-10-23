@@ -19,6 +19,8 @@ API giữ hợp đồng list/detail/retry hiện hành; list thêm query `status
 
 Chọn Chi tiết để đọc ID/type/status/attempts, availableAt/lease, mã lỗi, thời điểm/audit/version. Không trả payload, email người nhận, dedup key hoặc response provider. Chỉ DEAD và JOB_RETRY mới hiện thao tác retry khả dụng; UI yêu cầu xác nhận rồi gửi `POST /api/v1/admin/jobs/{id}/retry` với `{"version":<version đang xem>}`. Backend tiếp tục kiểm trạng thái/version trong SQL.
 
+Chi tiết job có cả createdBy/updatedBy; ID 0 hiển thị system. Retry ghi người bấm từ principal; worker nhận/chạy xong sẽ cập nhật người sửa thành system. Xem [quy tắc audit](AUDIT_VA_SYSTEM.md); không suy diễn đây là lịch sử mọi lần thay đổi.
+
 409 nghĩa dữ liệu/trạng thái đã đổi: UI hiển thị lỗi trong hộp chi tiết, không tự retry, người dùng làm mới rồi xem lại. Thành công giữ ID/dedup, queue nhận lại khi worker bật. At least once vẫn có thể lặp tác động provider nếu ACK trước đó mất; kiểm receipt/kết quả gửi trước khi retry. Không có nút retry hàng loạt hoặc xóa job/PII tùy ý.
 
 ## Ma trận quyền và role tài khoản

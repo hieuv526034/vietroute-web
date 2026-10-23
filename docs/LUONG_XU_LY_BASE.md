@@ -44,7 +44,7 @@ Startup được bật bằng `VIETROUTE_DB_INIT_ENABLED=true`:
 
 1. Lấy advisory transaction lock để hai instance không migrate/seed cùng lúc.
 2. SchemaBootstrap kiểm một history trong DB, tạo schema cấu hình; nếu history legacy public thì chuyển sang schema đó. History nơi khác/nhiều history hoặc legacy thiếu history bị chặn trước seed.
-3. Kiểm tra/chạy V001–V004. DB mới tạo bảng ở schema cấu hình; legacy public được V002 chuyển vào đó, giữ ID/FK/sequence/index/dữ liệu. Migration giữ nguyên byte/checksum; adapter chỉ ánh xạ schema SQL lịch sử V002/V003 trong RAM. Query/DDL mới dùng search_path cấu hình.
+3. Kiểm tra/chạy V001–V006. DB mới tạo bảng ở schema cấu hình; legacy public được V002 chuyển vào đó, giữ ID/FK/sequence/index/dữ liệu. Migration giữ nguyên byte/checksum; adapter chỉ ánh xạ schema SQL lịch sử V002/V003 trong RAM. Query/DDL mới dùng search_path cấu hình.
 4. Đối chiếu metadata entity với DB, seed role/admin/catalog theo khóa duy nhất, rồi commit. Admin có sẵn không bị reset mật khẩu.
 
 Chạy Maven build không khởi tạo DB. Muốn chạy app và có dữ liệu ngay, đặt các biến DB/JWT/bootstrap và bật initializer trong cấu hình chạy IDE/Tomcat hoặc Render; `.env` không được Java tự nạp. CI dùng PostgreSQL tạm để kiểm DB mới, khởi động đồng thời, restart và nâng cấp từ `public`.

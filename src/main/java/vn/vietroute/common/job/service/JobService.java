@@ -4,6 +4,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.jdbc.JdbcTransactions;
@@ -33,9 +34,9 @@ public class JobService {
 
     /** Retry thủ công giữ ID/dedup key; chỉ thực hiện một lần với version hiện hành. */
     @PreAuthorize("hasAuthority('JOB_RETRY')")
-    public JobResponse retry(UUID id, long version) {
+    public JobResponse retry(UUID id, long version, UserPrincipal actor) {
         transactions.execute(connection -> {
-            jobs.retry(connection, id, version);
+            jobs.retry(connection, id, version, actor.id());
             return null;
         });
         return jobs.find(id);

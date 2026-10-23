@@ -12,6 +12,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Repository;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
+import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.BaseRepository;
@@ -45,7 +46,7 @@ public class JobRepository extends BaseRepository {
     ) throws SQLException {
         try (
             PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO system_jobs(id,type,dedup_key,payload,created_by,available_at) VALUES (?,?,?,?::jsonb,?,COALESCE(?,CURRENT_TIMESTAMP)) ON CONFLICT (dedup_key) DO NOTHING RETURNING id"
+                "INSERT INTO system_jobs(id,type,dedup_key,payload,created_by,updated_by,available_at) VALUES (?,?,?,?::jsonb,?,?,COALESCE(?,CURRENT_TIMESTAMP)) ON CONFLICT (dedup_key) DO NOTHING RETURNING id"
             )
         ) {
             UUID id = UUID.randomUUID();
@@ -53,8 +54,11 @@ public class JobRepository extends BaseRepository {
             insert.setString(2, type);
             insert.setString(3, dedup);
             insert.setString(4, payload);
-            insert.setObject(5, actor);
-            insert.setTimestamp(6, availableAt == null ? null : Timestamp.from(availableAt));
+            // Job theo lịch không có người dùng; chỉ trường hợp này mới chọn actor system.
+            long creator = actor == null ? SystemActor.ID : actor;
+            insert.setLong(5, creator);
+            insert.setLong(6, creator);
+            insert.setTimestamp(7, availableAt == null ? null : Timestamp.from(availableAt));
             try (ResultSet row = insert.executeQuery()) {
                 if (row.next()) {
                     return row.getObject(1, UUID.class);
@@ -76,9 +80,10 @@ public class JobRepository extends BaseRepository {
     public Job claim(Connection connection, int leaseSeconds) throws SQLException {
         try (
             PreparedStatement expire = connection.prepareStatement(
-                "UPDATE system_jobs SET status='DEAD', lease_token=NULL, locked_until=NULL, last_error_code='LEASE_EXHAUSTED', finished_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP, version=version+1 WHERE status='RUNNING' AND locked_until<CURRENT_TIMESTAMP AND attempts>=max_attempts"
+                "UPDATE system_jobs SET status='DEAD', lease_token=NULL, locked_until=NULL, last_error_code='LEASE_EXHAUSTED', finished_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP, updated_by=?, version=version+1 WHERE status='RUNNING' AND locked_until<CURRENT_TIMESTAMP AND attempts>=max_attempts"
             )
         ) {
+            expire.setLong(1, SystemActor.ID);
             expire.executeUpdate();
         }
         try (
@@ -91,7 +96,7 @@ public class JobRepository extends BaseRepository {
                     ORDER BY available_at, created_at, id FOR UPDATE SKIP LOCKED LIMIT 1
                 )
                 UPDATE system_jobs j SET status='RUNNING', attempts=attempts+1, lease_token=?,
-                    locked_until=CURRENT_TIMESTAMP + (? * INTERVAL '1 second'), updated_at=CURRENT_TIMESTAMP, version=version+1
+                    locked_until=CURRENT_TIMESTAMP + (? * INTERVAL '1 second'), updated_at=CURRENT_TIMESTAMP, updated_by=?, version=version+1
                 FROM next WHERE j.id=next.id
                 RETURNING j.id,j.type,j.payload::text,j.attempts,j.max_attempts,j.lease_token,j.locked_until
                 """
@@ -99,6 +104,7 @@ public class JobRepository extends BaseRepository {
         ) {
             claim.setObject(1, UUID.randomUUID());
             claim.setInt(2, leaseSeconds);
+            claim.setLong(3, SystemActor.ID);
             try (ResultSet row = claim.executeQuery()) {
                 return row.next()
                     ? new Job(
@@ -126,7 +132,7 @@ public class JobRepository extends BaseRepository {
                 UPDATE system_jobs SET status=?,last_error_code=?,available_at=CURRENT_TIMESTAMP+(? * INTERVAL '1 second'),
                     lease_token=NULL,locked_until=NULL,finished_at=CASE WHEN ?='QUEUED' THEN NULL ELSE CURRENT_TIMESTAMP END,
                     payload=CASE WHEN ?='SUCCEEDED' THEN '{}'::jsonb ELSE payload END,
-                    updated_at=CURRENT_TIMESTAMP,version=version+1
+                    updated_at=CURRENT_TIMESTAMP,updated_by=?,version=version+1
                 WHERE id=? AND status='RUNNING' AND lease_token=? AND locked_until>CURRENT_TIMESTAMP
                 """
             )
@@ -136,8 +142,9 @@ public class JobRepository extends BaseRepository {
             update.setInt(3, delaySeconds);
             update.setString(4, status);
             update.setString(5, status);
-            update.setObject(6, job.id());
-            update.setObject(7, job.leaseToken());
+            update.setLong(6, SystemActor.ID);
+            update.setObject(7, job.id());
+            update.setObject(8, job.leaseToken());
             return update.executeUpdate() == 1;
         }
     }
@@ -191,18 +198,19 @@ public class JobRepository extends BaseRepository {
         });
     }
 
-    public void retry(Connection connection, UUID id, long version) throws SQLException {
+    public void retry(Connection connection, UUID id, long version, long actor) throws SQLException {
         try (
             PreparedStatement update = connection.prepareStatement(
                 """
                 UPDATE system_jobs SET status='QUEUED',attempts=0,available_at=CURRENT_TIMESTAMP,
-                    finished_at=NULL,last_error_code=NULL,updated_at=CURRENT_TIMESTAMP,version=version+1
+                    finished_at=NULL,last_error_code=NULL,updated_at=CURRENT_TIMESTAMP,updated_by=?,version=version+1
                 WHERE id=? AND version=? AND status='DEAD'
                 """
             )
         ) {
-            update.setObject(1, id);
-            update.setLong(2, version);
+            update.setLong(1, actor);
+            update.setObject(2, id);
+            update.setLong(3, version);
             if (update.executeUpdate() != 1) {
                 throw new BusinessException(ErrorCode.JOB_NOT_RETRYABLE);
             }
@@ -249,6 +257,7 @@ public class JobRepository extends BaseRepository {
             instant(row, "created_at"),
             instant(row, "updated_at"),
             row.getObject("created_by", Long.class),
+            row.getObject("updated_by", Long.class),
             row.getLong("version")
         );
     }

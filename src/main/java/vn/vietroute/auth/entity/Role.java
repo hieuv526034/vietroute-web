@@ -9,6 +9,7 @@ import vn.vietroute.common.jdbc.JdbcTable;
     primaryKey = { "code" },
     indexes = {
         @JdbcIndex(name = "auth_roles_pkey", columns = { "code" }, unique = true),
+        @JdbcIndex(name = "idx_roles_created_by", columns = { "created_by" }),
         @JdbcIndex(name = "idx_roles_updated_by", columns = { "updated_by" }),
     }
 )

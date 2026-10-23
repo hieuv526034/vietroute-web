@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
@@ -62,8 +64,9 @@ public class JobController extends BaseController {
     public ResponseEntity<ApiResponse<JobResponse>> retry(
         @PathVariable UUID id,
         @Valid @RequestBody RetryJobRequest body,
+        @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
-        return execute(SuccessCode.OK, request, () -> jobs.retry(id, body.getVersion()));
+        return execute(SuccessCode.OK, request, () -> jobs.retry(id, body.getVersion(), actor));
     }
 }
