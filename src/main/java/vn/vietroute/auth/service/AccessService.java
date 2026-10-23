@@ -11,8 +11,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import vn.vietroute.auth.dto.request.AccessUserSearchRequest;
 import vn.vietroute.auth.dto.request.RolePermissionsRequest;
 import vn.vietroute.auth.dto.request.UserRolesRequest;
+import vn.vietroute.auth.dto.response.AccessUserResponse;
 import vn.vietroute.auth.dto.response.PermissionResponse;
 import vn.vietroute.auth.dto.response.RolePermissionsResponse;
 import vn.vietroute.auth.dto.response.UserResponse;
@@ -21,6 +23,7 @@ import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.repository.AccessRepository;
 import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.security.UserPrincipal;
+import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.JdbcTransactions;
@@ -58,6 +61,12 @@ public class AccessService {
     @PreAuthorize("hasAuthority('ACCESS_READ')")
     public List<RolePermissionsResponse> roles() {
         return Arrays.stream(Role.values()).map(access::role).toList();
+    }
+
+    /** Danh sách tài khoản toàn hệ thống chỉ cho ADMIN; ACCESS_READ riêng không cho liệt kê người dùng. */
+    @PreAuthorize("hasAuthority('ACCESS_READ') and hasRole('ADMIN')")
+    public PageResponse<AccessUserResponse> users(AccessUserSearchRequest page) {
+        return users.pageForAccess(page);
     }
 
     /** ADMIN là role cứu hộ cố định; không cho API cấu hình làm mất khả năng quản trị hệ thống. */

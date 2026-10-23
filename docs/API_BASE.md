@@ -1,5 +1,7 @@
 # Hợp đồng API nền tảng
 
+Quản trị hệ thống bổ sung: `GET /api/v1/admin/system/configuration` dùng SYSTEM_READ và DTO whitelist chỉ đọc; `GET /api/v1/admin/access/users` dùng ADMIN + ACCESS_READ, prefix username/page/size; list jobs có query status tùy chọn. UI và hợp đồng chi tiết tại [QUAN_TRI_HE_THONG.md](QUAN_TRI_HE_THONG.md). Không có API ghi env/credential.
+
 Giám sát bổ sung: `GET /api/v1/admin/system/runtime` dùng SYSTEM_READ và envelope chung; `GET /monitoring` là trang chỉ đọc cùng quyền. `GET /internal/metrics` là Prometheus text, token vận hành riêng, không bọc envelope/JWT và không truy vấn DB. Token rỗng đóng endpoint. Xem [giám sát và vận hành](GIAM_SAT_VA_VAN_HANH.md) và [tổng quan](TONG_QUAN_HE_THONG.md).
 
 ## Endpoint đang có

@@ -1,6 +1,7 @@
 package vn.vietroute.common.job.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageRequest;
@@ -20,6 +22,7 @@ import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
 import vn.vietroute.common.job.dto.request.RetryJobRequest;
 import vn.vietroute.common.job.dto.response.JobResponse;
+import vn.vietroute.common.job.model.JobStatus;
 import vn.vietroute.common.job.service.JobService;
 import vn.vietroute.common.web.response.ApiResponse;
 import vn.vietroute.common.web.response.ApiResponses;
@@ -40,9 +43,12 @@ public class JobController extends BaseController {
     @Operation(summary = "Danh sách job có phân trang", description = "Yêu cầu JOB_READ, không trả payload")
     public ResponseEntity<ApiResponse<PageResponse<JobResponse>>> page(
         @Valid PageRequest page,
+        @Parameter(description = "Lọc trạng thái; bỏ trống để xem tất cả") @RequestParam(
+            required = false
+        ) JobStatus status,
         HttpServletRequest request
     ) {
-        return execute(SuccessCode.OK, request, () -> jobs.page(page));
+        return execute(SuccessCode.OK, request, () -> jobs.page(page, status));
     }
 
     @GetMapping(Routes.BY_ID)

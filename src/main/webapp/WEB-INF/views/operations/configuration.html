@@ -1,0 +1,180 @@
+<!doctype html>
+<html
+    lang="vi"
+    xmlns:th="http://www.thymeleaf.org"
+    th:lang="${currentLocale}"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.ops.configuration})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main
+            class="container-xl py-5 operations-page"
+            data-operations="configuration"
+        >
+            <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-3">
+                <h1 th:text="#{ui.ops.configuration}"></h1>
+                <button
+                    class="button button-outline"
+                    type="button"
+                    id="ops-refresh"
+                    th:text="#{ui.ops.refresh}"
+                ></button>
+            </div>
+            <p
+                class="text-secondary"
+                th:text="#{ui.ops.configNote}"
+            ></p>
+            <p
+                id="form-feedback"
+                class="feedback"
+                role="alert"
+                hidden
+            ></p>
+            <p
+                id="ops-status"
+                role="status"
+                aria-live="polite"
+            ></p>
+            <fieldset
+                id="ops-controls"
+                class="border-0 p-0 m-0 w-100"
+            >
+                <p
+                    class="alert alert-info"
+                    th:text="#{ui.ops.configReadonly}"
+                ></p>
+                <p>
+                    <span th:text="#{ui.ops.configTimestamp}"></span>
+                    :
+                    <time id="config-timestamp">—</time>
+                </p>
+                <div
+                    id="configuration-sections"
+                    class="row g-3"
+                    th:attr="data-application=#{ui.ops.application},data-database=#{ui.ops.database},data-traffic=#{ui.ops.traffic},data-worker=#{ui.ops.worker},data-features=#{ui.ops.features},data-monitoring=#{ui.monitoring}"
+                ></div>
+                <dl
+                    id="configuration-labels"
+                    hidden
+                >
+                    <dt
+                        data-field="production"
+                        th:text="#{ui.ops.config.production}"
+                    ></dt>
+                    <dt
+                        data-field="secureCookie"
+                        th:text="#{ui.ops.config.secureCookie}"
+                    ></dt>
+                    <dt
+                        data-field="initializationEnabled"
+                        th:text="#{ui.ops.config.initializationEnabled}"
+                    ></dt>
+                    <dt
+                        data-field="accessTokenSeconds"
+                        th:text="#{ui.ops.config.accessTokenSeconds}"
+                    ></dt>
+                    <dt
+                        data-field="maximumPoolSize"
+                        th:text="#{ui.ops.config.maximumPoolSize}"
+                    ></dt>
+                    <dt
+                        data-field="acquisitionTimeoutMs"
+                        th:text="#{ui.ops.config.acquisitionTimeoutMs}"
+                    ></dt>
+                    <dt
+                        data-field="connectTimeoutSeconds"
+                        th:text="#{ui.ops.config.connectTimeoutSeconds}"
+                    ></dt>
+                    <dt
+                        data-field="socketTimeoutSeconds"
+                        th:text="#{ui.ops.config.socketTimeoutSeconds}"
+                    ></dt>
+                    <dt
+                        data-field="requestsPerMinute"
+                        th:text="#{ui.ops.config.requestsPerMinute}"
+                    ></dt>
+                    <dt
+                        data-field="loginsPerMinute"
+                        th:text="#{ui.ops.config.loginsPerMinute}"
+                    ></dt>
+                    <dt
+                        data-field="maxConcurrent"
+                        th:text="#{ui.ops.config.maxConcurrent}"
+                    ></dt>
+                    <dt
+                        data-field="maxConcurrentLogins"
+                        th:text="#{ui.ops.config.maxConcurrentLogins}"
+                    ></dt>
+                    <dt
+                        data-field="maxBodyBytes"
+                        th:text="#{ui.ops.config.maxBodyBytes}"
+                    ></dt>
+                    <dt
+                        data-field="maxKeys"
+                        th:text="#{ui.ops.config.maxKeys}"
+                    ></dt>
+                    <dt
+                        data-field="quotaBackend"
+                        th:text="#{ui.ops.config.quotaBackend}"
+                    ></dt>
+                    <dt
+                        data-field="trustedProxyConfigured"
+                        th:text="#{ui.ops.config.trustedProxyConfigured}"
+                    ></dt>
+                    <dt
+                        data-field="enabled"
+                        th:text="#{ui.ops.config.enabled}"
+                    ></dt>
+                    <dt
+                        data-field="threads"
+                        th:text="#{ui.ops.config.threads}"
+                    ></dt>
+                    <dt
+                        data-field="pollSeconds"
+                        th:text="#{ui.ops.config.pollSeconds}"
+                    ></dt>
+                    <dt
+                        data-field="leaseSeconds"
+                        th:text="#{ui.ops.config.leaseSeconds}"
+                    ></dt>
+                    <dt
+                        data-field="retentionDays"
+                        th:text="#{ui.ops.config.retentionDays}"
+                    ></dt>
+                    <dt
+                        data-field="mailEnabled"
+                        th:text="#{ui.ops.config.mailEnabled}"
+                    ></dt>
+                    <dt
+                        data-field="mailProvider"
+                        th:text="#{ui.ops.config.mailProvider}"
+                    ></dt>
+                    <dt
+                        data-field="mediaEnabled"
+                        th:text="#{ui.ops.config.mediaEnabled}"
+                    ></dt>
+                    <dt
+                        data-field="maxUploadBytes"
+                        th:text="#{ui.ops.config.maxUploadBytes}"
+                    ></dt>
+                    <dt
+                        data-field="scrapeEnabled"
+                        th:text="#{ui.ops.config.scrapeEnabled}"
+                    ></dt>
+                    <dt
+                        data-field="databaseProbeEnabled"
+                        th:text="#{ui.ops.config.databaseProbeEnabled}"
+                    ></dt>
+                </dl>
+            </fieldset>
+            <div
+                id="ops-labels"
+                hidden
+                th:attr="data-empty=#{ui.ops.empty},data-loading=#{ui.ops.loading},data-saved=#{ui.ops.saved},data-confirm-retry=#{ui.ops.confirmRetry},data-confirm-permissions=#{ui.ops.confirmPermissions},data-confirm-roles=#{ui.ops.confirmRoles},data-details=#{ui.ops.details},data-retry=#{ui.ops.retry},data-select=#{ui.ops.select},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off},data-page=#{ui.ops.page},data-fixed=#{ui.ops.fixed},data-readonly=#{ui.ops.readonly},data-restricted=#{ui.ops.restricted},data-self=#{ui.ops.self},data-conflict=#{ui.ops.conflict}"
+            ></div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/operations.js}"></script>
+    </body>
+</html>

@@ -6,6 +6,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.web.locale.SupportedLocaleResolver;
@@ -23,13 +24,18 @@ public class PageModelAdvice {
         model.addAttribute("currentLocale", new SupportedLocaleResolver().resolveLocale(request).getLanguage());
         model.addAttribute("currentUser", user);
         model.addAttribute("adminUser", user != null && user.roles().contains(Role.ADMIN));
-        model.addAttribute(
-            "monitoringAllowed",
+        model.addAttribute("jobsAllowed", allowed(auth, Permission.JOB_READ));
+        model.addAttribute("accessAllowed", allowed(auth, Permission.ACCESS_READ));
+        model.addAttribute("monitoringAllowed", allowed(auth, Permission.SYSTEM_READ));
+    }
+
+    private static boolean allowed(Authentication auth, Permission permission) {
+        return (
             auth != null &&
-                auth
-                    .getAuthorities()
-                    .stream()
-                    .anyMatch(value -> value.getAuthority().equals("SYSTEM_READ"))
+            auth
+                .getAuthorities()
+                .stream()
+                .anyMatch(value -> value.getAuthority().equals(permission.name()))
         );
     }
 }

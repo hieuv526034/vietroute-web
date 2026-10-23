@@ -1,5 +1,7 @@
 # Giám sát và vận hành VietRoute
 
+Bổ sung UI quản lý job/retry, quyền và snapshot cấu hình không nhạy cảm tại [Quản trị hệ thống](QUAN_TRI_HE_THONG.md). Cấu hình chỉ đọc; thông tin runtime/collector/receiver bên dưới vẫn là các trách nhiệm riêng.
+
 Cập nhật 22/10/2026. Không cần Kafka/Redis. Source cung cấp instrument, trang xem, dashboard và alert mẫu; việc nhận cảnh báo thật cần collector/receiver bên ngoài được cấu hình và thử nghiệm. Không tự tạo tài khoản, mua dịch vụ hoặc gửi thông báo thật trong build.
 
 ## Endpoint và quyền

@@ -11,8 +11,10 @@ import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
 import vn.vietroute.common.monitoring.dto.response.RuntimeStatusResponse;
+import vn.vietroute.common.monitoring.dto.response.SystemConfigurationResponse;
 import vn.vietroute.common.monitoring.dto.response.SystemStatusResponse;
 import vn.vietroute.common.monitoring.service.ApplicationMetrics;
+import vn.vietroute.common.monitoring.service.SystemConfigurationService;
 import vn.vietroute.common.monitoring.service.SystemStatusService;
 import vn.vietroute.common.web.response.ApiResponse;
 import vn.vietroute.common.web.response.ApiResponses;
@@ -25,15 +27,19 @@ public class SystemStatusController extends BaseController {
 
     private final ApplicationMetrics metrics;
 
+    private final SystemConfigurationService configuration;
+
     public SystemStatusController(
         SystemStatusService system,
         ApplicationMetrics metrics,
+        SystemConfigurationService configuration,
         ApiResponses responses,
         ApiExceptionMapper errors
     ) {
         super(responses, errors);
         this.system = system;
         this.metrics = metrics;
+        this.configuration = configuration;
     }
 
     @GetMapping(Routes.SYSTEM_STATUS)
@@ -52,5 +58,14 @@ public class SystemStatusController extends BaseController {
     )
     public ResponseEntity<ApiResponse<RuntimeStatusResponse>> runtime(HttpServletRequest request) {
         return execute(SuccessCode.OK, request, metrics::snapshot);
+    }
+
+    @GetMapping(Routes.SYSTEM_CONFIGURATION)
+    @Operation(
+        summary = "Xem cấu hình hệ thống an toàn",
+        description = "SYSTEM_READ; whitelist thông số không nhạy cảm tại startup. Chỉ đọc, không trả secret/URL/credential, không kiểm provider thật và không sửa env."
+    )
+    public ResponseEntity<ApiResponse<SystemConfigurationResponse>> configuration(HttpServletRequest request) {
+        return execute(SuccessCode.OK, request, configuration::read);
     }
 }

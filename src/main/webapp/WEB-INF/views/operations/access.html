@@ -1,0 +1,208 @@
+<!doctype html>
+<html
+    lang="vi"
+    xmlns:th="http://www.thymeleaf.org"
+    th:lang="${currentLocale}"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.ops.access})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main
+            class="container-xl py-5 operations-page"
+            data-operations="access"
+        >
+            <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-3">
+                <h1 th:text="#{ui.ops.access}"></h1>
+                <button
+                    class="button button-outline"
+                    type="button"
+                    id="ops-refresh"
+                    th:text="#{ui.ops.refresh}"
+                ></button>
+            </div>
+            <p
+                class="text-secondary"
+                th:text="#{ui.ops.accessNote}"
+            ></p>
+            <p
+                id="form-feedback"
+                class="feedback"
+                role="alert"
+                hidden
+            ></p>
+            <p
+                id="ops-status"
+                role="status"
+                aria-live="polite"
+            ></p>
+            <fieldset
+                id="ops-controls"
+                class="border-0 p-0 m-0 w-100"
+            >
+                <section
+                    class="card p-4 mb-4"
+                    aria-labelledby="role-title"
+                >
+                    <h2
+                        id="role-title"
+                        class="h4"
+                        th:text="#{ui.ops.rolePermissions}"
+                    ></h2>
+                    <label
+                        for="access-role"
+                        class="form-label"
+                        th:text="#{ui.ops.role}"
+                    ></label>
+                    <select
+                        id="access-role"
+                        class="form-select mb-3"
+                        disabled
+                    ></select>
+                    <p
+                        id="role-note"
+                        class="text-secondary"
+                        role="status"
+                    ></p>
+                    <p>
+                        <span th:text="#{ui.ops.version}"></span>
+                        :
+                        <strong id="role-version">—</strong>
+                    </p>
+                    <form id="permissions-form">
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th th:text="#{ui.ops.resource}"></th>
+                                        <th th:text="#{ui.ops.permission}"></th>
+                                        <th th:text="#{ui.ops.actions}"></th>
+                                        <th th:text="#{ui.ops.granted}"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="permissions-body"></tbody>
+                            </table>
+                        </div>
+                        <button
+                            id="permissions-save"
+                            class="button"
+                            type="submit"
+                            disabled
+                            th:text="#{ui.ops.savePermissions}"
+                        ></button>
+                    </form>
+                </section>
+                <section
+                    class="card p-4"
+                    id="access-users-section"
+                    aria-labelledby="user-role-title"
+                    hidden
+                >
+                    <h2
+                        id="user-role-title"
+                        class="h4"
+                        th:text="#{ui.ops.userRoles}"
+                    ></h2>
+                    <p
+                        th:text="#{ui.ops.userRolesNote}"
+                        class="text-secondary"
+                    ></p>
+                    <form
+                        id="users-search"
+                        class="d-flex gap-3 flex-wrap align-items-end mb-3"
+                    >
+                        <div>
+                            <label
+                                for="user-prefix"
+                                class="form-label"
+                                th:text="#{ui.ops.usernamePrefix}"
+                            ></label>
+                            <input
+                                id="user-prefix"
+                                class="form-control"
+                                maxlength="32"
+                                pattern="[A-Za-z0-9]{0,32}"
+                                autocomplete="off"
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            class="button button-outline"
+                            th:text="#{ui.ops.filter}"
+                        ></button>
+                    </form>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th th:text="#{ui.ops.username}"></th>
+                                    <th th:text="#{ui.ops.displayName}"></th>
+                                    <th th:text="#{ui.ops.role}"></th>
+                                    <th th:text="#{ui.ops.status}"></th>
+                                    <th th:text="#{ui.ops.actions}"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-body"></tbody>
+                        </table>
+                    </div>
+                    <nav
+                        class="d-flex gap-3 align-items-center my-3"
+                        th:attr="aria-label=#{ui.ops.pagination}"
+                    >
+                        <button
+                            id="users-previous"
+                            class="button button-outline"
+                            type="button"
+                            disabled
+                            th:text="#{ui.mediaPrevious}"
+                        ></button>
+                        <span id="users-page"></span>
+                        <button
+                            id="users-next"
+                            class="button button-outline"
+                            type="button"
+                            disabled
+                            th:text="#{ui.mediaNext}"
+                        ></button>
+                    </nav>
+                    <form
+                        id="user-roles-form"
+                        class="border rounded p-3"
+                        hidden
+                    >
+                        <h3
+                            class="h5"
+                            id="selected-user"
+                        ></h3>
+                        <p>
+                            <span th:text="#{ui.ops.version}"></span>
+                            :
+                            <strong id="user-version"></strong>
+                        </p>
+                        <fieldset id="user-role-options">
+                            <legend
+                                class="h6"
+                                th:text="#{ui.ops.role}"
+                            ></legend>
+                        </fieldset>
+                        <button
+                            id="user-roles-save"
+                            class="button"
+                            type="submit"
+                            disabled
+                            th:text="#{ui.ops.saveRoles}"
+                        ></button>
+                    </form>
+                </section>
+            </fieldset>
+            <div
+                id="ops-labels"
+                hidden
+                th:attr="data-empty=#{ui.ops.empty},data-loading=#{ui.ops.loading},data-saved=#{ui.ops.saved},data-confirm-retry=#{ui.ops.confirmRetry},data-confirm-permissions=#{ui.ops.confirmPermissions},data-confirm-roles=#{ui.ops.confirmRoles},data-details=#{ui.ops.details},data-retry=#{ui.ops.retry},data-select=#{ui.ops.select},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off},data-page=#{ui.ops.page},data-fixed=#{ui.ops.fixed},data-readonly=#{ui.ops.readonly},data-restricted=#{ui.ops.restricted},data-self=#{ui.ops.self},data-conflict=#{ui.ops.conflict}"
+            ></div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/operations.js}"></script>
+    </body>
+</html>

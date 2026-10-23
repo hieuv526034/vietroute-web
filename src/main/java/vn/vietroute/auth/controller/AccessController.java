@@ -14,8 +14,10 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import vn.vietroute.auth.dto.request.AccessUserSearchRequest;
 import vn.vietroute.auth.dto.request.RolePermissionsRequest;
 import vn.vietroute.auth.dto.request.UserRolesRequest;
+import vn.vietroute.auth.dto.response.AccessUserResponse;
 import vn.vietroute.auth.dto.response.PermissionResponse;
 import vn.vietroute.auth.dto.response.RolePermissionsResponse;
 import vn.vietroute.auth.dto.response.UserResponse;
@@ -23,6 +25,7 @@ import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.AccessService;
 import vn.vietroute.common.base.BaseController;
+import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
@@ -55,6 +58,18 @@ public class AccessController extends BaseController {
     @Operation(summary = "Xem quyền các role", description = "Yêu cầu ACCESS_READ; version dùng khi cập nhật")
     public ResponseEntity<ApiResponse<List<RolePermissionsResponse>>> roles(HttpServletRequest request) {
         return execute(SuccessCode.OK, request, access::roles);
+    }
+
+    @GetMapping(Routes.USERS_ACTION)
+    @Operation(
+        summary = "Tra tài khoản để gán role",
+        description = "Chỉ ADMIN có ACCESS_READ; phân trang/prefix username, không trả credential. Gán role dùng API PUT riêng có version và kiểm quyền."
+    )
+    public ResponseEntity<ApiResponse<PageResponse<AccessUserResponse>>> users(
+        @Valid AccessUserSearchRequest page,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () -> access.users(page));
     }
 
     @PutMapping(Routes.ROLE_PERMISSIONS_ACTION)
