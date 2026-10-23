@@ -1,6 +1,7 @@
 package vn.vietroute.auth.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.Instant;
 import java.util.Set;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -25,6 +26,12 @@ public class UserResponse extends BaseResponse {
     @Schema(description = "Tên hiển thị", example = "Quản trị viên")
     private String displayName;
 
+    @Schema(description = "Email của tài khoản hiện tại; null nếu chưa gắn")
+    private String email;
+
+    @Schema(description = "Thời điểm xác minh email; null khi chưa xác minh")
+    private Instant emailVerifiedAt;
+
     @Schema(description = "Tài khoản đang hoạt động")
     private boolean active;
 
@@ -47,6 +54,8 @@ public class UserResponse extends BaseResponse {
             .version(user.getVersion())
             .username(user.getUsername())
             .displayName(user.getDisplayName())
+            .email(user.getEmail())
+            .emailVerifiedAt(user.getEmailVerifiedAt())
             .active(user.isActive())
             .mustChangePassword(user.isMustChangePassword())
             .roles(Set.copyOf(user.getRoles()))

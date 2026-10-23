@@ -118,6 +118,11 @@
             node.textContent = user.displayName;
             document.getElementById('account-username').textContent = user.username;
             document.getElementById('account-roles').textContent = user.roles.join(', ');
+            document.getElementById('account-email').textContent = user.email || '—';
+            const emailStatus = document.getElementById('account-email-status');
+            emailStatus.textContent = user.emailVerifiedAt
+                ? emailStatus.dataset.verified
+                : emailStatus.dataset.unverified;
             document.getElementById('account-created').textContent = new Intl.DateTimeFormat(
                 locale === 'vi' ? 'vi-VN' : 'en-GB',
                 { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh' },

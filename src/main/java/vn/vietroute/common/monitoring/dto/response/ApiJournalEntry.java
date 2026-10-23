@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.UUID;
 
-/** Metadata chỉ gồm route đã đăng ký và mã lỗi, không có IP/account/header/raw URL. */
+/** Metadata chỉ gồm route đã đăng ký và mã lỗi, không có IP/email/header/raw URL; danh tính giới hạn ID/username đã xác thực. */
 public record ApiJournalEntry(
     @Schema(description = "ID bản ghi do server sinh, khác traceId do client có thể cung cấp") UUID id,
     @Schema(description = "Thời điểm bắt đầu UTC") Instant timestamp,
@@ -17,5 +17,8 @@ public record ApiJournalEntry(
     @Schema(description = "Mã kết quả ổn định; UNKNOWN nếu lỗi không qua envelope") String code,
     @Schema(description = "Key thông báo vi/en, không chứa tham số nghiệp vụ") String messageKey,
     @Schema(description = "Nhóm lỗi nội bộ đã lọc; không phải stack trace") String diagnostic,
-    @Schema(description = "SQLState chuẩn khi có; không có câu SQL/param hoặc JDBC URL") String sqlState
+    @Schema(description = "SQLState chuẩn khi có; không có câu SQL/param hoặc JDBC URL") String sqlState,
+    @Schema(description = "ID user được JWT/password xác minh; null là khách hoặc lịch sử cũ chưa ghi nhận")
+    Long userId,
+    @Schema(description = "Username đọc từ auth_users theo ID, chỉ ADMIN + SYSTEM_READ được xem") String username
 ) {}

@@ -14,6 +14,12 @@ import vn.vietroute.common.constant.ApplicationConstants.Routes;
 @Controller
 public class AuthPageController {
 
+    /** Trang public không chứa token trên URL; mọi xác minh gửi POST JSON có CSRF. */
+    @GetMapping(Routes.AUTH_LIFECYCLE_PAGE)
+    public String lifecycle() {
+        return "auth/lifecycle";
+    }
+
     @GetMapping(Routes.LOGIN)
     public String login(@AuthenticationPrincipal UserPrincipal principal, Locale locale) {
         // Người đã đăng nhập không phải nhập lại mật khẩu khi bấm link login cũ hoặc nút Home.

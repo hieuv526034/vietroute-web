@@ -86,7 +86,7 @@ API client cũng lấy CSRF/cookie để đăng nhập, rồi có thể dùng JW
 
 JWT hết hạn sau 30 phút, chưa có refresh token; hết hạn thì đăng nhập lại. Decoder chỉ nhận HS256 đúng issuer/audience, exp/iat/jti; filter đọc lại DB để lấy role/active/tokenVersion. Logout và đổi mật khẩu vô hiệu hóa tất cả token trước đó, kể cả token còn thời hạn. Dữ liệu tài khoản không nằm trong HTTP session. Tài khoản bị khóa tạm chỉ chặn đăng nhập mới, không thay cho thao tác vô hiệu hóa tài khoản `active=false`.
 
-Quyền ADMIN/OPERATOR/DRIVER/CUSTOMER là nền. Các module đa nhà xe sau này phải thêm companyId/ownership checks tại service; role đơn thuần không đủ bảo vệ tenant. Chưa có API đăng ký, tạo tài khoản nhà xe hoặc quên mật khẩu; đây là các task riêng, không giả định đã có trong base.
+Quyền ADMIN/OPERATOR/DRIVER/CUSTOMER là nền. Các module đa nhà xe sau này phải thêm companyId/ownership checks tại service; role đơn thuần không đủ bảo vệ tenant. Đăng ký CUSTOMER, xác minh email và quên/đặt lại mật khẩu được mô tả ở phần FOUNDATION04 bên dưới; tạo tài khoản nhà xe và scope/tenant vẫn là task nghiệp vụ riêng.
 
 ## Audit, transaction và module mẫu
 
@@ -121,3 +121,25 @@ Render sinh JWT secret cố định từ Blueprint, yêu cầu nhập bootstrap 
 ## Ảnh công khai và chạy local
 
 API ảnh ở `/api/v1/media` có upload multipart, đọc/phân trang và xóa qua worker; quyền MEDIA_READ/CREATE/DELETE cùng kiểm owner. Cấu hình, giới hạn file, luồng phục hồi và hướng dẫn Run/Debug IntelliJ nằm trong [Cloudinary và IntelliJ](../01-bat-dau/CHAY_LOCAL_VA_CLOUDINARY.md).
+
+## Vòng đời tài khoản — FOUNDATION04
+
+| Method/path dưới `/api/v1/auth` | Quyền/hợp đồng |
+|---|---|
+| GET `/options` | Public; công bố emailFlowsEnabled và chính sách khóa/history, không có secret |
+| POST `/register` | Public + CSRF/quota, username/displayName/email/password; 202 chung, role CUSTOMER do server gán, active=false chờ xác minh |
+| POST `/activation/request` | Public + CSRF/quota, email; 202 chung, không xác nhận email tồn tại |
+| POST `/activate` | Public + CSRF/quota, email/token; token một lần 24h, không tự phát JWT |
+| POST `/password/forgot` | Public + CSRF/quota, email đã xác minh; 202 chung kể cả không có email |
+| POST `/password/reset` | Public + CSRF/quota, email/token/newPassword; token 15 phút, đổi hash/history/thu hồi JWT trong cùng transaction |
+| POST `/email` | Đăng nhập + currentPassword/email; gắn email cho tài khoản cũ, email mới chưa dùng reset trước xác minh |
+
+UI `/account-access` có tab đăng ký, xác minh, quên mật khẩu và đặt mật khẩu mới; link từ login. Trang tài khoản có modal gắn email; admin cũ không bị bắt kích hoạt lại. Đăng ký mới không nhận role/audit/user ID. Không nhận token qua URL; mã trong email được nhập vào form/JSON, không storage. Kích hoạt không phục hồi tài khoản đã bị vô hiệu hóa, chỉ tài khoản mới có activation_pending hoặc user đang active được xác minh.
+
+Theo lựa chọn chủ dự án ngày 24/10/2026, sai 5 lần liên tiếp **khóa 15 phút**, không ép reset để tránh người khác cố tình nhập sai khóa vĩnh viễn tài khoản. Chủ tài khoản có thể dùng email đã xác minh để đặt lại khi khóa tạm. Mật khẩu mới không trùng hiện tại và **hai mật khẩu trước đó**; sau ba lần đổi mới được dùng lại mật khẩu đã ra khỏi cửa sổ. V011 chỉ bắt đầu giữ lịch sử từ lúc áp dụng, không thể suy lại hash cũ. Reset xong phải login lại; không tự kích hoạt user đã bị khóa bởi admin.
+
+Để mở luồng: `VIETROUTE_AUTH_SELF_SERVICE_ENABLED=true`, `VIETROUTE_MAIL_ENABLED=true`, `VIETROUTE_WORKER_ENABLED=true`, cấu hình Gmail/Workspace theo [nền mail](NEN_TANG_MO_RONG.md). `.run` chia sẻ vẫn tắt mail/worker để không tự gửi thật khi chạy thử. `/options` cho biết cấu hình khả dụng, không chứng minh provider/inbox đang hoạt động. Cần startup áp dụng V011 trước. Thiếu cấu hình trả AUTH009/503; mã sai/hết hạn/đã dùng trả AUTH010/400; mật khẩu lặp trả AUTH008/400.
+
+Challenge DB chỉ giữ SHA-256 của token ngẫu nhiên 256 bit. Mỗi user/mục đích tối đa một dòng, cooldown 60 giây, tối đa 10 email auth/user/24h theo outbox; đăng ký mặc định tối đa 100 user có email/24h toàn hệ thống (key AUTH_REGISTRATIONS_PER_DAY, 1–1000). Khóa transaction/user và advisory lock chống đua giữa node. Đăng ký duplicate/cap trả cùng 202 nhưng không tạo user/job mới. Worker gửi sau commit, retry có thể khiến thư tới lặp; mã vẫn chỉ dùng một lần. Outbox auth mã hóa AES-GCM bằng khóa dẫn xuất tách miền từ JWT secret; mọi node cần cùng secret. Đổi secret làm JWT và outbox auth cũ không dùng được, cần cấp mã mới. Job UI không có recipient/payload/token.
+
+SMS/phone OTP **chưa triển khai** vì chưa chọn provider/ngân sách. Đối chiếu 24/10/2026: [Twilio trial](https://www.twilio.com/docs/usage/trials) giới hạn 30 ngày/recipient đã xác minh và quota, không phải free production; [Firebase](https://firebase.google.com/docs/auth/limits) chỉ gửi SMS verification trên gói Blaze. Chưa bật dịch vụ trả phí hoặc hứa SMS miễn phí lâu dài; hiện dùng email làm kênh xác minh/khôi phục.

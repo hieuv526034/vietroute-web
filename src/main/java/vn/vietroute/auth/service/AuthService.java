@@ -114,10 +114,7 @@ public class AuthService {
                     passwords.matches(request.getCurrentPassword(), user.getPasswordHash()),
                 ErrorCode.PASSWORD_INCORRECT
             );
-            BusinessRules.require(
-                !passwords.matches(request.getNewPassword(), user.getPasswordHash()),
-                ErrorCode.PASSWORD_REUSED
-            );
+            users.requireNewPassword(connection, user, request.getNewPassword(), passwords);
             users.changePassword(connection, user.getId(), passwords.encode(request.getNewPassword()));
             return users.findById(connection, user.getId(), false);
         });

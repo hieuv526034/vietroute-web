@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerMapping;
+import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.monitoring.dto.response.ApiJournalDetail;
@@ -96,7 +97,9 @@ public final class ApiJournalFilter extends OncePerRequestFilter {
                     state.code,
                     state.messageKey,
                     state.diagnostic,
-                    state.sqlState
+                    state.sqlState,
+                    request.getAttribute(Http.JOURNAL_USER_ATTRIBUTE) instanceof Long actor && actor > 0 ? actor : null,
+                    null
                 );
                 store.add(
                     new ApiJournalDetail(

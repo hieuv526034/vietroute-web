@@ -40,6 +40,7 @@ public final class ConfigurationEnvironment implements Function<String, String> 
             try {
                 for (String line : Files.readAllLines(path, StandardCharsets.UTF_8)) {
                     String entry = line.strip();
+                    if (entry.startsWith("\uFEFF")) entry = entry.substring(1);
                     if (entry.isEmpty() || entry.startsWith("#")) {
                         continue;
                     }
@@ -71,5 +72,10 @@ public final class ConfigurationEnvironment implements Function<String, String> 
     public String apply(String key) {
         String value = process.apply(key);
         return value == null ? local.get(key) : value;
+    }
+
+    /** Chỉ công bố nguồn, không công bố giá trị; dùng chẩn đoán biến IDE ghi đè file local. */
+    public String sourceOf(Env key) {
+        return process.apply(key.key()) != null ? "OS_IDE" : local.containsKey(key.key()) ? "LOCAL_FILE" : "DEFAULT";
     }
 }

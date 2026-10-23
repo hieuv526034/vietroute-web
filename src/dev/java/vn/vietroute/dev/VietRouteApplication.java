@@ -28,6 +28,9 @@ public final class VietRouteApplication {
         }
         Path root = Path.of("").toAbsolutePath().normalize();
         String configuredFile = System.getenv(Env.LOCAL_ENV_FILE.key());
+        if (configuredFile == null || configuredFile.isBlank()) {
+            configuredFile = System.getProperty(Env.LOCAL_ENV_FILE.key());
+        }
         Path defaultFile = root.resolve(".env");
         if (configuredFile != null && !configuredFile.isBlank()) {
             System.setProperty(Env.LOCAL_ENV_FILE.key(), configuredFile);
@@ -37,6 +40,14 @@ public final class VietRouteApplication {
             System.clearProperty(Env.LOCAL_ENV_FILE.key());
         }
         ConfigurationEnvironment environment = new ConfigurationEnvironment();
+        System.out.println(
+            "Nguồn DB local: URL=" +
+                environment.sourceOf(Env.DB_URL) +
+                ", user=" +
+                environment.sourceOf(Env.DB_USER) +
+                ", password=" +
+                environment.sourceOf(Env.DB_PASSWORD)
+        );
         Path web = root.resolve("src/main/webapp");
         // Dùng thư mục class thực tế của IDE/Maven, không buộc IntelliJ phải xuất vào target/classes.
         Path classes = Path.of(

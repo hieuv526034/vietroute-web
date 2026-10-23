@@ -62,6 +62,7 @@
             [labels.node, detail.instanceId],
             [labels.endpoint, `${e.method} ${e.endpoint}`],
             [labels.controller, e.controller],
+            [labels.user, e.userId == null ? labels.unknownUser : `${e.username || '#' + e.userId} (#${e.userId})`],
             ['HTTP / ms', `${e.status} / ${e.durationMs}`],
             [labels.code, `${e.code} · ${e.messageKey}`],
             [labels.diagnostic, `${e.diagnostic}${e.sqlState ? ` · SQLState ${e.sqlState}` : ''}`],
@@ -101,6 +102,9 @@
             const row = document.createElement('tr');
             for (const value of [
                 entry.timestamp,
+                entry.userId == null
+                    ? labels.unknownUser
+                    : `${entry.username || '#' + entry.userId} (#${entry.userId})`,
                 `${entry.method} ${entry.endpoint}`,
                 `${entry.status} / ${entry.code}`,
                 entry.durationMs,
@@ -119,7 +123,7 @@
         if (!body.childElementCount) {
             const row = document.createElement('tr');
             const cell = text('td', labels.empty);
-            cell.colSpan = 6;
+            cell.colSpan = 7;
             row.append(cell);
             body.append(row);
         }
@@ -129,6 +133,7 @@
         event.preventDefault();
         if (busy || !window.VietRouteForms.validate(node('search'))) return;
         params = {
+            userId: Number(node('user').value || 0),
             traceId: node('trace').value.trim(),
             endpoint: node('endpoint').value.trim(),
             method: node('method').value,

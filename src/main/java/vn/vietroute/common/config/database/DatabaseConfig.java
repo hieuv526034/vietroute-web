@@ -3,11 +3,13 @@ package vn.vietroute.common.config.database;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.metrics.micrometer.MicrometerMetricsTrackerFactory;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
+import java.util.logging.Logger;
 import javax.sql.DataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.application.ConfigurationEnvironment;
+import vn.vietroute.common.constant.ApplicationConstants.Env;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.jdbc.JdbcSchema;
 
@@ -15,9 +17,25 @@ import vn.vietroute.common.jdbc.JdbcSchema;
 @Configuration
 public class DatabaseConfig {
 
+    private static final Logger LOG = Logger.getLogger(DatabaseConfig.class.getName());
+
     /** Kiểm cấu hình JDBC và ngưỡng pool trước khi bean DataSource được sử dụng. */
     @Bean
     public DatabaseSettings databaseSettings(AppSettings settings, ConfigurationEnvironment environment) {
+        // Không in host/user/password; chỉ nêu nguồn giúp nhận ra cấu hình IDE cũ ghi đè .env.
+        LOG.info(
+            "event=database_configuration urlSource=" +
+                environment.sourceOf(Env.DB_URL) +
+                " userSource=" +
+                environment.sourceOf(Env.DB_USER) +
+                " passwordSource=" +
+                environment.sourceOf(Env.DB_PASSWORD)
+        );
+        if (environment.sourceOf(Env.DB_URL).equals("DEFAULT")) {
+            LOG.warning(
+                "Chưa nhận VIETROUTE_DB_URL: đang dùng mẫu local trong database.properties. Chọn VietRoute Local, kiểm working directory/file .env và biến OS/IDE."
+            );
+        }
         return new DatabaseSettings(environment, settings.isProduction());
     }
 

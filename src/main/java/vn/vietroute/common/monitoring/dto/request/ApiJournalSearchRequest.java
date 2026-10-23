@@ -15,6 +15,10 @@ import vn.vietroute.common.constant.ApplicationConstants.Regex;
 @Setter
 public class ApiJournalSearchRequest extends PageRequest {
 
+    @Min(value = 0, message = "{validation.invalid}")
+    @Schema(description = "ID user gửi request; 0 để bỏ lọc, không phải audit actor system")
+    private long userId;
+
     @NotNull(message = "{validation.required}")
     @Pattern(regexp = Regex.JOURNAL_TRACE, message = "{validation.invalid}")
     @Schema(description = "traceId chính xác, rỗng để xem tất cả")

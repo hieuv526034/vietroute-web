@@ -94,3 +94,11 @@ Tab **Tài nguyên UI/API** ở trang Phân quyền đọc `GET /api/v1/admin/ac
 Hai loại policy kiểm độc lập: MENU kiểm URL trang và ẩn menu; ENDPOINT kiểm method + template của API. Có quyền menu không tự có quyền API và ẩn menu không thay kiểm backend. Điều kiện role là any-of, permission là all-of; policy chỉ siết thêm guard service/controller, ownership/version vẫn bắt buộc. Public không cần policy/quyền chức năng nhưng CSRF/quota/validation vẫn áp dụng. ADMIN bỏ điều kiện policy bổ sung để cứu hộ, không bỏ guard nền.
 
 Khi thêm module: khai báo Routes → mapping + Operation → service guard resource/action + scope → menu theo quy ước UI → startup sync → quản trị tạo policy nếu cần siết thêm. Không dùng danh bạ như API gateway hoặc cơ chế tự cấp quyền cho code mới chưa có guard.
+
+## Cách hiểu quan hệ user/role/menu/API
+
+Một user nhận nhiều role qua auth_user_roles; mỗi role nhận nhiều permission RESOURCE_ACTION qua auth_role_permissions. JWT filter đọc hợp các quyền từ DB mỗi request, bỏ role/permission đã inactive. VIEW giao diện dùng READ; ghi tách CREATE/UPDATE/DELETE, gán dùng ASSIGN, không tạo WRITE toàn hệ thống. ADMIN/role không thay kiểm owner/tenant/version.
+
+Danh bạ auth_access_resources ghi mapping thật để chọn tài nguyên, không tự cấp authority. auth_access_policies gắn MENU/ENDPOINT với allowed_roles (any-of) và required_permissions (all-of); UI quản trị có thể chọn các role và quyền cho từng tài nguyên. MENU quyết định ẩn/hiện và chặn URL trang; ENDPOINT kiểm method + route template API, GET áp dụng HEAD. Có quyền menu không tự có quyền API. Bộ kiểm HTTP → JWT/DB authorities → policy → controller/service @PreAuthorize → scope repository phải cùng đạt. Public không cần quyền chức năng nhưng giữ CSRF/quota/validation. Auth/quản trị quyền/metrics là đường cứu hộ chỉ đọc về chính sách, không tùy ý mở public từ DB.
+
+Không cần bảng nhóm quyền nữa vì Role đã làm nhiệm vụ đó. Khi thêm API phải khai báo guard resource/action trong code; policy quản trị chỉ siết thêm guard nền, không thể biến người thiếu CATALOG_DELETE thành người được xóa dù được gán role ở policy API. Cơ chế này có chủ đích tránh cấu hình vô tình bỏ kiểm nghiệp vụ/tenant.

@@ -25,6 +25,15 @@
                     <dd id="account-username">—</dd>
                     <dt th:text="#{ui.roles}"></dt>
                     <dd id="account-roles">—</dd>
+                    <dt th:text="#{ui.accountFlow.emailStatus}"></dt>
+                    <dd id="account-email">—</dd>
+                    <dt th:text="#{ui.accountFlow.activate}"></dt>
+                    <dd
+                        id="account-email-status"
+                        th:attr="data-verified=#{ui.accountFlow.verified},data-unverified=#{ui.accountFlow.unverified}"
+                    >
+                        —
+                    </dd>
                     <dt th:text="#{ui.createdAt}"></dt>
                     <dd id="account-created">—</dd>
                 </dl>
@@ -42,6 +51,12 @@
                     hidden
                 ></div>
                 <div class="toolbar-actions">
+                    <button
+                        id="email-open"
+                        class="button button-outline mt-3"
+                        type="button"
+                        th:text="#{ui.accountFlow.bind}"
+                    ></button>
                     <button
                         id="password-open"
                         class="button mt-3"
@@ -133,8 +148,87 @@
                     </form>
                 </fieldset>
             </dialog>
+            <dialog
+                id="email-dialog"
+                class="workspace-dialog"
+                aria-labelledby="email-dialog-title"
+            >
+                <fieldset
+                    class="dialog-controls"
+                    id="email-controls"
+                >
+                    <div class="dialog-heading">
+                        <h2
+                            id="email-dialog-title"
+                            class="h4"
+                            th:text="#{ui.accountFlow.bind}"
+                        ></h2>
+                        <button
+                            type="button"
+                            class="dialog-close"
+                            data-dialog-close
+                            th:attr="aria-label=#{ui.ops.close}"
+                        >
+                            ×
+                        </button>
+                    </div>
+                    <p th:text="#{ui.accountFlow.bindNote}"></p>
+                    <p
+                        id="email-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></p>
+                    <form
+                        id="email-form"
+                        novalidate
+                    >
+                        <label
+                            for="bind-email"
+                            class="form-label"
+                            th:text="#{ui.accountFlow.email}"
+                        ></label>
+                        <input
+                            id="bind-email"
+                            name="email"
+                            type="email"
+                            class="form-control mb-3"
+                            required
+                            maxlength="254"
+                            autocomplete="email"
+                        />
+                        <label
+                            for="bind-password"
+                            class="form-label"
+                            th:text="#{ui.currentPassword}"
+                        ></label>
+                        <input
+                            id="bind-password"
+                            name="currentPassword"
+                            type="password"
+                            class="form-control mb-3"
+                            required
+                            maxlength="72"
+                            autocomplete="current-password"
+                        />
+                        <div class="dialog-actions">
+                            <a
+                                class="button button-outline"
+                                th:href="@{/account-access(lang=${currentLocale})}"
+                                th:text="#{ui.accountFlow.activate}"
+                            ></a>
+                            <button
+                                type="submit"
+                                class="button"
+                                th:text="#{ui.accountFlow.submit}"
+                            ></button>
+                        </div>
+                    </form>
+                </fieldset>
+            </dialog>
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/account-email.js}"></script>
     </body>
 </html>

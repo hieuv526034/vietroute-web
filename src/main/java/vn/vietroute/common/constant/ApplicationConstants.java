@@ -34,6 +34,8 @@ public final class ApplicationConstants {
         // Database và pool kết nối.
         DB_INIT_ENABLED("VIETROUTE_DB_INIT_ENABLED"),
         ACCESS_SYNC_ENABLED("VIETROUTE_ACCESS_SYNC_ENABLED"),
+        AUTH_SELF_SERVICE_ENABLED("VIETROUTE_AUTH_SELF_SERVICE_ENABLED"),
+        AUTH_REGISTRATIONS_PER_DAY("VIETROUTE_AUTH_REGISTRATIONS_PER_DAY"),
         DB_URL("VIETROUTE_DB_URL"),
         DB_USER("VIETROUTE_DB_USER"),
         DB_PASSWORD("VIETROUTE_DB_PASSWORD"),
@@ -103,6 +105,15 @@ public final class ApplicationConstants {
 
     /** Route đầy đủ dùng chung cho mapping, security, filter và OpenAPI; phần con ghép từ cùng gốc. */
     public static final class Routes {
+
+        public static final String AUTH_OPTIONS = "/options";
+        public static final String AUTH_REGISTER = "/register";
+        public static final String AUTH_ACTIVATE = "/activate";
+        public static final String AUTH_RESEND = "/activation/request";
+        public static final String AUTH_FORGOT = "/password/forgot";
+        public static final String AUTH_RESET = "/password/reset";
+        public static final String AUTH_EMAIL = "/email";
+        public static final String AUTH_LIFECYCLE_PAGE = "/account-access";
 
         public static final String PRESENCE = "/api/v1/activity/heartbeat";
         public static final String ACTIVITY = "/api/v1/admin/system/activity";
@@ -274,6 +285,8 @@ public final class ApplicationConstants {
 
         public static final String IMAGE_STORAGE_FORMAT = "jpg|png";
 
+        public static final String ACCOUNT_TOKEN = "[A-Za-z0-9_-]{43}";
+
         public static final String SAFE_HTTP_METHOD = "GET|HEAD|OPTIONS";
 
         public static final String API_METHOD = "GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS";
@@ -303,6 +316,8 @@ public final class ApplicationConstants {
     public static final class Http {
 
         public static final String VISITOR_COOKIE = "VIETROUTE_VISITOR";
+        public static final String JOURNAL_USER_ATTRIBUTE = "vietroute.requestActorId";
+
         public static final String VERIFIED_USER_ATTRIBUTE = "vietroute.verifiedUserId";
         public static final String ACCESS_POLICY_ATTRIBUTE = "vietroute.accessPolicies";
 

@@ -99,3 +99,11 @@ V005 chỉ chạy tại startup khi `VIETROUTE_DB_INIT_ENABLED=true`; giữ nguy
 Khi thêm API/DTO, cập nhật Swagger/locales và kiểm quyền backend như cũ. Chỉ bổ sung projection sau khi rà từng field, không log raw hoặc blacklist theo tên password/token. Kiểm sentinel secret không lọt vào UI/export/DB; không thêm email/username/address vào whitelist để tiện replay.
 
 Java test dùng repository giả chỉ để kiểm filter/security/omission/no-queue/backoff và response không bị log failure làm hỏng. Docker CI dùng PostgreSQL **tạm** để kiểm migration/index/schema cấu hình, SQL insert/filter/detail, restart vẫn thấy trace, node khác đọc được, retention/cleanup và permission. Node tests kiểm URL ROOT/context, token placeholder và cURL/collection không secret/script; UI fixture HTML thật chỉ xác nhận frontend, không thay SQL integration. Không dùng Neon/provider thật hoặc benchmark production trong các kiểm tra này.
+
+## Danh tính người gọi — V011 / FOUNDATION04
+
+Theo yêu cầu chủ dự án 24/10/2026, metadata journal bổ sung request_user_id (FK) từ JWT/password **đã xác minh**; audit created_by/updated_by vẫn là system vì recorder là hệ thống. UI/API chỉ ADMIN + SYSTEM_READ hiển thị userId/username và lọc ID user. Username đọc hiện tại từ auth_users bằng ID, không snapshot email/display name. Không dùng header X-User-ID, user ID trong body hoặc claim chưa xác minh. Login thành công gắn actor; logout vẫn giữ actor cho journal dù presence bị xóa.
+
+Các dòng trước V011 để userId NULL, không backfill phỏng đoán. NULL cũng có thể là khách, JWT sai, CSRF/quota/lỗi DB trước khi xác minh user. UI ghi “Khách / chưa ghi nhận”, không gán nhầm system/username trong payload login. Nếu DB/slot log lỗi vẫn có thể miss record theo cơ chế đã nêu; lọc sai user ID sẽ không ra dòng. Dữ liệu mới chỉ được lưu sau khi runtime áp dụng V011, không thay đổi log cũ.
+
+Đây là ngoại lệ metadata ID/username có chủ đích, không mở whitelist body/response cho PII: email/password/mã kích hoạt/reset/JWT vẫn bị bỏ. Export giữ URL thực/token placeholder và không dùng metadata danh tính để tự tạo header quyền hoặc replay request.
