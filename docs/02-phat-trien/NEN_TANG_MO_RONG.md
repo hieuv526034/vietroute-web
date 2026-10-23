@@ -2,6 +2,8 @@
 
 ## Mở rộng nền tảng 23/10/2026 — hợp đồng triển khai
 
+FOUNDATION03 đã merge qua [PR #38](https://github.com/hieuv526034/vietroute-web/pull/38): media tập trung toàn bộ common, ApiResult<T> rút gọn controller và danh bạ UI/API đồng bộ startup. Role là nhóm quyền; [schema và quyền](SCHEMA_VA_PHAN_QUYEN.md) mô tả V010/cờ sync, public/cứu hộ và giới hạn nhiều node. Kết quả kiểm tra tập trung ở [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
+
 Đợt FOUNDATION02 trên nhánh `hieuv526034/foundation-access-traffic-media` bổ sung registry role/quyền, chính sách endpoint/menu, thống kê hiện diện/bất thường và media dùng chung trước nghiệp vụ. Quyền cấu hình chỉ siết thêm kiểm tra backend; không biến route công khai hoặc bỏ `@PreAuthorize`. ADMIN là đường cứu hộ; không sửa role ADMIN, không gán system, không tự gán role hoặc bỏ admin cuối. Mã role/quyền đã được tham chiếu không đổi tên; vô hiệu hóa thay vì xóa lịch sử.
 
 Launcher local được phép đọc `.env` riêng để kết nối cùng Neon của chủ dự án. Biến OS/IDE ưu tiên, WAR/Render chỉ đọc env. Chạy local mặc định development/cookie HTTP, không ghi secret vào Git. Chỉ startup với DB_INIT bật rõ ràng mới migration/seed; kiểm thử dùng DB tạm/giả, không dùng Neon để thử ghi.
