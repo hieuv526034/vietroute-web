@@ -1,6 +1,6 @@
 # Nghiệm thu nền tảng trước nghiệp vụ
 
-Cập nhật 23/10/2026, đối chiếu main tại `df22688` sau [PR #35](https://github.com/hieuv526034/vietroute-web/pull/35). Phạm vi là source nền tảng và UI quản trị trên Spring MVC/JDBC hiện tại. Đọc cùng [quản trị hệ thống](../04-van-hanh/QUAN_TRI_HE_THONG.md), [tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) và [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md). Kết quả trên nhánh chức năng chỉ trở thành bản bàn giao main sau khi PR qua CI và merge.
+Cập nhật 23/10/2026, đối chiếu main tại `2a2e410` sau [PR #38](https://github.com/hieuv526034/vietroute-web/pull/38). Phạm vi là source nền tảng và UI quản trị trên Spring MVC/JDBC hiện tại. Đọc cùng [quản trị hệ thống](../04-van-hanh/QUAN_TRI_HE_THONG.md), [tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) và [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md). Kết quả trên nhánh chức năng chỉ trở thành bản bàn giao main sau khi PR qua CI và merge.
 
 ## Các màn và chức năng đã có trong source
 
@@ -61,3 +61,7 @@ Trước khi mở cho người dùng thật vẫn cần xác nhận Render Live/
 ## Bằng chứng bổ sung FOUNDATION02
 
 Xem [tiến độ và CI của PR #35](TIEN_DO_VA_KE_HOACH_NHOM.md). Source đã qua 100 test Java, 16 test Node, Docker/PostgreSQL tạm và kiểm UI fixture; đủ nền tảng để nhóm bắt đầu module theo phân công. Khi tích hợp provider hoặc deploy thật vẫn phải nghiệm thu riêng. Không có benchmark tải Neon/Render Free, backup/receiver cảnh báo hoặc OTP chỉ vì base đã merge. Test Maven được cách ly env, runtime local vẫn có thể dùng Neon duy nhất qua `.env` riêng và initializer bật rõ ràng.
+
+## Bằng chứng bổ sung FOUNDATION03
+
+[PR #38](https://github.com/hieuv526034/vietroute-web/pull/38) đã merge, 103 test Java/16 test Node và ba CI tại head 599b8a4 đạt; link chi tiết ở [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md). Media bao gồm controller/page nằm hoàn toàn trong common.media; API dùng ApiResult<T> nhưng giữ envelope/status/header/Swagger. Danh bạ UI/API có V010, sync startup và tab chỉ đọc/phân trang; role là nhóm quyền, public/cứu hộ không nhận policy tùy biến. Policy GET bảo vệ cả HEAD. Metadata không tự cấp authority hay ghi đè mapping, không xóa route node khác có thể còn dùng. Cần bật init để áp dụng V010; sync mặc định theo init nếu không khai báo riêng. Giới hạn provider/vận hành production bên trên vẫn còn.
