@@ -18,6 +18,7 @@ import vn.vietroute.common.jdbc.BaseRepository;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.job.dto.response.JobResponse;
 import vn.vietroute.common.job.model.Job;
+import vn.vietroute.common.job.model.JobStatus;
 
 /** Hàng đợi PostgreSQL: transaction enqueue có thể dùng chung với thay đổi nghiệp vụ (transactional outbox). */
 @Repository
@@ -155,24 +156,31 @@ public class JobRepository extends BaseRepository {
         });
     }
 
-    public PageResponse<JobResponse> page(PageRequest page) {
+    public PageResponse<JobResponse> page(PageRequest page, JobStatus status) {
         return read(connection -> {
             long total;
             try (
-                PreparedStatement count = connection.prepareStatement("SELECT count(*) FROM system_jobs");
-                ResultSet row = count.executeQuery()
+                PreparedStatement count = connection.prepareStatement(
+                    "SELECT count(*) FROM system_jobs WHERE (?::text IS NULL OR status=?)"
+                )
             ) {
-                row.next();
-                total = row.getLong(1);
+                count.setString(1, status == null ? null : status.name());
+                count.setString(2, status == null ? null : status.name());
+                try (ResultSet row = count.executeQuery()) {
+                    row.next();
+                    total = row.getLong(1);
+                }
             }
             List<JobResponse> content = new ArrayList<>();
             try (
                 PreparedStatement query = connection.prepareStatement(
-                    "SELECT * FROM system_jobs ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?"
+                    "SELECT * FROM system_jobs WHERE (?::text IS NULL OR status=?) ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?"
                 )
             ) {
-                query.setInt(1, page.getSize());
-                query.setLong(2, page.offset());
+                query.setString(1, status == null ? null : status.name());
+                query.setString(2, status == null ? null : status.name());
+                query.setInt(3, page.getSize());
+                query.setLong(4, page.offset());
                 try (ResultSet rows = query.executeQuery()) {
                     while (rows.next()) {
                         content.add(response(rows));

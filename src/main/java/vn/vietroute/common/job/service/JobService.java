@@ -8,6 +8,7 @@ import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.job.dto.response.JobResponse;
+import vn.vietroute.common.job.model.JobStatus;
 import vn.vietroute.common.job.repository.JobRepository;
 
 @Service
@@ -20,8 +21,8 @@ public class JobService {
 
     /** Chỉ trả trạng thái làm sạch, không trả payload chứa email. */
     @PreAuthorize("hasAuthority('JOB_READ')")
-    public PageResponse<JobResponse> page(PageRequest page) {
-        return jobs.page(page);
+    public PageResponse<JobResponse> page(PageRequest page, JobStatus status) {
+        return jobs.page(page, status);
     }
 
     /** Tìm receipt theo UUID, chỉ lấy metadata được phép công bố. */

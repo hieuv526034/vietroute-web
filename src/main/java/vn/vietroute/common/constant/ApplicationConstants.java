@@ -141,13 +141,15 @@ public final class ApplicationConstants {
 
         public static final String ACCESS = ADMIN_API + "/access";
 
+        public static final String USERS_ACTION = "/users";
+
         public static final String PERMISSIONS_ACTION = "/permissions";
 
         public static final String ROLES_ACTION = "/roles";
 
         public static final String ROLE_PERMISSIONS_ACTION = ROLES_ACTION + "/{role}" + PERMISSIONS_ACTION;
 
-        public static final String USER_ROLES_ACTION = "/users" + BY_ID + ROLES_ACTION;
+        public static final String USER_ROLES_ACTION = USERS_ACTION + BY_ID + ROLES_ACTION;
 
         public static final String JOBS = ADMIN_API + "/jobs";
 
@@ -160,6 +162,16 @@ public final class ApplicationConstants {
         public static final String SYSTEM_STATUS = ADMIN_API + "/system/status";
 
         public static final String SYSTEM_RUNTIME = ADMIN_API + "/system/runtime";
+
+        public static final String SYSTEM_CONFIGURATION = ADMIN_API + "/system/configuration";
+
+        public static final String OPERATIONS = "/operations";
+
+        public static final String JOBS_PAGE = OPERATIONS + "/jobs";
+
+        public static final String ACCESS_PAGE = OPERATIONS + "/access";
+
+        public static final String CONFIGURATION_PAGE = OPERATIONS + "/configuration";
 
         public static final String MONITORING_PAGE = "/monitoring";
 
@@ -190,6 +202,8 @@ public final class ApplicationConstants {
         public static final String BUSINESS_CODE = "^[A-Z][A-Z0-9]{2,39}$";
 
         public static final String USERNAME = "^[A-Za-z][A-Za-z0-9]{2,31}$";
+
+        public static final String USERNAME_SEARCH = "^[A-Za-z0-9]{0,32}$";
 
         public static final String CODE_PREFIX = "[A-Z]{2,6}";
 

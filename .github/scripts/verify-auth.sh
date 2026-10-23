@@ -94,6 +94,26 @@ call 200 GET /api/v1/auth/me '' bearer
 call 200 GET /api/v1/admin/system/runtime '' bearer
 [[ "$(field data.databaseProbeEnabled)" == True ]]
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["heapUsedBytes"]>0 and len(d["instanceId"])==36' "$result"
+printf 'System management stage: protected pages, safe config and account lookup\n'
+for page_path in jobs access configuration; do
+  for locale in vi en; do
+    call 200 GET "/operations/$page_path?lang=$locale" '' cookie
+    grep -q 'data-operations=' "$result"
+    grep -q 'ops-controls' "$result"
+    if grep -q '??ui.ops' "$result"; then exit 1; fi
+  done
+done
+call 200 GET /api/v1/admin/system/configuration '' bearer
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["readOnly"] is True; assert set(d["database"])=={"maximumPoolSize","acquisitionTimeoutMs","connectTimeoutSeconds","socketTimeoutSeconds"}; assert d["database"]["maximumPoolSize"]==4; assert d["worker"]["enabled"] is True; assert not any(k in json.dumps(d).lower() for k in ["password","refreshtoken","clientsecret","jdbc:postgresql","jwtkey"])' "$result"
+call 200 GET '/api/v1/admin/access/users?username=Ad&page=0&size=1' '' bearer
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["totalElements"]==1; u=d["content"][0]; assert u["username"]=="admin" and u["roles"]==["ADMIN"]; assert set(u)=={"id","username","displayName","active","roles","version","createdAt","updatedAt"}' "$result"
+call 400 GET '/api/v1/admin/access/users?username=%25' '' bearer
+assert_code COM001
+call 200 GET '/api/v1/admin/access/users?username=NoSuchUser&page=0&size=20' '' bearer
+[[ "$(field data.totalElements)" == 0 ]]
+call 200 GET '/api/v1/admin/jobs?status=DEAD&page=0&size=1' '' bearer
+call 400 GET '/api/v1/admin/jobs?status=NOT_VALID' '' bearer
+assert_code COM002
 call 401 GET /api/v1/auth/me
 assert_code AUTH002
 call 200 GET '/api/v1/catalogs/VEHICLE_TYPE?lang=en'
@@ -255,6 +275,8 @@ call 403 GET "/api/v1/admin/catalogs/$catalog_id" '' bearer
 call 403 PUT "/api/v1/admin/catalogs/$catalog_id" "$work/update-catalog.json" bearer
 call 403 DELETE "/api/v1/admin/catalogs/$catalog_id" "$work/delete-catalog.json" bearer
 call 403 GET /api/v1/admin/jobs '' bearer
+call 403 GET /api/v1/admin/access/users '' bearer
+call 403 GET /api/v1/admin/system/configuration '' bearer
 token="$admin_token"
 printf '%s\n' '{"permissions":["CATALOG_WRITE"],"version":1}' > "$work/legacy-write.json"
 call 200 PUT /api/v1/admin/access/roles/CUSTOMER/permissions "$work/legacy-write.json" bearer
@@ -321,6 +343,8 @@ done
 [[ "$(sql "SELECT attempts FROM system_jobs WHERE dedup_key='ci-expired'")" == 2 ]]
 [[ "$(sql "SELECT attempts FROM system_jobs WHERE dedup_key='ci-future'")" == 0 ]]
 [[ "$(sql "SELECT count(*) FROM system_jobs WHERE dedup_key='ci-rollback'")" == 0 ]]
+call 200 GET '/api/v1/admin/jobs?status=DEAD&size=100' '' bearer
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["totalElements"]>=1 and all(j["status"]=="DEAD" for j in d["content"]); assert all("payload" not in j and "dedupKey" not in j for j in d["content"])' "$result"
 call 200 GET /api/v1/admin/jobs/00000000-0000-0000-0000-000000000021 '' bearer
 job_version=$(field data.version)
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert "payload" not in d; assert d["lastErrorCode"]=="UNKNOWN_HANDLER"' "$result"

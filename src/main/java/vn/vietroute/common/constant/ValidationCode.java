@@ -15,7 +15,8 @@ public enum ValidationCode {
     LENGTH("VAL007", "validation.length"),
     PAGE("VAL008", "validation.page"),
     SIZE("VAL009", "validation.size"),
-    SORT_ORDER("VAL010", "validation.sortOrder");
+    SORT_ORDER("VAL010", "validation.sortOrder"),
+    USERNAME_SEARCH("VAL011", "validation.usernameSearch");
 
     private final String code;
 

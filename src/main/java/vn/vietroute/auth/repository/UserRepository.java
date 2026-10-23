@@ -6,11 +6,19 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashSet;
+import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Repository;
+import vn.vietroute.auth.dto.request.AccessUserSearchRequest;
+import vn.vietroute.auth.dto.response.AccessUserResponse;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
+import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.jdbc.BaseRepository;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 
@@ -25,6 +33,60 @@ public class UserRepository extends BaseRepository {
     /** Đọc độc lập cho filter/me; BaseRepository tự đóng connection sau khi map user và role. */
     public UserAccount findById(Long id) {
         return read(connection -> find(connection, "id", id, false));
+    }
+
+    /** Chọn tường minh cột công khai, lấy role trong cùng query để không N+1 hoặc đọc password hash. */
+    public PageResponse<AccessUserResponse> pageForAccess(AccessUserSearchRequest page) {
+        return read(connection -> {
+            String prefix = page.getUsername().toLowerCase(Locale.ROOT) + "%";
+            long total;
+            try (
+                PreparedStatement count = connection.prepareStatement(
+                    "SELECT count(*) FROM auth_users WHERE lower(username) LIKE ?"
+                )
+            ) {
+                count.setString(1, prefix);
+                try (ResultSet row = count.executeQuery()) {
+                    row.next();
+                    total = row.getLong(1);
+                }
+            }
+            var content = new ArrayList<AccessUserResponse>();
+            try (
+                PreparedStatement query = connection.prepareStatement(
+                    "SELECT u.id,u.username,u.display_name,u.active,u.version,u.created_at,u.updated_at," +
+                        "COALESCE((SELECT string_agg(r.role_code,',' ORDER BY r.role_code) FROM auth_user_roles r WHERE r.user_id=u.id),'') AS roles " +
+                        "FROM auth_users u WHERE lower(u.username) LIKE ? ORDER BY u.username,u.id LIMIT ? OFFSET ?"
+                )
+            ) {
+                query.setString(1, prefix);
+                query.setInt(2, page.getSize());
+                query.setLong(3, page.offset());
+                try (ResultSet rows = query.executeQuery()) {
+                    while (rows.next()) {
+                        String roleCodes = rows.getString("roles");
+                        Set<Role> roles = roleCodes.isEmpty()
+                            ? Set.of()
+                            : Arrays.stream(roleCodes.split(","))
+                                  .map(Role::valueOf)
+                                  .collect(Collectors.toUnmodifiableSet());
+                        content.add(
+                            new AccessUserResponse(
+                                rows.getLong("id"),
+                                rows.getString("username"),
+                                rows.getString("display_name"),
+                                rows.getBoolean("active"),
+                                roles,
+                                rows.getLong("version"),
+                                instant(rows, "created_at"),
+                                instant(rows, "updated_at")
+                            )
+                        );
+                    }
+                }
+            }
+            return PageResponse.of(content, page, total);
+        });
     }
 
     /** Login truyền lock=true để FOR UPDATE bảo vệ bộ đếm sai khi nhiều request cùng tài khoản. */
