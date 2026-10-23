@@ -5,12 +5,28 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.jdbc.LegacyMigrationSql;
 
 /** Kiểm compatibility adapter chỉ ánh xạ schema của V002/V003, không đổi byte/checksum nguồn hoặc migration mới. */
 class SchemaMigrationTest {
+
+    /** History lưu nguyên tên file trong VARCHAR(40); phát hiện tên quá dài trước khi startup chạm DB. */
+    @Test
+    void migrationNamesFitTheExistingHistoryColumn() throws Exception {
+        Path directory = Path.of(getClass().getResource("/db/migration").toURI());
+        try (var files = Files.list(directory)) {
+            for (Path file : files.toList()) {
+                String name = file.getFileName().toString();
+                if (name.endsWith(".sql")) {
+                    assertTrue(name.length() <= 40, "Tên migration vượt giới hạn history: " + name);
+                }
+            }
+        }
+    }
 
     @Test
     void legacyDdlTargetsConfiguredSchemaIncludingSqlKeywordNames() throws Exception {

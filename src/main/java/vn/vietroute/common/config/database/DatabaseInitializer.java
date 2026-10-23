@@ -78,7 +78,7 @@ public class DatabaseInitializer implements InitializingBean {
         migrate(connection, "V008__media_metadata.sql");
         migrate(connection, "V009__activity_presence.sql");
         migrate(connection, "V010__access_resource_inventory.sql");
-        migrate(connection, "V011__account_lifecycle_and_journal_actor.sql");
+        migrate(connection, "V011__account_and_request_actor.sql");
         JdbcSchemaValidator.verify(
             connection,
             UserAccount.class,
