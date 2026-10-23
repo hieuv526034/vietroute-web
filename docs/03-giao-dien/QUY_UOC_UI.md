@@ -74,3 +74,12 @@ Các đợt UI đã có tại [PR #29](https://github.com/hieuv526034/vietroute-
 Browser dùng HTML Thymeleaf thật + API fixture riêng: tab bàn phím, modal/focus, paging/filter, CSRF/version, 409/401 giữ draft, request chậm chặn Escape/đóng, reset mật khẩu khi hủy, dấu bắt buộc trước submit và không nhân đôi sau mở lại. Mobile 390px không tràn ngang toàn trang; bảng quyền cuộn trong dialog. Không thử đổi mật khẩu/gán quyền, gửi Cloudinary hoặc ghi Neon thật để kiểm UI; fixture không thay kiểm SQL/provider, không chứng nhận mọi thiết bị/trình đọc màn hình.
 
 Ảnh dùng dữ liệu kiểm thử, mở khi cần: [menu và toolbar](../images/catalog-toolbar-menu.png), [modal bắt buộc](../images/modal-required.png), [bảng/phân trang](../images/table-pagination.png), [validation](../images/modal-validation.png).
+
+
+## Điều hướng và trạng thái request — FOUNDATION05
+
+Header tách Hệ thống (danh mục/ảnh/journal/giám sát/job/cấu hình), Phân quyền (role/quyền/user/policy/danh bạ), API (Swagger/OpenAPI) và menu tên/avatar cá nhân. Các mục theo quyền DB/policy, không chỉ theo role mặc định; quản trị phân quyền/journal vẫn cần ADMIN. Khách có đăng nhập/đăng ký; Home thêm quên mật khẩu/xác minh email. Người đã xác thực vào login/account-access được chuyển về workspace/account; header không hiện nút login. Logout dùng POST+CSRF rồi về Home. Menu hỗ trợ một menu mở, Escape/click ngoài/focus; không gộp logout với link public.
+
+Hồ sơ có modal sửa tên/ảnh, đổi mật khẩu và gắn email riêng. Ảnh chọn JPEG/PNG gửi qua media dùng chung, không giữ URL/token ở storage. Lỗi giữ bản nháp/ảnh đã upload; 409 cần làm mới dữ liệu có chủ đích. Mọi ảnh là public, không dùng làm giấy tờ xác minh.
+
+request-state.js gắn interceptor Axios để hiển thị thanh tải trang, spinner nút và overlay bảng, đếm đúng nhiều request đồng thời và dọn trên cả success/error. Trạng thái disabled gốc được giữ; các workspace vẫn khóa controls/tabs/modal trong mutation. Single-flight theo method/path chỉ hợp nhất mutation đang chạy, không cache payload hay tự gửi lại sau lỗi; đây không phải idempotency server. Registry/search/refresh chặn bấm lặp; UI không chứng minh server rollback khi mất mạng. Input/select được thu gọn, cột thao tác giữ 96px/icon và toolbar bên phải, reduced-motion tắt animation. Kiểm bằng response chậm/lỗi có kiểm soát; không gửi dữ liệu UI fixture tới provider/Neon.

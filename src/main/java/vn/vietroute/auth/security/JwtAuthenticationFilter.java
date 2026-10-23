@@ -90,7 +90,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     user.getId(),
                     user.getUsername(),
                     user.getRoles(),
-                    user.getTokenVersion()
+                    user.getTokenVersion(),
+                    user.getDisplayName(),
+                    user.getAvatarUrl()
                 );
                 // Quyền chức năng lấy từ mapping DB mỗi request; thay quyền role có hiệu lực ngay, không chờ JWT hết hạn.
                 var authorities = Stream.concat(

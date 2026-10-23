@@ -8,7 +8,10 @@
         if (!document.hidden && !sending) {
             sending = true;
             try {
-                const result = await window.VietRoute.mutate('/api/v1/activity/heartbeat', {});
+                // Nhịp nền vẫn có CSRF/quota nhưng không làm mờ bảng hoặc nháy loading khi người dùng đang đọc.
+                const result = await window.VietRoute.mutate('/api/v1/activity/heartbeat', {}, 'post', {
+                    uiSilent: true,
+                });
                 if (result.data.data === false) return;
             } catch (error) {
                 /* Quan sát lỗi không che thao tác chính hoặc tự replay request. */

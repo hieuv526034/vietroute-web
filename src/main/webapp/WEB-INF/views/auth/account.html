@@ -52,6 +52,12 @@
                 ></div>
                 <div class="toolbar-actions">
                     <button
+                        id="profile-open"
+                        class="button button-outline mt-3"
+                        type="button"
+                        th:text="#{ui.profile.edit}"
+                    ></button>
+                    <button
                         id="email-open"
                         class="button button-outline mt-3"
                         type="button"
@@ -65,6 +71,92 @@
                     ></button>
                 </div>
             </section>
+            <dialog
+                id="profile-dialog"
+                class="workspace-dialog"
+                aria-labelledby="profile-dialog-title"
+            >
+                <fieldset class="dialog-controls">
+                    <div class="dialog-heading">
+                        <h2
+                            id="profile-dialog-title"
+                            th:text="#{ui.profile.edit}"
+                        ></h2>
+                        <button
+                            class="dialog-close"
+                            type="button"
+                            data-dialog-close
+                            th:attr="aria-label=#{ui.ops.close}"
+                        >
+                            ×
+                        </button>
+                    </div>
+                    <p
+                        id="profile-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></p>
+                    <form
+                        id="profile-form"
+                        novalidate
+                    >
+                        <label
+                            for="profile-display-name"
+                            th:text="#{ui.ops.displayName}"
+                        ></label>
+                        <input
+                            id="profile-display-name"
+                            name="displayName"
+                            class="form-control"
+                            required
+                            maxlength="120"
+                            autocomplete="name"
+                        />
+                        <label
+                            for="profile-file"
+                            class="mt-3"
+                            th:text="#{ui.profile.avatar}"
+                        ></label>
+                        <input
+                            id="profile-file"
+                            name="file"
+                            type="file"
+                            class="form-control"
+                            accept="image/jpeg,image/png"
+                        />
+                        <p
+                            class="muted"
+                            th:text="#{ui.profile.avatarNote}"
+                        ></p>
+                        <img
+                            id="profile-preview"
+                            class="avatar avatar-preview"
+                            alt=""
+                            hidden
+                        />
+                        <div class="dialog-actions">
+                            <button
+                                id="profile-remove-avatar"
+                                class="button button-outline"
+                                type="button"
+                                th:text="#{ui.profile.removeAvatar}"
+                            ></button>
+                            <button
+                                class="button button-outline"
+                                type="button"
+                                data-dialog-close
+                                th:text="#{ui.ops.close}"
+                            ></button>
+                            <button
+                                class="button"
+                                type="submit"
+                                th:text="#{ui.catalog.save}"
+                            ></button>
+                        </div>
+                    </form>
+                </fieldset>
+            </dialog>
             <dialog
                 id="password-dialog"
                 class="workspace-dialog"
@@ -230,5 +322,6 @@
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
         <script th:src="@{/assets/js/account-email.js}"></script>
+        <script th:src="@{/assets/js/profile.js}"></script>
     </body>
 </html>

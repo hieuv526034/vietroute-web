@@ -29,6 +29,12 @@ public class UserResponse extends BaseResponse {
     @Schema(description = "Email của tài khoản hiện tại; null nếu chưa gắn")
     private String email;
 
+    @Schema(description = "ID ảnh đại diện đang gắn, null nếu chưa có")
+    private Long avatarMediaId;
+
+    @Schema(description = "URL thumbnail công khai từ ảnh READY, null nếu chưa có")
+    private String avatarUrl;
+
     @Schema(description = "Thời điểm xác minh email; null khi chưa xác minh")
     private Instant emailVerifiedAt;
 
@@ -55,6 +61,8 @@ public class UserResponse extends BaseResponse {
             .username(user.getUsername())
             .displayName(user.getDisplayName())
             .email(user.getEmail())
+            .avatarMediaId(user.getAvatarMediaId())
+            .avatarUrl(user.getAvatarUrl())
             .emailVerifiedAt(user.getEmailVerifiedAt())
             .active(user.isActive())
             .mustChangePassword(user.isMustChangePassword())

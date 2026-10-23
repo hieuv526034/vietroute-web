@@ -122,11 +122,11 @@ public class SecurityConfig {
                         PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, Routes.CATALOG_MATCHER)
                     )
                     .permitAll()
-                    // API quản trị kiểm quyền hành động ở service; giao diện tổng quản trị vẫn dành cho ADMIN.
+                    // Trang danh mục và API kiểm quyền hành động tại method/service; custom role từ DB cũng dùng được.
                     .requestMatchers(matcher(Routes.ADMIN_API_MATCHER))
                     .authenticated()
                     .requestMatchers(matcher(Routes.ADMIN_MATCHER))
-                    .hasRole("ADMIN")
+                    .authenticated()
                     .anyRequest()
                     .authenticated()
             )

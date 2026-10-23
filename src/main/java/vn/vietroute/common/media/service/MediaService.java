@@ -64,6 +64,16 @@ public class MediaService {
     /** Reserve + job dọn cùng transaction trước mạng; chỉ công bố READY sau khi lưu metadata thành công. */
     @PreAuthorize("hasAuthority('MEDIA_CREATE')")
     public MediaResponse upload(MultipartFile file, UserPrincipal actor) {
+        return uploadOwned(file, actor);
+    }
+
+    /** Tự phục vụ avatar chỉ tạo ảnh thuộc chính mình; không mở quyền đọc/sửa/xóa thư viện của người khác. */
+    @PreAuthorize("isAuthenticated()")
+    public MediaResponse uploadAvatar(MultipartFile file, UserPrincipal actor) {
+        return uploadOwned(file, actor);
+    }
+
+    private MediaResponse uploadOwned(MultipartFile file, UserPrincipal actor) {
         if (!settings.isEnabled()) {
             throw new BusinessException(ErrorCode.MEDIA_DISABLED);
         }
@@ -92,11 +102,10 @@ public class MediaService {
     @PreAuthorize("hasAuthority('MEDIA_DELETE')")
     public MediaResponse delete(long id, long version, UserPrincipal actor) {
         owned(id, actor);
-        if (!settings.isEnabled()) {
-            throw new BusinessException(ErrorCode.MEDIA_DISABLED);
-        }
         return transactions.execute(connection -> {
             MediaAsset image = images.deleting(connection, id, version, actor.id());
+            images.requireUnreferenced(connection, id);
+            if (!settings.isEnabled()) throw new BusinessException(ErrorCode.MEDIA_DISABLED);
             jobs.enqueue(
                 connection,
                 "MEDIA_CLEANUP",

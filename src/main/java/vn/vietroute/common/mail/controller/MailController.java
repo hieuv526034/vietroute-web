@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.security.UserPrincipal;
+import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
@@ -29,6 +30,7 @@ import vn.vietroute.common.web.response.ApiResult;
 @RestController
 @RequestMapping(Routes.MAIL)
 @Tag(name = "Email", description = "Gửi mail qua outbox; không phải endpoint gửi thư công khai")
+@AccessFunction(group = "SYSTEM")
 public class MailController extends BaseController {
 
     private final MailService mail;

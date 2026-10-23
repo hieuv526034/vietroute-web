@@ -48,7 +48,6 @@ public final class WebRoutePolicy {
             path.equals(Routes.AUTH_LOGIN) ||
             path.equals(Routes.AUTH_CSRF) ||
             publicAccountFlow(path) ||
-            path.startsWith(Routes.DOCS) ||
             path.equals(Routes.OPENAPI)
         );
     }
@@ -70,6 +69,7 @@ public final class WebRoutePolicy {
         return (
             path.equals(Routes.HOME) ||
             path.equals(Routes.LOGIN) ||
+            path.equals(Routes.DOCS) ||
             path.equals(Routes.AUTH_LIFECYCLE_PAGE) ||
             publicAccountFlow(path) ||
             path.equals(Routes.AUTH_LOGOUT) ||

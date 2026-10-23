@@ -22,6 +22,7 @@ import vn.vietroute.auth.dto.response.RolePermissionsResponse;
 import vn.vietroute.auth.dto.response.UserResponse;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.UserPrincipal;
+import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.auth.service.AccessService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageResponse;
@@ -35,6 +36,7 @@ import vn.vietroute.common.web.response.ApiResult;
 @RestController
 @RequestMapping(Routes.ACCESS)
 @Tag(name = "Phân quyền", description = "Quản lý role và quyền chức năng, không bỏ qua phạm vi dữ liệu nghiệp vụ")
+@AccessFunction(group = "ACCESS")
 public class AccessController extends BaseController {
 
     private final AccessService access;
@@ -73,6 +75,7 @@ public class AccessController extends BaseController {
         summary = "Thay quyền chức năng của role",
         description = "Yêu cầu ACCESS_ASSIGN (hoặc ACCESS_WRITE tương thích); không sửa ADMIN; người được ủy quyền không gán quyền vượt tập quyền của mình; version cũ trả 409"
     )
+    @AccessFunction(group = "ACCESS", permissions = { "ACCESS_ASSIGN", "ACCESS_WRITE" })
     public ApiResult<RolePermissionsResponse> replace(
         @PathVariable Role role,
         @Valid @RequestBody RolePermissionsRequest body,
@@ -87,6 +90,7 @@ public class AccessController extends BaseController {
         summary = "Gán role cho tài khoản",
         description = "Yêu cầu ACCESS_ASSIGN (hoặc ACCESS_WRITE tương thích) và role ADMIN; thu hồi token cũ, không tự sửa role hoặc xóa admin cuối"
     )
+    @AccessFunction(group = "ACCESS", permissions = { "ACCESS_ASSIGN", "ACCESS_WRITE" })
     public ApiResult<UserResponse> assign(
         @PathVariable long id,
         @Valid @RequestBody UserRolesRequest body,

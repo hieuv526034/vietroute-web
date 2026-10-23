@@ -1,5 +1,9 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
+## FOUNDATION05 — đang thực hiện, chưa có trên main
+
+[Issue #43](https://github.com/hieuv526034/vietroute-web/issues/43), hieuv526034, nhánh `hieuv526034/access-annotations-profile-ui`. Annotation AccessFunction mô tả nhóm/quyền cùng mapping Spring; metadata vẫn không cấp quyền hoặc nới guard. ADMIN bất biến, role khác sửa/tắt và xóa mềm có chặn user/policy, dọn mapping trong transaction. V012 thêm tombstone, liên kết avatar và metadata. Menu Hệ thống/Phân quyền/API/tài khoản tách riêng; hồ sơ tự phục vụ dùng media chung, loading/single-flight và form gọn. Local đạt 112 test Java/18 Node, formatter/rules/docs, local compile và WAR production sạch test/dev/env. Docker/SQL tại d6955fb và 2712513 đạt; đầu nhánh đang chốt CSS dropdown 390px trước khi kiểm lại. UI fixture vi/en kiểm menu, ADMIN không sửa/xóa, metadata nhóm/quyền, loading nút/bảng, 409 giữ bản nháp và cập nhật tên header. Khung iframe 390px đã phát hiện/sửa dropdown bị cắt; chưa thay nghiệm thu thiết bị thật. Chưa áp dụng V012 lên Neon hoặc gửi/upload provider thật. Giữ tác giả thật; sau khi tất cả kiểm/merge/bàn giao hoàn tất mới đặt lịch tắt máy 5 phút theo yêu cầu chủ dự án ngày 24/10.
+
 ## FOUNDATION04 — Đã có trên main
 
 [PR #41](https://github.com/hieuv526034/vietroute-web/pull/41), merge `0237ad3`, head đã kiểm `b435d65`, [Issue #40](https://github.com/hieuv526034/vietroute-web/issues/40), hieuv526034. Bổ sung chẩn đoán nguồn DB/local JVM property/BOM; đăng ký CUSTOMER chờ email, resend/kích hoạt, bind email cho user cũ, quên/reset, lịch sử hai mật khẩu cũ; journal lưu/filter/hiển thị user đã xác minh. Giữ 5 sai/khóa 15 phút theo chủ dự án, role là nhóm quyền, không SMS/provider trả phí. V011 mới, giữ nguyên V001–V010.

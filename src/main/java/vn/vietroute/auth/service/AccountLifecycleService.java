@@ -22,6 +22,7 @@ import vn.vietroute.auth.dto.request.RegisterRequest;
 import vn.vietroute.auth.dto.request.ResetPasswordRequest;
 import vn.vietroute.auth.dto.response.AccountOptionsResponse;
 import vn.vietroute.auth.entity.UserAccount;
+import vn.vietroute.auth.repository.AccessRepository;
 import vn.vietroute.auth.repository.AccountRepository;
 import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.security.AccountSecrets;
@@ -49,6 +50,8 @@ public class AccountLifecycleService {
     private final JobSettings worker;
 
     private final AccountRepository accounts;
+
+    private final AccessRepository access;
 
     private final UserRepository users;
 
@@ -78,6 +81,9 @@ public class AccountLifecycleService {
         String email = email(body.getEmail());
         String hash = passwords.encode(body.getPassword());
         transactions.execute(connection -> {
+            // Cùng khóa với gán/xóa role: kiểm tham chiếu và tạo CUSTOMER không được chạy lọt nhau giữa các node.
+            // Thứ tự access → registration → user; BCrypt đã chạy ngoài transaction để không giữ khóa lâu.
+            access.lockRoleAssignments(connection);
             accounts.lockRegistration(connection);
             Long id = accounts.register(
                 connection,

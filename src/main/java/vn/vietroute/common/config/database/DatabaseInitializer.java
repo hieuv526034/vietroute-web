@@ -79,6 +79,7 @@ public class DatabaseInitializer implements InitializingBean {
         migrate(connection, "V009__activity_presence.sql");
         migrate(connection, "V010__access_resource_inventory.sql");
         migrate(connection, "V011__account_and_request_actor.sql");
+        migrate(connection, "V012__roles_profile_resources.sql");
         JdbcSchemaValidator.verify(
             connection,
             UserAccount.class,
@@ -122,7 +123,7 @@ public class DatabaseInitializer implements InitializingBean {
         for (Role role : Role.values()) {
             try (
                 PreparedStatement query = connection.prepareStatement(
-                    "SELECT permissions_initialized FROM auth_roles WHERE code=?"
+                    "SELECT permissions_initialized OR deleted FROM auth_roles WHERE code=?"
                 )
             ) {
                 query.setString(1, role.name());

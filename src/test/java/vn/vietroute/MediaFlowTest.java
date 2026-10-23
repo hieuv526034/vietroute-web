@@ -51,6 +51,8 @@ class MediaFlowTest {
 
     private boolean metadataFails;
 
+    private boolean referenced;
+
     private final UserPrincipal actor = new UserPrincipal(2L, "operator", Set.of(Role.OPERATOR), 0);
 
     private MediaService service() {
@@ -102,6 +104,16 @@ class MediaFlowTest {
                 }
                 image.setStatus("READY");
                 return image;
+            }
+
+            @Override
+            public MediaAsset deleting(Connection connection, long id, long version, long user) {
+                return image;
+            }
+
+            @Override
+            public void requireUnreferenced(Connection connection, long id) {
+                if (referenced) throw new BusinessException(ErrorCode.RESOURCE_IN_USE);
             }
 
             @Override
@@ -168,6 +180,18 @@ class MediaFlowTest {
     void persistsRecoveryBeforeProviderAndPublishesOnlyAfterMetadataCommit() throws Exception {
         assertEquals("READY", service().upload(file(), actor).getStatus());
         assertEquals(List.of("reserve", "cleanup", "commit", "upload", "metadata", "commit"), events);
+    }
+
+    @Test
+    void avatarReusesDurableUploadAndReferencedImageCannotBeDeleted() throws Exception {
+        var service = service();
+        assertEquals("READY", service.uploadAvatar(file(), actor).getStatus());
+        referenced = true;
+        assertEquals(
+            ErrorCode.RESOURCE_IN_USE,
+            assertThrows(BusinessException.class, () -> service.delete(7, 0, actor)).getErrorCode()
+        );
+        assertEquals("rollback", events.get(events.size() - 1));
     }
 
     @Test

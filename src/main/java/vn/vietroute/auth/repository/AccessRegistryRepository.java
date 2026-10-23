@@ -40,6 +40,7 @@ public class AccessRegistryRepository extends BaseRepository {
             PreparedStatement query = connection.prepareStatement(
                 "SELECT code,name_vi,name_en,active,registry_version,updated_at,updated_by FROM " +
                     table +
+                    ("roles".equals(kind) ? " WHERE NOT deleted" : "") +
                     " ORDER BY code LIMIT 513"
             );
             ResultSet rows = query.executeQuery()
@@ -81,7 +82,8 @@ public class AccessRegistryRepository extends BaseRepository {
               ") < 512 ON CONFLICT(code) DO NOTHING"
             : "UPDATE " +
               table +
-              " SET name_vi=?,name_en=?,active=?,registry_version=registry_version+1,updated_at=CURRENT_TIMESTAMP,updated_by=? WHERE code=? AND registry_version=?";
+              " SET name_vi=?,name_en=?,active=?,registry_version=registry_version+1,updated_at=CURRENT_TIMESTAMP,updated_by=? WHERE code=? AND registry_version=?" +
+              ("roles".equals(kind) ? " AND NOT deleted" : "");
         try (PreparedStatement query = connection.prepareStatement(sql)) {
             if (create) {
                 query.setString(1, code);
@@ -113,6 +115,36 @@ public class AccessRegistryRepository extends BaseRepository {
                 grant.setLong(3, actor);
                 grant.executeUpdate();
             }
+        }
+    }
+
+    /** Chặn tham chiếu user/policy; chỉ dọn mapping của role sau khi kiểm version trong cùng transaction. */
+    public void deleteRole(Connection connection, String code, long version, long actor) throws SQLException {
+        try (
+            var query = connection.prepareStatement(
+                "SELECT EXISTS(SELECT 1 FROM auth_user_roles WHERE role_code=?) OR EXISTS(SELECT 1 FROM auth_access_policies WHERE ?=ANY(string_to_array(allowed_roles,',')))"
+            )
+        ) {
+            query.setString(1, code);
+            query.setString(2, code);
+            try (var row = query.executeQuery()) {
+                row.next();
+                if (row.getBoolean(1)) throw new BusinessException(ErrorCode.RESOURCE_IN_USE);
+            }
+        }
+        try (
+            var query = connection.prepareStatement(
+                "UPDATE auth_roles SET deleted=true,active=false,registry_version=registry_version+1,updated_at=CURRENT_TIMESTAMP,updated_by=? WHERE code=? AND code<>'ADMIN' AND NOT deleted AND registry_version=?"
+            )
+        ) {
+            query.setLong(1, actor);
+            query.setString(2, code);
+            query.setLong(3, version);
+            if (query.executeUpdate() != 1) throw new BusinessException(ErrorCode.STALE_VERSION);
+        }
+        try (var query = connection.prepareStatement("DELETE FROM auth_role_permissions WHERE role_code=?")) {
+            query.setString(1, code);
+            query.executeUpdate();
         }
     }
 
@@ -194,7 +226,7 @@ public class AccessRegistryRepository extends BaseRepository {
 
     public static boolean builtIn(String kind, String code) {
         return "roles".equals(kind)
-            ? Arrays.stream(Role.values()).anyMatch(value -> value.name().equals(code))
+            ? Role.ADMIN.name().equals(code)
             : Arrays.stream(Permission.values()).anyMatch(value -> value.name().equals(code));
     }
 

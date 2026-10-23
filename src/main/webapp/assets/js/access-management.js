@@ -26,9 +26,33 @@
     const canCreate = () => me?.permissions?.includes('ACCESS_CREATE');
     // Danh bạ phân trang tại DB; chỉ đọc metadata server, không render HTML từ chuỗi controller/Operation.
     const resourcePager = window.VietRouteTable.pager('resources', {
-        onChange: (query) => renderResources(query).catch(app.failure),
+        onChange: (query) => read(() => renderResources(query)),
         busy: () => busy,
     });
+    const read = async (action) => {
+        if (busy) return;
+        busy = true;
+        const scope = document.querySelector('[data-operations]');
+        const controls = ['registry-kind', 'registry-refresh', 'policies-refresh', 'resources-refresh']
+            .map(node)
+            .filter(Boolean);
+        const disabled = controls.map((control) => control.disabled);
+        controls.forEach((control) => {
+            control.disabled = true;
+        });
+        scope.setAttribute('aria-busy', 'true');
+        try {
+            await action();
+        } catch (error) {
+            app.failure(error);
+        } finally {
+            busy = false;
+            controls.forEach((control, i) => {
+                control.disabled = disabled[i];
+            });
+            scope.setAttribute('aria-busy', 'false');
+        }
+    };
     const renderResources = async (query = resourcePager.query) => {
         const page = await window.VietRouteTable.readPage(
             (params) => get('/resources?' + new URLSearchParams(params)),
@@ -43,7 +67,7 @@
             for (const value of [
                 item.kind === 'MENU' ? labels.menu : labels.api,
                 item.target,
-                item.description,
+                `${item.group || 'GENERAL'} · ${item.description}${item.declaredPermissions?.length ? '\n' + item.declaredPermissions.join(' | ') : ''}`,
                 access,
                 item.lastSeenAt
                     ? new Date(item.lastSeenAt).toLocaleString(
@@ -75,8 +99,36 @@
             const actions = text('td', '');
             actions.className = 'table-actions';
             const edit = editButton(() => openRegistry(value));
-            edit.disabled = !canEdit();
-            actions.append(edit);
+            edit.disabled = !canEdit() || (node('registry-kind').value === 'roles' && value.builtIn);
+            const group = text('div', '');
+            group.className = 'row-actions';
+            group.append(edit);
+            if (node('registry-kind').value === 'roles' && !value.builtIn) {
+                const remove = window.VietRouteTable.actionButton(
+                    labels.deleteRole,
+                    'delete',
+                    () => {
+                        if (busy || !window.confirm(labels.confirmRole)) return;
+                        void read(async () => {
+                            await app.mutate(
+                                base +
+                                    '/registry/roles/' +
+                                    encodeURIComponent(value.code) +
+                                    '?version=' +
+                                    value.version,
+                                null,
+                                'delete',
+                            );
+                            await renderRegistry();
+                            document.dispatchEvent(new Event('access-registry-changed'));
+                        });
+                    },
+                    true,
+                );
+                remove.disabled = !me?.permissions?.includes('ACCESS_DELETE');
+                group.append(remove);
+            }
+            actions.append(group);
             row.append(actions);
             body.append(row);
         }
@@ -225,10 +277,10 @@
     });
     node('registry-create').addEventListener('click', () => openRegistry());
     node('policies-create').addEventListener('click', () => openPolicy().catch(app.failure));
-    node('registry-kind').addEventListener('change', () => renderRegistry().catch(app.failure));
-    node('registry-refresh').addEventListener('click', () => renderRegistry().catch(app.failure));
-    node('policies-refresh').addEventListener('click', () => renderPolicies().catch(app.failure));
-    node('resources-refresh').addEventListener('click', () => renderResources().catch(app.failure));
+    node('registry-kind').addEventListener('change', () => read(renderRegistry));
+    node('registry-refresh').addEventListener('click', () => read(renderRegistry));
+    node('policies-refresh').addEventListener('click', () => read(renderPolicies));
+    node('resources-refresh').addEventListener('click', () => read(renderResources));
     app.api
         .get('/api/v1/auth/me')
         .then(async (response) => {
@@ -236,7 +288,7 @@
             node('registry-create').disabled = !canCreate();
             node('policies-create').disabled = !canCreate();
             node('policy-delete').disabled = !me.permissions.includes('ACCESS_DELETE');
-            await Promise.all([renderRegistry(), renderPolicies(), renderResources()]);
+            await read(() => Promise.all([renderRegistry(), renderPolicies(), renderResources()]));
         })
         .catch(app.failure);
 })();

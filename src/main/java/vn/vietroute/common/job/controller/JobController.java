@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.security.UserPrincipal;
+import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
@@ -31,6 +32,7 @@ import vn.vietroute.common.web.response.ApiResult;
 @RestController
 @RequestMapping(Routes.JOBS)
 @Tag(name = "Worker", description = "Theo dõi và retry công việc nền có quyền chức năng")
+@AccessFunction(group = "SYSTEM")
 public class JobController extends BaseController {
 
     private final JobService jobs;

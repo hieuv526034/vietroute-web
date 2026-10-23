@@ -33,6 +33,10 @@
             name="app-login-action"
             th:content="#{ui.loginAgain}"
         />
+        <meta
+            name="app-loading"
+            th:content="#{ui.loading}"
+        />
         <title th:text="${title} + ' · VietRoute'">VietRoute</title>
         <link
             rel="stylesheet"
@@ -44,6 +48,14 @@
         />
     </head>
     <body>
+        <svg
+            th:fragment="icon(iconName)"
+            class="ui-icon"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+        >
+            <use th:href="${basePath + '/assets/icons/ui.svg#' + iconName}"></use>
+        </svg>
         <header
             th:fragment="header"
             class="site-header"
@@ -67,84 +79,107 @@
                     <span class="brand-dot">.</span>
                 </a>
                 <div class="nav-links">
+                    <a
+                        th:href="@{/(lang=${currentLocale})}"
+                        th:text="#{ui.home}"
+                    ></a>
                     <details
                         class="operations-menu"
+                        th:if="${catalogAllowed or mediaAllowed or monitoringAllowed or configurationAllowed or jobsAllowed or journalAllowed}"
                         th:classappend="${operationsActive} ? 'is-current'"
-                        th:if="${monitoringAllowed or configurationAllowed or jobsAllowed or accessAllowed}"
                     >
-                        <summary th:text="#{ui.ops.menu}">Hệ thống</summary>
+                        <summary>
+                            <svg th:replace="~{fragments/layout :: icon('system')}"></svg>
+                            <span th:text="#{ui.ops.menu}"></span>
+                        </summary>
                         <div class="operations-menu-items">
+                            <a
+                                th:if="${catalogAllowed}"
+                                th:href="@{/admin(lang=${currentLocale})}"
+                                th:attr="aria-current=${navigation.admin} ? 'page' : null"
+                            >
+                                <svg th:replace="~{fragments/layout :: icon('catalog')}"></svg>
+                                <span th:text="#{ui.catalogs}"></span>
+                            </a>
+                            <a
+                                th:if="${mediaAllowed}"
+                                th:href="@{/media(lang=${currentLocale})}"
+                                th:attr="aria-current=${navigation.media} ? 'page' : null"
+                            >
+                                <svg th:replace="~{fragments/layout :: icon('image')}"></svg>
+                                <span th:text="#{ui.media}"></span>
+                            </a>
                             <a
                                 th:if="${journalAllowed}"
                                 th:href="@{/operations/api-journal(lang=${currentLocale})}"
                                 th:attr="aria-current=${navigation.journal} ? 'page' : null"
-                                th:text="#{ui.journal.title}"
-                            ></a>
+                            >
+                                <svg th:replace="~{fragments/layout :: icon('activity')}"></svg>
+                                <span th:text="#{ui.journal.title}"></span>
+                            </a>
                             <a
                                 th:if="${monitoringAllowed}"
-                                th:attr="aria-current=${navigation.monitoring} ? 'page' : null"
                                 th:href="@{/monitoring(lang=${currentLocale})}"
-                                th:text="#{ui.monitoring}"
+                                th:attr="aria-current=${navigation.monitoring} ? 'page' : null"
                             >
-                                Giám sát
+                                <svg th:replace="~{fragments/layout :: icon('activity')}"></svg>
+                                <span th:text="#{ui.monitoring}"></span>
                             </a>
                             <a
                                 th:if="${jobsAllowed}"
-                                th:attr="aria-current=${navigation.jobs} ? 'page' : null"
                                 th:href="@{/operations/jobs(lang=${currentLocale})}"
-                                th:text="#{ui.ops.jobs}"
+                                th:attr="aria-current=${navigation.jobs} ? 'page' : null"
                             >
-                                Công việc nền
-                            </a>
-                            <a
-                                th:if="${accessAllowed}"
-                                th:attr="aria-current=${navigation.access} ? 'page' : null"
-                                th:href="@{/operations/access(lang=${currentLocale})}"
-                                th:text="#{ui.ops.access}"
-                            >
-                                Phân quyền
+                                <svg th:replace="~{fragments/layout :: icon('clock')}"></svg>
+                                <span th:text="#{ui.ops.jobs}"></span>
                             </a>
                             <a
                                 th:if="${configurationAllowed}"
                                 th:href="@{/operations/configuration(lang=${currentLocale})}"
                                 th:attr="aria-current=${navigation.configuration} ? 'page' : null"
-                                th:text="#{ui.ops.configuration}"
                             >
-                                Cấu hình
+                                <svg th:replace="~{fragments/layout :: icon('settings')}"></svg>
+                                <span th:text="#{ui.ops.configuration}"></span>
                             </a>
                         </div>
                     </details>
-                    <a
-                        th:if="${mediaAllowed}"
-                        th:href="@{/media(lang=${currentLocale})}"
-                        th:attr="aria-current=${navigation.media} ? 'page' : null"
-                        th:text="#{ui.media}"
+                    <details
+                        class="operations-menu"
+                        th:if="${accessAllowed}"
+                        th:classappend="${navigation.access} ? 'is-current'"
                     >
-                        Ảnh
-                    </a>
-                    <a
-                        th:href="@{/docs(lang=${currentLocale})}"
-                        th:attr="aria-current=${navigation.docs} ? 'page' : null"
-                        th:text="#{ui.docs}"
+                        <summary>
+                            <svg th:replace="~{fragments/layout :: icon('shield')}"></svg>
+                            <span th:text="#{ui.ops.access}"></span>
+                        </summary>
+                        <div class="operations-menu-items">
+                            <a
+                                th:href="@{/operations/access(lang=${currentLocale})}"
+                                th:attr="aria-current=${navigation.access} ? 'page' : null"
+                            >
+                                <span th:text="#{ui.nav.accessWorkspace}"></span>
+                            </a>
+                        </div>
+                    </details>
+                    <details
+                        class="operations-menu"
+                        th:classappend="${navigation.docs} ? 'is-current'"
                     >
-                        API
-                    </a>
-                    <a
-                        th:if="${adminUser}"
-                        th:href="@{/admin(lang=${currentLocale})}"
-                        th:attr="aria-current=${navigation.admin} ? 'page' : null"
-                        th:text="#{ui.admin}"
-                    >
-                        Quản trị
-                    </a>
-                    <a
-                        th:if="${currentUser != null and accountAllowed}"
-                        th:href="@{/account(lang=${currentLocale})}"
-                        th:attr="aria-current=${navigation.account} ? 'page' : null"
-                        th:text="#{ui.account}"
-                    >
-                        Tài khoản
-                    </a>
+                        <summary>
+                            <svg th:replace="~{fragments/layout :: icon('code')}"></svg>
+                            <span th:text="#{ui.docs}"></span>
+                        </summary>
+                        <div class="operations-menu-items">
+                            <a
+                                th:href="@{/docs(lang=${currentLocale})}"
+                                th:text="#{ui.nav.swagger}"
+                            ></a>
+                            <a
+                                th:href="@{/v3/api-docs}"
+                                th:text="#{ui.nav.openapi}"
+                            ></a>
+                        </div>
+                    </details>
                     <span class="language-switch">
                         <a
                             th:href="${currentPath + '?lang=vi'}"
@@ -162,22 +197,63 @@
                         </a>
                     </span>
                     <a
+                        class="button button-small button-outline"
+                        th:if="${currentUser == null}"
+                        th:href="@{/account-access(lang=${currentLocale},view='register')}"
+                        th:text="#{ui.accountFlow.register}"
+                    ></a>
+                    <a
                         class="button button-small"
                         th:if="${currentUser == null}"
                         th:href="@{/login(lang=${currentLocale})}"
                         th:text="#{ui.login}"
-                    >
-                        Đăng nhập
-                    </a>
-                    <button
-                        class="button button-outline button-small"
+                    ></a>
+                    <details
+                        class="operations-menu account-menu"
                         th:if="${currentUser != null}"
-                        id="logout-button"
-                        type="button"
-                        th:text="#{ui.logout}"
                     >
-                        Đăng xuất
-                    </button>
+                        <summary>
+                            <span
+                                class="avatar avatar-small"
+                                data-avatar-shell
+                            >
+                                <img
+                                    th:if="${currentUser.avatarUrl != null}"
+                                    th:src="${currentUser.avatarUrl}"
+                                    alt=""
+                                    data-user-avatar
+                                />
+                                <span
+                                    th:if="${currentUser.avatarUrl == null}"
+                                    th:text="${#strings.toUpperCase(#strings.substring(currentUser.username,0,1))}"
+                                    data-avatar-fallback
+                                ></span>
+                            </span>
+                            <span
+                                class="header-user-name"
+                                data-user-name
+                                th:text="${currentUser.displayName}"
+                            ></span>
+                        </summary>
+                        <div class="operations-menu-items">
+                            <a
+                                th:if="${accountAllowed}"
+                                th:href="@{/account(lang=${currentLocale})}"
+                                th:attr="aria-current=${navigation.account} ? 'page' : null"
+                            >
+                                <svg th:replace="~{fragments/layout :: icon('user')}"></svg>
+                                <span th:text="#{ui.account}"></span>
+                            </a>
+                            <button
+                                class="menu-action"
+                                id="logout-button"
+                                type="button"
+                            >
+                                <svg th:replace="~{fragments/layout :: icon('logout')}"></svg>
+                                <span th:text="#{ui.logout}"></span>
+                            </button>
+                        </div>
+                    </details>
                 </div>
             </nav>
         </header>
@@ -198,6 +274,7 @@
             <script th:src="@{/assets/js/workspace.js}"></script>
             <script th:src="@{/assets/js/table.js}"></script>
             <script th:src="@{/assets/js/forms.js}"></script>
+            <script th:src="@{/assets/js/request-state.js}"></script>
             <script th:src="@{/assets/js/app.js}"></script>
             <script th:src="@{/assets/js/presence.js}"></script>
         </th:block>

@@ -54,6 +54,14 @@ class AccessResourceDiscoveryTest {
             child.refresh();
             var mapping = child.getBean(RequestMappingHandlerMapping.class);
             var resources = AccessTargets.discover(mapping);
+            var catalog = resources
+                .stream()
+                .filter(item -> item.target().equals("PUT /api/v1/admin/catalogs/{id}"))
+                .findFirst()
+                .orElseThrow();
+            assertEquals("CATALOG", catalog.group());
+            assertTrue(catalog.declaredPermissions().contains("CATALOG_UPDATE"));
+            assertTrue(catalog.declaredPermissions().contains("CATALOG_WRITE"));
             var media = resources
                 .stream()
                 .filter(item -> item.target().equals("GET " + Routes.MEDIA_PAGE))

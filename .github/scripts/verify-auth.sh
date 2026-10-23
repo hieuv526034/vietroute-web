@@ -46,7 +46,7 @@ for port in 18080 18081; do
 done
 sql() { docker exec -e PGOPTIONS=-csearch_path=vietroute vietroute-db-ci psql -U vietroute_ci -d vietroute_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
 [[ "$(sql "SELECT count(*) FROM auth_users WHERE username='admin'")" == 1 ]]
-[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 11 ]]
+[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 12 ]]
 [[ "$(sql 'SELECT count(*) FROM catalog_items')" == 5 ]]
 [[ "$(sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','catalog_items','vietroute_schema_history')")" == 0 ]]
 [[ "$(sql "SELECT count(*) FROM pg_indexes WHERE schemaname='vietroute' AND indexname IN ('idx_auth_users_created_by','idx_auth_users_updated_by','idx_auth_user_roles_role_code','idx_catalog_created_by','idx_catalog_updated_by')")" == 5 ]]
@@ -574,7 +574,7 @@ start_app vietroute-auth-ci2 18081 vietroute_legacy_ci 300 '' legacy_custom
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 http://127.0.0.1:18081/health >/dev/null
 legacy_sql() { docker exec -e PGOPTIONS=-csearch_path=legacy_custom vietroute-db-ci psql -U vietroute_ci -d vietroute_legacy_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(legacy_sql 'SELECT count(*) FROM vietroute_schema_history')" == 11 ]]
+[[ "$(legacy_sql 'SELECT count(*) FROM vietroute_schema_history')" == 12 ]]
 [[ "$(legacy_sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','catalog_items','vietroute_schema_history')")" == 0 ]]
 [[ "$(legacy_sql "SELECT display_name FROM auth_users WHERE id=1 AND username='admin'")" == 'Legacy admin retained' ]]
 [[ "$(legacy_sql "SELECT code FROM catalog_items WHERE id=1")" == LEGACY ]]
@@ -601,7 +601,7 @@ start_app vietroute-auth-ci 18080 vietroute_schema_ci 300 '' select
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 http://127.0.0.1:18080/health >/dev/null
 custom_sql() { docker exec -e 'PGOPTIONS=-csearch_path="select"' vietroute-db-ci psql -U vietroute_ci -d vietroute_schema_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(custom_sql 'SELECT count(*) FROM vietroute_schema_history')" == 11 ]]
+[[ "$(custom_sql 'SELECT count(*) FROM vietroute_schema_history')" == 12 ]]
 [[ "$(custom_sql 'SELECT count(*) FROM catalog_items')" == 5 ]]
 [[ "$(custom_sql "SELECT count(*) FROM pg_namespace WHERE nspname='vietroute'")" == 0 ]]
 for migration in src/main/resources/db/migration/V00*.sql; do
@@ -639,7 +639,7 @@ start_app vietroute-auth-ci 18080 vietroute_schema_ci 300 '' renamed_app
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 "$base/health" >/dev/null
 renamed_sql() { docker exec -e PGOPTIONS=-csearch_path=renamed_app vietroute-db-ci psql -U vietroute_ci -d vietroute_schema_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(renamed_sql 'SELECT count(*) FROM vietroute_schema_history')" == 11 ]]
+[[ "$(renamed_sql 'SELECT count(*) FROM vietroute_schema_history')" == 12 ]]
 [[ "$(renamed_sql 'SELECT count(*) FROM catalog_items')" == 6 ]]
 renamed_sql "SELECT password_hash FROM auth_users WHERE username='admin'" > "$work/renamed-hash"
 cmp --silent "$work/custom-hash" "$work/renamed-hash"
@@ -718,4 +718,5 @@ docker stop vietroute-auth-ci2 >/dev/null
 scrape
 if curl --fail --silent --max-time 3 -H "Authorization: Bearer $metrics_token" http://127.0.0.1:18081/internal/metrics >/dev/null 2>&1; then exit 1; fi
 source "$(dirname "${BASH_SOURCE[0]}")/verify-account.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/verify-foundation.sh"
 printf 'Function permissions, durable workers, per-node quota, metrics isolation and DB/node recovery checks passed.\n'

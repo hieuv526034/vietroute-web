@@ -42,7 +42,7 @@ public class AccountRepository extends BaseRepository {
             var query = connection.prepareStatement(
                 "INSERT INTO auth_users(username,display_name,email,password_hash,active,activation_pending,must_change_password,created_by,updated_by) " +
                     "SELECT ?,?,?,?,false,true,false,?,? WHERE (SELECT count(*) FROM auth_users WHERE email IS NOT NULL AND created_at>CURRENT_TIMESTAMP-INTERVAL '24 hours')<? " +
-                    "AND EXISTS (SELECT 1 FROM auth_roles WHERE code='CUSTOMER' AND active) ON CONFLICT DO NOTHING RETURNING id"
+                    "AND EXISTS (SELECT 1 FROM auth_roles WHERE code='CUSTOMER' AND active AND NOT deleted) ON CONFLICT DO NOTHING RETURNING id"
             )
         ) {
             query.setString(1, username);
