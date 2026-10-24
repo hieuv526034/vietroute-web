@@ -42,6 +42,6 @@ public @interface AccessFunction {
         ALL,
     }
 
-    /** Quyền guard HTTP và danh bạ; service giữ cùng điều kiện ở AccessRules để bảo vệ lời gọi ngoài HTTP. */
+    /** Alias/điều kiện HTTP cũ; service dùng AccessOperation để bảo vệ cả lời gọi ngoài HTTP. */
     String[] permissions() default {};
 }

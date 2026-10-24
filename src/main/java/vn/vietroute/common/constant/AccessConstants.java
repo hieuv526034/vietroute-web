@@ -7,6 +7,16 @@ package vn.vietroute.common.constant;
  */
 public final class AccessConstants {
 
+    /** Trần an toàn cho API danh sách tương thích; quota vận hành có thể cấu hình thấp hơn. */
+    public static final class Limits {
+
+        public static final int REGISTRY_MAX = 2048;
+
+        public static final int POLICY_MAX = 1024;
+
+        private Limits() {}
+    }
+
     private AccessConstants() {}
 
     /** Nhóm mô tả/tài nguyên hiện tại; chưa biểu diễn quan hệ cha-con của cây menu. */

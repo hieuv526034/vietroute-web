@@ -139,6 +139,11 @@
         node('accounts-total').textContent = String(page.totalElements);
         pager.update(page);
     };
+    const roleSearch = window.VietRouteRolePicker.bind(
+        node('account-role-search'),
+        node('account-role-options'),
+        node('account-role-count'),
+    );
     const selection = () =>
         Array.from(node('account-role-options').querySelectorAll('input:checked'), (item) => item.value);
     const updateSelection = () => {
@@ -149,6 +154,7 @@
         host.querySelectorAll('label').forEach((item) => item.remove());
         for (const role of roles.filter((item) => item.active || values.includes(item.role))) {
             const label = text('label', '', 'account-role-option');
+            label.dataset.roleChoice = role.role;
             const input = document.createElement('input');
             input.type = 'checkbox';
             input.name = 'roles';
@@ -168,6 +174,7 @@
             host.append(label);
             input.addEventListener('change', updateSelection);
         }
+        roleSearch.reset();
         updateSelection();
     };
     const openEditor = (user) => {

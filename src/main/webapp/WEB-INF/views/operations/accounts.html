@@ -278,6 +278,23 @@
                                     ></button>
                                 </div>
                             </div>
+                            <label
+                                for="account-role-search"
+                                class="form-label"
+                                th:text="#{ui.accessRoles.search}"
+                            ></label>
+                            <input
+                                id="account-role-search"
+                                type="search"
+                                class="form-control"
+                                maxlength="160"
+                                autocomplete="off"
+                            />
+                            <p
+                                id="account-role-count"
+                                role="status"
+                                class="muted"
+                            ></p>
                             <fieldset
                                 id="account-role-options"
                                 data-required-selection
@@ -451,6 +468,7 @@
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/role-picker.js}"></script>
         <script th:src="@{/assets/js/accounts.js}"></script>
     </body>
 </html>

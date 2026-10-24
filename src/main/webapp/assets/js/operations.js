@@ -208,12 +208,36 @@
         let roleTree;
         let registry = [];
         let roles = [];
+        let roleNames = new Map();
+        const roleLabel = (role) =>
+            `${roleNames.get(role.role) || role.role} · ${role.role}${role.active === false ? ' · ' + labels.off : ''}`;
         let selectedRole;
         let selectedUser;
         const pager = tables.pager('users', { busy: () => busy, onChange: (query) => perform(() => loadUsers(query)) });
         let prefix = '';
         const roleSelect = node('access-role');
         const permissionsBody = node('permissions-body');
+        const roleSearch = window.VietRouteRolePicker.bind(
+            node('user-role-search'),
+            node('user-role-options'),
+            node('user-role-count'),
+        );
+        const renderRoleOptions = () => {
+            const previous = roleSelect.value || selectedRole?.role;
+            const matches = roles.filter((role) =>
+                window.VietRouteRolePicker.matches(
+                    role.role,
+                    roleNames.get(role.role),
+                    node('access-role-search').value,
+                ),
+            );
+            const visible = roles.filter((role) => role.role === previous || matches.includes(role));
+            roleSelect.replaceChildren(...visible.map((role) => option(role.role, roleLabel(role))));
+            if (visible.some((role) => role.role === previous)) roleSelect.value = previous;
+            node('access-role-count').textContent = `${matches.length} / ${roles.length}`;
+        };
+        node('access-role-search').addEventListener('input', renderRoleOptions);
+
         const roleModal = window.VietRouteUI.modal('permissions-dialog', {
             busy: () => busy,
             onClose: () => {
@@ -257,7 +281,7 @@
             node('permissions-edit').disabled = false;
             node('permissions-save').hidden = !editable;
             node('permissions-target').textContent =
-                `${selectedRole.role} · v${selectedRole.version} · ${selectedRole.assignedUsers || 0} ${document.getElementById('access-tree-labels').dataset.impact}`;
+                `${roleLabel(selectedRole)} · v${selectedRole.version} · ${selectedRole.assignedUsers || 0} ${document.getElementById('access-tree-labels').dataset.impact}`;
             const summary = node('role-permission-summary');
             summary.replaceChildren();
             for (const permission of registry.filter((item) => selectedRole.permissions.includes(item.code))) {
@@ -273,16 +297,16 @@
         });
         const loadRoles = async () => {
             const previous = roleSelect.value;
-            [registry, roles, treeData] = await Promise.all([
+            let metadata;
+            [registry, roles, treeData, metadata] = await Promise.all([
                 get(`${routes.access}/permissions`),
                 get(`${routes.access}/roles`),
                 get(`${routes.access}/tree`),
+                get(`${routes.access}/registry/roles`),
             ]);
-            roleSelect.replaceChildren(
-                ...roles.map((role) =>
-                    option(role.role, role.role + (role.active === false ? ' · ' + labels.off : '')),
-                ),
-            );
+            const english = document.documentElement.lang === 'en';
+            roleNames = new Map(metadata.map((item) => [item.code, english ? item.nameEn : item.nameVi]));
+            renderRoleOptions();
             if (roles.some((role) => role.role === previous)) {
                 roleSelect.value = previous;
             }
@@ -304,15 +328,17 @@
                 const input = document.createElement('input');
                 input.type = 'checkbox';
                 input.className = 'form-check-input';
+                label.dataset.roleChoice = role.role;
                 input.value = role.role;
                 input.checked = user.roles.includes(role.role);
                 input.disabled =
                     !editable ||
                     (role.active === false && !input.checked) ||
                     (!isAdmin() && (role.role === 'ADMIN' || role.permissions.some((permission) => !has(permission))));
-                label.append(input, text('span', role.role + (role.active === false ? ' · ' + labels.off : '')));
+                label.append(input, text('span', roleLabel(role)));
                 options.append(label);
             }
+            roleSearch.reset();
             node('user-roles-save').disabled = !editable;
             if (user.id === me.id) {
                 app.feedback(labels.self, false, 'user-roles-feedback');

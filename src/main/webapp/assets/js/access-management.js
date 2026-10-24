@@ -11,7 +11,8 @@
         selectedPolicy,
         targets = [],
         me,
-        resourceFilters = { kind: '', query: '' };
+        resourceFilters = { kind: '', query: '' },
+        registryFilters = { query: '', active: '' };
     const registryForm = node('registry-form'),
         policyForm = node('policy-form');
     const registryModal = window.VietRouteUI.modal('registry-dialog', { busy: () => busy });
@@ -30,12 +31,19 @@
         onChange: (query) => read(() => renderResources(query)),
         busy: () => busy,
     });
+    const registryPager = window.VietRouteTable.pager('registry', {
+        onChange: (query) => read(() => renderRegistry(query)),
+        busy: () => busy,
+    });
     const read = async (action) => {
         if (busy) return;
         busy = true;
         const scope = document.querySelector('[data-operations]');
         const controls = [
             'registry-kind',
+            'registry-query',
+            'registry-active',
+            'registry-search',
             'registry-refresh',
             'policies-refresh',
             'resources-refresh',
@@ -91,10 +99,20 @@
         }
         resourcePager.update(page);
     };
-    const renderRegistry = async () => {
+    const renderRegistry = async (query = registryPager.query) => {
         if (!me?.permissions.includes('ACCESS_READ')) return;
-        const values = await get('/registry/' + node('registry-kind').value),
+        let quota;
+        const page = await window.VietRouteTable.readPage(async (params) => {
+            const filters = Object.fromEntries(Object.entries(registryFilters).filter(([, value]) => value !== ''));
+            quota = await get(
+                '/registry/' + node('registry-kind').value + '/page?' + new URLSearchParams({ ...params, ...filters }),
+            );
+            return quota.page;
+        }, query);
+        const values = page.content,
             body = node('registry-body');
+        registryPager.update(page);
+        node('registry-capacity').textContent = `${labels.capacity}: ${quota.allocated} / ${quota.capacity}`;
         body.replaceChildren();
         node('registry-status').textContent = values.length ? '' : labels.empty;
         for (const value of values) {
@@ -295,7 +313,16 @@
         openRegistry();
     });
     node('policies-create').addEventListener('click', () => openPolicy().catch(app.failure));
-    node('registry-kind').addEventListener('change', () => read(renderRegistry));
+    const searchRegistry = () => {
+        if (busy) return;
+        registryFilters = { query: node('registry-query').value.trim(), active: node('registry-active').value };
+        void read(() => renderRegistry({ page: 0, size: registryPager.query.size }));
+    };
+    node('registry-kind').addEventListener('change', searchRegistry);
+    node('registry-filter').addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (window.VietRouteForms.validate(event.target)) searchRegistry();
+    });
     node('registry-refresh').addEventListener('click', () => read(renderRegistry));
     node('policies-refresh').addEventListener('click', () => read(renderPolicies));
     node('resources-filter').addEventListener('submit', (event) => {
