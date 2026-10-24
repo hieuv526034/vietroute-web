@@ -81,3 +81,9 @@ Tab tài khoản có nút xem nguồn quyền, chỉ rõ role nào cấp từng 
 Ở Phân quyền, chọn role → Chỉnh sửa quyền vai trò → Chọn bộ quyền hệ thống → xem preview → Lưu. Đây là gán nhiều mapping quyền một lần, vẫn có thể bỏ riêng một quyền sau đó. Không gồm CRUD danh mục/ảnh/nghiệp vụ, không mở quyền chỉ ADMIN; actor được ủy quyền phải có đủ bộ quyền mới chọn được mẫu. Quyền chưa lưu chỉ ở draft; mở lại role đọc mapping từ DB. Module nghiệp vụ tiếp tục gán VIEW/LIST/DETAIL/CREATE/UPDATE/DELETE theo nhu cầu, READ cũ giữ hợp đồng.
 
 Tab Tài nguyên UI/API chọn MENU/ENDPOINT hoặc tất cả, nhập route/controller/mô tả/mã quyền rồi Tra cứu. Lọc thực hiện trước paging; đổi trang giữ bộ lọc đã tìm, tìm mới về trang đầu. Từ khóa tối đa 160 ký tự, không phải biểu thức SQL/wildcard. Tài liệu Swagger ở menu API có đủ query kế thừa cùng body JSON/multipart để thử trực tiếp; dùng token/cookie của chính tài khoản đang kiểm.
+
+## Cấp tài khoản và kiểm tra phân quyền
+
+Vào **Quản trị truy cập → Tài khoản** bằng admin đã đổi mật khẩu bootstrap. Tạo tài xế/người dùng với role phù hợp, bàn giao mật khẩu tạm qua kênh riêng và yêu cầu người nhận đổi tại Thông tin cá nhân trước khi dùng chức năng. Màn này không phụ thuộc Gmail để cấp danh tính nội bộ; đăng ký công khai vẫn theo kích hoạt email. Email nhận reset được người dùng gắn/xác minh qua luồng hồ sơ hiện có.
+
+Cấu hình role tại Phân quyền → Tạo vai trò → chọn menu/thao tác → Lưu; sau đó gán role tại Tài khoản. Dùng nút xem để kiểm quyền thực tế của tài khoản, gồm policy bổ sung. Lưu gán/khóa/mở làm token cũ hết hiệu lực; người nhận đăng nhập lại. Khóa không xóa lịch sử, không cho khóa ADMIN/system/bản thân hoặc mở bỏ qua email đang chờ. Version 409 cần đọc lại có chủ đích. Xem [hợp đồng chi tiết](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#quản-trị-tài-khoản-và-ma-trận-menu--access05).

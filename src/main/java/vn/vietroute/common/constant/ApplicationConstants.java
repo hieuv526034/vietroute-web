@@ -190,6 +190,10 @@ public final class ApplicationConstants {
 
         public static final String ADMIN_CATALOG_BY_ID = ADMIN_CATALOGS + BY_ID;
 
+        public static final String ACCOUNTS = ADMIN_API + "/accounts";
+        public static final String ACCOUNT_STATE = BY_ID + "/state";
+        public static final String ACCOUNT_ACCESS = BY_ID + "/access";
+
         public static final String ACCESS = ADMIN_API + "/access";
 
         public static final String USERS_ACTION = "/users";
@@ -219,6 +223,8 @@ public final class ApplicationConstants {
         public static final String OPERATIONS = "/operations";
 
         public static final String JOBS_PAGE = OPERATIONS + "/jobs";
+
+        public static final String ACCOUNTS_PAGE = OPERATIONS + "/accounts";
 
         public static final String ACCESS_PAGE = OPERATIONS + "/access";
 

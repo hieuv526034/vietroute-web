@@ -1,5 +1,11 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
+## ACCESS05 — Đang kiểm trước PR
+
+hieuv526034, nhánh `hieuv526034/access05-tai-khoan-va-cay-quyen`, nền main `3b5b933`. Đã bổ sung khu tài khoản admin cấp DRIVER/CUSTOMER/nhiều role, khóa/mở + revoke JWT/challenge, preview capabilities theo policy user đích; ma trận menu/hành động và lối tạo role trực tiếp. Mật khẩu tạm bắt đổi trước chức năng, kể cả bootstrap còn flag. Không migration mới; không ghi Neon, không giả membership nhà xe. Chi tiết tại [thiết kế](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#quản-trị-tài-khoản-và-ma-trận-menu--access05).
+
+Đạt 124 Java/24 Node, npm ci/format/format:check/rules/docs (269 link, 34 tài liệu), actionlint/bash syntax/diff. UI fixture HTML thật kiểm desktop/390px: dấu bắt buộc, nhiều role, loading chặn Escape, 409 giữ draft, lọc nhóm ma trận/gợi VIEW và console sạch; ảnh ở chuyên đề UI. Còn Docker/PostgreSQL CI đúng head rồi PR/merge; chưa ghi Đã có trên main. SCOPE01/AUTH03 hồ sơ/membership theo nhà xe vẫn còn, không coi DRIVER là scope.
+
 ## ACCESS04 — Đã có trên main
 
 [PR #53](https://github.com/hieuv526034/vietroute-web/pull/53), merge `70fea08`, head đã kiểm `0a06d35`, [Issue #52](https://github.com/hieuv526034/vietroute-web/issues/52), hieuv526034, nhánh `hieuv526034/access04-resources-swagger`, base `87a831a`. Lọc kind/query ở PostgreSQL trước paging; UI tìm/giữ bộ lọc; spinner icon giữ 32×32; Swagger mô tả path/query/header, DTO kế thừa và payload/response. Mẫu chọn bộ quyền hệ thống lưu mapping cụ thể, giữ ADMIN theo lựa chọn chủ dự án; Permission nhận thêm LIST/DETAIL để nghiệp vụ mới tách danh sách/chi tiết. Không đổi quyền đã gán, lookup công khai, schema/migration hoặc ghi Neon.

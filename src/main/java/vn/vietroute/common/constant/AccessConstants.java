@@ -20,6 +20,8 @@ public final class AccessConstants {
 
         public static final String ACCESS = "ACCESS";
 
+        public static final String ACCOUNTS = "ACCOUNTS";
+
         public static final String CATALOG = "CATALOG";
 
         public static final String MEDIA = "MEDIA";
@@ -62,11 +64,18 @@ public final class AccessConstants {
 
         public static final String ACCESS = "ACCESS";
 
+        public static final String ACCOUNTS = "ACCOUNTS";
+
         private Functions() {}
     }
 
     /** Mã quyền lõi dùng chung giữa AccessFunction và Permission; không giới hạn registry tùy chỉnh trong DB. */
     public static final class Permissions {
+
+        public static final String ACCOUNT_VIEW = "ACCOUNT_VIEW";
+        public static final String ACCOUNT_READ = "ACCOUNT_READ";
+        public static final String ACCOUNT_CREATE = "ACCOUNT_CREATE";
+        public static final String ACCOUNT_UPDATE = "ACCOUNT_UPDATE";
 
         public static final String CATALOG_READ = Groups.CATALOG + "_READ";
 

@@ -168,3 +168,17 @@ GET `/api/v1/admin/access/resources` cần ACCESS_READ; query gồm `kind` (rỗ
 OpenAPI xuất từ mapping thật + Operation/Parameter/Schema. Path/query/header có mô tả/ví dụ; ModelAttribute và mọi lớp con PageRequest trải phẳng field kế thừa thành query parameters, giữ default/min/max/maxLength/enum và phân biệt required với giá trị mặc định của DTO. Body JSON và multipart có schema riêng, response vẫn là ApiResponse với đúng status. Tên alias Spring `value`/`name` được resolve, giữ đúng Idempotency-Key; principal/servlet request do server tiêm không thành input của client. Regression đối chiếu toàn bộ route API với JSON spec, payload/response fields và query để tránh thêm controller nhưng quên Swagger.
 
 Permission là value object JSON string từ registry; constants/values() chỉ là từ vựng bootstrap, không khóa client vào enum role/quyền cố định. Các mã như BOOKING_LIST/BOOKING_DETAIL hợp lệ, chưa có nghĩa booking đã triển khai hoặc ai đã được cấp. Guard của từng endpoint phải khai báo đúng mã hành động; có mã trong registry chưa tự mở API. Bộ quyền hệ thống là mẫu chọn/gán các mapping cụ thể, xem hợp đồng ở [schema và phân quyền](SCHEMA_VA_PHAN_QUYEN.md#bộ-quyền-hệ-thống-và-quyền-db--access04).
+
+## API quản trị danh tính — ACCESS05
+
+| API | Quyền bắt buộc ngoài JWT/CSRF | Hợp đồng |
+|---|---|---|
+| GET `/api/v1/admin/accounts` | ADMIN + ACCOUNT_READ | username prefix, role, active, page/size; loại system, không credential |
+| POST `/api/v1/admin/accounts` | ADMIN + ACCOUNT_CREATE + ACCESS_ASSIGN (ALL) | username/displayName/password write-only/roles active; 201, trùng 409; tạo cùng transaction |
+| PUT `/api/v1/admin/accounts/{id}/state` | ADMIN + ACCOUNT_UPDATE | active + version; thu hồi JWT/challenge, stale 409, bảo vệ ADMIN/system/self/pending activation |
+| GET `/api/v1/admin/accounts/{id}/access` | ADMIN + ACCOUNT_READ | metadata và capabilities đã xét policy user đích; không token/credential |
+| PUT `/api/v1/admin/access/users/{id}/roles` | ACCESS_ASSIGN hoặc ACCESS_WRITE | Cơ chế gán hiện có: scope ủy quyền, version, chống tự sửa/nâng quyền; JWT cũ bị thu hồi |
+
+Mọi payload/tham số/projection được mô tả OpenAPI. ACCOUNT_* khai báo tập trung tại AccessConstants và Permission; sync enabled bổ sung registry/ADMIN khi startup. Không cần thay migration hiện hữu. POST cấp tài khoản và đổi mật khẩu đi qua quota/semaphore credential để giới hạn BCrypt đồng thời.
+
+AUTH011 (403) yêu cầu đổi mật khẩu tạm. Filter xác minh token/DB rồi bỏ toàn bộ authority trong phiên hạn chế; chỉ mở GET hồ sơ/me, capabilities rỗng, đổi mật khẩu/logout, trang account và dữ liệu công khai. Quy tắc bắt đổi áp dụng cả bootstrap đang mang must_change_password=true; đổi xong mới dùng chức năng. Đừng hiểu accessToken nhận từ login mật khẩu tạm là đã có quyền quản trị. Nhật ký mặc định bỏ payload/response các DTO quản trị mới, không thêm password/PII vào projection.

@@ -2001,3 +2001,304 @@ fieldset:disabled .button[type='submit']::before,
     margin-left: auto;
     justify-content: flex-end;
 }
+/* ACCESS05: khu danh tính và ma trận menu/hành động; cuộn trong bảng, không kéo ngang cả trang. */
+.accounts-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+.accounts-heading h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+}
+.accounts-eyebrow {
+    font-size: 0.72rem;
+    color: #62738a;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.4rem;
+}
+.accounts-heading .toolbar-actions {
+    flex-shrink: 0;
+}
+.accounts-workflow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border: 1px solid #dbe7f6;
+    border-radius: 0.8rem;
+    padding: 1rem 1.2rem;
+    background: #f3f7ff;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+}
+.accounts-filter {
+    align-items: end;
+}
+.accounts-filter > div:not(.toolbar-actions) {
+    flex: 1 1 150px;
+}
+.accounts-filter .toolbar-actions {
+    margin-left: auto;
+}
+.accounts-count {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.7rem;
+    color: #68768a;
+    font-size: 0.8rem;
+}
+.accounts-count strong {
+    color: #244c88;
+    background: #edf4ff;
+    border-radius: 1rem;
+    padding: 0.15rem 0.65rem;
+}
+.accounts-table {
+    font-size: 0.85rem;
+    min-width: 690px;
+}
+.account-role-chips {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+.account-badge {
+    border-radius: 1rem;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.75rem;
+    display: inline-block;
+    background: #f0f2f6;
+    color: #5a6574;
+}
+.account-badge.is-active {
+    background: #e8f6ee;
+    color: #237347;
+}
+.account-badge.is-inactive {
+    background: #fbeeed;
+    color: #9d423c;
+}
+.account-editor {
+    width: min(760px, 95vw);
+}
+.account-field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+.account-field-grid p {
+    font-size: 0.8rem;
+    align-self: end;
+    margin: 0;
+}
+.account-role-picker {
+    border-top: 1px solid #e1e7f0;
+    padding-top: 1rem;
+}
+#account-role-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+}
+.account-role-option {
+    display: flex;
+    gap: 0.65rem;
+    align-items: flex-start;
+    border: 1px solid #dce4ef;
+    padding: 0.85rem;
+    border-radius: 0.65rem;
+    cursor: pointer;
+    margin: 0;
+    font-size: 0.85rem;
+}
+.account-role-option:has(input:checked) {
+    border-color: #537ac1;
+    background: #f1f6ff;
+}
+.account-role-option input {
+    flex-shrink: 0;
+}
+.account-role-option small {
+    font-size: 0.72rem;
+    margin-top: 0.2rem;
+}
+#account-role-summary {
+    margin: 0.6rem 0;
+    font-size: 0.8rem;
+}
+.account-scope-note {
+    background: #f7f8fb;
+    padding: 0.75rem;
+    border-left: 3px solid #a8b8d2;
+    border-radius: 0.3rem;
+    font-size: 0.8rem;
+}
+.account-detail-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+.account-detail-summary p {
+    margin: 0;
+}
+.access-effective-table {
+    font-size: 0.8rem;
+    min-width: 590px;
+}
+.access-matrix {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    font-size: 0.77rem;
+}
+.access-matrix th {
+    background: #f2f5fa;
+    padding: 0.7rem 0.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    white-space: nowrap;
+    text-align: center;
+    border-bottom: 1px solid #dce4ef;
+}
+.access-matrix th:first-child {
+    text-align: left;
+    min-width: 220px;
+}
+.access-matrix td {
+    border-bottom: 1px solid #e9edf4;
+    padding: 0.7rem 0.5rem;
+    vertical-align: top;
+}
+.access-matrix-check {
+    text-align: center;
+    min-width: 58px;
+}
+.access-matrix-check label {
+    display: inline-flex;
+    gap: 0.25rem;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin: 0 0.15rem;
+}
+.access-matrix-check small {
+    font-size: 0.6rem;
+}
+.access-matrix-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    margin: 0;
+}
+.access-matrix-title input {
+    flex-shrink: 0;
+}
+.access-matrix-title small {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 400;
+    margin-top: 0.2rem;
+}
+.access-matrix-group {
+    background: #f7f9fd;
+}
+.access-matrix-group .access-matrix-title {
+    color: #31588e;
+}
+.access-matrix .access-endpoints {
+    margin: 0;
+    min-width: 90px;
+    max-width: 250px;
+}
+.access-matrix .access-endpoints summary {
+    white-space: nowrap;
+}
+.access-matrix .access-endpoints div {
+    min-width: 200px;
+}
+@media (max-width: 767px) {
+    .accounts-heading,
+    .accounts-workflow {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .accounts-heading .toolbar-actions {
+        justify-content: flex-end;
+    }
+}
+@media (max-width: 480px) {
+    .account-field-grid,
+    #account-role-options {
+        grid-template-columns: 1fr;
+    }
+    .accounts-workflow {
+        padding: 0.8rem;
+    }
+}
+#permissions-dialog {
+    width: min(1200px, calc(100vw - 32px));
+    padding: 22px;
+}
+#permissions-dialog .dialog-controls {
+    max-height: calc(100dvh - 80px);
+}
+#permissions-dialog .dialog-heading h2 {
+    font-size: 1.3rem;
+}
+#permissions-target {
+    margin-bottom: 0.7rem;
+    font-size: 0.8rem;
+}
+#permissions-dialog .access-tree-toolbar .button {
+    margin-top: 0;
+}
+#permissions-dialog .access-tree-hint {
+    margin: 0.5rem 0;
+}
+#permissions-dialog .access-tree-select {
+    margin-bottom: 0.5rem;
+}
+#permissions-dialog .access-tree-content {
+    max-height: 58vh;
+}
+#permissions-dialog .dialog-actions {
+    margin-top: 0.75rem;
+}
+.access-matrix td {
+    padding: 0.5rem;
+}
+.access-matrix th:first-child {
+    min-width: 190px;
+}
+.access-matrix-check small {
+    white-space: nowrap;
+}
+.account-editor .dialog-heading h2 {
+    font-size: 1.3rem;
+}
+.account-editor .button {
+    margin-top: 0;
+}
+.account-editor .dialog-actions {
+    margin-top: 0.8rem;
+}
+.account-editor .account-field-grid {
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+.account-editor .account-role-picker > p {
+    margin-bottom: 0.6rem;
+    font-size: 0.8rem;
+}
+.account-role-option {
+    padding: 0.65rem 0.8rem;
+}

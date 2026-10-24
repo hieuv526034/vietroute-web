@@ -1,0 +1,456 @@
+<!doctype html>
+<html
+    lang="vi"
+    xmlns:th="http://www.thymeleaf.org"
+    th:lang="${currentLocale}"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.accounts.title})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main
+            class="container-xl py-4 accounts-page"
+            data-accounts
+        >
+            <div class="accounts-heading">
+                <div>
+                    <p
+                        class="accounts-eyebrow"
+                        th:text="#{ui.accounts.guard}"
+                    ></p>
+                    <h1 th:text="#{ui.accounts.title}"></h1>
+                    <p
+                        class="muted"
+                        th:text="#{ui.accounts.subtitle}"
+                    ></p>
+                </div>
+                <div class="toolbar-actions">
+                    <button
+                        id="accounts-refresh"
+                        type="button"
+                        class="button button-outline"
+                        th:text="#{ui.accounts.refresh}"
+                    ></button>
+                    <button
+                        id="accounts-create"
+                        type="button"
+                        class="button"
+                        th:text="#{ui.accounts.create}"
+                    ></button>
+                </div>
+            </div>
+            <div class="accounts-workflow">
+                <span th:text="#{ui.accounts.workflow}"></span>
+                <a
+                    class="button button-small button-outline"
+                    th:href="@{/operations/access(lang=${currentLocale})}"
+                    th:text="#{ui.accounts.configure}"
+                ></a>
+            </div>
+            <p
+                id="form-feedback"
+                class="feedback"
+                role="alert"
+                hidden
+            ></p>
+            <p
+                id="accounts-status"
+                class="muted"
+                role="status"
+                aria-live="polite"
+            ></p>
+            <fieldset
+                id="accounts-controls"
+                class="border-0 p-0 m-0 w-100"
+            >
+                <section class="card p-3 p-md-4">
+                    <form
+                        id="accounts-search"
+                        class="table-filter accounts-filter mb-3"
+                    >
+                        <div>
+                            <label
+                                for="account-query"
+                                class="form-label"
+                                th:text="#{ui.accounts.username}"
+                            ></label>
+                            <input
+                                id="account-query"
+                                name="username"
+                                class="form-control"
+                                maxlength="32"
+                                pattern="[A-Za-z0-9]{0,32}"
+                                autocomplete="off"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                for="account-role-filter"
+                                class="form-label"
+                                th:text="#{ui.accounts.roles}"
+                            ></label>
+                            <select
+                                id="account-role-filter"
+                                name="role"
+                                class="form-select"
+                            >
+                                <option
+                                    value=""
+                                    th:text="#{ui.accounts.all}"
+                                ></option>
+                            </select>
+                        </div>
+                        <div>
+                            <label
+                                for="account-active-filter"
+                                class="form-label"
+                                th:text="#{ui.accounts.state}"
+                            ></label>
+                            <select
+                                id="account-active-filter"
+                                name="active"
+                                class="form-select"
+                            >
+                                <option
+                                    value=""
+                                    th:text="#{ui.accounts.all}"
+                                ></option>
+                                <option
+                                    value="true"
+                                    th:text="#{ui.accounts.active}"
+                                ></option>
+                                <option
+                                    value="false"
+                                    th:text="#{ui.accounts.inactive}"
+                                ></option>
+                            </select>
+                        </div>
+                        <div class="toolbar-actions">
+                            <button
+                                type="submit"
+                                class="button button-outline"
+                                th:text="#{ui.accounts.search}"
+                            ></button>
+                        </div>
+                    </form>
+                    <div class="accounts-count">
+                        <strong id="accounts-total">0</strong>
+                        <span th:text="#{ui.accounts.total}"></span>
+                    </div>
+                    <div
+                        class="table-responsive"
+                        tabindex="0"
+                        role="region"
+                        th:attr="aria-label=#{ui.table.scroll}"
+                    >
+                        <table class="table align-middle accounts-table">
+                            <thead>
+                                <tr>
+                                    <th th:text="#{ui.accounts.username}"></th>
+                                    <th th:text="#{ui.accounts.roles}"></th>
+                                    <th th:text="#{ui.accounts.state}"></th>
+                                    <th th:text="#{ui.accounts.updated}"></th>
+                                    <th
+                                        class="table-actions"
+                                        th:text="#{ui.accounts.actions}"
+                                    ></th>
+                                </tr>
+                            </thead>
+                            <tbody id="accounts-body"></tbody>
+                        </table>
+                    </div>
+                    <div th:replace="~{fragments/pagination :: pager('accounts', 10)}"></div>
+                </section>
+            </fieldset>
+            <dialog
+                id="account-edit-dialog"
+                class="workspace-dialog account-editor"
+                aria-labelledby="account-edit-title"
+            >
+                <fieldset
+                    class="dialog-controls"
+                    data-account-controls
+                >
+                    <div class="dialog-heading">
+                        <h2
+                            id="account-edit-title"
+                            class="h4"
+                        ></h2>
+                        <button
+                            class="dialog-close"
+                            type="button"
+                            data-dialog-close
+                            th:attr="aria-label=#{ui.ops.close}"
+                        >
+                            ×
+                        </button>
+                    </div>
+                    <p
+                        id="account-edit-target"
+                        class="muted"
+                    ></p>
+                    <p
+                        id="account-edit-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></p>
+                    <form id="account-edit-form">
+                        <section
+                            id="account-create-fields"
+                            class="account-field-grid"
+                        >
+                            <div>
+                                <label
+                                    for="new-account-username"
+                                    class="form-label"
+                                    th:text="#{ui.accounts.username}"
+                                ></label>
+                                <input
+                                    id="new-account-username"
+                                    name="username"
+                                    class="form-control"
+                                    required
+                                    pattern="[A-Za-z0-9]{3,32}"
+                                    minlength="3"
+                                    maxlength="32"
+                                    autocomplete="off"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    for="new-account-name"
+                                    class="form-label"
+                                    th:text="#{ui.accounts.name}"
+                                ></label>
+                                <input
+                                    id="new-account-name"
+                                    name="displayName"
+                                    class="form-control"
+                                    required
+                                    maxlength="120"
+                                    autocomplete="off"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    for="new-account-password"
+                                    class="form-label"
+                                    th:text="#{ui.accounts.password}"
+                                ></label>
+                                <input
+                                    id="new-account-password"
+                                    name="password"
+                                    class="form-control"
+                                    type="password"
+                                    required
+                                    minlength="8"
+                                    maxlength="72"
+                                    autocomplete="new-password"
+                                />
+                            </div>
+                            <p
+                                class="muted"
+                                th:text="#{ui.accounts.createNote}"
+                            ></p>
+                        </section>
+                        <div class="account-role-picker">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                                <h3
+                                    class="h6 m-0"
+                                    th:text="#{ui.accounts.roleTitle}"
+                                ></h3>
+                                <div class="d-flex gap-2">
+                                    <span
+                                        class="muted"
+                                        th:text="#{ui.accounts.preset}"
+                                    ></span>
+                                    <button
+                                        id="preset-driver"
+                                        type="button"
+                                        class="button button-small button-outline"
+                                        th:text="#{ui.accounts.driver}"
+                                    ></button>
+                                    <button
+                                        id="preset-customer"
+                                        type="button"
+                                        class="button button-small button-outline"
+                                        th:text="#{ui.accounts.customer}"
+                                    ></button>
+                                </div>
+                            </div>
+                            <fieldset
+                                id="account-role-options"
+                                data-required-selection
+                                data-validation-key="roles"
+                                class="border-0 p-0 m-0"
+                            >
+                                <legend
+                                    class="form-label h6"
+                                    th:text="#{ui.accounts.roles}"
+                                ></legend>
+                            </fieldset>
+                            <p
+                                id="account-role-summary"
+                                class="muted"
+                                role="status"
+                                aria-live="polite"
+                            ></p>
+                            <p
+                                class="muted"
+                                th:text="#{ui.accounts.roleNote}"
+                            ></p>
+                        </div>
+                        <p
+                            id="account-grant-note"
+                            class="muted"
+                            th:text="#{ui.accounts.grantNote}"
+                        ></p>
+                        <div class="dialog-actions">
+                            <button
+                                type="button"
+                                class="button button-outline"
+                                data-dialog-close
+                                th:text="#{ui.accounts.cancel}"
+                            ></button>
+                            <button
+                                id="account-save"
+                                type="submit"
+                                class="button"
+                                th:text="#{ui.accounts.save}"
+                            ></button>
+                        </div>
+                    </form>
+                </fieldset>
+            </dialog>
+            <dialog
+                id="account-detail-dialog"
+                class="workspace-dialog workspace-dialog-wide"
+                aria-labelledby="account-detail-title"
+            >
+                <fieldset
+                    class="dialog-controls"
+                    data-account-controls
+                >
+                    <div class="dialog-heading">
+                        <h2
+                            id="account-detail-title"
+                            class="h4"
+                            th:text="#{ui.accounts.detail}"
+                        ></h2>
+                        <button
+                            class="dialog-close"
+                            type="button"
+                            data-dialog-close
+                            th:attr="aria-label=#{ui.ops.close}"
+                        >
+                            ×
+                        </button>
+                    </div>
+                    <p
+                        id="account-detail-target"
+                        class="muted"
+                    ></p>
+                    <p
+                        id="account-detail-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></p>
+                    <div
+                        id="account-detail-summary"
+                        class="account-detail-summary"
+                    ></div>
+                    <h3
+                        class="h6"
+                        th:text="#{ui.accounts.effective}"
+                    ></h3>
+                    <p
+                        class="muted"
+                        th:text="#{ui.accounts.effectiveNote}"
+                    ></p>
+                    <div
+                        id="account-effective"
+                        class="table-responsive"
+                    ></div>
+                    <p
+                        id="account-protection"
+                        class="muted"
+                    ></p>
+                    <div class="dialog-actions">
+                        <button
+                            id="account-state-open"
+                            type="button"
+                            class="button button-outline"
+                            th:text="#{ui.accounts.disable}"
+                        ></button>
+                        <button
+                            type="button"
+                            class="button button-outline"
+                            data-dialog-close
+                            th:text="#{ui.ops.close}"
+                        ></button>
+                    </div>
+                </fieldset>
+            </dialog>
+            <dialog
+                id="account-state-dialog"
+                class="workspace-dialog"
+                aria-labelledby="account-state-title"
+            >
+                <fieldset
+                    class="dialog-controls"
+                    data-account-controls
+                >
+                    <div class="dialog-heading">
+                        <h2
+                            id="account-state-title"
+                            class="h4"
+                            th:text="#{ui.accounts.confirmState}"
+                        ></h2>
+                        <button
+                            class="dialog-close"
+                            type="button"
+                            data-dialog-close
+                            th:attr="aria-label=#{ui.ops.close}"
+                        >
+                            ×
+                        </button>
+                    </div>
+                    <p id="account-state-target"></p>
+                    <p
+                        class="muted"
+                        th:text="#{ui.accounts.stateNote}"
+                    ></p>
+                    <p
+                        id="account-state-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></p>
+                    <div class="dialog-actions">
+                        <button
+                            type="button"
+                            class="button button-outline"
+                            data-dialog-close
+                            th:text="#{ui.accounts.cancel}"
+                        ></button>
+                        <button
+                            id="account-state-save"
+                            type="button"
+                            class="button"
+                            th:text="#{ui.accounts.disable}"
+                        ></button>
+                    </div>
+                </fieldset>
+            </dialog>
+            <div
+                id="accounts-labels"
+                hidden
+                th:attr="data-action-view=#{ui.accessMatrix.VIEW},data-action-read=#{ui.accessMatrix.READ},data-action-list=#{ui.accessMatrix.LIST},data-action-detail=#{ui.accessMatrix.DETAIL},data-action-create=#{ui.accessMatrix.CREATE},data-action-update=#{ui.accessMatrix.UPDATE},data-action-delete=#{ui.accessMatrix.DELETE},data-action-assign=#{ui.accessMatrix.ASSIGN},data-action-retry=#{ui.accessMatrix.RETRY},data-action-send=#{ui.accessMatrix.SEND},data-no-actions=#{ui.accounts.noActions},data-title=#{ui.accounts.title},data-subtitle=#{ui.accounts.subtitle},data-create=#{ui.accounts.create},data-assign=#{ui.accounts.assign},data-detail=#{ui.accounts.detail},data-search=#{ui.accounts.search},data-refresh=#{ui.accounts.refresh},data-username=#{ui.accounts.username},data-name=#{ui.accounts.name},data-password=#{ui.accounts.password},data-roles=#{ui.accounts.roles},data-state=#{ui.accounts.state},data-all=#{ui.accounts.all},data-active=#{ui.accounts.active},data-inactive=#{ui.accounts.inactive},data-pending=#{ui.accounts.pending},data-password-pending=#{ui.accounts.passwordPending},data-locked=#{ui.accounts.locked},data-updated=#{ui.accounts.updated},data-actions=#{ui.accounts.actions},data-save=#{ui.accounts.save},data-cancel=#{ui.accounts.cancel},data-empty=#{ui.accounts.empty},data-total=#{ui.accounts.total},data-role-note=#{ui.accounts.roleNote},data-create-note=#{ui.accounts.createNote},data-role-title=#{ui.accounts.roleTitle},data-driver=#{ui.accounts.driver},data-customer=#{ui.accounts.customer},data-preset=#{ui.accounts.preset},data-scope-note=#{ui.accounts.scopeNote},data-permissions=#{ui.accounts.permissions},data-fixed=#{ui.accounts.fixed},data-grant-note=#{ui.accounts.grantNote},data-success=#{ui.accounts.success},data-created=#{ui.accounts.created},data-view=#{ui.accounts.view},data-allowed=#{ui.accounts.allowed},data-denied=#{ui.accounts.denied},data-feature=#{ui.accounts.feature},data-effective=#{ui.accounts.effective},data-effective-note=#{ui.accounts.effectiveNote},data-blocked=#{ui.accounts.blocked},data-disable=#{ui.accounts.disable},data-enable=#{ui.accounts.enable},data-state-note=#{ui.accounts.stateNote},data-confirm-state=#{ui.accounts.confirmState},data-configure=#{ui.accounts.configure},data-workflow=#{ui.accounts.workflow},data-selection=#{ui.accounts.selection},data-off=#{ui.accounts.off},data-loading=#{ui.accounts.loading},data-conflict=#{ui.accounts.conflict},data-guard=#{ui.accounts.guard},data-no-role=#{ui.accounts.noRole}"
+            ></div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/accounts.js}"></script>
+    </body>
+</html>

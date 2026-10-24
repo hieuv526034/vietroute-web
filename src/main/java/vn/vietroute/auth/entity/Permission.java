@@ -191,6 +191,27 @@ public final class Permission {
         Set.of(PermissionAction.VIEW)
     );
 
+    public static final Permission ACCOUNT_VIEW = new Permission(
+        Permissions.ACCOUNT_VIEW,
+        Groups.ACCOUNTS,
+        Set.of(PermissionAction.VIEW)
+    );
+    public static final Permission ACCOUNT_READ = new Permission(
+        Permissions.ACCOUNT_READ,
+        Groups.ACCOUNTS,
+        Set.of(PermissionAction.READ)
+    );
+    public static final Permission ACCOUNT_CREATE = new Permission(
+        Permissions.ACCOUNT_CREATE,
+        Groups.ACCOUNTS,
+        Set.of(PermissionAction.CREATE)
+    );
+    public static final Permission ACCOUNT_UPDATE = new Permission(
+        Permissions.ACCOUNT_UPDATE,
+        Groups.ACCOUNTS,
+        Set.of(PermissionAction.UPDATE)
+    );
+
     private final String code;
 
     private final String resource;
@@ -232,6 +253,10 @@ public final class Permission {
     /** Chỉ danh mục bootstrap/tương thích; tuyệt đối không dùng values() để suy quyền của tài khoản hiện tại. */
     public static Permission[] values() {
         return new Permission[] {
+            ACCOUNT_VIEW,
+            ACCOUNT_READ,
+            ACCOUNT_CREATE,
+            ACCOUNT_UPDATE,
             CATALOG_VIEW,
             MEDIA_VIEW,
             ACCESS_VIEW,

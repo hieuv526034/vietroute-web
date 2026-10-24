@@ -57,6 +57,13 @@ public final class AccessFeatures {
         new Feature(Functions.MAIL, Functions.SYSTEM, "access.function.MAIL", null, null),
         new Feature(Functions.AUTHORIZATION, null, "access.function.AUTHORIZATION", null, null),
         new Feature(
+            Functions.ACCOUNTS,
+            Functions.AUTHORIZATION,
+            "access.function.ACCOUNTS",
+            Routes.ACCOUNTS_PAGE,
+            Permissions.ACCOUNT_VIEW
+        ),
+        new Feature(
             Functions.ACCESS,
             Functions.AUTHORIZATION,
             "access.function.ACCESS",

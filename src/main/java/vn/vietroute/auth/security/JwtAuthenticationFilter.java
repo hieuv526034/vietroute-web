@@ -7,6 +7,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -19,6 +21,7 @@ import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
@@ -42,6 +45,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.users = users;
         this.errors = errors;
         this.cookies = cookies;
+    }
+
+    /** Whitelist chỉ là các luồng tự phục vụ hoặc dữ liệu công khai; không nhận URL tùy ý từ người dùng. */
+    private static boolean passwordSetupRoute(String path, String method) {
+        return (
+            WebRoutePolicy.publicApi(path, method) ||
+            Set.of(
+                Routes.ACCOUNT,
+                Routes.HOME,
+                Routes.LOGIN,
+                Routes.AUTH_LIFECYCLE_PAGE,
+                Routes.AUTH + Routes.ME_ACTION,
+                Routes.AUTH + Routes.PASSWORD_ACTION,
+                Routes.AUTH + Routes.AUTH_CAPABILITIES
+            ).contains(path)
+        );
     }
 
     @Override
@@ -107,11 +126,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 ).toList();
                 var context = SecurityContextHolder.createEmptyContext();
                 context.setAuthentication(
-                    UsernamePasswordAuthenticationToken.authenticated(principal, null, authorities)
+                    UsernamePasswordAuthenticationToken.authenticated(
+                        principal,
+                        null,
+                        user.isMustChangePassword() ? List.of() : authorities
+                    )
                 );
                 SecurityContextHolder.setContext(context);
                 request.setAttribute(Http.VERIFIED_USER_ATTRIBUTE, user.getId());
                 request.setAttribute(Http.JOURNAL_USER_ATTRIBUTE, user.getId());
+                // Tài khoản dùng mật khẩu tạm chỉ được vào hồ sơ/đổi mật khẩu; bỏ mọi authority trong phiên hạn chế.
+                if (user.isMustChangePassword() && !passwordSetupRoute(path, request.getMethod())) {
+                    if (path.startsWith(Routes.API_ROOT)) errors.write(
+                        request,
+                        response,
+                        ErrorCode.PASSWORD_CHANGE_REQUIRED
+                    );
+                    else response.sendRedirect(request.getContextPath() + Routes.ACCOUNT);
+                    return;
+                }
             } catch (JwtException | IllegalArgumentException exception) {
                 // Token cookie cũ được xóa để trang công khai vẫn mở được; API cần đăng nhập phải trả AUTH004.
                 SecurityContextHolder.clearContext();

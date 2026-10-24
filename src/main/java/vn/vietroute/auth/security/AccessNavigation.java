@@ -50,6 +50,7 @@ public final class AccessNavigation {
 
     private static String icon(String code) {
         return switch (code) {
+            case Functions.ACCOUNTS -> "user";
             case Functions.SYSTEM -> "system";
             case Functions.CATALOG -> "catalog";
             case Functions.MEDIA -> "image";

@@ -24,6 +24,7 @@ public enum ErrorCode {
     PASSWORD_REUSED("AUTH008", "auth.passwordReused", HttpStatus.BAD_REQUEST),
     ACCOUNT_FLOW_DISABLED("AUTH009", "auth.flowDisabled", HttpStatus.SERVICE_UNAVAILABLE),
     ACCOUNT_CODE_INVALID("AUTH010", "auth.codeInvalid", HttpStatus.BAD_REQUEST),
+    PASSWORD_CHANGE_REQUIRED("AUTH011", "auth.passwordChangeRequired", HttpStatus.FORBIDDEN),
     STALE_VERSION("COM008", "error.staleVersion", HttpStatus.CONFLICT),
     RESOURCE_IN_USE("COM015", "error.inUse", HttpStatus.CONFLICT),
     METHOD_NOT_ALLOWED("COM009", "error.method", HttpStatus.METHOD_NOT_ALLOWED),
