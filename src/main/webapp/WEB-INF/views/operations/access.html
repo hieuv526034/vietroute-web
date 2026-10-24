@@ -73,6 +73,13 @@
                         th:text="#{ui.foundation.policies}"
                     ></button>
                     <button
+                        id="scopes-tab"
+                        type="button"
+                        data-tab-target="access-scopes-section"
+                        th:if="${adminUser}"
+                        th:text="#{ui.scope.title}"
+                    ></button>
+                    <button
                         id="history-tab"
                         type="button"
                         data-tab-target="access-history-section"
@@ -485,6 +492,151 @@
                             <tbody id="policies-body"></tbody>
                         </table>
                     </div>
+                </section>
+                <section
+                    id="access-scopes-section"
+                    class="card p-4"
+                    hidden
+                    th:if="${adminUser}"
+                    aria-labelledby="scopes-title"
+                >
+                    <h2
+                        id="scopes-title"
+                        class="h4"
+                        th:text="#{ui.scope.title}"
+                    ></h2>
+                    <p
+                        class="muted"
+                        th:text="#{ui.scope.note}"
+                    ></p>
+                    <p
+                        id="scopes-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></p>
+                    <fieldset
+                        id="scopes-controls"
+                        class="border-0 p-0 m-0"
+                    >
+                        <form
+                            id="scopes-search"
+                            class="table-filter mb-3"
+                        >
+                            <div>
+                                <label
+                                    for="scope-query"
+                                    th:text="#{ui.accessRoles.registrySearch}"
+                                ></label>
+                                <input
+                                    id="scope-query"
+                                    type="search"
+                                    maxlength="160"
+                                    class="form-control"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    for="scope-active-filter"
+                                    th:text="#{ui.foundation.active}"
+                                ></label>
+                                <select
+                                    id="scope-active-filter"
+                                    class="form-select"
+                                >
+                                    <option
+                                        value=""
+                                        th:text="#{ui.ops.all}"
+                                    ></option>
+                                    <option
+                                        value="true"
+                                        th:text="#{ui.monitoring.on}"
+                                    ></option>
+                                    <option
+                                        value="false"
+                                        th:text="#{ui.monitoring.off}"
+                                    ></option>
+                                </select>
+                            </div>
+                            <button
+                                type="submit"
+                                class="button button-outline"
+                                th:text="#{ui.ops.filter}"
+                            ></button>
+                            <button
+                                id="scopes-refresh"
+                                type="button"
+                                class="button button-outline"
+                                th:text="#{ui.ops.refresh}"
+                            ></button>
+                            <button
+                                id="scope-create"
+                                type="button"
+                                class="button"
+                                th:text="#{ui.scope.create}"
+                            ></button>
+                        </form>
+                        <p
+                            id="scope-status"
+                            role="status"
+                        ></p>
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th th:text="#{ui.foundation.code}"></th>
+                                        <th th:text="#{ui.foundation.nameVi}"></th>
+                                        <th th:text="#{ui.foundation.active}"></th>
+                                        <th
+                                            class="table-actions"
+                                            th:text="#{ui.ops.actions}"
+                                        ></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="scopes-body"></tbody>
+                            </table>
+                        </div>
+                        <nav th:replace="~{fragments/pagination :: pager('scopes', 20)}"></nav>
+                        <section
+                            id="scope-members-section"
+                            hidden
+                            class="mt-4"
+                        >
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                <h3
+                                    id="scope-members-title"
+                                    class="h5"
+                                ></h3>
+                                <button
+                                    id="scope-member-create"
+                                    type="button"
+                                    class="button button-outline"
+                                    th:text="#{ui.scope.assign}"
+                                ></button>
+                            </div>
+                            <p
+                                class="muted"
+                                th:text="#{ui.scope.membersNote}"
+                            ></p>
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th th:text="#{ui.ops.username}"></th>
+                                            <th th:text="#{ui.ops.role}"></th>
+                                            <th th:text="#{ui.foundation.active}"></th>
+                                            <th
+                                                class="table-actions"
+                                                th:text="#{ui.ops.actions}"
+                                            ></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="scope-members-body"></tbody>
+                                </table>
+                            </div>
+                            <nav th:replace="~{fragments/pagination :: pager('scope-members', 20)}"></nav>
+                        </section>
+                    </fieldset>
                 </section>
                 <section
                     id="access-history-section"
@@ -1045,6 +1197,229 @@
                 th:if="${adminUser}"
                 th:attr="data-empty=#{ui.accessTree.empty},data-loading=#{ui.ops.loading},data-detail=#{ui.accessHistory.detail},data-time=#{ui.accessHistory.time},data-event=#{ui.accessHistory.event},data-target=#{ui.accessHistory.target},data-actor=#{ui.accessHistory.actor},data-trace=#{ui.accessHistory.trace},data-roles=#{ui.ops.role},data-permissions=#{ui.accessHistory.permissions},data-mapping-count=#{ui.accessHistory.mappingCount},data-version=#{ui.ops.version},data-active=#{ui.accounts.active},data-deleted=#{ui.accessHistory.deleted},data-enabled=#{ui.accessHistory.enabled},data-name-vi=#{ui.foundation.nameVi},data-name-en=#{ui.foundation.nameEn},data-policy-kind=#{ui.accessHistory.policyKind},data-policy-target=#{ui.accessHistory.policyTarget},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off}"
             ></div>
+            <dialog
+                id="scope-dialog"
+                class="workspace-dialog"
+                th:if="${adminUser}"
+                aria-labelledby="scope-dialog-title"
+            >
+                <div class="dialog-heading">
+                    <h2
+                        id="scope-dialog-title"
+                        class="h4"
+                        th:text="#{ui.scope.edit}"
+                    ></h2>
+                    <button
+                        type="button"
+                        class="dialog-close"
+                        data-dialog-close
+                        th:attr="aria-label=#{ui.ops.close}"
+                    >
+                        ×
+                    </button>
+                </div>
+                <form
+                    id="scope-form"
+                    data-validate
+                >
+                    <fieldset
+                        id="scope-form-controls"
+                        class="border-0 p-0 m-0"
+                    >
+                        <label
+                            for="scope-code"
+                            class="form-label"
+                            th:text="#{ui.foundation.code}"
+                        ></label>
+                        <input
+                            id="scope-code"
+                            name="code"
+                            class="form-control"
+                            required
+                            maxlength="50"
+                            pattern="[A-Z][A-Z0-9_]{1,49}"
+                        />
+                        <label
+                            for="scope-name-vi"
+                            class="form-label"
+                            th:text="#{ui.foundation.nameVi}"
+                        ></label>
+                        <input
+                            id="scope-name-vi"
+                            name="nameVi"
+                            class="form-control"
+                            required
+                            maxlength="120"
+                        />
+                        <label
+                            for="scope-name-en"
+                            class="form-label"
+                            th:text="#{ui.foundation.nameEn}"
+                        ></label>
+                        <input
+                            id="scope-name-en"
+                            name="nameEn"
+                            class="form-control"
+                            required
+                            maxlength="120"
+                        />
+                        <label class="d-flex gap-2 mt-3">
+                            <input
+                                id="scope-active"
+                                name="active"
+                                type="checkbox"
+                                class="form-check-input"
+                            />
+                            <span th:text="#{ui.foundation.active}"></span>
+                        </label>
+                        <p
+                            id="scope-form-feedback"
+                            class="feedback"
+                            role="alert"
+                            hidden
+                        ></p>
+                        <div class="dialog-actions">
+                            <button
+                                type="button"
+                                class="button button-outline"
+                                data-dialog-close
+                                th:text="#{ui.catalog.cancel}"
+                            ></button>
+                            <button
+                                type="submit"
+                                class="button"
+                                th:text="#{ui.catalog.save}"
+                            ></button>
+                        </div>
+                    </fieldset>
+                </form>
+            </dialog>
+            <dialog
+                id="scope-member-dialog"
+                class="workspace-dialog"
+                th:if="${adminUser}"
+                aria-labelledby="scope-member-dialog-title"
+            >
+                <div class="dialog-heading">
+                    <h2
+                        id="scope-member-dialog-title"
+                        class="h4"
+                        th:text="#{ui.scope.assign}"
+                    ></h2>
+                    <button
+                        type="button"
+                        class="dialog-close"
+                        data-dialog-close
+                        th:attr="aria-label=#{ui.ops.close}"
+                    >
+                        ×
+                    </button>
+                </div>
+                <form
+                    id="scope-member-form"
+                    data-validate
+                >
+                    <fieldset
+                        id="scope-member-controls"
+                        class="border-0 p-0 m-0"
+                    >
+                        <div id="scope-user-search-fields">
+                            <label
+                                for="scope-user-query"
+                                class="form-label"
+                                th:text="#{ui.ops.usernamePrefix}"
+                            ></label>
+                            <div class="d-flex gap-2">
+                                <input
+                                    id="scope-user-query"
+                                    class="form-control"
+                                    maxlength="32"
+                                    pattern="[A-Za-z0-9]{0,32}"
+                                />
+                                <button
+                                    id="scope-user-search"
+                                    type="button"
+                                    class="button button-outline"
+                                    th:text="#{ui.ops.filter}"
+                                ></button>
+                            </div>
+                        </div>
+                        <label
+                            for="scope-user"
+                            class="form-label"
+                            th:text="#{ui.ops.username}"
+                        ></label>
+                        <select
+                            id="scope-user"
+                            name="userId"
+                            class="form-select"
+                            required
+                        ></select>
+                        <p
+                            class="muted"
+                            th:text="#{ui.scope.userHint}"
+                        ></p>
+                        <label
+                            for="scope-role-query"
+                            class="form-label"
+                            th:text="#{ui.accessRoles.search}"
+                        ></label>
+                        <input
+                            id="scope-role-query"
+                            type="search"
+                            class="form-control"
+                            maxlength="160"
+                        />
+                        <p
+                            id="scope-role-count"
+                            role="status"
+                            class="muted"
+                        ></p>
+                        <fieldset
+                            id="scope-role-options"
+                            class="border-0 p-0 m-0"
+                        >
+                            <legend
+                                class="form-label h6"
+                                th:text="#{ui.ops.role}"
+                            ></legend>
+                        </fieldset>
+                        <label class="d-flex gap-2 mt-3">
+                            <input
+                                id="scope-member-active"
+                                type="checkbox"
+                                class="form-check-input"
+                            />
+                            <span th:text="#{ui.foundation.active}"></span>
+                        </label>
+                        <p
+                            id="scope-member-feedback"
+                            class="feedback"
+                            role="alert"
+                            hidden
+                        ></p>
+                        <div class="dialog-actions">
+                            <button
+                                type="button"
+                                class="button button-outline"
+                                data-dialog-close
+                                th:text="#{ui.catalog.cancel}"
+                            ></button>
+                            <button
+                                type="submit"
+                                class="button"
+                                th:text="#{ui.catalog.save}"
+                            ></button>
+                        </div>
+                    </fieldset>
+                </form>
+            </dialog>
+            <div
+                id="scope-labels"
+                hidden
+                th:if="${adminUser}"
+                th:attr="data-title=#{ui.scope.members},data-edit=#{ui.scope.edit},data-assign=#{ui.scope.assign},data-empty=#{ui.foundation.empty},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off},data-loading=#{ui.ops.loading},data-conflict=#{ui.accounts.conflict},data-required=#{ui.validation.selection}"
+            ></div>
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
@@ -1058,6 +1433,10 @@
         <script
             th:if="${adminUser}"
             th:src="@{/assets/js/access-history.js}"
+        ></script>
+        <script
+            th:if="${adminUser}"
+            th:src="@{/assets/js/data-scopes.js}"
         ></script>
     </body>
 </html>

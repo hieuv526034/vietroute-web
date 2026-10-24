@@ -21,12 +21,15 @@ import vn.vietroute.auth.config.AccessSettings;
 import vn.vietroute.auth.dto.request.AccessChangeSearchRequest;
 import vn.vietroute.auth.dto.request.AccessRegistrySearchRequest;
 import vn.vietroute.auth.dto.request.AccessResourceSearchRequest;
+import vn.vietroute.auth.dto.request.ScopeMemberSearchRequest;
 import vn.vietroute.auth.dto.response.AccessChangeResponse;
 import vn.vietroute.auth.dto.response.AccessChangeStateResponse;
 import vn.vietroute.auth.dto.response.AccessPolicyResponse;
 import vn.vietroute.auth.dto.response.AccessRegistryPageResponse;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
+import vn.vietroute.auth.dto.response.DataScopeResponse;
 import vn.vietroute.auth.dto.response.PermissionResponse;
+import vn.vietroute.auth.dto.response.ScopeMembershipResponse;
 import vn.vietroute.auth.entity.AuthorizationState;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.repository.AccessChangeRepository;
@@ -34,6 +37,7 @@ import vn.vietroute.auth.repository.AccessRegistryRepository;
 import vn.vietroute.auth.repository.AccessRepository;
 import vn.vietroute.auth.repository.AccessResourceRepository;
 import vn.vietroute.auth.repository.AuthorizationRepository;
+import vn.vietroute.auth.repository.DataScopeRepository;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
@@ -51,6 +55,28 @@ public class AccessTestConfig {
     @Primary
     public HistoryFixture isolatedAccessChanges() {
         return new HistoryFixture();
+    }
+
+    /** Chỉ fixture cho API đọc scope; kiểm SQL/mutation/guard thật nằm ở CI PostgreSQL. */
+    @Bean
+    @Primary
+    public DataScopeRepository isolatedDataScopes() {
+        return new DataScopeRepository(null, new AccessSettings(key -> null)) {
+            @Override
+            public PageResponse<DataScopeResponse> page(AccessRegistrySearchRequest search) {
+                return PageResponse.of(List.of(), search, 0);
+            }
+
+            @Override
+            public PageResponse<ScopeMembershipResponse> members(long scope, ScopeMemberSearchRequest search) {
+                return PageResponse.of(List.of(), search, 0);
+            }
+
+            @Override
+            public List<DataScopeResponse> mine(long id) {
+                return List.of();
+            }
+        };
     }
 
     public static class HistoryFixture extends AccessChangeRepository {

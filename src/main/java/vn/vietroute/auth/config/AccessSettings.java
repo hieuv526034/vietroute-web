@@ -22,11 +22,15 @@ public final class AccessSettings {
     /** Policy là điều kiện bổ sung, cần giới hạn riêng để mỗi request không đọc quá nhiều cấu hình. */
     private final int policyCapacity;
 
+    /** Trần số phạm vi bảo mật; metadata tắt vẫn chiếm suất vì không có xóa dữ liệu lịch sử. */
+    private final int scopeCapacity;
+
     public AccessSettings(Function<String, String> source) {
         var values = new ConfigValues(source);
         auditRetentionDays = values.number(Env.ACCESS_AUDIT_RETENTION_DAYS, 7, 1, 90);
         auditCapacity = values.number(Env.ACCESS_AUDIT_CAPACITY, 1000, 100, 100000);
         registryCapacity = values.number(Env.ACCESS_REGISTRY_CAPACITY, 512, 64, Limits.REGISTRY_MAX);
         policyCapacity = values.number(Env.ACCESS_POLICY_CAPACITY, 256, 16, Limits.POLICY_MAX);
+        scopeCapacity = values.number(Env.ACCESS_SCOPE_CAPACITY, 512, 1, 4096);
     }
 }

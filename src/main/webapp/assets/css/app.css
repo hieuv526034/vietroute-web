@@ -2326,7 +2326,8 @@ fieldset:disabled .button[type='submit']::before,
     display: none !important;
 }
 #account-role-options,
-#user-role-options {
+#user-role-options,
+#scope-role-options {
     max-height: 22rem;
     overflow-y: auto;
 }

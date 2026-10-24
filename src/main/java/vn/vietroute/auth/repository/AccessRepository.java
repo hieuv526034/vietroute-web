@@ -283,13 +283,41 @@ public class AccessRepository extends BaseRepository {
                 throw new BusinessException(ErrorCode.STALE_VERSION);
             }
         }
-        try (PreparedStatement delete = connection.prepareStatement("DELETE FROM auth_user_roles WHERE user_id=?")) {
+        // Chỉ xóa role bị thu hồi: giữ audit/membership của role không đổi, FK dọn scope-role bị thu hồi thật.
+        try (
+            PreparedStatement delete = connection.prepareStatement(
+                "DELETE FROM auth_user_roles WHERE user_id=? AND NOT (role_code=ANY(?))"
+            )
+        ) {
             delete.setLong(1, id);
-            delete.executeUpdate();
+            var kept = connection.createArrayOf(
+                "varchar",
+                roles
+                    .stream()
+                    .map(Role::name)
+                    .toArray(String[]::new)
+            );
+            try {
+                // Thu hồi global role làm đổi tập role scoped: tăng version trước khi FK cascade dọn mapping.
+                try (
+                    var scoped = connection.prepareStatement(
+                        "UPDATE auth_scope_memberships m SET version=version+1,updated_at=CURRENT_TIMESTAMP,updated_by=? WHERE m.user_id=? AND EXISTS (SELECT 1 FROM auth_scope_roles sr WHERE sr.scope_id=m.scope_id AND sr.user_id=m.user_id AND NOT (sr.role_code=ANY(?)))"
+                    )
+                ) {
+                    scoped.setLong(1, actor);
+                    scoped.setLong(2, id);
+                    scoped.setArray(3, kept);
+                    scoped.executeUpdate();
+                }
+                delete.setArray(2, kept);
+                delete.executeUpdate();
+            } finally {
+                kept.free();
+            }
         }
         try (
             PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO auth_user_roles(user_id,role_code,created_by,updated_by) VALUES (?,?,?,?)"
+                "INSERT INTO auth_user_roles(user_id,role_code,created_by,updated_by) VALUES (?,?,?,?) ON CONFLICT DO NOTHING"
             )
         ) {
             for (Role role : roles) {

@@ -12,14 +12,17 @@ import org.springframework.stereotype.Service;
 import vn.vietroute.auth.dto.request.AccessUserSearchRequest;
 import vn.vietroute.auth.dto.request.RolePermissionsRequest;
 import vn.vietroute.auth.dto.request.UserRolesRequest;
+import vn.vietroute.auth.dto.response.AccessChangeStateResponse;
 import vn.vietroute.auth.dto.response.AccessUserResponse;
 import vn.vietroute.auth.dto.response.PermissionResponse;
 import vn.vietroute.auth.dto.response.RolePermissionsResponse;
+import vn.vietroute.auth.dto.response.ScopeMembershipResponse;
 import vn.vietroute.auth.dto.response.UserResponse;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.repository.AccessRepository;
+import vn.vietroute.auth.repository.DataScopeRepository;
 import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.UserPrincipal;
@@ -171,7 +174,37 @@ public class AccessService {
             ) {
                 throw new BusinessException(ErrorCode.CONFLICT);
             }
+            var scopedBefore = request.getRoles().containsAll(beforeRoles)
+                ? List.<ScopeMembershipResponse>of()
+                : DataScopeRepository.memberships(connection, id);
             access.replaceRoles(connection, id, request.getRoles(), request.getVersion(), actor.id());
+            if (!scopedBefore.isEmpty()) {
+                var scopedAfter = DataScopeRepository.memberships(connection, id);
+                for (var previous : scopedBefore) {
+                    var current = scopedAfter
+                        .stream()
+                        .filter(item -> item.scopeId() == previous.scopeId())
+                        .findFirst()
+                        .orElseThrow();
+                    if (!previous.roles().equals(current.roles())) changes.record(
+                        connection,
+                        Event.SCOPE_MEMBERSHIP,
+                        Target.MEMBERSHIP,
+                        previous.scopeId() + ":" + id,
+                        actor.id(),
+                        AccessChangeStateResponse.membership(
+                            previous.roles().stream().map(Role::name).collect(Collectors.toSet()),
+                            previous.active(),
+                            previous.version()
+                        ),
+                        AccessChangeStateResponse.membership(
+                            current.roles().stream().map(Role::name).collect(Collectors.toSet()),
+                            current.active(),
+                            current.version()
+                        )
+                    );
+                }
+            }
             var after = users.findById(connection, id, false);
             changes.mappings(
                 connection,
