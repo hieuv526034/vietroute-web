@@ -1,5 +1,11 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
+## ACCESS06 — Đang làm
+
+[Issue #58](https://github.com/hieuv526034/vietroute-web/issues/58), hieuv526034, nhánh `hieuv526034/access06-kiem-quyen-db`, base `d8074c8`. Thay các biểu thức AccessRules bằng hàm `accessGuard` đọc account/tokenVersion và mapping role/quyền active trực tiếp DB; refresh trước guard HTTP/policy, giữ method security hai context và bảo vệ ADMIN/scope. Không cache quyền hoặc thay schema, không ghi trên Neon. Hợp đồng, chi phí SELECT và giới hạn thu hồi với thao tác đang chạy tại [thiết kế](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#hàm-kiểm-db-trong-preauthorize--access06).
+
+Local Maven verify đạt 129 Java (0 lỗi), gồm state DB độc lập authorities, ANY/ALL, tokenVersion, mật khẩu tạm, hai context WAR/URL trực tiếp và DB lỗi đúng lúc PreAuthorize trả 503 trước controller. Đạt 25 Node, npm ci/format/format:check/rules/docs, actionlint/bash syntax/diff; helper CI đã biên dịch local. Có helper gọi class production với PostgreSQL Docker và Authentication cũ để kiểm mapping/trạng thái thật; chưa xác nhận chạy CI tại mốc này. Bước tiếp: chạy CI Docker/PostgreSQL đúng head và merge qua PR khi đạt; sau merge bổ sung bằng chứng. Không thay UI/API payload; chưa nghiệm thu tải production/provider.
+
 ## ACCESS05 — Đã có trên main
 
 [PR #56](https://github.com/hieuv526034/vietroute-web/pull/56), merge `37343f8`, head đã kiểm `973c69f`, [Issue #55](https://github.com/hieuv526034/vietroute-web/issues/55), hieuv526034, nhánh `hieuv526034/access05-tai-khoan-va-cay-quyen`, base `3b5b933`. ADMIN cấp DRIVER/CUSTOMER/nhiều role nguyên tử; khu Tài khoản lọc/phân trang, khóa/mở + revoke JWT/challenge, preview capabilities theo policy user đích. Ma trận menu/hành động có checkbox nhóm, tìm giữ draft, gợi VIEW, quyền đã tắt vẫn gỡ được và tạo role trực tiếp. Bắt đổi mật khẩu tạm trước chức năng, gồm bootstrap còn flag; GET không chiếm quota credential. Hợp đồng tại [thiết kế](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#quản-trị-tài-khoản-và-ma-trận-menu--access05).

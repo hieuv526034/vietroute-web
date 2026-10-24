@@ -33,10 +33,12 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import vn.vietroute.auth.dto.request.LoginRequest;
 import vn.vietroute.auth.entity.Role;
+import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.security.AuthCookies;
 import vn.vietroute.auth.security.JwtAuthenticationFilter;
+import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.business.catalog.dto.request.CatalogCreateRequest;
 import vn.vietroute.common.config.RootConfig;
@@ -200,7 +202,12 @@ class ApiJournalTest {
 
     private UsernamePasswordAuthenticationToken actor(String... authorities) {
         return UsernamePasswordAuthenticationToken.authenticated(
-            "isolated",
+            new UserPrincipal(
+                2L,
+                "isolated",
+                Set.of(List.of(authorities).contains("ROLE_ADMIN") ? Role.ADMIN : Role.OPERATOR),
+                0
+            ),
             null,
             AccessTestConfig.upgradedAuthorities(authorities)
         );

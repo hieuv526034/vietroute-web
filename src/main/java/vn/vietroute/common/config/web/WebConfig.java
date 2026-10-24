@@ -31,6 +31,7 @@ import org.thymeleaf.spring6.view.ThymeleafViewResolver;
 import org.thymeleaf.templatemode.TemplateMode;
 import vn.vietroute.auth.security.AccessPolicyInterceptor;
 import vn.vietroute.auth.security.AccessResourceSynchronizer;
+import vn.vietroute.auth.security.DatabaseAccessGuard;
 import vn.vietroute.auth.service.AccessManagementService;
 import vn.vietroute.auth.service.AccessResourceService;
 import vn.vietroute.common.config.application.AppSettings;
@@ -56,6 +57,8 @@ public class WebConfig extends DelegatingWebMvcConfiguration {
 
     private final AccessManagementService access;
 
+    private final DatabaseAccessGuard guard;
+
     private final MessageSource messages;
 
     private final ObjectMapper mapper;
@@ -66,9 +69,11 @@ public class WebConfig extends DelegatingWebMvcConfiguration {
         MessageSource messages,
         ObjectMapper mapper,
         SupportedLocaleResolver locales,
-        AccessManagementService access
+        AccessManagementService access,
+        DatabaseAccessGuard guard
     ) {
         this.access = access;
+        this.guard = guard;
         this.messages = messages;
         this.mapper = mapper;
         this.locales = locales;
@@ -167,7 +172,7 @@ public class WebConfig extends DelegatingWebMvcConfiguration {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         super.addInterceptors(registry);
-        registry.addInterceptor(new AccessPolicyInterceptor(access));
+        registry.addInterceptor(new AccessPolicyInterceptor(access, guard));
         registry.addInterceptor(
             new HandlerInterceptor() {
                 @Override

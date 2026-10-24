@@ -18,6 +18,7 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,6 +32,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
+import vn.vietroute.auth.entity.Role;
+import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.monitoring.MonitoringSettings;
 import vn.vietroute.common.config.web.WebConfig;
@@ -155,7 +158,7 @@ class MonitoringFoundationTest {
                     .getStatus()
             );
             var allowed = UsernamePasswordAuthenticationToken.authenticated(
-                "operator",
+                new UserPrincipal(2L, "operator", Set.of(Role.OPERATOR), 0),
                 null,
                 List.of(new SimpleGrantedAuthority("SYSTEM_READ"), new SimpleGrantedAuthority("SYSTEM_VIEW"))
             );

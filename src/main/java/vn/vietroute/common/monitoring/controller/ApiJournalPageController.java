@@ -24,7 +24,7 @@ import vn.vietroute.common.constant.ApplicationConstants.Routes;
 public class ApiJournalPageController {
 
     @GetMapping(Routes.API_JOURNAL_PAGE)
-    @PreAuthorize(AccessRules.ADMIN + " and " + AccessRules.JOURNAL_VIEW)
+    @PreAuthorize(AccessRules.SENSITIVE_VIEW)
     public String journal(HttpServletResponse response) {
         response.setHeader(HttpHeaders.CACHE_CONTROL, Http.NO_STORE);
         return "operations/api-journal";

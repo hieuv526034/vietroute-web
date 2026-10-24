@@ -18,8 +18,11 @@ public final class AccessPolicyInterceptor implements HandlerInterceptor {
 
     private final AccessManagementService access;
 
-    public AccessPolicyInterceptor(AccessManagementService access) {
+    private final DatabaseAccessGuard guard;
+
+    public AccessPolicyInterceptor(AccessManagementService access, DatabaseAccessGuard guard) {
         this.access = access;
+        this.guard = guard;
     }
 
     /** Một snapshot trên request, dùng lại cho capabilities/header để không query policy nhiều lần. */
@@ -37,6 +40,10 @@ public final class AccessPolicyInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String path = String.valueOf(request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE));
         var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserPrincipal) {
+            auth = guard.refresh(auth);
+            SecurityContextHolder.getContext().setAuthentication(auth);
+        }
         // Guard annotation thực thi cả khi route không cho cấu hình policy; DB không thể biến route thành public.
         if (
             handler instanceof HandlerMethod methodHandler &&
