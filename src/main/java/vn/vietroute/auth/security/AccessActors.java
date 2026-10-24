@@ -17,6 +17,7 @@ public final class AccessActors {
             auth == null ||
             !(auth.getPrincipal() instanceof UserPrincipal current) ||
             actor == null ||
+            actor.id() == null ||
             actor.id() == SystemActor.ID ||
             !Objects.equals(actor.id(), current.id()) ||
             actor.tokenVersion() != current.tokenVersion() ||

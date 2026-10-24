@@ -25,7 +25,7 @@ CI_ACCOUNT_PASSWORD="$admin_password" python3 -c 'import json,os,sys;json.dump({
 call 201 POST /api/v1/admin/accounts "$work/managed-create.json" bearer
 managed_id=$(field data.id)
 managed_version=$(field data.version)
-python3 -c 'import json,sys;d=json.load(open(sys.argv[1]))["data"]; assert d["active"] and d["mustChangePassword"] and set(d["roles"])=={"DRIVER","ACCOUNT_ENTRY_CI"}; assert not any(x in d for x in ("password","passwordHash","tokenVersion","email"))' "$result"
+python3 -c 'import json,sys;d=json.load(open(sys.argv[1]))["data"]; assert d["active"] and d["mustChangePassword"] and d["emailVerificationRequired"] and set(d["roles"])=={"DRIVER","ACCOUNT_ENTRY_CI"}; assert not any(x in d for x in ("password","passwordHash","tokenVersion","email"))' "$result"
 [[ "$(sql "SELECT created_by=1 AND updated_by=1 AND password_hash LIKE '\$2%' FROM auth_users WHERE id=$managed_id")" == t ]]
 call 409 POST /api/v1/admin/accounts "$work/managed-create.json" bearer
 python3 -c 'import json,sys;d=json.load(open(sys.argv[1]));d["username"]="managedinvalid";d["roles"]=["UNKNOWN_CI"];json.dump(d,sys.stdout)' "$work/managed-create.json" > "$work/managed-invalid.json"
@@ -60,6 +60,9 @@ account_code
 account_id="$managed_saved_account_id"
 python3 -c 'import json,sys;json.dump({"email":"manageddriver@example.invalid","token":open(sys.argv[1]).read()},sys.stdout)' "$work/account-code.txt" > "$work/managed-activate.json"
 call 200 POST /api/v1/auth/activate "$work/managed-activate.json" cookie
+call 200 GET /api/v1/auth/me '' bearer
+[[ "$(field data.emailVerificationRequired)" == False ]]
+
 call 403 GET /operations/accounts '' bearer
 assert_code AUTH003
 call 403 GET /api/v1/admin/accounts '' bearer

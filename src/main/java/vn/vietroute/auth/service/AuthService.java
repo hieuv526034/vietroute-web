@@ -13,6 +13,7 @@ import vn.vietroute.auth.dto.response.AuthResponse;
 import vn.vietroute.auth.dto.response.UserResponse;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
@@ -98,12 +99,14 @@ public class AuthService {
     /** Đọc thông tin mới nhất và map sang response an toàn, không trả hash/tokenVersion của entity. */
     @AccessOperation(authenticated = true)
     public UserResponse me(UserPrincipal principal) {
+        AccessActors.requireCurrent(principal);
         return UserResponse.from(BusinessRules.requireFound(users.findById(principal.id())));
     }
 
     /** Khóa dòng tài khoản để hai yêu cầu đổi mật khẩu không cùng dùng mật khẩu cũ thành công. */
     @AccessOperation(authenticated = true)
     public AuthResponse changePassword(UserPrincipal principal, ChangePasswordRequest request) {
+        AccessActors.requireCurrent(principal);
         BusinessRules.require(StrongPasswordValidator.valid(request.getNewPassword()), ErrorCode.VALIDATION_FAILED);
         UserAccount changed = transactions.execute(connection -> {
             // So khớp tokenVersion dưới khóa trước khi cập nhật, tránh dùng token vừa bị thu hồi.
@@ -124,6 +127,8 @@ public class AuthService {
     /** Logout thu hồi mọi JWT cũ của tài khoản; gọi lại khi anonymous vẫn xóa cookie được. */
     public void logout(UserPrincipal principal) {
         if (principal != null) {
+            // Anonymous vẫn xóa cookie được; caller nội bộ có principal chỉ được thu hồi phiên của chính mình.
+            AccessActors.requireCurrent(principal);
             transactions.execute(connection -> {
                 users.revokeTokens(connection, principal.id());
                 return null;

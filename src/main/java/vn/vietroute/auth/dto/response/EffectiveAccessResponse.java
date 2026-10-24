@@ -9,5 +9,8 @@ public record EffectiveAccessResponse(
     @Schema(description = "ID user") long userId,
     @Schema(description = "Username") String username,
     @Schema(description = "Tài khoản đang hoạt động") boolean active,
-    @Schema(description = "Mã quyền -> các role active đang cấp quyền đó") Map<String, Set<String>> sources
+    @Schema(
+        description = "Mã quyền -> các role active đang cấp quyền đó; rỗng khi tài khoản tắt, pending, dùng mật khẩu tạm hoặc chưa xác minh email"
+    )
+    Map<String, Set<String>> sources
 ) {}

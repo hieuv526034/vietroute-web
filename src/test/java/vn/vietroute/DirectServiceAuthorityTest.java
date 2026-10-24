@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,9 @@ import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.AccessService;
+import vn.vietroute.auth.service.AccountLifecycleService;
+import vn.vietroute.auth.service.AuthService;
+import vn.vietroute.auth.service.ProfileService;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ErrorCode;
@@ -33,6 +37,34 @@ import vn.vietroute.support.JournalTestConfig;
 
 /** Lời gọi bean không qua interceptor: snapshot DB phải được dùng cả guard lẫn kiểm tập quyền được ủy quyền trong thân hàm. */
 class DirectServiceAuthorityTest {
+
+    @Test
+    void selfServiceBeansRejectAnotherUsersPrincipalBeforeReadingOrWriting() {
+        try (var root = new AnnotationConfigWebApplicationContext()) {
+            root.setServletContext(new MockServletContext("src/main/webapp", new FileSystemResourceLoader()));
+            root.register(RootConfig.class, AccessTestConfig.class, JournalTestConfig.class, NoWrites.class);
+            root.refresh();
+            var current = new UserPrincipal(8L, "self", Set.of(Role.CUSTOMER), 0);
+            var foreign = new UserPrincipal(9L, "other", Set.of(Role.CUSTOMER), 0);
+            SecurityContextHolder.getContext().setAuthentication(
+                UsernamePasswordAuthenticationToken.authenticated(current, null, List.of())
+            );
+            List<Runnable> calls = List.of(
+                () -> root.getBean(AuthService.class).me(foreign),
+                () -> root.getBean(AuthService.class).me(new UserPrincipal(null, "invalid", Set.of(Role.CUSTOMER), 0)),
+                () -> root.getBean(AuthService.class).logout(foreign),
+                () -> root.getBean(AuthService.class).changePassword(foreign, null),
+                () -> root.getBean(ProfileService.class).update(null, foreign),
+                () -> root.getBean(AccountLifecycleService.class).bindEmail(foreign, null, Locale.ENGLISH)
+            );
+            for (var call : calls) {
+                assertEquals(ErrorCode.ACCESS_DENIED, assertThrows(BusinessException.class, call::run).getErrorCode());
+            }
+            assertEquals(0, root.getBean(RefuseTransactions.class).calls.get());
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
 
     @Test
     void staleAdminOrPermissionCannotPassDelegationInsideRealService() {
