@@ -1,14 +1,14 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
-## LOCATION01 — Đang chốt nghiệp vụ địa điểm đầu tiên
+## LOCATION01 — Đã có trên main: nghiệp vụ địa điểm đầu tiên
 
-Nhánh `hiencoi250404-design/location01-dia-diem`, [Issue #101](https://github.com/hieuv526034/vietroute-web/issues/101), base main `b50aa19` ngày 24/10/2026. Phần phụ trách theo kế hoạch là Hien; người thực sự triển khai đợt này là hieuv526034 và giữ nguyên identity đó trên commit, không ghi thành đóng góp đã làm của Hien.
+Đã merge [PR #102](https://github.com/hieuv526034/vietroute-web/pull/102), merge `3f3105d`, head đã kiểm `998e96a`, nhánh `hiencoi250404-design/location01-dia-diem`, [Issue #101](https://github.com/hieuv526034/vietroute-web/issues/101), base main `b50aa19` ngày 24/10/2026. Phần phụ trách theo kế hoạch là Hien; người thực sự triển khai đợt này là hieuv526034 và giữ nguyên identity đó trên commit, không ghi thành đóng góp đã làm của Hien.
 
 Đã có source V016 hai bảng địa lý, API/service/JDBC tỉnh–địa điểm, projection public chỉ active, quản trị ADMIN + LOCATION_* hai context, version/audit và khóa tỉnh khi tạo/bật con. Hai tab/modal UI vi/en dùng table/forms/workspace chung, tìm tỉnh theo trang và giữ draft khi lỗi; dữ liệu ngừng dùng giữ ID/tham chiếu. Hợp đồng ở [API base](../02-phat-trien/API_BASE.md#danh-mục-địa-lý--location01), [schema](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#danh-mục-địa-lý-dùng-chung--location01), [UI](../03-giao-dien/QUY_UOC_UI.md#quản-lý-địa-điểm--location01).
 
-Local 153 Java/44 Node đạt, renderer vi/en không thiếu key. Browser fixture đạt tạo tỉnh và địa điểm, chặn tọa độ sai, picker giữ lựa chọn khi tìm tiếp, 409 giữ modal/draft, tab bàn phím; 320/390/768/1280px không tràn ngang trang, bảng cuộn riêng. Ảnh fixture ở chuyên đề UI. Đang chốt formatter/check và CI PostgreSQL cho trạng thái cha/con, tham chiếu, version/cạnh tranh, search/paging/projection và guard của module thật. Chưa đánh dấu có trên main hoặc áp V016 lên Neon; giữ V001–V015 nguyên vẹn, không seed địa lý hoặc tích hợp Maps giả.
+Local 153 Java/44 Node, formatter/check/rules/docs, bash/node syntax/diff đạt; renderer vi/en không thiếu key. Browser fixture đạt tạo tỉnh và địa điểm, chặn tọa độ sai, picker giữ lựa chọn khi tìm tiếp, 409 giữ modal/draft, tab bàn phím; 320/390/768/1280px không tràn ngang trang, bảng cuộn riêng. Ảnh fixture ở chuyên đề UI. Ba CI đúng head đạt: [Docker/PostgreSQL](https://github.com/hieuv526034/vietroute-web/actions/runs/40109992973), [format/quy tắc](https://github.com/hieuv526034/vietroute-web/actions/runs/40109993033), [tài liệu](https://github.com/hieuv526034/vietroute-web/actions/runs/40109992996). Job `120919517369` xác nhận trạng thái cha/con, giữ tham chiếu/ID, tọa độ DB, mã trùng, hai UPDATE cùng version chỉ một thành công, search/paging/projection/locale, registry/nhãn module mới và rào ADMIN dù tài khoản thường có đủ LOCATION_*; toàn bộ regression auth/scope/history/recovery/PgBouncer đạt. Đã tự review, chưa có review độc lập của thành viên khác. Không còn code dở LOCATION01. Không test/ghi Neon hoặc xác nhận Render đã chạy V016; giữ V001–V015 nguyên vẹn, không seed địa lý hoặc tích hợp Maps giả.
 
-Bước tiếp: chốt PR/CI rồi bàn giao LOCATION01 cho Hien nghiệm thu/tích hợp tuyến. CARRIER01/AUTH03 của Anh/Hieu là phụ thuộc tiếp theo để mở ROUTE01 và xe/tài xế; Bang chuẩn bị trạng thái/snapshot/lịch chồng trước TRIP01/BOOKING01. Chưa coi các nghiệp vụ đó đã được triển khai cùng LOCATION01.
+Bước tiếp: Hien nghiệm thu/tích hợp LOCATION01 vào tuyến khi CARRIER01 có API dùng được. CARRIER01/AUTH03 của Anh/Hieu là phụ thuộc tiếp theo để mở ROUTE01 và xe/tài xế; Bang chuẩn bị trạng thái/snapshot/lịch chồng trước TRIP01/BOOKING01. Chưa coi các nghiệp vụ đó đã được triển khai cùng LOCATION01. Bản bàn giao sau chỉ đồng bộ trạng thái/phân công/tổng quan với source đã merge.
 
 ## ACCESS23 — Đã có trên main: sẵn sàng bắt đầu nghiệp vụ
 
@@ -273,7 +273,7 @@ Nhánh đã chuẩn bị chưa phải bằng chứng đã viết code. Dùng đ�
 
 ## 4. Backlog nghiệp vụ và đầu ra bàn giao
 
-Các dòng dưới là **nghiệp vụ còn triển khai**, trừ CAT02 có UI, AUTH02 có email lifecycle, quản trị danh tính ADMIN của AUTH03 tại ACCESS05 và nền auth scope/membership của SCOPE01 tại PR #72; xem PR #29/#30, #41 và #56, bằng chứng nghiệm thu tại [NGHIEM_THU_NEN_TANG.md](NGHIEM_THU_NEN_TANG.md). Người chủ trì là người dự kiến triển khai thực tế; khi PR merge phải cập nhật bằng chứng và tác giả thực, không đánh dấu xong theo kế hoạch.
+Các dòng dưới là **nghiệp vụ còn triển khai**, trừ LOCATION01 đã có API/UI tại PR #102, CAT02 có UI, AUTH02 có email lifecycle, quản trị danh tính ADMIN của AUTH03 tại ACCESS05 và nền auth scope/membership của SCOPE01 tại PR #72; xem PR #29/#30, #41 và #56, bằng chứng nghiệm thu nền tại [NGHIEM_THU_NEN_TANG.md](NGHIEM_THU_NEN_TANG.md). Người chủ trì của việc chưa làm là người dự kiến triển khai; khi PR merge phải cập nhật bằng chứng và tác giả thực, không đánh dấu xong theo kế hoạch.
 
 | Mã | Chủ trì / phối hợp | API, UI và quy tắc cần hoàn thành | Phụ thuộc | Nghiệm thu gắn đặc tả |
 |---|---|---|---|---|
@@ -284,7 +284,7 @@ Các dòng dưới là **nghiệp vụ còn triển khai**, trừ CAT02 có UI, 
 | CARRIER01 | Anh / Hieu | Nhà xe CRUD, hồ sơ/liên hệ/trạng thái, UI ADMIN/OPERATOR theo phạm vi, code duy nhất và ảnh logo public qua mediaId được kiểm owner | SCOPE01, AUTH03 contract; MEDIA01 khi bật ảnh | F02; T01/T11, khóa thay vì xóa dữ liệu còn liên quan |
 | VEHICLE01 | Anh / Hieu | Xe thuộc nhà xe: mã/biển số/loại xe/sức chứa/trạng thái/ảnh public, API+form+phân trang+version | CARRIER01, CAT02; MEDIA01 khi dùng ảnh | F04; biển số trùng, capacity <=0, đổi carrierId giả và xe đang được sử dụng |
 | DRIVER01 | Anh / Hieu sở hữu auth | Hồ sơ tài xế/liên hệ/trạng thái, liên kết tài khoản do auth cấp, UI đúng nhà xe; không upload giấy tờ riêng tư qua media public | CARRIER01, AUTH03 | F04; tài khoản/hồ sơ khác nhà xe, khóa và giữ lịch sử |
-| LOCATION01 | Hien / Hieu review schema | Tỉnh/thành/địa điểm, tên vi/en, địa chỉ/tọa độ hợp lệ, UI CRUD và trạng thái; dữ liệu đang tham chiếu không bị xóa mất | BASE01, chốt schema/quyền | F03; địa điểm không tồn tại, tọa độ sai, dữ liệu đang dùng |
+| LOCATION01 | Hieu đã triển khai / Hien nghiệm thu, tích hợp | Đã có API/UI hai tab tỉnh–địa điểm, tọa độ, search/paging/trạng thái/version/audit tại PR #102. ADMIN + LOCATION_* hai context; public chỉ active cả cha/con, giữ tham chiếu khi ngừng dùng. Không seed danh mục hoặc Maps | BASE01; ROUTE01 tiếp tục cần CARRIER01 | F03; CI kiểm tọa độ/ràng buộc DB, version/cạnh tranh, tham chiếu, dữ liệu tắt và guard. Browser fixture vi/en/mobile đạt |
 | ROUTE01 | Hien / Anh, Bang | Tuyến một chiều thuộc nhà xe, >=2 điểm theo thứ tự, ngày-giờ tương đối qua đêm và giá theo mốc, API+UI thêm/sắp điểm; hai chiều là hai bản ghi riêng | SCOPE01, CARRIER01, LOCATION01 | F05; T02/T03/T09/T13; không đảo dữ liệu cũ khi sửa tuyến |
 | TRIP01 | Bang / Anh, Hien | Tạo chuyến từ tuyến, snapshot điểm/giờ/giá, phân xe/tài xế, vòng đời DRAFT/OPEN/IN_PROGRESS/COMPLETED/CANCELLED, API+UI; kiểm lịch chồng trong transaction để hai request không lọt | VEHICLE01, DRIVER01, ROUTE01 | F06; T03/T13/T14/T17; Instant và cùng nhà xe, active, trạng thái đúng |
 | CAPACITY01 | Hieu / Bang | Tồn chỗ theo từng chặng, min số chỗ còn trên đoạn; transaction/khóa dùng chung và rollback. Thống nhất thứ tự khóa trip → booking → segments tăng dần; API/service nhận cùng Connection | Chốt schema TRIP01/BOOKING01 trước, sau đó dữ liệu chuyến | T04–T08/T10/T15; xác nhận đồng thời chỗ cuối không oversell, trả chỗ đúng một lần |
@@ -342,7 +342,7 @@ flowchart TD
 
 Theo yêu cầu ngày 23/10: hoàn thiện và nghiệm thu source nền tảng/UI quản trị trước khi khởi động các đợt nghiệp vụ dưới đây. Việc bổ sung UI không tự bật provider/cảnh báo thật hoặc bắt đầu module nhà xe.
 
-**Đợt 1 sau nền tảng:** Hieu chốt SCOPE01 và hợp đồng cấp tài khoản, auth/schema; Anh nghiệm thu/tích hợp CAT02 đã bổ sung và chuẩn bị form nhà xe theo hợp đồng; Hien làm LOCATION01; Bang đọc luồng, chuẩn bị thiết kế trạng thái/snapshot/lịch chồng và ca test TRIP01/BOOKING01. Thiết kế chưa được ghi thành chức năng hoàn thành. Hieu có thể khảo sát rủi ro Geolocation sớm nhưng chưa ghép tracking giả vào nghiệp vụ.
+**Đợt 1 sau nền tảng:** LOCATION01 đã có source/API/UI do Hieu triển khai tại PR #102; Hien nghiệm thu và tích hợp tiếp, không viết lại danh mục địa điểm. Hieu chốt hợp đồng cấp tài khoản/auth/schema theo CARRIER01; Anh nghiệm thu/tích hợp CAT02 và triển khai nhà xe cùng scope; Bang đọc luồng, chuẩn bị thiết kế trạng thái/snapshot/lịch chồng và ca test TRIP01/BOOKING01. Thiết kế chưa được ghi thành chức năng hoàn thành. Hieu có thể khảo sát rủi ro Geolocation sớm nhưng chưa ghép tracking giả vào nghiệp vụ.
 
 **Đợt 2:** Nhà xe/xe/tài xế và tuyến; Hieu hỗ trợ AUTH03 và review scope. Trước khi merge chốt migration version mới, permission/key vi/en, ID/quan hệ và contract; không hai người cùng viết migration trùng số. Các migration đã có giữ nguyên.
 
@@ -364,4 +364,4 @@ Mẫu ghi bàn giao cho mỗi task:
 |---|---|---|---|---|---|---|---|
 | `<mã>` | `<trạng thái>` | `<username thực>` | `<liên kết>` | `<đầu ra>` | `<lệnh/ca/kết quả>` | `<giới hạn>` | `<mã task>` |
 
-Sau ACCESS23, nền phân quyền đủ điều kiện bắt đầu đợt nghiệp vụ đầu tiên theo bảng trên. Nền auth SCOPE01, lifecycle AUTH02 và cứu hộ ACCESS15 đã có source; tiếp theo gắn scope vào CARRIER01/AUTH03/DRIVER01, triển khai LOCATION01 và các hạng mục theo phụ thuộc. Chưa coi CRUD nhà xe/chuyến/booking đã có hoặc vận hành/provider đã nghiệm thu chỉ bởi việc hoàn thiện nền auth.
+Sau ACCESS23, nền phân quyền đủ điều kiện bắt đầu nghiệp vụ và LOCATION01 đã được triển khai/merge tại PR #102. Tiếp theo gắn scope vào CARRIER01/AUTH03/DRIVER01 và làm các hạng mục theo phụ thuộc. Chưa coi CRUD nhà xe/chuyến/booking đã có hoặc vận hành/provider đã nghiệm thu chỉ bởi việc hoàn thiện nền auth/địa điểm.
