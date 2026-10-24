@@ -1,6 +1,6 @@
 # Tổng quan VietRoute cho thành viên mới
 
-Cập nhật 24/10/2026, source sau PR #44. Đọc tài liệu này trước, sau đó mở các tài liệu theo liên kết. Đây là bản đồ source đang có, không phải tuyên bố đã hoàn thành các nghiệp vụ đặt vé.
+Cập nhật 24/10/2026, bổ sung source LOCATION01 sau PR #102. Đọc tài liệu này trước, sau đó mở các tài liệu theo liên kết. Đây là bản đồ source đang có, không phải tuyên bố đã hoàn thành các nghiệp vụ đặt vé.
 
 Để biết ai làm gì tiếp theo và phần nào đã/chưa hoàn thành, xem [Tiến độ và kế hoạch nhóm](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md). Bảng tách trạng thái source/API/UI và cấu hình dịch vụ ngoài app, kèm PR và phụ thuộc để bàn giao.
 
@@ -18,7 +18,7 @@ flowchart LR
     Api[API client] --> Web
     Web --> Security[Quota và JWT/CSRF]
     Security --> Services[Service kiểm quyền và transaction]
-    Services --> DB[(PostgreSQL: auth, policy, catalog, media, jobs, activity)]
+    Services --> DB[(PostgreSQL: auth, policy, catalog, locations, media, jobs, activity)]
     Worker[Worker nhận lease] --> DB
     Worker --> Gmail[Gmail HTTPS hoặc SMTP TLS]
     Worker --> Cloudinary[Cloudinary cleanup]
@@ -28,7 +28,7 @@ flowchart LR
     Monitor --> Dashboard[Dashboard và cảnh báo bên ngoài]
 ```
 
-Phần đã có: nền tảng locale/error/validation/audit/paging, auth/JWT/phân quyền, migration/seed, catalog CRUD, hàng đợi PostgreSQL, Gmail/SMTP, Cloudinary và giám sát. Nhà xe, tuyến/chuyến, booking/tồn chỗ và Maps là giai đoạn tiếp theo trong [PHAN_CONG.md](../05-ke-hoach/PHAN_CONG.md).
+Phần đã có source: nền tảng locale/error/validation/audit/paging, auth/JWT/phân quyền, migration/seed, catalog CRUD, LOCATION01 tỉnh–địa điểm (API/UI quản trị và lookup công khai), hàng đợi PostgreSQL, adapter Gmail/SMTP/Cloudinary và giám sát. Nhà xe, tuyến/chuyến, booking/tồn chỗ và Maps là giai đoạn tiếp theo trong [PHAN_CONG.md](../05-ke-hoach/PHAN_CONG.md).
 
 [Nhật ký API và debug](../04-van-hanh/NHAT_KY_API_VA_DEBUG.md) nằm trong `common.monitoring`: filter trước Security → projection DTO/response → PostgreSQL (V005) → API/page có kiểm quyền. Dùng để tra traceId/controller và xuất Postman đã che dữ liệu; lịch sử dùng chung DB/schema giữa các node, không phải gateway/audit bất biến.
 
@@ -48,6 +48,7 @@ Phần đã có: nền tảng locale/error/validation/audit/paging, auth/JWT/ph�
 | `common.traffic` | Giới hạn request/body/quota, nhận địa chỉ qua trusted proxy; quota memory theo node |
 | `auth` | Credential, role/permission, principal, cookie/JWT, bootstrap và vòng đời đăng ký/email/reset |
 | `business/catalog` | Danh mục nền đang chạy; controller → service → repository → entity/response |
+| `business/location` | LOCATION01 tỉnh/thành và địa điểm, V016; ADMIN + quyền hành động, public chỉ active, UI `/operations/locations`. Hợp đồng trường/tọa độ/trạng thái ở API base |
 | `common/media` | Lõi thư viện ảnh/upload dùng chung, controller public gọi service lõi |
 
 Đổi package chỉ đổi tổ chức code, không đổi route/schema/dữ liệu. Không tạo lớp ở package cũ để chuyển tiếp. Sau khi cập nhật nhánh lần đầu, dừng IDE server → Maven clean → Reload Maven → Rebuild Project rồi Run.
@@ -78,7 +79,7 @@ Outbox: transaction lưu `system_jobs` cùng thay đổi nghiệp vụ → commi
 
 Ảnh công khai: giữ metadata PENDING + job cleanup → upload ngoài transaction → metadata READY. Xóa qua DELETING/job/provider/DELETED; cleanup không xóa ảnh READY. Chỉ JPEG/PNG bytes thật, giới hạn byte/pixel, quyền và owner phía server. Không dùng module này cho giấy tờ riêng tư.
 
-Email auth: đăng ký CUSTOMER pending → transaction lưu challenge hash + outbox mã hóa → worker gửi mã → xác minh một lần. Reset đổi hash/lịch sử và thu hồi JWT atomically; giữ khóa tạm 5 sai/15 phút và không trùng hiện tại + hai mật khẩu cũ. Mặc định tắt, cần cấu hình provider; admin cũ không bị ép kích hoạt. Xem [API và giới hạn auth](../02-phat-trien/API_BASE.md).
+Email auth: đăng ký CUSTOMER pending → transaction lưu challenge hash + outbox mã hóa → worker gửi mã → xác minh một lần. Reset đổi hash/lịch sử và thu hồi JWT atomically; giữ khóa tạm 5 sai/15 phút và không trùng hiện tại + hai mật khẩu cũ. Mặc định tắt, cần cấu hình provider. AUTH17 chỉ cấp sẵn trạng thái xác minh cho đúng bootstrap identity khi init/sync; mọi tài khoản khác, kể cả ADMIN được gán và tài khoản cũ, phải xác minh email trước quyền private. Xem [API và giới hạn auth](../02-phat-trien/API_BASE.md).
 
 Chi tiết [worker/mail](../02-phat-trien/NEN_TANG_MO_RONG.md) và [Cloudinary](CHAY_LOCAL_VA_CLOUDINARY.md).
 
