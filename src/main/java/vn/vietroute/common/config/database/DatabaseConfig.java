@@ -7,6 +7,7 @@ import java.util.logging.Logger;
 import javax.sql.DataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import vn.vietroute.auth.config.AccessSettings;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.application.ConfigurationEnvironment;
 import vn.vietroute.common.constant.ApplicationConstants.Env;
@@ -16,6 +17,12 @@ import vn.vietroute.common.jdbc.JdbcSchema;
 /** Tạo bean hạ tầng theo trách nhiệm; Settings vẫn là nơi kiểm cấu hình và secrets. */
 @Configuration
 public class DatabaseConfig {
+
+    /** Ngưỡng lịch sử quyền được kiểm ngay startup, không chứa secret hoặc trạng thái người dùng. */
+    @Bean
+    public AccessSettings accessSettings(ConfigurationEnvironment environment) {
+        return new AccessSettings(environment);
+    }
 
     private static final Logger LOG = Logger.getLogger(DatabaseConfig.class.getName());
 

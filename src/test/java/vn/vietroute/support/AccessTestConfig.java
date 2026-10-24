@@ -1,6 +1,8 @@
 package vn.vietroute.support;
 
+import java.sql.Connection;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -15,12 +17,17 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import vn.vietroute.auth.config.AccessSettings;
+import vn.vietroute.auth.dto.request.AccessChangeSearchRequest;
 import vn.vietroute.auth.dto.request.AccessResourceSearchRequest;
+import vn.vietroute.auth.dto.response.AccessChangeResponse;
+import vn.vietroute.auth.dto.response.AccessChangeStateResponse;
 import vn.vietroute.auth.dto.response.AccessPolicyResponse;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
 import vn.vietroute.auth.dto.response.PermissionResponse;
 import vn.vietroute.auth.entity.AuthorizationState;
 import vn.vietroute.auth.entity.Permission;
+import vn.vietroute.auth.repository.AccessChangeRepository;
 import vn.vietroute.auth.repository.AccessRegistryRepository;
 import vn.vietroute.auth.repository.AccessRepository;
 import vn.vietroute.auth.repository.AccessResourceRepository;
@@ -28,12 +35,75 @@ import vn.vietroute.auth.repository.AuthorizationRepository;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
+import vn.vietroute.common.constant.AccessAuditConstants.Event;
+import vn.vietroute.common.constant.AccessAuditConstants.Target;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 
 /** Fixture chỉ trong test: registry/policy DB giả, không thay hoặc bỏ method security của service/controller. */
 @Configuration
 public class AccessTestConfig {
+
+    /** Chỉ fixture test thay DAO, giữ guard ADMIN/DB và delta service thật; không mở JDBC production. */
+    @Bean
+    @Primary
+    public HistoryFixture isolatedAccessChanges() {
+        return new HistoryFixture();
+    }
+
+    public static class HistoryFixture extends AccessChangeRepository {
+
+        public final List<AccessChangeResponse> events = new ArrayList<>();
+
+        public HistoryFixture() {
+            super(null, null, new AccessSettings(key -> null));
+        }
+
+        @Override
+        public void append(
+            Connection connection,
+            Event event,
+            Target kind,
+            String key,
+            long actor,
+            String trace,
+            AccessChangeStateResponse before,
+            AccessChangeStateResponse after
+        ) {
+            events.add(
+                new AccessChangeResponse(
+                    events.size() + 1,
+                    event,
+                    kind,
+                    key,
+                    actor,
+                    actor == 0 ? "system" : "fixture",
+                    trace,
+                    Instant.EPOCH,
+                    before,
+                    after
+                )
+            );
+        }
+
+        @Override
+        public PageResponse<AccessChangeResponse> page(AccessChangeSearchRequest search) {
+            var filtered = events
+                .stream()
+                .filter(
+                    event ->
+                        (search.getEvent() == null || search.getEvent() == event.event()) &&
+                        event.targetKey().startsWith(search.getTarget()) &&
+                        (search.getActorId() == null || search.getActorId() == event.actorId())
+                )
+                .toList();
+            return PageResponse.of(
+                filtered.stream().skip(search.offset()).limit(search.getSize()).toList(),
+                search,
+                filtered.size()
+            );
+        }
+    }
 
     /**
      * Các test MVC cũ dùng auth giả để mô tả dữ liệu DB fixture. Chỉ thay DAO, giữ bean accessGuard thật.

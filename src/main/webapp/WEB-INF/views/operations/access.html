@@ -73,6 +73,13 @@
                         th:text="#{ui.foundation.policies}"
                     ></button>
                     <button
+                        id="history-tab"
+                        type="button"
+                        data-tab-target="access-history-section"
+                        th:if="${adminUser}"
+                        th:text="#{ui.accessHistory.title}"
+                    ></button>
+                    <button
                         id="resources-tab"
                         type="button"
                         data-tab-target="access-resources-section"
@@ -410,6 +417,119 @@
                             <tbody id="policies-body"></tbody>
                         </table>
                     </div>
+                </section>
+                <section
+                    id="access-history-section"
+                    class="card p-4"
+                    aria-labelledby="history-title"
+                    th:if="${adminUser}"
+                    hidden
+                >
+                    <h2
+                        id="history-title"
+                        class="h4"
+                        th:text="#{ui.accessHistory.title}"
+                    ></h2>
+                    <p
+                        class="muted"
+                        th:text="#{ui.accessHistory.note}"
+                    ></p>
+                    <p
+                        id="history-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></p>
+                    <fieldset
+                        id="history-controls"
+                        class="border-0 p-0 m-0 w-100"
+                    >
+                        <form
+                            id="history-filter"
+                            class="table-filter mb-3"
+                        >
+                            <div class="filter-field">
+                                <label
+                                    for="history-event"
+                                    th:text="#{ui.accessHistory.event}"
+                                ></label>
+                                <select
+                                    id="history-event"
+                                    class="form-select"
+                                >
+                                    <option
+                                        value=""
+                                        th:text="#{ui.accounts.all}"
+                                    ></option>
+                                    <option
+                                        th:each="item : ${accessHistoryEvents}"
+                                        th:value="${item.name()}"
+                                        th:text="${#messages.msg(item.messageKey())}"
+                                    ></option>
+                                </select>
+                            </div>
+                            <div class="filter-field">
+                                <label
+                                    for="history-target"
+                                    th:text="#{ui.accessHistory.target}"
+                                ></label>
+                                <input
+                                    id="history-target"
+                                    class="form-control"
+                                    maxlength="120"
+                                />
+                            </div>
+                            <div class="filter-field">
+                                <label
+                                    for="history-actor"
+                                    th:text="#{ui.accessHistory.actorId}"
+                                ></label>
+                                <input
+                                    id="history-actor"
+                                    class="form-control"
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                />
+                            </div>
+                            <div class="toolbar-actions">
+                                <button
+                                    type="submit"
+                                    class="button"
+                                    th:text="#{ui.ops.filter}"
+                                ></button>
+                                <button
+                                    id="history-refresh"
+                                    type="button"
+                                    class="button button-outline"
+                                    th:text="#{ui.ops.refresh}"
+                                ></button>
+                            </div>
+                        </form>
+                        <p
+                            id="history-status"
+                            role="status"
+                            aria-live="polite"
+                        ></p>
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th th:text="#{ui.accessHistory.time}"></th>
+                                        <th th:text="#{ui.accessHistory.event}"></th>
+                                        <th th:text="#{ui.accessHistory.target}"></th>
+                                        <th th:text="#{ui.accessHistory.actor}"></th>
+                                        <th
+                                            class="table-actions"
+                                            th:text="#{ui.ops.actions}"
+                                        ></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-body"></tbody>
+                            </table>
+                        </div>
+                        <nav th:replace="~{fragments/pagination :: pager('history', 20)}"></nav>
+                    </fieldset>
                 </section>
             </fieldset>
             <dialog
@@ -772,6 +892,73 @@
                 hidden
                 th:attr="data-delete-role=#{ui.foundation.deleteRole},data-confirm-role=#{ui.foundation.confirmRole},data-empty=#{ui.foundation.empty},data-edit=#{ui.foundation.edit},data-confirm=#{ui.foundation.confirm},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off},data-public=#{ui.accessResources.public},data-protected=#{ui.accessResources.protected},data-reserved=#{ui.accessResources.reserved},data-menu=#{ui.accessResources.menu},data-api=#{ui.accessResources.api}"
             ></div>
+            <dialog
+                id="history-dialog"
+                class="workspace-dialog workspace-dialog-wide"
+                th:if="${adminUser}"
+                aria-labelledby="history-detail-title"
+            >
+                <div class="dialog-heading">
+                    <h2
+                        id="history-detail-title"
+                        class="h4"
+                        th:text="#{ui.accessHistory.detail}"
+                    ></h2>
+                    <button
+                        type="button"
+                        class="dialog-close"
+                        data-dialog-close
+                        th:attr="aria-label=#{ui.ops.close}"
+                    >
+                        ×
+                    </button>
+                </div>
+                <dl
+                    id="history-meta"
+                    class="operations-details"
+                ></dl>
+                <p
+                    id="history-delta-note"
+                    class="muted"
+                    th:text="#{ui.accessHistory.deltaNote}"
+                ></p>
+                <div class="access-history-states">
+                    <section class="access-history-state">
+                        <h3
+                            class="h6"
+                            th:text="#{ui.accessHistory.before}"
+                        ></h3>
+                        <dl
+                            id="history-before"
+                            class="operations-details"
+                        ></dl>
+                    </section>
+                    <section class="access-history-state">
+                        <h3
+                            class="h6"
+                            th:text="#{ui.accessHistory.after}"
+                        ></h3>
+                        <dl
+                            id="history-after"
+                            class="operations-details"
+                        ></dl>
+                    </section>
+                </div>
+                <div class="dialog-actions">
+                    <button
+                        type="button"
+                        class="button button-outline"
+                        data-dialog-close
+                        th:text="#{ui.ops.close}"
+                    ></button>
+                </div>
+            </dialog>
+            <div
+                id="history-labels"
+                hidden
+                th:if="${adminUser}"
+                th:attr="data-empty=#{ui.accessTree.empty},data-loading=#{ui.ops.loading},data-detail=#{ui.accessHistory.detail},data-time=#{ui.accessHistory.time},data-event=#{ui.accessHistory.event},data-target=#{ui.accessHistory.target},data-actor=#{ui.accessHistory.actor},data-trace=#{ui.accessHistory.trace},data-roles=#{ui.ops.role},data-permissions=#{ui.accessHistory.permissions},data-mapping-count=#{ui.accessHistory.mappingCount},data-version=#{ui.ops.version},data-active=#{ui.accounts.active},data-deleted=#{ui.accessHistory.deleted},data-enabled=#{ui.accessHistory.enabled},data-name-vi=#{ui.foundation.nameVi},data-name-en=#{ui.foundation.nameEn},data-policy-kind=#{ui.accessHistory.policyKind},data-policy-target=#{ui.accessHistory.policyTarget},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off}"
+            ></div>
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
@@ -780,6 +967,10 @@
         <script
             th:if="${accessAllowed}"
             th:src="@{/assets/js/access-management.js}"
+        ></script>
+        <script
+            th:if="${adminUser}"
+            th:src="@{/assets/js/access-history.js}"
         ></script>
     </body>
 </html>

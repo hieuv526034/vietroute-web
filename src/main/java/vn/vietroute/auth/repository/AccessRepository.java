@@ -237,6 +237,22 @@ public class AccessRepository extends BaseRepository {
         }
     }
 
+    /** Snapshot mapping thô cho audit, gồm role đang tắt để việc gỡ không bị mất dấu trong lịch sử. */
+    public Set<Role> assignedRoles(Connection connection, long id) throws SQLException {
+        Set<Role> result = new LinkedHashSet<>();
+        try (
+            var query = connection.prepareStatement(
+                "SELECT role_code FROM auth_user_roles WHERE user_id=? ORDER BY role_code"
+            )
+        ) {
+            query.setLong(1, id);
+            try (var rows = query.executeQuery()) {
+                while (rows.next()) result.add(Role.valueOf(rows.getString(1)));
+            }
+        }
+        return Set.copyOf(result);
+    }
+
     public void replaceRoles(Connection connection, long id, Set<Role> roles, long version, long actor)
         throws SQLException {
         try (

@@ -34,6 +34,8 @@ public final class ApplicationConstants {
         // Database và pool kết nối.
         DB_INIT_ENABLED("VIETROUTE_DB_INIT_ENABLED"),
         ACCESS_SYNC_ENABLED("VIETROUTE_ACCESS_SYNC_ENABLED"),
+        ACCESS_AUDIT_RETENTION_DAYS("VIETROUTE_ACCESS_AUDIT_RETENTION_DAYS"),
+        ACCESS_AUDIT_CAPACITY("VIETROUTE_ACCESS_AUDIT_CAPACITY"),
         AUTH_SELF_SERVICE_ENABLED("VIETROUTE_AUTH_SELF_SERVICE_ENABLED"),
         AUTH_REGISTRATIONS_PER_DAY("VIETROUTE_AUTH_REGISTRATIONS_PER_DAY"),
         DB_URL("VIETROUTE_DB_URL"),
@@ -126,6 +128,7 @@ public final class ApplicationConstants {
         public static final String ACTIVITY_ONLINE = ACTIVITY + "/online";
         public static final String ACTIVITY_ANOMALIES = ACTIVITY + "/anomalies";
         public static final String ACCESS_REGISTRY = "/registry/{kind}";
+        public static final String ACCESS_HISTORY = "/history";
         public static final String ACCESS_REGISTRY_ITEM = "/registry/{kind}/{code}";
         public static final String ACCESS_TARGETS = "/targets";
         public static final String ACCESS_RESOURCES = "/resources";

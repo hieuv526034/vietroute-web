@@ -3,6 +3,7 @@ package vn.vietroute.auth.service;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import vn.vietroute.auth.dto.request.ManagedAccountCreateRequest;
 import vn.vietroute.auth.dto.request.ManagedAccountSearchRequest;
 import vn.vietroute.auth.dto.request.ManagedAccountStateRequest;
+import vn.vietroute.auth.dto.response.AccessChangeStateResponse;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
 import vn.vietroute.auth.dto.response.ManagedAccountAccessResponse;
 import vn.vietroute.auth.dto.response.ManagedAccountResponse;
@@ -26,6 +28,8 @@ import vn.vietroute.auth.security.AccessCapabilities;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.base.PageResponse;
+import vn.vietroute.common.constant.AccessAuditConstants.Event;
+import vn.vietroute.common.constant.AccessAuditConstants.Target;
 import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
@@ -52,6 +56,8 @@ public class ManagedAccountService {
     private final JdbcTransactions transactions;
 
     private final AccessManagementService policies;
+
+    private final AccessChangeService changes;
 
     /** Danh sách chỉ ADMIN có ACCOUNT_READ; không cho OPERATOR tra danh tính ngoài nhà xe. */
     @AccessOperation(resource = Groups.ACCOUNT, action = PermissionAction.READ, adminOnly = true)
@@ -82,6 +88,28 @@ public class ManagedAccountService {
                 actor.id()
             );
             access.replaceRoles(connection, id, body.getRoles(), 0, actor.id());
+            changes.record(
+                connection,
+                Event.ACCOUNT_CREATED,
+                Target.USER,
+                Long.toString(id),
+                actor.id(),
+                AccessChangeStateResponse.empty(),
+                new AccessChangeStateResponse(
+                    body.getRoles().stream().map(Role::name).collect(Collectors.toSet()),
+                    Set.of(),
+                    body.getRoles().size(),
+                    false,
+                    true,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    1
+                )
+            );
             return ManagedAccountResponse.from(
                 users.findById(connection, id, false),
                 accounts.assignedRoles(connection, id)
@@ -102,6 +130,15 @@ public class ManagedAccountService {
             BusinessRules.require(!target.getRoles().contains(Role.ADMIN), ErrorCode.ACCESS_DENIED);
             accounts.state(connection, id, body.active(), body.version(), actor.id());
             lifecycle.invalidate(connection, id);
+            changes.record(
+                connection,
+                Event.ACCOUNT_STATUS,
+                Target.USER,
+                Long.toString(id),
+                actor.id(),
+                AccessChangeStateResponse.status(target.isActive(), target.getVersion()),
+                AccessChangeStateResponse.status(body.active(), body.version() + 1)
+            );
             return ManagedAccountResponse.from(
                 users.findById(connection, id, false),
                 accounts.assignedRoles(connection, id)

@@ -2,6 +2,7 @@ package vn.vietroute.common.job.handler;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import vn.vietroute.auth.repository.AccessChangeRepository;
 import vn.vietroute.common.config.integration.JobSettings;
 import vn.vietroute.common.config.monitoring.ApiJournalSettings;
 import vn.vietroute.common.jdbc.JdbcTransactions;
@@ -24,6 +25,8 @@ public class MaintenanceJobHandler implements JobHandler {
 
     private final ApiJournalSettings journalSettings;
 
+    private final AccessChangeRepository accessChanges;
+
     @Override
     public String type() {
         return "SYSTEM_CLEANUP";
@@ -33,6 +36,7 @@ public class MaintenanceJobHandler implements JobHandler {
     public void handle(Job job) {
         transactions.execute(connection -> {
             jobs.cleanup(connection, settings.getRetentionDays());
+            accessChanges.cleanup(connection);
             return null;
         });
         // Transaction log riêng, giữ batch nhỏ; job retry nếu dọn DB lỗi, không tạo queue RAM.

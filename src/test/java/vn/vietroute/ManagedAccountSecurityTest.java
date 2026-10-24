@@ -311,7 +311,8 @@ class ManagedAccountSecurityTest {
             null,
             null,
             null,
-            new AccessManagementService(registry, null, null)
+            new AccessManagementService(registry, null, null, null),
+            null
         );
         var endpoint = new AccessResourceResponse(
             "MENU",

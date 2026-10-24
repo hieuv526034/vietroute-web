@@ -117,3 +117,11 @@ Preview của tài khoản lấy capabilities từ server, không suy từ tên 
 Ảnh ACCESS05 từ fixture cô lập: [ma trận menu/hành động](../images/access05-matrix.png), [gán nhiều role và giữ bản nháp khi 409](../images/access05-assignment.png), [xem quyền tài khoản](../images/access05-account.png), [danh sách và trạng thái sau khóa](../images/access05-accounts.png).
 
 Ma trận còn hiện từng mã quyền ngoài chức năng hoặc đã tắt đang nằm trong role, để ADMIN có thể bỏ mapping cũ; không giữ quyền vô hình khiến mọi lần Lưu đều bị từ chối. Những dòng này không tự tạo endpoint hoặc VIEW.
+
+## Lịch sử phân quyền — ACCESS09
+
+Tab Lịch sử phân quyền chỉ hiện với ADMIN. Mở tab mới tải API, giữ bộ lọc loại/tiền tố mã/actor khi phân trang hoặc lỗi; bảng dùng pager server và icon 32×32/cột 96px. Modal chỉ đọc actor/trace/time và hai khung trước–sau; delta có giải thích mã bị bỏ/thêm, không hiển thị như snapshot toàn bộ quyền. Tab/phím/focus theo workspace chung. Loading khóa controls, 401/403 xóa dòng cũ khỏi DOM; lỗi không tự replay thao tác ghi. Mặc định 7 ngày/mục tiêu 1000 sự kiện là cấu hình, không hứa audit bất biến.
+
+Kiểm UI bằng `src/test/resources/dev/RenderSystemUi.java` với hai context thật và ConfigurationEnvironment fixture riêng (DB loopback cổng 1, init/sync/worker/provider/journal tắt), xuất HTML vào target/ui-preview; Node `src/test/resources/dev/ui-fixture.cjs` chỉ nghe 127.0.0.1:18119, dữ liệu giả. Fixture không đọc .env/OS credentials hoặc gọi Neon/provider. Đây là kiểm layout/luồng browser, không thay bộ SQL/bảo mật CI. Renderer cũng xuất public webjar assets từ dependency đã có, không tải hay đóng gói tooling vào WAR.
+
+Ảnh dữ liệu giả: [modal lịch sử vi/en và delta](../images/access09-history-vi.jpg). Cách biên dịch renderer: chạy Maven `test-compile dependency:build-classpath -Dmdep.outputFile=target/ui-classpath.txt -DincludeScope=test`, javac với classpath target/test-classes, target/classes và file vừa xuất, rồi chạy RenderSystemUi bằng cùng classpath. Các file xuất/bytecode nằm target hoặc .tools được ignore; source fixture được Git quản lý để máy khác chạy lại.
