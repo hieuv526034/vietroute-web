@@ -42,6 +42,8 @@ import vn.vietroute.common.jdbc.JdbcTransactions;
 @RequiredArgsConstructor
 public class AccessService {
 
+    private final BootstrapAdminInitializer bootstrap;
+
     private final AccessRepository access;
 
     private final UserRepository users;
@@ -144,6 +146,10 @@ public class AccessService {
                 throw new BusinessException(ErrorCode.NOT_FOUND);
             }
             var beforeRoles = access.assignedRoles(connection, id);
+            // Tài khoản bootstrap luôn giữ ADMIN, dù vẫn còn admin khác trong hệ thống.
+            if (
+                bootstrap.username().equals(target.getUsername()) && !request.getRoles().contains(Role.ADMIN)
+            ) throw new BusinessException(ErrorCode.ACCESS_DENIED);
             // Người được ủy quyền không đụng user ADMIN và chỉ gán role có tập quyền nằm trong quyền của chính họ.
             if (!actor.roles().contains(Role.ADMIN)) {
                 if (

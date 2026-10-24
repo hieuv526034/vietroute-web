@@ -43,6 +43,8 @@ import vn.vietroute.common.validation.StrongPasswordValidator;
 @RequiredArgsConstructor
 public class AccountLifecycleService {
 
+    private final BootstrapAdminInitializer bootstrap;
+
     private final AccountSettings settings;
 
     private final MailSettings mail;
@@ -78,6 +80,8 @@ public class AccountLifecycleService {
     public void register(RegisterRequest body, Locale locale) {
         requireAvailable();
         BusinessRules.require(StrongPasswordValidator.valid(body.getPassword()), ErrorCode.VALIDATION_FAILED);
+        // Trả cùng phản hồi chung, không cho đăng ký chiếm username bootstrap nếu dữ liệu quản trị đang bị mất.
+        if (bootstrap.username().equals(body.getUsername().toLowerCase(Locale.ROOT))) return;
         String email = email(body.getEmail());
         String hash = passwords.encode(body.getPassword());
         transactions.execute(connection -> {

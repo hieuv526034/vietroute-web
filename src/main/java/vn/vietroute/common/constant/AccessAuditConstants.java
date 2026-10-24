@@ -20,6 +20,7 @@ public final class AccessAuditConstants {
         POLICY_DELETED,
         ACCOUNT_CREATED,
         ACCOUNT_STATUS,
+        ADMIN_RECOVERED,
         SCOPE_CREATED,
         SCOPE_UPDATED,
         SCOPE_MEMBERSHIP;

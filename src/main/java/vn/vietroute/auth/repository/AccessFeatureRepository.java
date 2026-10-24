@@ -46,7 +46,7 @@ public class AccessFeatureRepository extends BaseRepository {
         var en = ResourceBundle.getBundle("i18n.messages", Locale.ENGLISH);
         try (
             var insert = connection.prepareStatement(
-                "INSERT INTO auth_permissions(code,name_vi,name_en,created_by,updated_by) VALUES (?,?,?,0,0) ON CONFLICT(code) DO NOTHING"
+                "INSERT INTO auth_permissions(code,name_vi,name_en,created_by,updated_by) VALUES (?,?,?,0,0) ON CONFLICT(code) DO UPDATE SET active=true,updated_at=CURRENT_TIMESTAMP,updated_by=0,registry_version=auth_permissions.registry_version+1 WHERE NOT auth_permissions.active"
             );
             var admin = connection.prepareStatement(
                 "INSERT INTO auth_role_permissions(role_code,permission_code,created_by,updated_by) VALUES ('ADMIN',?,0,0) ON CONFLICT DO NOTHING"

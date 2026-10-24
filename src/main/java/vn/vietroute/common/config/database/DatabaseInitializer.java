@@ -14,7 +14,6 @@ import java.util.ResourceBundle;
 import java.util.logging.Logger;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import vn.vietroute.auth.entity.AccessChange;
 import vn.vietroute.auth.entity.AccessFeature;
@@ -28,6 +27,7 @@ import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.ScopeMembership;
 import vn.vietroute.auth.entity.ScopeRole;
 import vn.vietroute.auth.entity.UserAccount;
+import vn.vietroute.auth.service.BootstrapAdminInitializer;
 import vn.vietroute.business.catalog.entity.CatalogItem;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
@@ -53,7 +53,7 @@ public class DatabaseInitializer implements InitializingBean {
 
     private final JdbcTransactions transactions;
 
-    private final PasswordEncoder passwords;
+    private final BootstrapAdminInitializer bootstrap;
 
     private final JdbcSchema schema;
 
@@ -111,7 +111,7 @@ public class DatabaseInitializer implements InitializingBean {
         );
         seedRoles(connection);
         seedPermissions(connection);
-        seedAdmin(connection);
+        bootstrap.initialize(connection, SystemActor.ID);
         seedCatalogs(connection);
         return null;
     }
@@ -235,39 +235,6 @@ public class DatabaseInitializer implements InitializingBean {
                 insert.addBatch();
             }
             insert.executeBatch();
-        }
-    }
-
-    /** Chỉ tạo tài khoản khi chưa có; không reset hash, trạng thái hay gán thêm quyền vào user đã tồn tại. */
-    private void seedAdmin(Connection connection) throws SQLException {
-        String username = settings.getBootstrapUsername().toLowerCase(Locale.ROOT);
-        try (PreparedStatement query = connection.prepareStatement("SELECT id FROM auth_users WHERE username=?")) {
-            query.setString(1, username);
-            try (ResultSet result = query.executeQuery()) {
-                if (result.next()) {
-                    return;
-                }
-            }
-        }
-        try (
-            PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO auth_users(username,password_hash,display_name) VALUES (?,?,?) RETURNING id"
-            )
-        ) {
-            insert.setString(1, username);
-            insert.setString(2, passwords.encode(settings.getBootstrapPassword()));
-            insert.setString(3, "Quản trị viên");
-            try (ResultSet result = insert.executeQuery()) {
-                result.next();
-                try (
-                    PreparedStatement role = connection.prepareStatement(
-                        "INSERT INTO auth_user_roles(user_id,role_code) VALUES (?, 'ADMIN')"
-                    )
-                ) {
-                    role.setLong(1, result.getLong(1));
-                    role.executeUpdate();
-                }
-            }
         }
     }
 
