@@ -38,6 +38,7 @@ public final class ApplicationConstants {
         ACCESS_AUDIT_CAPACITY("VIETROUTE_ACCESS_AUDIT_CAPACITY"),
         ACCESS_REGISTRY_CAPACITY("VIETROUTE_ACCESS_REGISTRY_CAPACITY"),
         ACCESS_POLICY_CAPACITY("VIETROUTE_ACCESS_POLICY_CAPACITY"),
+        ACCESS_SCOPE_CAPACITY("VIETROUTE_ACCESS_SCOPE_CAPACITY"),
         AUTH_SELF_SERVICE_ENABLED("VIETROUTE_AUTH_SELF_SERVICE_ENABLED"),
         AUTH_REGISTRATIONS_PER_DAY("VIETROUTE_AUTH_REGISTRATIONS_PER_DAY"),
         DB_URL("VIETROUTE_DB_URL"),
@@ -132,6 +133,16 @@ public final class ApplicationConstants {
         public static final String ACCESS_REGISTRY = "/registry/{kind}";
 
         public static final String ACCESS_REGISTRY_PAGE = "/registry/{kind}/page";
+
+        public static final String ACCESS_SCOPES = "/scopes";
+
+        public static final String ACCESS_SCOPE_ITEM = "/scopes/{id}";
+
+        public static final String ACCESS_SCOPE_MEMBERS = "/scopes/{id}/members";
+
+        public static final String ACCESS_SCOPE_MEMBER = "/scopes/{id}/members/{userId}";
+
+        public static final String ACCESS_SCOPE_PERMISSIONS = "/scopes/{id}/permissions";
         public static final String ACCESS_HISTORY = "/history";
         public static final String ACCESS_REGISTRY_ITEM = "/registry/{kind}/{code}";
         public static final String ACCESS_TARGETS = "/targets";
@@ -283,6 +294,8 @@ public final class ApplicationConstants {
         public static final String PERMISSION_CODE = "[A-Z][A-Z0-9_]{1,38}_[A-Z]+";
 
         public static final String BUSINESS_CODE = "^[A-Z][A-Z0-9]{2,39}$";
+
+        public static final String DATA_SCOPE_CODE = "^[A-Z][A-Z0-9_]{1,49}$";
 
         public static final String USERNAME = "^[A-Za-z][A-Za-z0-9]{2,31}$";
 

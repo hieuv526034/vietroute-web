@@ -196,3 +196,17 @@ Response PageResponse chứa ID, event, targetKind/targetKey, actorId/actorUsern
 GET `/api/v1/admin/access/registry/{kind}/page` cần ACCESS_READ, kind là roles/permissions, query nguyên văn tối đa 160 ký tự trong code/nameVi/nameEn không phân biệt hoa thường, active tùy chọn, page/size kế thừa (size tối đa 100). Response có page, capacity và allocated chưa xóa của toàn loại. `%`, `_`, `!` là ký tự thường; sai loại/query/size trả 400. Hai query count/page dùng projection registry rõ ràng, không credential. API danh sách cũ giữ shape tương thích; lưu registry/audit đọc trực tiếp theo code, không tải toàn danh sách để tìm một mã.
 
 COM016/409 báo đạt quota cấu hình, khác COM005 trùng mã và COM008 stale version. Quota/tombstone/giới hạn mở rộng tại [chuyên đề](SCHEMA_VA_PHAN_QUYEN.md#tìm-role-và-quota-registry--access10). Tăng quota không tự tăng permission trên role đã lưu hoặc nới guard.
+
+## API phạm vi bảo mật — SCOPE01
+
+| API | Guard | Input/kết quả |
+|---|---|---|
+| GET /api/v1/admin/access/scopes | ADMIN + ACCESS_READ | query/active/page/size theo registry search; PageResponse metadata |
+| POST /api/v1/admin/access/scopes | ADMIN + ACCESS_CREATE | code/nameVi/nameEn/active/version=0, 201; code bất biến/duy nhất, quota COM016 |
+| PUT /api/v1/admin/access/scopes/{id} | ADMIN + ACCESS_UPDATE | tên/trạng thái, giữ code/version; stale 409 |
+| GET /api/v1/admin/access/scopes/{id}/members | ADMIN + ACCESS_READ | userId tùy chọn/page/size; projection userId/username/role/trạng thái/version, không credential |
+| PUT /api/v1/admin/access/scopes/{id}/members/{userId} | ADMIN + ACCESS_ASSIGN | roles là tập con role toàn cục của user, active, version=0 tạo/phiên bản hiện hành để sửa; không ADMIN/system/self; audit nguyên tử |
+| GET /api/v1/auth/scopes | JWT hợp lệ, không mật khẩu tạm | danh sách scope của chính user, không có userId đầu vào; không thay tìm nhà xe công khai |
+| GET /api/v1/auth/scopes/{id}/permissions | JWT + membership/quyền ADMIN DB hiện hành | scopeId và tập permission riêng trong scope, 403 nếu scope/user/membership không hợp lệ; UI còn kết hợp policy/capabilities chung |
+
+Không endpoint xóa hoặc nhận audit/tenant claim tin cậy từ client. Membership có thể tắt bằng roles rỗng/active=false; bật cần ít nhất một role active thuộc user. Tắt role/quyền/account/scope hoặc thu hồi global role có hiệu lực lần DB check tiếp theo; không hủy transaction đang chạy. Nền guard/DAO integration, giới hạn và bắt buộc drain V015 tại [thiết kế](SCHEMA_VA_PHAN_QUYEN.md#nền-phạm-vi-dữ-liệu--scope01). Swagger bao phủ query/path/body/response; không tạo API nghiệp vụ giả để minh chứng đã có nhà xe/trip.

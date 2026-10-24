@@ -131,3 +131,9 @@ Kiểm UI bằng `src/test/resources/dev/RenderSystemUi.java` với hai context 
 Role ở ma trận/gán tài khoản hiển thị tên theo locale cùng mã, có ô tìm không dấu; role đang chọn và checkbox ngoài kết quả không bị mất. Component role-picker.js dùng chung ở khu Phân quyền/Tài khoản, giới hạn chiều cao danh sách và giữ khả năng bàn phím. Bộ lọc registry loại/từ khóa/trạng thái/nút cùng toolbar khi đủ chỗ, bảng phân trang server và quota riêng không đổi theo bộ lọc. Lỗi giữ bản nháp/version; tìm không cấp quyền và UI không thay guard DB.
 
 Renderer hai context/locale phải không có key dịch thiếu; Node kiểm tìm tên không dấu và không làm mất selection. Browser fixture của lượt ACCESS10 bị URL policy chặn mở lại tab, nên chưa có bằng chứng thao tác trực quan mới cho picker/registry; ảnh ACCESS09 trước đó không được tính là kiểm giao diện mới. Kiểm PostgreSQL phân trang/quota không thay nghiệm thu UX với người dùng thật.
+
+## Quản trị phạm vi — SCOPE01
+
+Tab Phạm vi dữ liệu trong Phân quyền chỉ dành ADMIN. Danh sách tìm/trạng thái/phân trang server; chọn icon thành viên để xem đúng scope, thêm/sửa metadata bằng modal. Modal gán tìm prefix username (tối đa 20 kết quả, thu hẹp từ khóa nếu cần), chọn tài khoản đã có role toàn cục rồi tick các role riêng tại scope. Tên role theo locale kèm mã, tìm giữ draft, trường bắt buộc có dấu đỏ, cột icon 96px/footer bên phải. Không có checkbox giả cho endpoint business chưa triển khai.
+
+Tắt membership/role có version, lỗi giữ modal/draft, không tự nạp version mới hoặc replay. Loading khóa fieldset và chặn đóng modal. Đây là UI admin nền; chưa là màn nhân viên chọn nhà xe hay hành khách đặt/theo dõi chuyến. UI business sau này phải giao quyền scoped với capabilities/policy chung, không lấy quyền A để hiện nút ở B. Browser URL policy còn chặn phiên kiểm; renderer vi/en/validation/SQL không được coi là nghiệm thu trực quan đầy đủ của tab/modal scope.

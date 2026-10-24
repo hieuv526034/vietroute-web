@@ -19,7 +19,10 @@ public final class AccessAuditConstants {
         POLICY_UPDATED,
         POLICY_DELETED,
         ACCOUNT_CREATED,
-        ACCOUNT_STATUS;
+        ACCOUNT_STATUS,
+        SCOPE_CREATED,
+        SCOPE_UPDATED,
+        SCOPE_MEMBERSHIP;
 
         public String messageKey() {
             return "access.change." + name();
@@ -31,5 +34,7 @@ public final class AccessAuditConstants {
         PERMISSION,
         USER,
         POLICY,
+        SCOPE,
+        MEMBERSHIP,
     }
 }

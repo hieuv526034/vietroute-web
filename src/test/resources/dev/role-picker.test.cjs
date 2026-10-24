@@ -15,7 +15,7 @@ test('Tìm role theo tên vi/en bỏ dấu hoặc mã, không làm mất lựa c
         { dataset: { roleChoice: 'CUSTOMER' }, textContent: 'Khách CUSTOMER', checked: false },
     ];
     const handlers = {};
-    const input = { value: 'khach', addEventListener: (event, callback) => handlers[event] = callback };
+    const input = { value: 'khach', addEventListener: (event, callback) => (handlers[event] = callback) };
     const status = {};
     const control = picker.bind(input, { querySelectorAll: () => choices }, status);
     handlers.input();

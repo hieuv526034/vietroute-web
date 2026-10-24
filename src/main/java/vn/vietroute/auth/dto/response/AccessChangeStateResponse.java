@@ -110,6 +110,24 @@ public record AccessChangeStateResponse(
         );
     }
 
+    /** Membership giữ tập role tối đa 32 và trạng thái/version trước–sau, không ghi danh tính liên hệ. */
+    public static AccessChangeStateResponse membership(Set<String> roles, boolean active, long version) {
+        return new AccessChangeStateResponse(
+            roles,
+            Set.of(),
+            roles.size(),
+            false,
+            active,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            version
+        );
+    }
+
     /** Tombstone giữ mã và tên, version registry tăng một lần cùng thao tác xóa. */
     public static AccessChangeStateResponse deleted(AccessRegistryResponse value) {
         return new AccessChangeStateResponse(

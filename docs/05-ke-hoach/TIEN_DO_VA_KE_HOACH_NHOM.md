@@ -1,8 +1,18 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
-## ACCESS11 — Đang làm
+## SCOPE01 — Nền phạm vi đang làm
 
-[Issue #69](https://github.com/hieuv526034/vietroute-web/issues/69), hieuv526034, nhánh `hieuv526034/access11-chi-phi-kiem-quyen`, base `69dbbf4`. Filter/me dùng một snapshot user/role/quyền không hash thay hai SELECT; guard dùng mảng thay lặp cột user theo mapping. Không cache hoặc bỏ lần kiểm DB interceptor/service. Verify local 135 Java đạt; helper JDBC đã biên dịch sau khi bỏ phụ thuộc Spring JDBC không có trong stack. Chuẩn bị CI đo 4 worker/100 lượt DAO, pool 2, statement count/borrow/p95 và 80 GET đọc hai node/p95/lỗi. Chưa có số đo thành công để kết luận tải, không gửi tải Neon/Render. Scope tiếp tục trước business.
+[Issue #71](https://github.com/hieuv526034/vietroute-web/issues/71), hieuv526034, nhánh `hieuv526034/scope01-nen-pham-vi`, base `0703a02`. V015 scope/membership/role scoped FK tập con role toàn cục; API/tab/modal ADMIN, version và lịch sử cùng transaction. DataScopeGuard đọc account/tokenVersion/scope/membership/đúng quyền DB; endpoint quyền scoped để UI không lấy quyền A hiện nút tại B. Thu hồi global role dọn FK, tăng version và ghi từng membership ảnh hưởng, không làm mất mapping không đổi. Chưa tạo CRUD nhà xe/chuyến/booking; DAO business vẫn phải tích hợp WHERE scope/quan hệ cha/con và owner/tài xế.
+
+Local verify 137 Java/28 Node đạt; hai context kiểm ADMIN-only/query/payload và self-service, helper DataScopeInspector biên dịch, renderer xuất vi/en không thiếu key. Chuẩn bị CI SQL ba scope/quyền chéo/row ID/version/thu hồi/rollback và API permission scoped; chưa có kết quả CI để coi SQL đã nghiệm thu. Browser vẫn bị policy chặn, chưa có nghiệm thu trực quan UI scope mới. Không ghi Neon hoặc đổi V001–V014. Bắt buộc nâng/drain tất cả node cũ trước khi gán membership vì code cũ thay global role bằng xóa toàn bộ mapping. Không đánh dấu business scope/BOOKING01/AUTH03 đã xong theo nền auth này.
+
+## ACCESS11 — Đã có trên main
+
+[PR #70](https://github.com/hieuv526034/vietroute-web/pull/70), merge `0703a02`, head đã kiểm `754aacb`, [Issue #69](https://github.com/hieuv526034/vietroute-web/issues/69), hieuv526034, nhánh `hieuv526034/access11-chi-phi-kiem-quyen`, base `69dbbf4`. Filter/me dùng một snapshot user/role/quyền không hash thay hai SELECT; guard dùng mảng thay lặp cột user theo mapping. Không cache hoặc bỏ lần kiểm DB interceptor/service. Verify local 135 Java đạt; helper biên dịch bằng dependency hiện có, formatter/check/rules/docs/actionlint/bash/diff đạt.
+
+Ba CI đúng head đạt: [Docker/PostgreSQL](https://github.com/hieuv526034/vietroute-web/actions/runs/40070748548), [format/quy tắc](https://github.com/hieuv526034/vietroute-web/actions/runs/40070748565), [tài liệu](https://github.com/hieuv526034/vietroute-web/actions/runs/40070748545). JDBC 4 worker ×25 lượt, pool 2: 100 lượt/0 lỗi, p95 9,13ms, mean borrow 1,04ms/max 7ms. Projection user 2 statement gồm search_path so với nhánh credential 3; mỗi lượt user+guard 4 statement. HTTP 4 worker ×20 GET hai node: 80 request/0 lỗi, p95 24,91ms/p99 413,27ms, 114,98rps trong 0,696s. Pool waiting sau workload đều 0; max acquire tích lũy app khoảng 104/114ms, gồm hoạt động khác.
+
+Đây là smoke workload nhỏ trên runner/DB cách ly, không điểm chịu tải tối đa hoặc SLA/benchmark Neon Free/Render/provider. Không có code dở ACCESS11; SCOPE01/AUTH03 và nghiệm thu production tiếp tục theo phụ thuộc, không coi quyền chức năng là scope nhà xe. Hợp đồng phép đo ở chuyên đề phân quyền.
 
 ## ACCESS10 — Đã có trên main
 
