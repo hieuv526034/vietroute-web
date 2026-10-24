@@ -85,6 +85,14 @@ class AdminRecoverySecurityTest {
                 .getResponse()
                 .getContentAsString(StandardCharsets.UTF_8);
             assertTrue(ownPage.contains("id=\"admin-recovery-open\""));
+            // Axios đã ghép baseURL theo context; endpoint không được lặp /demo ở cả base lẫn data attribute.
+            String nestedPage = mvc
+                .perform(get("/demo/account").contextPath("/demo").with(authentication(owner)))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+            assertTrue(nestedPage.contains("data-endpoint=\"/api/v1/auth/admin-recovery\""));
+            assertFalse(nestedPage.contains("data-endpoint=\"/demo/api/"));
             String otherPage = mvc
                 .perform(get("/account").with(authentication(auth(2, "otheradmin", Set.of(Role.ADMIN)))))
                 .andReturn()

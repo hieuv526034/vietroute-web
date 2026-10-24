@@ -2,7 +2,7 @@
 
 ## ACCESS15 — Đã có trên main: khôi phục tài khoản bootstrap
 
-Đang chốt bổ sung trên nhánh hieuv526034/access15-duong-cuu-ho: loại /account khỏi target policy quản trị để policy từ chối cũ không khóa màn cứu hộ khi mất ADMIN. Regression hai context/SQL CI bổ sung policy cũ; thêm xác nhận anonymous không được gọi recovery. Phần bổ sung chỉ đánh dấu trên main sau merge PR riêng.
+Đang chốt bổ sung trên nhánh hieuv526034/access15-duong-cuu-ho, PR #78: loại /account khỏi target policy quản trị để policy từ chối cũ không khóa màn cứu hộ khi mất ADMIN. Regression hai context/SQL CI bổ sung policy cũ; thêm xác nhận anonymous không được gọi recovery. Modal dùng endpoint tương đối với Axios baseURL để không lặp context khi WAR chạy dưới /demo. Phần bổ sung chỉ đánh dấu trên main sau merge PR riêng.
 
 [PR #77](https://github.com/hieuv526034/vietroute-web/pull/77), merge 3b4748d, head đã kiểm 29829e4, [Issue #76](https://github.com/hieuv526034/vietroute-web/issues/76), hieuv526034, nhánh hieuv526034/access15-khoi-phuc-admin, base d1fe84e. Theo yêu cầu chủ dự án: root init/servlet sync sửa role/permission/mapping ADMIN và tài khoản bootstrap thiếu, giữ hash/trạng thái/khóa/mật khẩu tạm của account đã có. Nút cứu hộ ở /account chỉ chính username bootstrap; API kiểm ID/username/tokenVersion/mật khẩu DB, không cần quyền đang mất, giữ CSRF/quota và AUTH011. Giữ tên bootstrap khỏi đăng ký/managed create, không cho gỡ ADMIN của account gốc; history ADMIN_RECOVERED cùng transaction và thu hồi phiên sau thành công. Chuyên đề phân quyền/API/UI đã ghi hợp đồng và giới hạn.
 
