@@ -1,10 +1,12 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
-## ACCESS15 — Đang làm: khôi phục tài khoản bootstrap
+## ACCESS15 — Đã có trên main: khôi phục tài khoản bootstrap
 
-[Issue #76](https://github.com/hieuv526034/vietroute-web/issues/76), hieuv526034, nhánh hieuv526034/access15-khoi-phuc-admin, base d1fe84e. Theo yêu cầu chủ dự án: root init/servlet sync sửa role/permission/mapping ADMIN và tài khoản bootstrap thiếu, giữ hash/trạng thái/khóa/mật khẩu tạm của account đã có. Nút cứu hộ ở /account chỉ chính username bootstrap; API kiểm ID/username/tokenVersion/mật khẩu DB, không cần quyền đang mất, giữ CSRF/quota và AUTH011. Giữ tên bootstrap khỏi đăng ký/managed create, không cho gỡ ADMIN của account gốc; history ADMIN_RECOVERED cùng transaction và thu hồi phiên sau thành công. Chuyên đề phân quyền/API/UI đã ghi hợp đồng và giới hạn.
+Đang chốt bổ sung trên nhánh hieuv526034/access15-duong-cuu-ho: loại /account khỏi target policy quản trị để policy từ chối cũ không khóa màn cứu hộ khi mất ADMIN. Regression hai context/SQL CI bổ sung policy cũ; thêm xác nhận anonymous không được gọi recovery. Phần bổ sung chỉ đánh dấu trên main sau merge PR riêng.
 
-Local Maven verify 140 Java/30 Node đạt; formatter/check/rules/docs, actionlint/bash syntax/diff đạt. Helper CI biên dịch, renderer hai context xuất vi/en không thiếu key. Modal fixture kiểm submit lặp/busy, 503 giữ bản nháp và thành công xóa password/hiện đăng nhập lại. Chuẩn bị CI PostgreSQL phá dữ liệu có rollback, mất role/mapping, giữ hash và restart. Chưa đánh dấu trên main hoặc kiểm Neon/Render/browser thật. Bước tiếp: PR/CI đúng head, xử lý lỗi thực nếu có rồi merge theo quy trình. Không thay migration V001–V015.
+[PR #77](https://github.com/hieuv526034/vietroute-web/pull/77), merge 3b4748d, head đã kiểm 29829e4, [Issue #76](https://github.com/hieuv526034/vietroute-web/issues/76), hieuv526034, nhánh hieuv526034/access15-khoi-phuc-admin, base d1fe84e. Theo yêu cầu chủ dự án: root init/servlet sync sửa role/permission/mapping ADMIN và tài khoản bootstrap thiếu, giữ hash/trạng thái/khóa/mật khẩu tạm của account đã có. Nút cứu hộ ở /account chỉ chính username bootstrap; API kiểm ID/username/tokenVersion/mật khẩu DB, không cần quyền đang mất, giữ CSRF/quota và AUTH011. Giữ tên bootstrap khỏi đăng ký/managed create, không cho gỡ ADMIN của account gốc; history ADMIN_RECOVERED cùng transaction và thu hồi phiên sau thành công. Chuyên đề phân quyền/API/UI đã ghi hợp đồng và giới hạn.
+
+Local Maven verify 140 Java/30 Node đạt; formatter/check/rules/docs, actionlint/bash syntax/diff đạt. Helper CI biên dịch, renderer hai context xuất vi/en không thiếu key. Modal fixture kiểm submit lặp/busy, 503 giữ bản nháp và thành công xóa password/hiện đăng nhập lại. Ba CI đúng head đạt: [Docker/PostgreSQL](https://github.com/hieuv526034/vietroute-web/actions/runs/40077642164), [format/quy tắc](https://github.com/hieuv526034/vietroute-web/actions/runs/40077641931), [tài liệu](https://github.com/hieuv526034/vietroute-web/actions/runs/40077641927). Job 120824370609 kiểm mất cả role ADMIN/permission/mapping, mật khẩu tạm/ADMIN khác bị chặn, history lỗi rollback toàn bộ, sửa lại bằng nút và startup giữ hash, initializer username tùy cấu hình/idempotent; toàn bộ regression nền/chi phí cũng đạt. Không còn code dở ACCESS15. Không thay V001–V015, ghi/test Neon hoặc nghiệm thu browser/provider/Render thật. Bước tiếp: nghiệm thu UI trực quan và business scope theo phụ thuộc; nâng đồng nhất node/cấu hình username bootstrap trước khi cam kết bảo vệ tài khoản gốc trên toàn cụm.
 
 ## Mốc bàn giao nền phân quyền
 
@@ -233,7 +235,7 @@ OPSUI01/ACCESSUI01/CONFIGUI01 đã được Hieu bổ sung source UI theo các h
 | Mã | Chủ trì / phối hợp | Đã có | Cần làm và giới hạn |
 |---|---|---|---|
 | OPSUI01 | Hieu triển khai / Anh phối hợp nghiệm thu dự kiến | API và UI list/status filter/page/detail/retry DEAD có xác nhận, version và JOB_READ/JOB_RETRY | Đã có trên main qua PR #22. Không hiện payload/PII, không retry hàng loạt; cần bật worker để xử lý job |
-| ACCESSUI01 | Hieu triển khai / Hien phối hợp nghiệm thu dự kiến | UI ma trận/gán quyền và tra/gán role tài khoản, version/conflict/CSRF, service kiểm quyền | Đã có trên main qua PR #22. ADMIN role bảo vệ, không tự sửa role; tra tài khoản chỉ ADMIN + ACCESS_READ; chưa tạo tài khoản mới hoặc scope nhà xe |
+| ACCESSUI01 | Hieu triển khai / Hien phối hợp nghiệm thu dự kiến | UI ma trận/gán quyền và tra/gán role tài khoản, version/conflict/CSRF, service kiểm quyền | Bản đầu PR #22, mở rộng qua ACCESS03–15: đã có tạo/quản lý tài khoản ADMIN, registry động, auth scope/membership và cứu hộ bootstrap. Business scope còn tích hợp vào DAO nhà xe/chuyến/đơn; UI picker/scope mới còn nghiệm thu trực quan |
 | CONFIGUI01 | Hieu triển khai | API/UI snapshot cấu hình whitelist với SYSTEM_READ | Đã có trên main qua PR #22, chỉ đọc, không serialize Settings/secret. Sửa Environment vẫn qua IDE/Render và restart; chưa có lưu cấu hình runtime hoặc API sửa env |
 | MAILTPL01 | Hieu + Bang | Outbox và transport Gmail/SMTP | Template vi/en cho sự kiện booking theo scope đã chốt; thử bằng transport giả rồi staging. Template auth/reset đã có tại PR #41; chưa có UI gửi mail tùy ý hoặc SMS/phone OTP |
 | DEPLOY01 | Hieu | Docker/Blueprint và adapter | Xác nhận service Live/env, bật worker/mail/media khi đủ điều kiện; không tự mua dịch vụ hoặc coi credentials có sẵn |
@@ -292,4 +294,4 @@ Mẫu ghi bàn giao cho mỗi task:
 |---|---|---|---|---|---|---|---|
 | `<mã>` | `<trạng thái>` | `<username thực>` | `<liên kết>` | `<đầu ra>` | `<lệnh/ca/kết quả>` | `<giới hạn>` | `<mã task>` |
 
-Ưu tiên hiện tại là nghiệm thu nền tảng/UI quản trị. Khi chốt xong mới bắt đầu SCOPE01, AUTH02, LOCATION01 và các hạng mục theo phụ thuộc; lượt hoàn thiện UI này chưa bắt đầu code nghiệp vụ nhà xe/chuyến/booking.
+Ưu tiên hiện tại là nghiệm thu trực quan nền tảng/UI quản trị và vận hành có bằng chứng. Nền auth SCOPE01, lifecycle AUTH02 và cứu hộ ACCESS15 đã có source; tiếp theo gắn scope vào CARRIER01/AUTH03/DRIVER01, triển khai LOCATION01 và các hạng mục theo phụ thuộc. Chưa bắt đầu CRUD nghiệp vụ nhà xe/chuyến/booking chỉ bởi việc hoàn thiện nền auth.
