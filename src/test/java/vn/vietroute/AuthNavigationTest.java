@@ -96,6 +96,21 @@ class AuthNavigationTest {
                             .getResponse();
                         assertEquals(302, login.getStatus());
                         assertEquals(destination, login.getRedirectedUrl());
+                        // Trang sau đổi mật khẩu phải render được thông báo vi/en dưới cả ROOT và context WAR.
+                        var account = mvc
+                            .perform(
+                                get(contextPath + "/account")
+                                    .contextPath(contextPath)
+                                    .param("lang", locale)
+                                    .param("passwordChanged", "true")
+                                    .with(authentication(actor))
+                            )
+                            .andReturn()
+                            .getResponse();
+                        assertEquals(200, account.getStatus());
+                        String accountHtml = account.getContentAsString(StandardCharsets.UTF_8);
+                        assertTrue(accountHtml.contains("data-password-changed=\""));
+                        assertTrue(!accountHtml.contains("??success.passwordChanged"));
                     }
                 }
             }

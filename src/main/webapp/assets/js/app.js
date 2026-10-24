@@ -119,6 +119,7 @@
         );
     });
 
+    let passwordChangedNotice = new URLSearchParams(window.location.search).get('passwordChanged') === 'true';
     const loadAccount = async () => {
         const node = document.getElementById('account-name');
         if (!node) {
@@ -140,6 +141,11 @@
                 { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh' },
             ).format(new Date(user.createdAt));
             document.getElementById('initial-password').hidden = !user.mustChangePassword;
+            // Query chỉ giữ thông báo qua lần tải trang; trạng thái mật khẩu/quyền vẫn phải đọc từ server.
+            if (!user.mustChangePassword && passwordChangedNotice) {
+                feedback(document.getElementById('form-feedback').dataset.passwordChanged, true);
+                passwordChangedNotice = false;
+            }
         } catch (error) {
             failure(error);
         }
@@ -163,7 +169,9 @@
             form.reset();
             feedback(response.data.message, true);
             document.getElementById('password-dialog').close();
-            await loadAccount();
+            // Cookie mới đã được server trả về: tải lại document để dựng menu theo quyền DB của phiên mới.
+            // Chỉ đọc lại /me sẽ để header mắc ở menu rỗng của phiên mật khẩu tạm dù đổi đã thành công.
+            window.location.assign(`${route('/account')}&passwordChanged=true`);
         },
         'password-feedback',
     );
