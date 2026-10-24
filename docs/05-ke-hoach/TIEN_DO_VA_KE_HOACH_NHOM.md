@@ -1,5 +1,21 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
+## ACCESS07 — Rà soát mức sẵn sàng, phần bổ sung chưa triển khai
+
+[Issue #61](https://github.com/hieuv526034/vietroute-web/issues/61), hieuv526034, nhánh `hieuv526034/access07-ra-soat-phan-quyen`, đối chiếu source main `0c7ce42` ngày 24/10/2026. Phạm vi lượt này là đánh giá, không sửa hành vi phân quyền. Lõi RBAC, nhiều role/user, cây menu/hành động, guard DB ở HTTP/service, version/transaction, bảo vệ ADMIN và preview user đích đã có tại ACCESS03–06. Không kết luận đã sẵn sàng cho mọi tải hoặc mọi nghiệp vụ từ các bằng chứng đó.
+
+Các việc còn lại, phân biệt lỗi tái hiện và phần cần bổ sung:
+
+| Ưu tiên/phần | Kết quả rà soát và bằng chứng | Tiêu chí xử lý tiếp |
+|---|---|---|
+| P2 — lỗi UI ủy quyền | `access-tree.js` model.toggle tự thêm viewPermission khi tick hành động, không xét options.allowed của render. Tái hiện Node: actor chỉ được gán CATALOG_CREATE, tick CREATE tạo draft có cả CATALOG_VIEW. AccessService.replace chặn quyền ngoài actor, nên có thể trả 403 thay vì lưu lựa chọn hợp lệ; không phải đường nâng quyền backend | Chỉ gợi VIEW trong tập được gán; nếu thiếu thì giải thích, giữ CREATE độc lập. Kiểm tick đơn/nhóm/chọn bộ/tìm kiếm, không lặng bỏ quyền hoặc nới service |
+| Bổ sung — lịch sử phân quyền | Có actor/time/version hiện tại, nhưng replacePermissions xóa rồi chèn mapping, replaceRoles thay mapping và deletePolicy xóa bản ghi; chưa có lịch sử trước–sau bền vững cho từng lần gán/thu hồi | Lưu sự kiện actor/đối tượng/quyền thêm-bỏ/thời điểm/kết quả trong cùng transaction; phân quyền xem, retention và giới hạn dung lượng rõ ràng. Nhật ký API đã lọc không thay thế lịch sử này |
+| Bổ sung — UX và quy mô registry | Ma trận có tìm kiếm/checkbox nhóm/preview, nhưng picker role ở operations.js vẫn là select/checkbox toàn bộ mã role; chưa tìm theo tên vi/en như nhãn ở màn Tài khoản. Registry đang giới hạn 512 role/quyền mỗi bảng, policy 256; tombstone role vẫn tính quota tạo mới | Tên thân thiện kèm mã, tìm/lọc role và phân trang registry khi cần; hiển thị giới hạn có lý do. Không bỏ quota hoặc xóa tombstone tùy tiện để tuyên bố mở rộng không giới hạn |
+| Cần nghiệm thu — chi phí DB | JWT filter, interceptor refresh và từng method guard đều có truy vấn; một request có thể đọc quyền nhiều lần. CI chức năng/hai node không phải benchmark Neon Free | Đo số query, p95, pool wait và 5xx trên môi trường cách ly/staging; tối ưu truy vấn trùng mà giữ kiểm DB hiện hành và fail closed. Không thêm Redis/Kafka theo suy đoán |
+| Phụ thuộc nghiệp vụ — SCOPE01/AUTH03 | Role DRIVER/OPERATOR chưa gắn membership nhà xe; quyền chức năng không tự giới hạn dữ liệu theo nhà xe/tài xế/khách | Chốt mô hình quan hệ, lọc scope trong DAO và kiểm quan hệ cha/con; regression hai nhà xe không đọc/sửa chéo bằng đổi ID trước CRUD nghiệp vụ |
+
+Kiểm lượt rà soát: 18 Java thuộc DatabaseAccessGuardTest/AccessTreeTest/AccessPolicyTest/ManagedAccountSecurityTest/AccessProfileSecurityTest đạt (0 lỗi); Node tái hiện riêng lỗi VIEW đạt assertion. Bằng chứng 129 Java/25 Node và Docker/PostgreSQL của nền hiện tại ở ACCESS06 phía dưới, không coi là đã kiểm benchmark hoặc UI với người dùng thật. Lượt này đọc code/UI và bằng chứng UI vi/en/390px đã có tại ACCESS05; chưa thao tác lại trình duyệt/provider hoặc DB production. Bước tiếp: sửa lỗi VIEW trước, bổ sung lịch sử/UX, nghiệm thu tải và hoàn thành scope trước nghiệp vụ. Các việc trong bảng chưa được đánh dấu hoàn thành chỉ vì đã ghi kế hoạch.
+
 ## ACCESS06 — Đã có trên main
 
 [PR #59](https://github.com/hieuv526034/vietroute-web/pull/59), merge `f89fbef`, head đã kiểm `6db2de4`, [Issue #58](https://github.com/hieuv526034/vietroute-web/issues/58), hieuv526034, nhánh `hieuv526034/access06-kiem-quyen-db`, base `d8074c8`. Thay các biểu thức AccessRules bằng hàm `accessGuard` đọc account/tokenVersion và mapping role/quyền active trực tiếp DB; refresh trước guard HTTP/policy, giữ method security hai context và bảo vệ ADMIN/scope. Không cache quyền hoặc thay schema, không ghi trên Neon. Hợp đồng, chi phí SELECT và giới hạn thu hồi với thao tác đang chạy tại [thiết kế](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#hàm-kiểm-db-trong-preauthorize--access06).
