@@ -189,7 +189,7 @@
             });
         node('account-save').textContent = create ? labels.create : labels.save;
         node('account-grant-note').hidden = create;
-        renderRoles(user?.roles || ['CUSTOMER']);
+        renderRoles(user?.roles || (roles.some((role) => role.role === 'CUSTOMER' && role.active) ? ['CUSTOMER'] : []));
         app.feedback('', false, 'account-edit-feedback');
         editModal.open();
     };
@@ -321,6 +321,14 @@
         roleNames = new Map(
             registry.map((role) => [role.code, document.documentElement.lang === 'en' ? role.nameEn : role.nameVi]),
         );
+        for (const [id, role] of [
+            ['preset-driver', 'DRIVER'],
+            ['preset-customer', 'CUSTOMER'],
+        ]) {
+            const available = roles.some((item) => item.role === role && item.active);
+            node(id).disabled = !available;
+            if (!available) node(id).title = labels.off;
+        }
         node('account-role-filter').append(
             ...roles.map((role) =>
                 option(
