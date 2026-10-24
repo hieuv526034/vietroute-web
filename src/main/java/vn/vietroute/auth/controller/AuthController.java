@@ -35,7 +35,7 @@ import vn.vietroute.common.web.response.ApiResult;
 @RestController
 @RequestMapping(Routes.AUTH)
 @Tag(name = "Auth", description = "Đăng nhập JWT, tài khoản hiện tại, CSRF, đổi mật khẩu và logout")
-@AccessFunction(group = Groups.AUTH)
+@AccessFunction(group = Groups.AUTH, authenticated = true)
 public class AuthController extends BaseController {
 
     private final AuthService auth;

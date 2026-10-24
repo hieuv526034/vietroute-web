@@ -38,6 +38,10 @@ public final class AccessTargets {
     }
 
     /** Chỉ các route Security thực sự permitAll; không suy ra công khai từ annotation hay dữ liệu DB. */
+    public static boolean isPublic(String method, String path) {
+        return publicRoute(method, path);
+    }
+
     private static boolean publicRoute(String method, String path) {
         return (
             WebRoutePolicy.publicApi(path, method) ||
@@ -49,6 +53,7 @@ public final class AccessTargets {
 
     /** Tự thu thập cả trang MVC và API; method/path/template lấy trực tiếp từ RequestMappingHandlerMapping. */
     public static List<AccessResourceResponse> discover(RequestMappingHandlerMapping mapping) {
+        AccessFeatures.validate(AccessFeatures.definitions());
         List<AccessResourceResponse> result = new ArrayList<>();
         mapping.getHandlerMethods().forEach((info, handler) -> {
             if (info.getMethodsCondition().isEmpty()) {
@@ -69,6 +74,7 @@ public final class AccessTargets {
                 handler.getBeanType(),
                 AccessFunction.class
             );
+            var binding = AccessAuthorization.binding(handler);
             String group = declared == null ? Groups.GENERAL : declared.group();
             Role.valueOf(group); // Cùng allowlist mã in hoa; chặn metadata sai ngay lúc startup.
             List<String> declaredPermissions =
@@ -81,11 +87,21 @@ public final class AccessTargets {
                           .sorted()
                           .toList();
             String description = operation == null || operation.summary().isBlank() ? name : operation.summary();
+            if (!binding.function().isEmpty()) AccessFeatures.require(binding.function());
             info.getPatternValues().forEach(path ->
                 info
                     .getMethodsCondition()
                     .getMethods()
                     .forEach(method -> {
+                        boolean publicEndpoint = publicRoute(method.name(), path);
+                        if (
+                            !publicEndpoint && binding.permissions().isEmpty() && !binding.authenticated()
+                        ) throw new IllegalStateException(
+                            "Endpoint bảo vệ thiếu quyền/self-service: " + method + " " + path
+                        );
+                        if (
+                            !binding.permissions().isEmpty() && binding.function().isEmpty()
+                        ) throw new IllegalStateException("Quyền endpoint thiếu function: " + path);
                         result.add(
                             new AccessResourceResponse(
                                 kind,
@@ -97,12 +113,32 @@ public final class AccessTargets {
                                 null,
                                 null,
                                 group,
-                                declaredPermissions
+                                declaredPermissions,
+                                binding.function(),
+                                binding.match(),
+                                binding.adminOnly()
                             )
                         );
                     })
             );
         });
+        // Một PAGE phải có mapping VIEW thật; khai báo cây thiếu trang không được publish như chức năng dùng được.
+        if (!result.isEmpty()) for (var feature : AccessFeatures.definitions()) {
+            if (
+                feature.path() != null &&
+                result
+                    .stream()
+                    .noneMatch(
+                        item ->
+                            item.kind().equals("MENU") &&
+                            item.function().equals(feature.code()) &&
+                            item.target().equals("GET " + feature.path()) &&
+                            item.declaredPermissions().contains(feature.viewPermission())
+                    )
+            ) {
+                throw new IllegalStateException("Chức năng thiếu mapping VIEW: " + feature.code());
+            }
+        }
         return result
             .stream()
             .sorted(Comparator.comparing(AccessResourceResponse::kind).thenComparing(AccessResourceResponse::target))

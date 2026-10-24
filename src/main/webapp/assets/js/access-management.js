@@ -54,6 +54,7 @@
         }
     };
     const renderResources = async (query = resourcePager.query) => {
+        if (!me?.permissions.includes('ACCESS_READ')) return;
         const page = await window.VietRouteTable.readPage(
             (params) => get('/resources?' + new URLSearchParams(params)),
             query,
@@ -82,6 +83,7 @@
         resourcePager.update(page);
     };
     const renderRegistry = async () => {
+        if (!me?.permissions.includes('ACCESS_READ')) return;
         const values = await get('/registry/' + node('registry-kind').value),
             body = node('registry-body');
         body.replaceChildren();
@@ -119,7 +121,7 @@
                                 null,
                                 'delete',
                             );
-                            await renderRegistry();
+                            if (me.permissions.includes('ACCESS_READ')) await renderRegistry();
                             document.dispatchEvent(new Event('access-registry-changed'));
                         });
                     },
@@ -134,6 +136,7 @@
         }
     };
     const renderPolicies = async () => {
+        if (!me?.permissions.includes('ACCESS_READ')) return;
         const values = await get('/policies'),
             body = node('policies-body');
         body.replaceChildren();
@@ -146,6 +149,7 @@
             actions.className = 'table-actions';
             const edit = editButton(() => openPolicy(value).catch(app.failure));
             edit.disabled = !canEdit();
+            edit.hidden = !canEdit();
             actions.append(edit);
             row.append(actions);
             body.append(row);
@@ -202,7 +206,7 @@
                 input.append(option);
             }
         }
-        node('policy-delete').hidden = !value;
+        node('policy-delete').hidden = !value || !me.permissions.includes('ACCESS_DELETE');
         policyModal.open();
     };
     const run = async (id, action) => {
@@ -286,9 +290,13 @@
         .then(async (response) => {
             me = response.data.data;
             node('registry-create').disabled = !canCreate();
-            node('policies-create').disabled = !canCreate();
+            node('registry-create').hidden = !canCreate();
+            node('policies-create').disabled = !canCreate() || !me.permissions.includes('ACCESS_READ');
+            node('policies-create').hidden = !canCreate();
             node('policy-delete').disabled = !me.permissions.includes('ACCESS_DELETE');
-            await read(() => Promise.all([renderRegistry(), renderPolicies(), renderResources()]));
+            node('policy-delete').hidden = !me.permissions.includes('ACCESS_DELETE');
+            if (me.permissions.includes('ACCESS_READ'))
+                await read(() => Promise.all([renderRegistry(), renderPolicies(), renderResources()]));
         })
         .catch(app.failure);
 })();

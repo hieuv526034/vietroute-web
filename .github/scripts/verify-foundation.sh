@@ -43,7 +43,7 @@ call 200 DELETE '/api/v1/admin/access/registry/roles/DRIVER?version=2' '' bearer
 
 printf '%s\n' '{"nameVi":"Biên tập","nameEn":"Editor","active":true,"version":0}' > "$work/foundation-registry.json"
 call 201 POST /api/v1/admin/access/registry/roles/EDITOR_CI "$work/foundation-registry.json" bearer
-printf '%s\n' '{"permissions":["CATALOG_READ"],"version":0}' > "$work/foundation-permissions.json"
+printf '%s\n' '{"permissions":["CATALOG_VIEW","CATALOG_READ"],"version":0}' > "$work/foundation-permissions.json"
 call 200 PUT /api/v1/admin/access/roles/EDITOR_CI/permissions "$work/foundation-permissions.json" bearer
 account_version=$(sql "SELECT version FROM auth_users WHERE id=$account_id")
 printf '{"roles":["CUSTOMER","EDITOR_CI"],"version":%s}\n' "$account_version" > "$work/foundation-roles.json"

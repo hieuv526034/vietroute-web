@@ -3,18 +3,29 @@ package vn.vietroute.common.web.advice;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.MessageSource;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.HandlerMapping;
+import vn.vietroute.auth.dto.response.AccessCapabilityResponse;
 import vn.vietroute.auth.dto.response.AccessPolicyResponse;
-import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
+import vn.vietroute.auth.security.AccessCapabilities;
+import vn.vietroute.auth.security.AccessNavigation;
+import vn.vietroute.auth.security.AccessPolicyInterceptor;
+import vn.vietroute.auth.security.AccessResourceSynchronizer;
 import vn.vietroute.auth.security.AuthNavigation;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.auth.service.AccessManagementService;
-import vn.vietroute.common.constant.ApplicationConstants.Http;
+import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.web.locale.SupportedLocaleResolver;
 
@@ -22,8 +33,24 @@ import vn.vietroute.common.web.locale.SupportedLocaleResolver;
 @ControllerAdvice
 public class PageModelAdvice {
 
+    private final ObjectProvider<AccessResourceSynchronizer> mapping;
+
+    private final MessageSource messages;
+
+    public PageModelAdvice(ObjectProvider<AccessResourceSynchronizer> mapping, MessageSource messages) {
+        this.messages = messages;
+        this.mapping = mapping;
+    }
+
     @ModelAttribute
     public void common(Model model, HttpServletRequest request) {
+        // JSON/health không render header: tránh dựng model/menu và quét metadata cho mọi request API.
+        Object handler = request.getAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE);
+        if (
+            handler instanceof HandlerMethod method &&
+            (AnnotatedElementUtils.hasAnnotation(method.getBeanType(), RestController.class) ||
+                AnnotatedElementUtils.hasAnnotation(method.getMethod(), ResponseBody.class))
+        ) return;
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         UserPrincipal user = auth != null && auth.getPrincipal() instanceof UserPrincipal value ? value : null;
         model.addAttribute("basePath", request.getContextPath());
@@ -31,47 +58,29 @@ public class PageModelAdvice {
         model.addAttribute("currentLocale", new SupportedLocaleResolver().resolveLocale(request).getLanguage());
         model.addAttribute("currentUser", user);
         model.addAttribute("workspacePath", AuthNavigation.workspace(user));
+        List<AccessPolicyResponse> policies = AccessPolicyInterceptor.snapshot(request);
+        var capabilities = AccessCapabilities.compute(mapping.getObject().inventory(), auth, policies);
+        Map<String, Boolean> pages = capabilities
+            .stream()
+            .collect(Collectors.toMap(AccessCapabilityResponse::function, AccessCapabilityResponse::view));
         model.addAttribute(
-            "catalogAllowed",
-            menuAllowed(request, auth, Routes.ADMIN) &&
-                (allowed(auth, Permission.CATALOG_READ) ||
-                    allowed(auth, Permission.CATALOG_CREATE) ||
-                    allowed(auth, Permission.CATALOG_UPDATE) ||
-                    allowed(auth, Permission.CATALOG_WRITE) ||
-                    allowed(auth, Permission.CATALOG_DELETE))
+            "functionNavigation",
+            AccessNavigation.build(
+                pages,
+                request.getRequestURI().substring(request.getContextPath().length()),
+                new SupportedLocaleResolver().resolveLocale(request),
+                messages
+            )
         );
+        model.addAttribute("catalogAllowed", pages.getOrDefault(Functions.CATALOG, false));
+        model.addAttribute("mediaAllowed", pages.getOrDefault(Functions.MEDIA, false));
+        model.addAttribute("jobsAllowed", pages.getOrDefault(Functions.JOBS, false));
+        model.addAttribute("accessAllowed", pages.getOrDefault(Functions.ACCESS, false));
+        model.addAttribute("monitoringAllowed", pages.getOrDefault(Functions.MONITORING, false));
+        model.addAttribute("configurationAllowed", pages.getOrDefault(Functions.CONFIGURATION, false));
+        model.addAttribute("journalAllowed", pages.getOrDefault(Functions.JOURNAL, false));
+        model.addAttribute("accountAllowed", user != null);
         model.addAttribute("adminUser", user != null && user.roles().contains(Role.ADMIN));
-        model.addAttribute(
-            "jobsAllowed",
-            allowed(auth, Permission.JOB_READ) && menuAllowed(request, auth, Routes.JOBS_PAGE)
-        );
-        model.addAttribute(
-            "accessAllowed",
-            user != null &&
-                user.roles().contains(Role.ADMIN) &&
-                allowed(auth, Permission.ACCESS_READ) &&
-                menuAllowed(request, auth, Routes.ACCESS_PAGE)
-        );
-        model.addAttribute(
-            "monitoringAllowed",
-            allowed(auth, Permission.SYSTEM_READ) && menuAllowed(request, auth, Routes.MONITORING_PAGE)
-        );
-        model.addAttribute(
-            "configurationAllowed",
-            allowed(auth, Permission.SYSTEM_READ) && menuAllowed(request, auth, Routes.CONFIGURATION_PAGE)
-        );
-        model.addAttribute("accountAllowed", menuAllowed(request, auth, Routes.ACCOUNT));
-        model.addAttribute(
-            "mediaAllowed",
-            allowed(auth, Permission.MEDIA_READ) && menuAllowed(request, auth, Routes.MEDIA_PAGE)
-        );
-        model.addAttribute(
-            "journalAllowed",
-            user != null &&
-                user.roles().contains(Role.ADMIN) &&
-                allowed(auth, Permission.SYSTEM_READ) &&
-                menuAllowed(request, auth, Routes.API_JOURNAL_PAGE)
-        );
         // Chỉ đánh dấu trang hiện hành; các cờ giao diện không thay thế kiểm quyền ở service.
         String path = request.getRequestURI().substring(request.getContextPath().length());
         Map<String, Boolean> navigation = Map.of(
@@ -101,33 +110,6 @@ public class PageModelAdvice {
                 navigation.get("jobs") ||
                 navigation.get("configuration") ||
                 navigation.get("journal")
-        );
-    }
-
-    /** Snapshot do interceptor đặt trên request; không truy vấn DB riêng cho từng menu. */
-    private static boolean menuAllowed(HttpServletRequest request, Authentication auth, String path) {
-        Object snapshot = request.getAttribute(Http.ACCESS_POLICY_ATTRIBUTE);
-        if (snapshot instanceof List<?> policies) {
-            for (Object item : policies) {
-                if (
-                    item instanceof AccessPolicyResponse policy &&
-                    policy.target().equals("GET " + path) &&
-                    !AccessManagementService.allows(policy, auth)
-                ) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    private static boolean allowed(Authentication auth, Permission permission) {
-        return (
-            auth != null &&
-            auth
-                .getAuthorities()
-                .stream()
-                .anyMatch(value -> value.getAuthority().equals(permission.name()))
         );
     }
 }

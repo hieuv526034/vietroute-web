@@ -26,6 +26,7 @@ import vn.vietroute.business.catalog.service.CatalogService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
+import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.CatalogType;
@@ -38,7 +39,7 @@ import vn.vietroute.common.web.response.ApiResult;
 /** Controller danh mục làm ví dụ hoàn chỉnh để các thành viên triển khai module sau theo cùng chuẩn. */
 @RestController
 @Tag(name = "Catalog", description = "Danh mục vi/en, phân trang và audit")
-@AccessFunction(group = Groups.CATALOG)
+@AccessFunction(group = Groups.CATALOG, function = Functions.CATALOG)
 public class CatalogController extends BaseController {
 
     private final CatalogService catalogs;
@@ -48,6 +49,7 @@ public class CatalogController extends BaseController {
         this.catalogs = catalogs;
     }
 
+    @AccessFunction(group = Groups.CATALOG)
     @GetMapping(Routes.CATALOG_BY_TYPE)
     @Operation(
         summary = "Tra cứu danh mục",

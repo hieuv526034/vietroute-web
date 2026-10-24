@@ -29,7 +29,6 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockServletContext;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import vn.vietroute.auth.dto.request.LoginRequest;
@@ -203,7 +202,7 @@ class ApiJournalTest {
         return UsernamePasswordAuthenticationToken.authenticated(
             "isolated",
             null,
-            List.of(authorities).stream().map(SimpleGrantedAuthority::new).toList()
+            AccessTestConfig.upgradedAuthorities(authorities)
         );
     }
 

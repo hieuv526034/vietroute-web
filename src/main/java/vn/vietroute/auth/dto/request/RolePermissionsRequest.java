@@ -17,11 +17,12 @@ import vn.vietroute.common.base.BaseRequest;
 public class RolePermissionsRequest extends BaseRequest {
 
     @NotNull(message = "{validation.required}")
-    @Size(max = 64, message = "{validation.length}")
+    @Size(max = 512, message = "{validation.length}")
     @Schema(description = "Tập quyền mới; tập rỗng thu hồi mọi quyền chức năng")
     private Set<@NotNull Permission> permissions;
 
     @Min(value = 0, message = "{validation.invalid}")
     @Schema(description = "Version hiện hành của cấu hình role", example = "0", minimum = "0")
-    private long version;
+    @NotNull(message = "{validation.required}")
+    private Long version;
 }

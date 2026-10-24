@@ -157,7 +157,7 @@ class MonitoringFoundationTest {
             var allowed = UsernamePasswordAuthenticationToken.authenticated(
                 "operator",
                 null,
-                List.of(new SimpleGrantedAuthority("SYSTEM_READ"))
+                List.of(new SimpleGrantedAuthority("SYSTEM_READ"), new SimpleGrantedAuthority("SYSTEM_VIEW"))
             );
             var runtime = mvc
                 .perform(get(Routes.SYSTEM_RUNTIME).with(authentication(allowed)))

@@ -9,7 +9,7 @@ import vn.vietroute.auth.entity.PermissionAction;
 public record PermissionResponse(
     @Schema(description = "Mã quyền ổn định") Permission code,
     @Schema(description = "Nhóm tài nguyên, ví dụ CATALOG/ACCESS/JOB") String resource,
-    @Schema(description = "Hành động được cho phép; WRITE tương thích chỉ gồm CREATE/UPDATE")
+    @Schema(description = "Hành động được cho phép; WRITE tương thích theo từng resource")
     Set<PermissionAction> actions,
     @Schema(description = "Key dịch tên quyền") String messageKey,
     @Schema(description = "Tên quyền theo ngôn ngữ yêu cầu") String name

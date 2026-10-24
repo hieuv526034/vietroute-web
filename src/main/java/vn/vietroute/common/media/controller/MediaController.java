@@ -23,6 +23,7 @@ import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
+import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
@@ -40,7 +41,7 @@ import vn.vietroute.common.web.response.ApiResult;
 @RestController
 @RequestMapping(Routes.MEDIA)
 @Tag(name = "Ảnh công khai", description = "Upload/xem/xóa ảnh xe, logo, avatar; không dùng cho giấy tờ nhạy cảm")
-@AccessFunction(group = Groups.MEDIA)
+@AccessFunction(group = Groups.MEDIA, function = Functions.MEDIA, permissions = { Permissions.MEDIA_READ })
 public class MediaController extends BaseController {
 
     private final MediaService media;

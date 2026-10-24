@@ -1,6 +1,7 @@
 /* Tra nhật ký PostgreSQL dùng chung; lỗi chi tiết ở modal, không tự replay mutation hoặc đọc header xác thực. */
 (() => {
     'use strict';
+    let readAllowed = false;
     const root = document.getElementById('api-journal');
     if (!root) return;
     const { api, feedback, failure } = window.VietRoute;
@@ -85,6 +86,10 @@
         requestAnimationFrame(() => window.VietRouteUI.tabs(detailTabs).select('journal-request'));
     };
     const load = async (query = pager.query) => {
+        if (!readAllowed) {
+            window.VietRoute.feedback(document.querySelector('meta[name="access-no-read"]')?.content || '');
+            return;
+        }
         let data;
         const records = await tables.readPage(async (pagination) => {
             data = (await api.get(route, { params: { ...params, ...pagination }, timeout: 10000 })).data.data;
@@ -172,5 +177,10 @@
         link.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
-    perform(load);
+    window.VietRouteAccess.load('JOURNAL')
+        .then((capability) => {
+            readAllowed = capability.actions.includes('READ');
+            perform(load);
+        })
+        .catch(window.VietRoute.failure);
 })();

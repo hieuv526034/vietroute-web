@@ -81,7 +81,11 @@ class AccessPolicyTest {
             var user = UsernamePasswordAuthenticationToken.authenticated(
                 new UserPrincipal(8L, "support", Set.of(Role.valueOf("SUPPORT")), 0),
                 null,
-                List.of(new SimpleGrantedAuthority("ROLE_SUPPORT"), new SimpleGrantedAuthority("MEDIA_READ"))
+                List.of(
+                    new SimpleGrantedAuthority("ROLE_SUPPORT"),
+                    new SimpleGrantedAuthority("MEDIA_READ"),
+                    new SimpleGrantedAuthority("MEDIA_VIEW")
+                )
             );
             assertEquals(
                 403,
@@ -167,7 +171,11 @@ class AccessPolicyTest {
             var admin = UsernamePasswordAuthenticationToken.authenticated(
                 new UserPrincipal(1L, "admin", Set.of(Role.ADMIN), 0),
                 null,
-                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"), new SimpleGrantedAuthority("MEDIA_READ"))
+                List.of(
+                    new SimpleGrantedAuthority("ROLE_ADMIN"),
+                    new SimpleGrantedAuthority("MEDIA_READ"),
+                    new SimpleGrantedAuthority("MEDIA_VIEW")
+                )
             );
             assertEquals(
                 200,

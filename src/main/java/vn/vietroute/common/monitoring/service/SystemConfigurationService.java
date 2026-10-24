@@ -5,6 +5,7 @@ import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import vn.vietroute.auth.security.AccessRules;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.database.DatabaseSettings;
 import vn.vietroute.common.config.integration.JobSettings;
@@ -45,7 +46,7 @@ public class SystemConfigurationService {
     private final Clock clock;
 
     /** Đọc cấu hình startup không cần DB, không serialize trực tiếp bất kỳ Settings nào. */
-    @PreAuthorize("hasAuthority('SYSTEM_READ')")
+    @PreAuthorize(AccessRules.CONFIGURATION_READ)
     public SystemConfigurationResponse read() {
         return new SystemConfigurationResponse(
             Instant.now(clock),

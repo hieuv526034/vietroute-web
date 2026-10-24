@@ -19,7 +19,9 @@ import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
+import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.AccessConstants.Groups;
+import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
@@ -33,7 +35,7 @@ import vn.vietroute.common.web.response.ApiResult;
 @RestController
 @RequestMapping(Routes.JOBS)
 @Tag(name = "Worker", description = "Theo dõi và retry công việc nền có quyền chức năng")
-@AccessFunction(group = Groups.SYSTEM)
+@AccessFunction(group = Groups.SYSTEM, function = Functions.JOBS, permissions = { Permissions.JOB_READ })
 public class JobController extends BaseController {
 
     private final JobService jobs;
@@ -61,6 +63,7 @@ public class JobController extends BaseController {
         return execute(SuccessCode.OK, request, () -> jobs.find(id));
     }
 
+    @AccessFunction(group = Groups.SYSTEM, permissions = { Permissions.JOB_RETRY })
     @PostMapping(Routes.JOB_RETRY_ACTION)
     @Operation(summary = "Chạy lại job DEAD", description = "Yêu cầu JOB_RETRY và version hiện hành")
     public ApiResult<JobResponse> retry(

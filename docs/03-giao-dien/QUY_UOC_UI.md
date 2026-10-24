@@ -89,3 +89,11 @@ Heartbeat dùng uiSilent để không nháy loading/mờ bảng khi đọc; CSRF
 ![Menu Hệ thống, Phân quyền, API và tài khoản tách riêng](../images/foundation05-menu.png)
 
 ![Nút refresh, bảng và thanh tiến trình khi request chậm](../images/foundation05-loading.png)
+
+## Cây quyền, menu và capabilities — ACCESS03
+
+Header dựng từ AccessFeatures sau khi lọc VIEW bằng cùng guard/policy với API capabilities. Nút dữ liệu dùng actions và target cụ thể, không chỉ kiểm tên role. VIEW-only mở được trang nhưng không gọi API READ; API-only có thể có hành động mà không có menu. Các giới hạn journal/online ADMIN vẫn giữ theo hợp đồng dữ liệu nhạy cảm.
+
+Component access-tree.js giữ một Set cho các bản hiển thị của quyền dùng chung; tìm kiếm không làm mất lựa chọn ngoài kết quả. Nhóm ba trạng thái, chọn trong kết quả hiển thị, gợi VIEW đúng nhánh, preview mã thêm/bỏ/số user snapshot, endpoint ANY/ALL và mã inactive để ADMIN loại bỏ. Dùng details/summary, checkbox/label và search native cho bàn phím; modal giữ focus, vùng cây cuộn riêng và footer bên phải. Lỗi 403/409/timeout không đóng/replay và không làm mất draft. Nguồn quyền của user được tải theo yêu cầu, không lưu lịch sử/quyền/token vào storage.
+
+Ảnh kiểm bằng HTML thật và API fixture cô lập: [cây quyền/preview](../images/access03-tree.png). Không dùng dữ liệu/token production để chụp.

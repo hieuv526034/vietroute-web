@@ -33,7 +33,7 @@ import vn.vietroute.common.web.response.ApiResult;
 @RestController
 @RequestMapping(Routes.AUTH)
 @Tag(name = "Vòng đời tài khoản", description = "Đăng ký, xác minh email và đặt lại mật khẩu qua mail/worker")
-@AccessFunction(group = Groups.AUTH)
+@AccessFunction(group = Groups.AUTH, authenticated = true)
 public class AccountLifecycleController extends BaseController {
 
     private final AccountLifecycleService accounts;

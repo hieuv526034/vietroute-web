@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import vn.vietroute.auth.entity.AccessFeature;
 import vn.vietroute.auth.entity.AccessPolicy;
 import vn.vietroute.auth.entity.AccessResource;
 import vn.vietroute.auth.entity.AccountChallenge;
@@ -80,6 +81,7 @@ public class DatabaseInitializer implements InitializingBean {
         migrate(connection, "V010__access_resource_inventory.sql");
         migrate(connection, "V011__account_and_request_actor.sql");
         migrate(connection, "V012__roles_profile_resources.sql");
+        migrate(connection, "V013__function_tree_and_view.sql");
         JdbcSchemaValidator.verify(
             connection,
             UserAccount.class,
@@ -93,6 +95,7 @@ public class DatabaseInitializer implements InitializingBean {
             ApiJournalRecord.class,
             AccessPolicy.class,
             AccessResource.class,
+            AccessFeature.class,
             VisitorPresence.class,
             ActivityBucket.class
         );

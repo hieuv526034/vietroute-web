@@ -6,10 +6,10 @@ Cập nhật 23/10/2026. Các màn này hoàn thiện nền tảng trước nghi
 
 | Trang | Quyền xem | Chức năng |
 |---|---|---|
-| `/operations/jobs` | JOB_READ | Lọc trạng thái, phân trang, xem metadata và mã lỗi, retry DEAD khi có JOB_RETRY |
-| `/operations/access` | ACCESS_READ | Ma trận quyền của role; sửa role thường nếu có ACCESS_ASSIGN/ACCESS_WRITE trong phạm vi cho phép |
-| `/operations/configuration` | SYSTEM_READ | Xem snapshot whitelist thông số không nhạy cảm của instance; chỉ đọc |
-| `/monitoring` | SYSTEM_READ | JVM/heap/CPU/HTTP/pool/worker và mẫu probe DB opt-in; hướng dẫn tại [giám sát](GIAM_SAT_VA_VAN_HANH.md) |
+| `/operations/jobs` | JOB_VIEW; dữ liệu cần JOB_READ | Lọc trạng thái, phân trang, xem metadata và mã lỗi, retry DEAD khi có JOB_RETRY |
+| `/operations/access` | ACCESS_VIEW; dữ liệu cần ACCESS_READ | Ma trận quyền của role; sửa role thường nếu có ACCESS_ASSIGN/ACCESS_WRITE trong phạm vi cho phép |
+| `/operations/configuration` | CONFIGURATION_VIEW; dữ liệu cần CONFIGURATION_READ | Xem snapshot whitelist thông số không nhạy cảm của instance; chỉ đọc |
+| `/monitoring` | CONFIGURATION_VIEW; dữ liệu cần CONFIGURATION_READ | JVM/heap/CPU/HTTP/pool/worker và mẫu probe DB opt-in; hướng dẫn tại [giám sát](GIAM_SAT_VA_VAN_HANH.md) |
 
 Mỗi màn có vi/en, trạng thái tải/rỗng/lỗi, nút làm mới và menu theo quyền. JavaScript dùng Axios/CSRF/lỗi chung, không localStorage token, không đưa giá trị server vào innerHTML. Fieldset khóa trong lúc xử lý để hạn chế gửi lặp. Quyền hiển thị UI chỉ hỗ trợ thao tác; service là nơi quyết định quyền thực tế.
 
@@ -29,23 +29,23 @@ Ma trận lấy registry có tên vi/en và version role từ API hiện hành. 
 
 Sau khi lưu mapping, UI lấy lại `/auth/me` vì thay quyền có hiệu lực ở request kế tiếp. Nếu tự mất ACCESS_READ qua role của mình, chuyển về trang tài khoản; không để UI tiếp tục coi quyền cũ còn hợp lệ. Làm mới lấy lại quyền trước khi dựng controls. Conflict không được gửi lại mutation tự động.
 
-Phần tra/gán role tài khoản chỉ mở cho ADMIN có ACCESS_READ. API bổ sung:
+Phần tra tài khoản mở cho ACCESS_READ; gán cần ACCESS_ASSIGN trong phạm vi được ủy quyền. API bổ sung:
 
 ```text
 GET /api/v1/admin/access/users?username=Ad&page=0&size=20
 ```
 
-`username` là prefix không phân biệt hoa/thường, chữ/số tối đa 32 ký tự; rỗng để xem tất cả. Chọn tường minh id/username/displayName/active/roles/version/createdAt/updatedAt; không đọc password hash vào DTO hoặc trả token/credential. Người có ACCESS_READ nhưng không ADMIN không được liệt kê tài khoản. Query dùng PreparedStatement, không wildcard do người dùng cung cấp và không N+1 theo từng user. Nếu dữ liệu lớn cần đo query plan và cân nhắc index prefix qua migration mới, không sửa migration đã áp dụng.
+`username` là prefix không phân biệt hoa/thường, chữ/số tối đa 32 ký tự; rỗng để xem tất cả. Chọn tường minh id/username/displayName/active/roles/version/createdAt/updatedAt; không đọc password hash vào DTO hoặc trả token/credential. Role được ủy quyền có ACCESS_READ cũng liệt kê tài khoản, không trả credential. Query dùng PreparedStatement, không wildcard do người dùng cung cấp và không N+1 theo từng user. Nếu dữ liệu lớn cần đo query plan và cân nhắc index prefix qua migration mới, không sửa migration đã áp dụng.
 
-Chọn tài khoản để sửa các role; không tự sửa role bản thân. Ghi dùng API PUT đã có, cần thêm ACCESS_ASSIGN/ACCESS_WRITE và role ADMIN, version hiện hành; backend bảo vệ admin cuối và thu hồi token cũ của user đích. UI không cấp tài khoản mới, đổi mật khẩu người khác, gắn nhà xe hoặc thay scope; các phần đó theo AUTH02/AUTH03/SCOPE01 trong [kế hoạch nhóm](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
+Chọn tài khoản để sửa các role; không tự sửa role bản thân. Ghi dùng API PUT đã có, cần thêm ACCESS_ASSIGN/ACCESS_WRITE và version hiện hành; actor không ADMIN chỉ gán role có quyền nằm trong tập mình có, không đụng user ADMIN/system hoặc bản thân; backend bảo vệ admin cuối và thu hồi token cũ của user đích. UI không cấp tài khoản mới, đổi mật khẩu người khác, gắn nhà xe hoặc thay scope; các phần đó theo AUTH02/AUTH03/SCOPE01 trong [kế hoạch nhóm](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
 
 ## Trang cấu hình an toàn
 
-`GET /api/v1/admin/system/configuration` dùng SYSTEM_READ và envelope BaseController. DTO typed whitelist: môi trường/cookie/initializer/lifetime, pool/timeout, quota/concurrency/body, worker/lease/retention, cờ mail/media và cấu hình probe. Không serialize Settings, env map, JDBC URL, DB username/password/schema, mailbox, SMTP host/password, JWT key, Cloudinary secret, CIDR proxy hoặc token metrics.
+`GET /api/v1/admin/system/configuration` dùng CONFIGURATION_READ và envelope BaseController. DTO typed whitelist: môi trường/cookie/initializer/lifetime, pool/timeout, quota/concurrency/body, worker/lease/retention, cờ mail/media và cấu hình probe. Không serialize Settings, env map, JDBC URL, DB username/password/schema, mailbox, SMTP host/password, JWT key, Cloudinary secret, CIDR proxy hoặc token metrics.
 
 Chỉ có GET; POST/PUT không phải API thay cấu hình. Sửa biến môi trường trong IDE/Render, restart/deploy và đọc lại snapshot trên đúng node. `enabled` nghĩa cờ bật tại startup, không khẳng định worker đang chạy hoặc provider đã kết nối thành công. Runtime xem màn Giám sát. Không có nút thử gửi mail/upload thật hay tự gọi provider khi mở trang. Không cần bật Kafka/Redis, worker, mail, media hoặc DB probe để render trang.
 
-API cấu hình đọc Settings trong RAM; xác thực JWT/cookie vẫn tra DB như các API người dùng khác. Metrics token riêng chỉ đọc `/internal/metrics`, không mở các trang quản trị hoặc API cấu hình. Không coi UI cấu hình chỉ đọc là cơ chế lưu cấu hình runtime đa node.
+API cấu hình cần CONFIGURATION_READ, đọc Settings trong RAM; xác thực JWT/cookie vẫn tra DB như các API người dùng khác. Metrics token riêng chỉ đọc `/internal/metrics`, không mở các trang quản trị hoặc API cấu hình. Không coi UI cấu hình chỉ đọc là cơ chế lưu cấu hình runtime đa node.
 
 ## Kiểm tra và giới hạn
 
@@ -64,8 +64,14 @@ Các kiểm tra này không chứng minh provider production, cảnh báo thật
 
 ## Quản trị role, quyền và menu/endpoint
 
-Vào **Hệ thống → Phân quyền** bằng ADMIN. Tab **Role và quyền** chọn loại role/quyền, thêm bằng modal, sửa tên/trạng thái bằng icon ở cột thao tác. Mã giữ nguyên sau tạo, tên có cả vi/en; mã lõi được bảo vệ. Tab gán quyền role và role user vẫn tách riêng. Mỗi thao tác kiểm quyền hành động và version ở backend; 409 cần đọc lại rồi đối chiếu, không tự gửi lại bản nháp.
+Vào **Quản trị truy cập → Role và phân quyền** bằng tài khoản có ACCESS_VIEW và quyền hành động tương ứng. Tab **Role và quyền** chọn loại role/quyền, thêm bằng modal, sửa tên/trạng thái bằng icon ở cột thao tác. Mã giữ nguyên sau tạo, tên có cả vi/en; mã lõi được bảo vệ. Tab gán quyền role và role user vẫn tách riêng. Mỗi thao tác kiểm quyền hành động và version ở backend; 409 cần đọc lại rồi đối chiếu, không tự gửi lại bản nháp.
 
 Tab **Menu và endpoint** chọn target từ inventory thật, chọn tất cả quyền bắt buộc và một trong các role cho phép. Để roles rỗng nếu không hạn chế theo role; permissions rỗng chỉ không thêm điều kiện quyền. Bỏ chọn cho phép sẽ chặn người thường. ADMIN có đường cứu hộ, còn guard nền trong code luôn giữ. Xóa policy trong modal chỉ bỏ điều kiện bổ sung. Nội dung và ca kiểm chi tiết ở [nền tảng mở rộng](../02-phat-trien/NEN_TANG_MO_RONG.md#registry-động-chính-sách-menuendpoint).
 
 **Giám sát → Truy cập và online** hiển thị cửa sổ 3 phút, phân trang trình duyệt và tín hiệu bất thường. Không dùng số này làm báo cáo lượt người chính xác tuyệt đối; đọc [giới hạn lưu trữ/đa node](GIAM_SAT_VA_VAN_HANH.md#truy-cập-người-online-và-tín-hiệu-bất-thường). Thư viện ảnh có modal sửa tên/mô tả; thêm/sửa/xóa vẫn kiểm owner, quyền riêng và version, lỗi giữ bản nháp trong modal.
+
+## Cây gán quyền — ACCESS03
+
+Chọn role, mở **Chỉnh sửa quyền vai trò** để xem cây nhóm → chức năng → hành động. Có tìm kiếm theo tên/mã/nhóm, checkbox ba trạng thái, mở/thu gọn và chi tiết endpoint/ANY/ALL. ADMIN mở cây chỉ đọc. Chọn tất cả áp dụng trong kết quả đang hiển thị; preview luôn liệt kê mã thêm/bỏ và số tài khoản gán role ở snapshot. VIEW và READ độc lập; UI gợi VIEW cho nhánh đang chọn, đánh dấu quyền dùng chung. Sửa qua UI cần READ+UPDATE; API-only có thể chỉ dùng hành động.
+
+Tab tài khoản có nút xem nguồn quyền, chỉ rõ role nào cấp từng permission. Bỏ quyền ở một role không làm mất quyền đến từ role khác. Registry role/permission ngừng hoạt động không được actor thiếu quyền kích hoạt lại để tự nâng quyền. Lưu có version/CSRF/loading, lỗi giữ draft, không tự gửi lại. Giới hạn và hợp đồng đầy đủ ở [schema và phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#cây-chức-năng-và-quyền-hành-động--access03); nâng V012 lên V013 cần dừng/drain các node cũ trước.

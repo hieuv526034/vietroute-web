@@ -7,7 +7,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.common.base.BaseController;
+import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.AccessConstants.Groups;
+import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
@@ -22,7 +24,7 @@ import vn.vietroute.common.web.response.ApiResult;
 
 @RestController
 @Tag(name = "Vận hành", description = "Quan sát pool/worker/quota và kiểm tra database thật")
-@AccessFunction(group = Groups.SYSTEM)
+@AccessFunction(group = Groups.SYSTEM, function = Functions.MONITORING, permissions = { Permissions.SYSTEM_READ })
 public class SystemStatusController extends BaseController {
 
     private final SystemStatusService system;
@@ -62,10 +64,15 @@ public class SystemStatusController extends BaseController {
         return execute(SuccessCode.OK, request, metrics::snapshot);
     }
 
+    @AccessFunction(
+        group = Groups.SYSTEM,
+        function = Functions.CONFIGURATION,
+        permissions = { Permissions.CONFIGURATION_READ }
+    )
     @GetMapping(Routes.SYSTEM_CONFIGURATION)
     @Operation(
         summary = "Xem cấu hình hệ thống an toàn",
-        description = "SYSTEM_READ; whitelist thông số không nhạy cảm tại startup. Chỉ đọc, không trả secret/URL/credential, không kiểm provider thật và không sửa env."
+        description = "CONFIGURATION_READ; whitelist thông số không nhạy cảm tại startup. Chỉ đọc, không trả secret/URL/credential, không kiểm provider thật và không sửa env."
     )
     public ApiResult<SystemConfigurationResponse> configuration(HttpServletRequest request) {
         return execute(SuccessCode.OK, request, configuration::read);

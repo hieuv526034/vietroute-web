@@ -16,6 +16,38 @@ public record AccessResourceResponse(
     @Schema(description = "Lần đầu startup ghi nhận tài nguyên") Instant firstSeenAt,
     @Schema(description = "Lần startup gần nhất quan sát; không phải trạng thái node đang online") Instant lastSeenAt,
     @Schema(description = "Nhóm chức năng từ AccessFunction, GENERAL khi chưa khai báo") String group,
-    @Schema(description = "Mã quyền khai báo để tra cứu, không phải cấp quyền hay biểu thức guard")
-    List<String> declaredPermissions
-) {}
+    @Schema(description = "Mã quyền guard HTTP; match chỉ rõ ANY/ALL, mapping cấp cho role nằm trong DB")
+    List<String> declaredPermissions,
+    @Schema(description = "Mã chức năng trong cây; rỗng với public/self-service") String function,
+    @Schema(description = "ANY/ALL của guard khai báo") String match,
+    @Schema(description = "Giới hạn bổ sung chỉ ADMIN cho dữ liệu nhạy cảm") boolean adminOnly
+) {
+    public AccessResourceResponse(
+        String kind,
+        String target,
+        String handler,
+        String description,
+        boolean publicRoute,
+        boolean configurable,
+        Instant firstSeenAt,
+        Instant lastSeenAt,
+        String group,
+        List<String> declaredPermissions
+    ) {
+        this(
+            kind,
+            target,
+            handler,
+            description,
+            publicRoute,
+            configurable,
+            firstSeenAt,
+            lastSeenAt,
+            group,
+            declaredPermissions,
+            "",
+            "ANY",
+            false
+        );
+    }
+}

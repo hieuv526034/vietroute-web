@@ -5,10 +5,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Repository;
 import vn.vietroute.auth.dto.response.PermissionResponse;
 import vn.vietroute.auth.dto.response.RolePermissionsResponse;
@@ -70,6 +72,43 @@ public class AccessRepository extends BaseRepository {
         });
     }
 
+    /** Một statement cho danh sách role/mapping/số user: tránh mở connection và query N+1 theo từng role. */
+    public List<RolePermissionsResponse> roleSummaries() {
+        return read(connection -> {
+            List<RolePermissionsResponse> result = new ArrayList<>();
+            try (
+                var query = connection.prepareStatement(
+                    "SELECT r.code,r.permission_version,r.updated_at,r.updated_by,r.active,(SELECT COUNT(*) FROM auth_user_roles ur WHERE ur.role_code=r.code),COALESCE((SELECT string_agg(rp.permission_code,',' ORDER BY rp.permission_code) FROM auth_role_permissions rp WHERE rp.role_code=r.code),'') FROM auth_roles r WHERE NOT r.deleted ORDER BY r.code LIMIT 512"
+                );
+                var rows = query.executeQuery()
+            ) {
+                while (rows.next()) {
+                    String encoded = rows.getString(7);
+                    Set<Permission> permissions = encoded.isEmpty()
+                        ? Set.of()
+                        : Arrays.stream(encoded.split(",")).map(Permission::valueOf).collect(Collectors.toSet());
+                    result.add(
+                        new RolePermissionsResponse(
+                            Role.valueOf(rows.getString(1)),
+                            Set.copyOf(permissions),
+                            rows.getLong(2),
+                            rows.getTimestamp(3).toInstant(),
+                            rows.getObject(4, Long.class),
+                            rows.getLong(6),
+                            rows.getBoolean(5)
+                        )
+                    );
+                }
+            }
+            return List.copyOf(result);
+        });
+    }
+
+    /** Cho sửa mapping khi role đang tắt để quản trị chuẩn bị quyền trước khi bật; không cho sửa tombstone. */
+    public void requireExistingRole(Connection connection, Role role) throws SQLException {
+        requireActive(connection, "SELECT 1 FROM auth_roles WHERE code=? AND NOT deleted", role.name());
+    }
+
     /** Kiểm tập mapping tồn tại/đang bật trong cùng transaction, chặn mã tự chế hoặc role đã ngừng. */
     public void validateMappings(Connection connection, Set<Role> roles, Set<Permission> permissions)
         throws SQLException {
@@ -99,7 +138,7 @@ public class AccessRepository extends BaseRepository {
     public RolePermissionsResponse role(Connection connection, Role role) throws SQLException {
         try (
             PreparedStatement query = connection.prepareStatement(
-                "SELECT permission_version, updated_at, updated_by FROM auth_roles WHERE code=? AND NOT deleted"
+                "SELECT permission_version, updated_at, updated_by, (SELECT COUNT(*) FROM auth_user_roles ur WHERE ur.role_code=auth_roles.code), active FROM auth_roles WHERE code=? AND NOT deleted"
             )
         ) {
             query.setString(1, role.name());
@@ -125,7 +164,9 @@ public class AccessRepository extends BaseRepository {
                     Set.copyOf(permissions),
                     row.getLong(1),
                     row.getTimestamp(2).toInstant(),
-                    row.getObject(3, Long.class)
+                    row.getObject(3, Long.class),
+                    row.getLong(4),
+                    row.getBoolean(5)
                 );
             }
         }

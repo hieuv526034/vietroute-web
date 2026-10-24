@@ -1,0 +1,114 @@
+package vn.vietroute.auth.security;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import vn.vietroute.auth.entity.Permission;
+import vn.vietroute.auth.entity.PermissionAction;
+import vn.vietroute.common.constant.AccessConstants.Functions;
+import vn.vietroute.common.constant.AccessConstants.Permissions;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
+
+/** Định nghĩa cây do lập trình viên khai báo; DB chỉ lưu danh bạ và mapping quyền, không tự mở route. */
+public final class AccessFeatures {
+
+    private AccessFeatures() {}
+
+    public record Feature(String code, String parent, String nameKey, String path, String viewPermission) {}
+
+    private static final List<Feature> DEFINITIONS = List.of(
+        new Feature(Functions.SYSTEM, null, "access.function.SYSTEM", null, null),
+        new Feature(
+            Functions.CATALOG,
+            Functions.SYSTEM,
+            "access.function.CATALOG",
+            Routes.ADMIN,
+            Permissions.CATALOG_VIEW
+        ),
+        new Feature(
+            Functions.MEDIA,
+            Functions.SYSTEM,
+            "access.function.MEDIA",
+            Routes.MEDIA_PAGE,
+            Permissions.MEDIA_VIEW
+        ),
+        new Feature(Functions.JOBS, Functions.SYSTEM, "access.function.JOBS", Routes.JOBS_PAGE, Permissions.JOB_VIEW),
+        new Feature(
+            Functions.MONITORING,
+            Functions.SYSTEM,
+            "access.function.MONITORING",
+            Routes.MONITORING_PAGE,
+            Permissions.SYSTEM_VIEW
+        ),
+        new Feature(
+            Functions.CONFIGURATION,
+            Functions.SYSTEM,
+            "access.function.CONFIGURATION",
+            Routes.CONFIGURATION_PAGE,
+            Permissions.CONFIGURATION_VIEW
+        ),
+        new Feature(
+            Functions.JOURNAL,
+            Functions.SYSTEM,
+            "access.function.JOURNAL",
+            Routes.API_JOURNAL_PAGE,
+            Permissions.JOURNAL_VIEW
+        ),
+        new Feature(Functions.MAIL, Functions.SYSTEM, "access.function.MAIL", null, null),
+        new Feature(Functions.AUTHORIZATION, null, "access.function.AUTHORIZATION", null, null),
+        new Feature(
+            Functions.ACCESS,
+            Functions.AUTHORIZATION,
+            "access.function.ACCESS",
+            Routes.ACCESS_PAGE,
+            Permissions.ACCESS_VIEW
+        )
+    );
+
+    public static List<Feature> definitions() {
+        return DEFINITIONS;
+    }
+
+    /** Fail trước publish nếu trùng mã, parent sai/chu trình hoặc VIEW không hợp lệ. */
+    public static void validate(List<Feature> definitions) {
+        Set<String> codes = new HashSet<>();
+        for (var feature : definitions) {
+            if (
+                feature.code() == null ||
+                feature.code().isBlank() ||
+                feature.code().length() > 40 ||
+                feature.nameKey() == null ||
+                feature.nameKey().isBlank()
+            ) throw new IllegalStateException("Định nghĩa chức năng thiếu mã/tên");
+            if (feature.path() != null && feature.viewPermission() == null) throw new IllegalStateException(
+                "Trang thiếu quyền VIEW"
+            );
+            if (!codes.add(feature.code())) throw new IllegalStateException("Trùng mã chức năng: " + feature.code());
+            if (
+                feature.viewPermission() != null &&
+                !Permission.valueOf(feature.viewPermission()).actions().contains(PermissionAction.VIEW)
+            ) throw new IllegalStateException("Quyền vào trang phải là VIEW");
+        }
+        for (var feature : definitions) {
+            Set<String> ancestors = new HashSet<>();
+            var current = feature;
+            while (current.parent() != null) {
+                if (!ancestors.add(current.code())) throw new IllegalStateException("Chu trình cây chức năng");
+                String parent = current.parent();
+                current = definitions
+                    .stream()
+                    .filter(item -> item.code().equals(parent))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("Thiếu chức năng cha: " + parent));
+            }
+        }
+    }
+
+    /** Không nhận code tùy ý từ client để sinh function có quyền. */
+    public static Feature require(String code) {
+        return DEFINITIONS.stream()
+            .filter(item -> item.code().equals(code))
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("Chức năng chưa khai báo: " + code));
+    }
+}

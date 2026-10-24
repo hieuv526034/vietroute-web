@@ -4,6 +4,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import vn.vietroute.auth.security.AccessRules;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.monitoring.dto.request.ApiJournalSearchRequest;
@@ -17,12 +18,12 @@ public class ApiJournalService {
 
     private final ApiJournalStore store;
 
-    @PreAuthorize("hasRole('ADMIN') and hasAuthority('SYSTEM_READ')")
+    @PreAuthorize(AccessRules.SENSITIVE_READ)
     public ApiJournalResponse page(ApiJournalSearchRequest search) {
         return store.page(search);
     }
 
-    @PreAuthorize("hasRole('ADMIN') and hasAuthority('SYSTEM_READ')")
+    @PreAuthorize(AccessRules.SENSITIVE_READ)
     public ApiJournalDetail find(UUID id) {
         ApiJournalDetail result = store.find(id);
         if (result == null) throw new BusinessException(ErrorCode.NOT_FOUND);

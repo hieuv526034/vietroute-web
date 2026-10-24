@@ -34,7 +34,7 @@
         try {
             await mutate('/api/v1/media/' + selectedImage.id, body, 'put');
             document.getElementById('media-edit-dialog').close();
-            await load();
+            if (permissions.includes('READ')) await load();
         } catch (error) {
             failure(
                 error,
@@ -47,6 +47,7 @@
     });
     let loading = false;
     let permissions = [];
+    let targets = [];
     let uploading = false;
     const open = document.getElementById('media-open');
     const uploadModal = window.VietRouteUI.modal('media-dialog', {
@@ -57,7 +58,7 @@
         },
     });
     open.addEventListener('click', () => {
-        if (!uploading && enabled && permissions.includes('MEDIA_CREATE')) uploadModal.open();
+        if (!uploading && enabled && permissions.includes('CREATE')) uploadModal.open();
     });
 
     const loadPage = async (query) => {
@@ -97,7 +98,7 @@
                 view.className = 'button button-outline button-small';
                 view.textContent = root.dataset.view;
                 card.append(view);
-                if (permissions.includes('MEDIA_UPDATE')) {
+                if (permissions.includes('UPDATE')) {
                     const edit = document.createElement('button');
                     edit.type = 'button';
                     edit.className = 'button button-outline button-small';
@@ -113,7 +114,7 @@
                     });
                     card.append(edit);
                 }
-                if (enabled && permissions.includes('MEDIA_DELETE')) {
+                if (enabled && permissions.includes('DELETE')) {
                     const remove = document.createElement('button');
                     remove.type = 'button';
                     remove.className = 'button button-outline button-small';
@@ -130,7 +131,7 @@
                                 'delete',
                             );
                             feedback(response.data.message, true);
-                            await load();
+                            if (permissions.includes('READ')) await load();
                         } catch (error) {
                             failure(error);
                         } finally {
@@ -146,6 +147,7 @@
 
     // Không cho refresh/phân trang chạy đua và thay kết quả của một request mới hơn.
     const load = async (query = pager.query) => {
+        if (!targets.includes('GET /api/v1/media')) return;
         if (loading) return;
         loading = true;
         root.setAttribute('aria-busy', 'true');
@@ -162,7 +164,7 @@
     // File đi qua backend để kiểm pixel/chuẩn hóa; trình duyệt không biết Cloudinary API secret.
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        if (uploading || !enabled || !permissions.includes('MEDIA_CREATE') || !window.VietRouteForms.validate(form)) {
+        if (uploading || !enabled || !permissions.includes('CREATE') || !window.VietRouteForms.validate(form)) {
             return;
         }
         upload.disabled = true;
@@ -179,7 +181,7 @@
         } catch (error) {
             failure(error, document.getElementById('media-dialog').open ? 'media-upload-feedback' : 'form-feedback');
         } finally {
-            upload.disabled = !enabled || !permissions.includes('MEDIA_CREATE');
+            upload.disabled = !enabled || !permissions.includes('CREATE');
             uploading = false;
             document.getElementById('media-dialog-controls').disabled = false;
         }
@@ -187,10 +189,13 @@
     document.getElementById('media-refresh').addEventListener('click', () => load().catch(failure));
     api.get('/api/v1/auth/me')
         .then(async (response) => {
-            permissions = response.data.data.permissions;
-            upload.disabled = !enabled || !permissions.includes('MEDIA_CREATE');
+            const capability = await window.VietRouteAccess.load('MEDIA');
+            permissions = capability.actions;
+            targets = capability.targets;
+            upload.disabled = !enabled || !permissions.includes('CREATE');
             open.disabled = upload.disabled;
-            await load();
+            open.hidden = !permissions.includes('CREATE');
+            if (permissions.includes('READ')) await load();
         })
         .catch(failure);
 })();

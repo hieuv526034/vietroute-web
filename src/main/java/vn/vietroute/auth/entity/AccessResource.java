@@ -11,6 +11,7 @@ import vn.vietroute.common.jdbc.JdbcTable;
         @JdbcIndex(name = "pk_auth_access_resources", columns = { "kind", "target" }, unique = true),
         @JdbcIndex(name = "idx_auth_access_resources_created_by", columns = { "created_by" }),
         @JdbcIndex(name = "idx_auth_access_resources_updated_by", columns = { "updated_by" }),
+        @JdbcIndex(name = "idx_access_resources_function", columns = { "function_code" }),
     }
 )
 public final class AccessResource {

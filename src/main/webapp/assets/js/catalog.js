@@ -31,9 +31,7 @@
             conflict.hidden = true;
         },
     });
-    const can = (action) =>
-        permissions.includes(`CATALOG_${action}`) ||
-        (['CREATE', 'UPDATE'].includes(action) && permissions.includes('CATALOG_WRITE'));
+    const can = (action) => permissions.includes(action);
 
     // Giữ nguyên trường đang sửa khi lỗi; không tự gửi lại mutation sau timeout hoặc conflict.
     const perform = async (action, target = editor.isOpen ? 'form-feedback' : 'catalog-feedback') => {
@@ -194,15 +192,17 @@
     );
     document.getElementById('catalog-refresh').addEventListener('click', () =>
         perform(async () => {
-            permissions = (await api.get('/api/v1/auth/me', { timeout: 10000 })).data.data.permissions;
+            permissions = (await window.VietRouteAccess.load('CATALOG')).actions;
             document.getElementById('catalog-create').disabled = !can('CREATE');
+            document.getElementById('catalog-create').hidden = !can('CREATE');
             resetEditor();
             await load();
         }, 'catalog-feedback'),
     );
     void perform(async () => {
-        permissions = (await api.get('/api/v1/auth/me', { timeout: 10000 })).data.data.permissions;
+        permissions = (await window.VietRouteAccess.load('CATALOG')).actions;
         document.getElementById('catalog-create').disabled = !can('CREATE');
+        document.getElementById('catalog-create').hidden = !can('CREATE');
         resetEditor();
         await load();
     }, 'catalog-feedback');

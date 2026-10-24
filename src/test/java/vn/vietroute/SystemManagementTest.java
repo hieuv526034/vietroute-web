@@ -14,20 +14,24 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariDataSource;
 import java.time.Clock;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.FileSystemResourceLoader;
 import org.springframework.mock.web.MockServletContext;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import vn.vietroute.auth.dto.request.AccessUserSearchRequest;
+import vn.vietroute.auth.dto.response.AccessUserResponse;
+import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.service.AccessService;
+import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.database.DatabaseSettings;
@@ -39,16 +43,32 @@ import vn.vietroute.common.config.monitoring.MonitoringSettings;
 import vn.vietroute.common.config.traffic.TrafficSettings;
 import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
+import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.monitoring.service.SystemConfigurationService;
 import vn.vietroute.support.AccessTestConfig;
 
 /** Kiểm quyền UI/API và whitelist cấu hình trước khi mở DB; SQL integration chạy trên PostgreSQL CI tạm. */
 class SystemManagementTest {
 
+    @Configuration
+    static class IsolatedUsers {
+
+        @Bean
+        @Primary
+        UserRepository users(JdbcConnectionFactory connections) {
+            return new UserRepository(connections) {
+                @Override
+                public PageResponse<AccessUserResponse> pageForAccess(AccessUserSearchRequest page) {
+                    return PageResponse.of(List.of(), page, 0);
+                }
+            };
+        }
+    }
+
     private AnnotationConfigWebApplicationContext context() {
         var context = new AnnotationConfigWebApplicationContext();
         context.setServletContext(new MockServletContext("src/main/webapp", new FileSystemResourceLoader()));
-        context.register(RootConfig.class, AccessTestConfig.class, WebConfig.class);
+        context.register(RootConfig.class, AccessTestConfig.class, WebConfig.class, IsolatedUsers.class);
         context.refresh();
         return context;
     }
@@ -57,7 +77,7 @@ class SystemManagementTest {
         return UsernamePasswordAuthenticationToken.authenticated(
             "isolated-test",
             null,
-            Arrays.stream(authorities).map(SimpleGrantedAuthority::new).toList()
+            AccessTestConfig.upgradedAuthorities(authorities)
         );
     }
 
@@ -158,15 +178,16 @@ class SystemManagementTest {
     }
 
     @Test
-    void delegatedAccessReadCannotEnumerateAccountsAndDirectServicesEnforcePermissions() {
+    void delegatedAccessReadCanEnumerateAccountsAndDirectServicesEnforcePermissions() {
         try (var context = context()) {
             var access = context.getBean(AccessService.class);
             var configuration = context.getBean(SystemConfigurationService.class);
-            for (var authentication : List.of(actor("ACCESS_READ"), actor("ROLE_ADMIN"), actor("ACCESS_ASSIGN"))) {
+            for (var authentication : List.of(actor("ROLE_ADMIN"), actor("ACCESS_ASSIGN"))) {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 assertThrows(AccessDeniedException.class, () -> access.users(new AccessUserSearchRequest()));
             }
             SecurityContextHolder.getContext().setAuthentication(actor("ACCESS_READ"));
+            assertEquals(0, access.users(new AccessUserSearchRequest()).totalElements());
             assertThrows(AccessDeniedException.class, configuration::read);
             assertNull(context.getBean(HikariDataSource.class).getHikariPoolMXBean());
         } finally {

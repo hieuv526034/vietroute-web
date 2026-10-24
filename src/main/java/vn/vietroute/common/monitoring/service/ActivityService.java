@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import javax.crypto.Mac;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import vn.vietroute.auth.security.AccessRules;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.config.application.AppSettings;
@@ -109,7 +110,7 @@ public class ActivityService {
     }
 
     /** Đọc số liệu chia sẻ; lỗi DB được trả ra ngoài để UI không hiển thị số 0 giả. */
-    @PreAuthorize("hasRole('ADMIN') and hasAuthority('SYSTEM_READ')")
+    @PreAuthorize(AccessRules.SENSITIVE_READ)
     public ActivitySnapshot snapshot() {
         return enabled()
             ? repository.snapshot(missed.get())
@@ -117,13 +118,13 @@ public class ActivityService {
     }
 
     /** Danh sách online phân trang SQL, userId là đối tượng quan sát đã xác thực. */
-    @PreAuthorize("hasRole('ADMIN') and hasAuthority('SYSTEM_READ')")
+    @PreAuthorize(AccessRules.SENSITIVE_READ)
     public PageResponse<OnlineVisitorResponse> online(PageRequest page) {
         return enabled() ? repository.online(page) : PageResponse.of(List.of(), page, 0);
     }
 
     /** Lấy tín hiệu vượt ngưỡng, không tự khóa user hoặc kết luận đây là tấn công. */
-    @PreAuthorize("hasRole('ADMIN') and hasAuthority('SYSTEM_READ')")
+    @PreAuthorize(AccessRules.SENSITIVE_READ)
     public List<RequestAnomalyResponse> anomalies() {
         return enabled() ? repository.anomalies(settings.getRequestThreshold()) : List.of();
     }

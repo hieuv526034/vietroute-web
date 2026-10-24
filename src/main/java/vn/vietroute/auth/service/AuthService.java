@@ -14,6 +14,7 @@ import vn.vietroute.auth.dto.response.AuthResponse;
 import vn.vietroute.auth.dto.response.UserResponse;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.security.AccessRules;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.constant.ErrorCode;
@@ -96,13 +97,13 @@ public class AuthService {
     }
 
     /** Đọc thông tin mới nhất và map sang response an toàn, không trả hash/tokenVersion của entity. */
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(AccessRules.AUTHENTICATED)
     public UserResponse me(UserPrincipal principal) {
         return UserResponse.from(BusinessRules.requireFound(users.findById(principal.id())));
     }
 
     /** Khóa dòng tài khoản để hai yêu cầu đổi mật khẩu không cùng dùng mật khẩu cũ thành công. */
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(AccessRules.AUTHENTICATED)
     public AuthResponse changePassword(UserPrincipal principal, ChangePasswordRequest request) {
         BusinessRules.require(StrongPasswordValidator.valid(request.getNewPassword()), ErrorCode.VALIDATION_FAILED);
         UserAccount changed = transactions.execute(connection -> {

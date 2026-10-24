@@ -223,3 +223,13 @@
 
     void loadAccount();
 })();
+
+/* Quyền UI lấy cùng guard/policy backend. Lần gọi mới đọc lại DB, không dùng quyền lưu trong localStorage. */
+window.VietRouteAccess = {
+    async load(feature) {
+        const response = await window.VietRoute.api.get('/api/v1/auth/capabilities', { timeout: 10000 });
+        return (
+            response.data.data.find((item) => item.function === feature) || { view: false, actions: [], targets: [] }
+        );
+    },
+};

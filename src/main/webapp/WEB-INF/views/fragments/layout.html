@@ -6,6 +6,10 @@
     <head th:fragment="head(title)">
         <meta charset="UTF-8" />
         <meta
+            name="access-no-read"
+            th:content="#{ui.accessTree.noRead}"
+        />
+        <meta
             name="viewport"
             content="width=device-width, initial-scale=1"
         />
@@ -56,6 +60,25 @@
         >
             <use th:href="${basePath + '/assets/icons/ui.svg#' + iconName}"></use>
         </svg>
+        <th:block th:fragment="functionMenuItems(items)">
+            <th:block th:each="item : ${items}">
+                <a
+                    th:if="${item.path != null}"
+                    th:href="${basePath + item.path + '?lang=' + currentLocale}"
+                    th:attr="aria-current=${item.active} ? 'page' : null"
+                >
+                    <svg th:replace="~{fragments/layout :: icon(${item.icon})}"></svg>
+                    <span th:text="${item.name}"></span>
+                </a>
+                <div
+                    th:if="${item.path == null and !item.children.isEmpty()}"
+                    class="navigation-subgroup"
+                >
+                    <strong th:text="${item.name}"></strong>
+                    <th:block th:insert="~{fragments/layout :: functionMenuItems(${item.children})}"></th:block>
+                </div>
+            </th:block>
+        </th:block>
         <header
             th:fragment="header"
             class="site-header"
@@ -85,81 +108,17 @@
                     ></a>
                     <details
                         class="operations-menu"
-                        th:if="${catalogAllowed or mediaAllowed or monitoringAllowed or configurationAllowed or jobsAllowed or journalAllowed}"
-                        th:classappend="${operationsActive} ? 'is-current'"
+                        th:each="item : ${functionNavigation}"
+                        th:classappend="${item.active} ? 'is-current'"
                     >
                         <summary>
-                            <svg th:replace="~{fragments/layout :: icon('system')}"></svg>
-                            <span th:text="#{ui.ops.menu}"></span>
+                            <svg th:replace="~{fragments/layout :: icon(${item.icon})}"></svg>
+                            <span th:text="${item.name}"></span>
                         </summary>
-                        <div class="operations-menu-items">
-                            <a
-                                th:if="${catalogAllowed}"
-                                th:href="@{/admin(lang=${currentLocale})}"
-                                th:attr="aria-current=${navigation.admin} ? 'page' : null"
-                            >
-                                <svg th:replace="~{fragments/layout :: icon('catalog')}"></svg>
-                                <span th:text="#{ui.catalogs}"></span>
-                            </a>
-                            <a
-                                th:if="${mediaAllowed}"
-                                th:href="@{/media(lang=${currentLocale})}"
-                                th:attr="aria-current=${navigation.media} ? 'page' : null"
-                            >
-                                <svg th:replace="~{fragments/layout :: icon('image')}"></svg>
-                                <span th:text="#{ui.media}"></span>
-                            </a>
-                            <a
-                                th:if="${journalAllowed}"
-                                th:href="@{/operations/api-journal(lang=${currentLocale})}"
-                                th:attr="aria-current=${navigation.journal} ? 'page' : null"
-                            >
-                                <svg th:replace="~{fragments/layout :: icon('activity')}"></svg>
-                                <span th:text="#{ui.journal.title}"></span>
-                            </a>
-                            <a
-                                th:if="${monitoringAllowed}"
-                                th:href="@{/monitoring(lang=${currentLocale})}"
-                                th:attr="aria-current=${navigation.monitoring} ? 'page' : null"
-                            >
-                                <svg th:replace="~{fragments/layout :: icon('activity')}"></svg>
-                                <span th:text="#{ui.monitoring}"></span>
-                            </a>
-                            <a
-                                th:if="${jobsAllowed}"
-                                th:href="@{/operations/jobs(lang=${currentLocale})}"
-                                th:attr="aria-current=${navigation.jobs} ? 'page' : null"
-                            >
-                                <svg th:replace="~{fragments/layout :: icon('clock')}"></svg>
-                                <span th:text="#{ui.ops.jobs}"></span>
-                            </a>
-                            <a
-                                th:if="${configurationAllowed}"
-                                th:href="@{/operations/configuration(lang=${currentLocale})}"
-                                th:attr="aria-current=${navigation.configuration} ? 'page' : null"
-                            >
-                                <svg th:replace="~{fragments/layout :: icon('settings')}"></svg>
-                                <span th:text="#{ui.ops.configuration}"></span>
-                            </a>
-                        </div>
-                    </details>
-                    <details
-                        class="operations-menu"
-                        th:if="${accessAllowed}"
-                        th:classappend="${navigation.access} ? 'is-current'"
-                    >
-                        <summary>
-                            <svg th:replace="~{fragments/layout :: icon('shield')}"></svg>
-                            <span th:text="#{ui.ops.access}"></span>
-                        </summary>
-                        <div class="operations-menu-items">
-                            <a
-                                th:href="@{/operations/access(lang=${currentLocale})}"
-                                th:attr="aria-current=${navigation.access} ? 'page' : null"
-                            >
-                                <span th:text="#{ui.nav.accessWorkspace}"></span>
-                            </a>
-                        </div>
+                        <div
+                            class="operations-menu-items"
+                            th:insert="~{fragments/layout :: functionMenuItems(${item.children})}"
+                        ></div>
                     </details>
                     <details
                         class="operations-menu"

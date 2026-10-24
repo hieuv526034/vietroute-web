@@ -22,5 +22,6 @@ public class UserRolesRequest extends BaseRequest {
 
     @Min(value = 0, message = "{validation.invalid}")
     @Schema(description = "Version hiện hành của user", minimum = "0")
-    private long version;
+    @NotNull(message = "{validation.required}")
+    private Long version;
 }

@@ -1,8 +1,8 @@
 # Hợp đồng API nền tảng
 
-Quản trị hệ thống bổ sung: `GET /api/v1/admin/system/configuration` dùng SYSTEM_READ và DTO whitelist chỉ đọc; `GET /api/v1/admin/access/users` dùng ADMIN + ACCESS_READ, prefix username/page/size; list jobs có query status tùy chọn. UI và hợp đồng chi tiết tại [QUAN_TRI_HE_THONG.md](../04-van-hanh/QUAN_TRI_HE_THONG.md). Không có API ghi env/credential.
+Quản trị hệ thống bổ sung: `GET /api/v1/admin/system/configuration` dùng CONFIGURATION_READ và DTO whitelist chỉ đọc; `GET /api/v1/admin/access/users` dùng ACCESS_READ, prefix username/page/size; list jobs có query status tùy chọn. UI và hợp đồng chi tiết tại [QUAN_TRI_HE_THONG.md](../04-van-hanh/QUAN_TRI_HE_THONG.md). Không có API ghi env/credential.
 
-Giám sát bổ sung: `GET /api/v1/admin/system/runtime` dùng SYSTEM_READ và envelope chung; `GET /monitoring` là trang chỉ đọc cùng quyền. `GET /internal/metrics` là Prometheus text, token vận hành riêng, không bọc envelope/JWT và không truy vấn DB. Token rỗng đóng endpoint. Xem [giám sát và vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md) và [tổng quan](../01-bat-dau/TONG_QUAN_HE_THONG.md).
+Giám sát bổ sung: `GET /api/v1/admin/system/runtime` dùng SYSTEM_READ và envelope chung; `GET /monitoring` cần SYSTEM_VIEW, dữ liệu đọc bằng SYSTEM_READ. `GET /internal/metrics` là Prometheus text, token vận hành riêng, không bọc envelope/JWT và không truy vấn DB. Token rỗng đóng endpoint. Xem [giám sát và vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md) và [tổng quan](../01-bat-dau/TONG_QUAN_HE_THONG.md).
 
 ## Endpoint đang có
 
@@ -154,3 +154,9 @@ POST `/api/v1/auth/avatar` nhận multipart field `file`, dùng cùng MediaServi
 V012 thêm avatar FK/index, tombstone role và metadata annotation. Principal được dựng từ DB có tên hiển thị/thumbnail; header không giữ JWT trong storage hoặc phải gọi thêm DB riêng cho từng menu. Sau đổi hồ sơ, UI cập nhật header, request sau đọc lại DB. Shared Run vẫn tắt provider/mail theo mặc định; runtime phải chủ động áp dụng V012 trước khi chạy source mới.
 
 Upload avatar thành công trả HTTP 201/OK004, OpenAPI có response 201; lỗi vẫn giữ status chung. Triển khai xong tất cả node trước khi dùng liên kết avatar vì phiên bản cũ chưa có guard xóa ảnh đang tham chiếu.
+
+## Cây quyền UI/API — ACCESS03
+
+Hợp đồng hiện hành và ví dụ nằm ở [cây chức năng](SCHEMA_VA_PHAN_QUYEN.md#cây-chức-năng-và-quyền-hành-động--access03). VIEW mở trang, API đòi hành động riêng, user nhiều role nhận hợp quyền DB. Annotation AccessFunction thực thi guard HTTP; service dùng AccessRules cùng mã, không bỏ scope/version. Registry/user/role management có thể ủy quyền bằng ACCESS_*; ADMIN/system/last-admin và dữ liệu journal/online giữ giới hạn riêng.
+
+GET `/api/v1/admin/access/tree` (ACCESS_READ) trả code/parent/name/path/viewPermission/actions + endpoints; GET `/api/v1/auth/capabilities` trả capability của chính principal; GET `/api/v1/admin/access/users/{id}/effective` (ACCESS_READ) trả nguồn role của từng permission. PUT role permissions/user roles bắt buộc version; giới hạn 512 permission và 32 role. Response role thêm active (gồm role tắt chưa xóa) và assignedUsers (snapshot gồm cả user tắt). POST/PUT registry/policy chỉ trả tài nguyên vừa ghi; DELETE trả danh sách rỗng, status giữ nguyên. Không nhận route/public/grant metadata từ client để thay annotation. Triển khai V013 phải dừng/drain code trước VIEW; xem chuyên đề trước khi nâng môi trường đang có dữ liệu.

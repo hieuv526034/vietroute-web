@@ -194,7 +194,7 @@ class FoundationSecurityTest {
         var viewer = UsernamePasswordAuthenticationToken.authenticated(
             new UserPrincipal(2L, "viewer", Set.of(Role.OPERATOR), 0),
             null,
-            List.of(new SimpleGrantedAuthority("MEDIA_READ"))
+            List.of(new SimpleGrantedAuthority("MEDIA_READ"), new SimpleGrantedAuthority("MEDIA_VIEW"))
         );
         var vi = mvc
             .perform(get("/media").param("lang", "vi").with(authentication(viewer)))
