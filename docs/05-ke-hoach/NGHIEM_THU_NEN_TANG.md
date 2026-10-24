@@ -1,6 +1,6 @@
 # Nghiệm thu nền tảng trước nghiệp vụ
 
-Cập nhật 24/10/2026, đối chiếu main tại `46d0243` sau [PR #44](https://github.com/hieuv526034/vietroute-web/pull/44). Phạm vi là source nền tảng và UI quản trị trên Spring MVC/JDBC hiện tại. Đọc cùng [quản trị hệ thống](../04-van-hanh/QUAN_TRI_HE_THONG.md), [tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) và [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md). Kết quả trên nhánh chức năng chỉ trở thành bản bàn giao main sau khi PR qua CI và merge.
+Cập nhật 24/10/2026, đối chiếu main tại `37343f8` sau [PR #56](https://github.com/hieuv526034/vietroute-web/pull/56). Phạm vi là source nền tảng và UI quản trị trên Spring MVC/JDBC hiện tại. Đọc cùng [quản trị hệ thống](../04-van-hanh/QUAN_TRI_HE_THONG.md), [tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) và [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md). Kết quả trên nhánh chức năng chỉ trở thành bản bàn giao main sau khi PR qua CI và merge.
 
 ## Các màn và chức năng đã có trong source
 
@@ -8,7 +8,8 @@ Cập nhật 24/10/2026, đối chiếu main tại `46d0243` sau [PR #44](https:
 |---|---|---|
 | Đăng nhập/tài khoản | Login/me/đổi mật khẩu/logout, đăng ký CUSTOMER/xác minh email/quên/reset; JWT cookie HttpOnly, CSRF, khóa tạm và lịch sử mật khẩu | Bootstrap giữ mật khẩu cũ; email cần cấu hình provider + self-service/mail/worker, chưa thử inbox thật; SMS/phone OTP chưa triển khai |
 | Trang quản trị `/admin` | Lối tắt giám sát/job/quyền/cấu hình; danh mục lọc nhóm, phân trang server với chọn size/nhảy trang, tạo/sửa/xóa mềm, xác nhận và version | Chỉ liệt kê danh mục active; chưa có khôi phục/lịch sử chỉnh sửa trên UI. Không phải CRUD nhà xe/địa điểm |
-| Phân quyền | Registry role/quyền tùy chỉnh, ma trận/gán, inventory/policy menu/endpoint, kiểm URL trực tiếp và quyền nền; bảo vệ ADMIN/bản thân/admin cuối | Khu cấp tài khoản admin DRIVER/CUSTOMER đang được nghiệm thu ở ACCESS05; hồ sơ/membership chờ mô hình nhà xe; không coi role là tenant scope |
+| Phân quyền | Registry role/quyền tùy chỉnh, ma trận/gán, inventory/policy menu/endpoint, kiểm URL trực tiếp và quyền nền; bảo vệ ADMIN/bản thân/admin cuối | Khu cấp tài khoản ADMIN đã có ở ACCESS05; hồ sơ/membership chờ mô hình nhà xe; không coi role là tenant scope |
+| Quản trị tài khoản `/operations/accounts` | ADMIN cấp tài xế/người dùng/nhiều role, bắt đổi mật khẩu tạm, lọc/paging, khóa/mở có version và revoke JWT/challenge, xem menu/hành động thực tế theo policy user đích; ma trận và tạo role trực tiếp ở Phân quyền | Chưa có hồ sơ/membership nhà xe hoặc OPERATOR cấp tài xế trong scope; chưa gửi email mời tự động. Nâng/drain tất cả node trước khi cấp mật khẩu tạm |
 | Công việc nền | Lọc trạng thái, phân trang, chi tiết metadata, retry DEAD có quyền và version | At least once; worker tắt mặc định; tác vụ dài cần cơ chế lease riêng |
 | Giám sát | Heap/CPU/HTTP/pool/worker, scrape token riêng; tab online/phân trang/bất thường DB và missed writes | Lịch sử JVM vẫn theo node/tab; online DB có retention/capacity/cửa sổ 3 phút, không phải analytics tuyệt đối. Receiver cảnh báo ngoài app chưa xác nhận |
 | Cấu hình | Whitelist thông số startup không nhạy cảm, chỉ đọc | Thay env ở IDE/Render rồi restart; không có nút sửa secret hoặc bật provider từ trình duyệt |
@@ -79,3 +80,5 @@ UI vi/en fixture kiểm tab/required, modal email giữ bản nháp khi lỗi, k
 [PR #44](https://github.com/hieuv526034/vietroute-web/pull/44) đã merge; bằng chứng 112 Java/18 Node, ba CI đúng head 6318e38 và phạm vi SQL/UI tại [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md). Annotation mô tả inventory, quyền vẫn từ DB/service; ADMIN bất biến, role khác xóa mềm có chặn liên quan. Hồ sơ/avatar dùng media chung, owner/READY/version và không xóa ảnh đang tham chiếu. Menu tách nhóm, Swagger giữ danh tính cookie, controls gọn, loading/single-flight và heartbeat nền uiSilent. Khung 390px đã sửa dropdown, chưa thay kiểm thiết bị thật.
 
 Runtime áp dụng V012 trên schema đang có và cập nhật tất cả node trước khi dùng avatar; không chạy migration trên Neon để kiểm build. Cloudinary/Gmail/Render Live/tải production vẫn cần nghiệm thu riêng; không có cam kết mọi cấu hình/tải đều không lỗi. Không còn phần code dở của FOUNDATION05, chưa bắt đầu nhà xe/chuyến/booking.
+
+ACCESS05 đã merge tại [PR #56](https://github.com/hieuv526034/vietroute-web/pull/56), head `973c69f`: local 125 Java/25 Node; [Docker/PostgreSQL CI](https://github.com/hieuv526034/vietroute-web/actions/runs/40056779696) đạt toàn bộ cấp tài khoản/mật khẩu tạm/role/policy/khóa/revoke và bộ nền cũ. Bằng chứng và giới hạn đầy đủ ở đầu bảng tiến độ; không coi kết quả CI là đã triển khai trên Render hoặc nghiệm thu provider production.
