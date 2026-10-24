@@ -16,6 +16,7 @@ import vn.vietroute.auth.dto.response.AccessUserResponse;
 import vn.vietroute.auth.dto.response.PermissionResponse;
 import vn.vietroute.auth.dto.response.RolePermissionsResponse;
 import vn.vietroute.auth.dto.response.UserResponse;
+import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.repository.AccessRepository;
@@ -24,6 +25,8 @@ import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.base.PageResponse;
+import vn.vietroute.common.constant.AccessAuditConstants.Event;
+import vn.vietroute.common.constant.AccessAuditConstants.Target;
 import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
@@ -41,6 +44,8 @@ public class AccessService {
     private final UserRepository users;
 
     private final JdbcTransactions transactions;
+
+    private final AccessChangeService changes;
 
     /** Registry quyền được dịch theo locale; không truy vấn hay tiết lộ dữ liệu tài khoản. */
     @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.READ)
@@ -86,6 +91,7 @@ public class AccessService {
         }
         return transactions.execute(connection -> {
             access.lockRoleAssignments(connection);
+            var before = access.role(connection, role);
             if (!actor.roles().contains(Role.ADMIN)) {
                 Set<String> granted = SecurityContextHolder.getContext()
                     .getAuthentication()
@@ -94,8 +100,7 @@ public class AccessService {
                     .map(GrantedAuthority::getAuthority)
                     .collect(Collectors.toSet());
                 if (
-                    access
-                        .role(connection, role)
+                    before
                         .permissions()
                         .stream()
                         .anyMatch(permission -> !granted.contains(permission.name()))
@@ -104,7 +109,19 @@ public class AccessService {
             access.requireExistingRole(connection, role);
             access.validateMappings(connection, Set.of(), request.getPermissions());
             access.replacePermissions(connection, role, request.getPermissions(), request.getVersion(), actor.id());
-            return access.role(connection, role);
+            var after = access.role(connection, role);
+            changes.mappings(
+                connection,
+                Event.ROLE_PERMISSIONS,
+                Target.ROLE,
+                role.name(),
+                actor.id(),
+                before.permissions().stream().map(Permission::name).collect(Collectors.toSet()),
+                after.permissions().stream().map(Permission::name).collect(Collectors.toSet()),
+                before.version(),
+                after.version()
+            );
+            return after;
         });
     }
 
@@ -123,6 +140,7 @@ public class AccessService {
             if (target == null) {
                 throw new BusinessException(ErrorCode.NOT_FOUND);
             }
+            var beforeRoles = access.assignedRoles(connection, id);
             // Người được ủy quyền không đụng user ADMIN và chỉ gán role có tập quyền nằm trong quyền của chính họ.
             if (!actor.roles().contains(Role.ADMIN)) {
                 if (
@@ -154,7 +172,19 @@ public class AccessService {
                 throw new BusinessException(ErrorCode.CONFLICT);
             }
             access.replaceRoles(connection, id, request.getRoles(), request.getVersion(), actor.id());
-            return UserResponse.from(users.findById(connection, id, false));
+            var after = users.findById(connection, id, false);
+            changes.mappings(
+                connection,
+                Event.USER_ROLES,
+                Target.USER,
+                Long.toString(id),
+                actor.id(),
+                beforeRoles.stream().map(Role::name).collect(Collectors.toSet()),
+                request.getRoles().stream().map(Role::name).collect(Collectors.toSet()),
+                target.getVersion(),
+                after.getVersion()
+            );
+            return UserResponse.from(after);
         });
     }
 }

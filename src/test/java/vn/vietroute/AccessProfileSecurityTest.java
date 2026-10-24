@@ -47,7 +47,7 @@ class AccessProfileSecurityTest {
 
     @Test
     void adminRegistryCannotBeRenamedDisabledOrDeleted() {
-        var service = new AccessManagementService(null, null, null);
+        var service = new AccessManagementService(null, null, null, null);
         var actor = new UserPrincipal(1L, "admin", Set.of(Role.ADMIN), 0);
         for (boolean active : List.of(true, false)) {
             var failure = assertThrows(BusinessException.class, () ->

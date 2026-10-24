@@ -184,3 +184,9 @@ Permission là value object JSON string từ registry; constants/values() chỉ 
 Mọi payload/tham số/projection được mô tả OpenAPI. ACCOUNT_* khai báo tập trung tại AccessConstants và Permission; sync enabled bổ sung registry/ADMIN khi startup. Không cần thay migration hiện hữu. POST cấp tài khoản và đổi mật khẩu đi qua quota/semaphore credential để giới hạn BCrypt đồng thời; GET tìm tài khoản chỉ dùng quota request thông thường, không làm cạn quota đăng nhập.
 
 AUTH011 (403) yêu cầu đổi mật khẩu tạm. Filter xác minh token/DB rồi bỏ toàn bộ authority trong phiên hạn chế; chỉ mở GET hồ sơ/me, capabilities rỗng, đổi mật khẩu/logout, trang account và dữ liệu công khai. Quy tắc bắt đổi áp dụng cả bootstrap đang mang must_change_password=true; đổi xong mới dùng chức năng. Đừng hiểu accessToken nhận từ login mật khẩu tạm là đã có quyền quản trị. Nhật ký mặc định bỏ payload/response các DTO quản trị mới, không thêm password/PII vào projection.
+
+## API lịch sử phân quyền — ACCESS09
+
+GET `/api/v1/admin/access/history` chỉ ADMIN + ACCESS_READ; query `event` theo enum sự kiện, `target` tiền tố nguyên văn tối đa 120 ký tự, `actorId` không âm, `page/size` theo PageRequest (size tối đa 100). Count và page lọc trong PostgreSQL, `%`, `_`, `!` được escape thành ký tự thường. Sai enum/giới hạn trả 400. Không có endpoint sửa/xóa lịch sử.
+
+Response PageResponse chứa ID, event, targetKind/targetKey, actorId/actorUsername, traceId, createdAt và before/after có schema tường minh. Với `delta=true`, các set trước/sau lần lượt là mã bị bỏ/thêm, mappingCount/version thể hiện tổng thực trước/sau; không hiểu danh sách delta là toàn bộ quyền tại thời điểm đó. Không password/hash/token/email/body/header. Đọc lịch sử không tải vào cache/storage; các giới hạn retention/rollback tại [chuyên đề](SCHEMA_VA_PHAN_QUYEN.md#lịch-sử-quản-trị-quyền--access09).

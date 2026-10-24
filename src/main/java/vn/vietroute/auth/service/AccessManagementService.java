@@ -10,6 +10,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import vn.vietroute.auth.dto.request.AccessPolicyRequest;
 import vn.vietroute.auth.dto.request.AccessRegistryRequest;
+import vn.vietroute.auth.dto.response.AccessChangeStateResponse;
 import vn.vietroute.auth.dto.response.AccessPolicyResponse;
 import vn.vietroute.auth.dto.response.AccessRegistryResponse;
 import vn.vietroute.auth.dto.response.AccessTargetResponse;
@@ -21,6 +22,8 @@ import vn.vietroute.auth.repository.AccessRepository;
 import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessOperation;
+import vn.vietroute.common.constant.AccessAuditConstants.Event;
+import vn.vietroute.common.constant.AccessAuditConstants.Target;
 import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
@@ -36,6 +39,8 @@ public class AccessManagementService {
     private final AccessRepository access;
 
     private final JdbcTransactions transactions;
+
+    private final AccessChangeService changes;
 
     /** Registry tên/trạng thái có version riêng; không suy ra quyền từ hằng Java. */
     @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.READ)
@@ -72,6 +77,12 @@ public class AccessManagementService {
         }
         return transactions.execute(connection -> {
             access.lockRoleAssignments(connection);
+            var before = registry
+                .registry(connection, kind)
+                .stream()
+                .filter(item -> item.code().equals(code))
+                .findFirst()
+                .orElse(null);
             // Bật lại role/permission cũng là cấp quyền gián tiếp: người được ủy quyền không được kích hoạt tập quyền vượt chính mình.
             if (!create && !actor.roles().contains(Role.ADMIN)) {
                 Set<String> granted = SecurityContextHolder.getContext()
@@ -90,11 +101,28 @@ public class AccessManagementService {
                 if (outside) throw new BusinessException(ErrorCode.ACCESS_DENIED);
             }
             registry.save(connection, kind, code, body, actor.id(), create);
-            return registry
+            var result = registry
                 .registry(connection, kind)
                 .stream()
                 .filter(item -> item.code().equals(code))
                 .toList();
+            boolean role = kind.equals("roles");
+            changes.record(
+                connection,
+                role
+                    ? create
+                        ? Event.ROLE_CREATED
+                        : Event.ROLE_UPDATED
+                    : create
+                      ? Event.PERMISSION_CREATED
+                      : Event.PERMISSION_UPDATED,
+                role ? Target.ROLE : Target.PERMISSION,
+                code,
+                actor.id(),
+                AccessChangeStateResponse.registry(before),
+                AccessChangeStateResponse.registry(result.get(0))
+            );
+            return result;
         });
     }
 
@@ -109,7 +137,28 @@ public class AccessManagementService {
         }
         return transactions.execute(connection -> {
             access.lockRoleAssignments(connection);
+            var before = registry
+                .registry(connection, "roles")
+                .stream()
+                .filter(item -> item.code().equals(code))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+            var permissions = access
+                .role(connection, Role.valueOf(code))
+                .permissions()
+                .stream()
+                .map(Object::toString)
+                .collect(Collectors.toSet());
             registry.deleteRole(connection, code, version, actor.id());
+            changes.record(
+                connection,
+                Event.ROLE_DELETED,
+                Target.ROLE,
+                code,
+                actor.id(),
+                AccessChangeStateResponse.registry(before, permissions),
+                AccessChangeStateResponse.deleted(before)
+            );
             return List.of();
         });
     }
@@ -139,21 +188,57 @@ public class AccessManagementService {
         return transactions.execute(connection -> {
             access.lockRoleAssignments(connection);
             access.validateMappings(connection, body.roles(), body.permissions());
+            var before =
+                id == 0
+                    ? null
+                    : registry
+                          .policies(connection)
+                          .stream()
+                          .filter(item -> item.id() == id)
+                          .findFirst()
+                          .orElse(null);
             registry.savePolicy(connection, id, body, actor.id());
-            return registry
+            var result = registry
                 .policies(connection)
                 .stream()
                 .filter(item -> item.kind().equals(body.kind()) && item.target().equals(body.target()))
                 .toList();
+            changes.record(
+                connection,
+                id == 0 ? Event.POLICY_CREATED : Event.POLICY_UPDATED,
+                Target.POLICY,
+                Long.toString(result.get(0).id()),
+                actor.id(),
+                AccessChangeStateResponse.policy(before),
+                AccessChangeStateResponse.policy(result.get(0))
+            );
+            return result;
         });
     }
 
     /** Xóa chỉ chính sách bổ sung; annotation/service guard vẫn còn nguyên. */
     @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.DELETE)
     public List<AccessPolicyResponse> deletePolicy(long id, long version) {
+        var actor = (UserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        AccessActors.requireCurrent(actor);
         return transactions.execute(connection -> {
             access.lockRoleAssignments(connection);
+            var before = registry
+                .policies(connection)
+                .stream()
+                .filter(item -> item.id() == id)
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
             registry.deletePolicy(connection, id, version);
+            changes.record(
+                connection,
+                Event.POLICY_DELETED,
+                Target.POLICY,
+                Long.toString(id),
+                actor.id(),
+                AccessChangeStateResponse.policy(before),
+                AccessChangeStateResponse.empty()
+            );
             return List.of();
         });
     }

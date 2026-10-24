@@ -1,10 +1,13 @@
 package vn.vietroute.auth.controller;
 
+import java.util.List;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.auth.security.annotation.AccessOperation;
+import vn.vietroute.common.constant.AccessAuditConstants.Event;
 import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
@@ -16,7 +19,8 @@ public class AccessPageController {
 
     @GetMapping(Routes.ACCESS_PAGE)
     @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.VIEW)
-    public String access() {
+    public String access(Model model) {
+        model.addAttribute("accessHistoryEvents", List.of(Event.values()));
         return "operations/access";
     }
 }
