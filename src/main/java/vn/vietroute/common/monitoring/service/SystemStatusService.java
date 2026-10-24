@@ -10,11 +10,12 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.security.AccessRules;
+import vn.vietroute.auth.entity.PermissionAction;
+import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.config.integration.MailSettings;
 import vn.vietroute.common.config.traffic.TrafficSettings;
+import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.jdbc.BaseRepository;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.job.worker.JobWorker;
@@ -37,7 +38,7 @@ public class SystemStatusService {
 
     private final Clock clock;
 
-    @PreAuthorize(AccessRules.SYSTEM_READ)
+    @AccessOperation(resource = Groups.SYSTEM, action = PermissionAction.READ)
     public SystemStatusResponse status() {
         Map<String, Long> queues = new LinkedHashMap<>();
         try (

@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
+import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -25,6 +26,27 @@ import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 public class DatabaseAccessGuard {
 
     private final AuthorizationRepository repository;
+
+    /** Guard duy nhất của annotation: nhận đúng hàm server, suy ra mã hành động rồi kiểm mapping hiện hành trong DB. */
+    public boolean operation(Authentication authentication, MethodInvocation invocation) {
+        AccessOperationMetadata operation;
+        try {
+            operation = AccessOperationMetadata.resolve(invocation);
+        } catch (IllegalArgumentException exception) {
+            return false;
+        }
+        var current = state(authentication);
+        if (current == null) return false;
+        if (
+            operation.adminOnly() && (current.mustChangePassword() || !current.roles().contains(Role.ADMIN))
+        ) return false;
+        if (operation.authenticated()) return true;
+        return (
+            !current.mustChangePassword() &&
+            current.permissions().containsAll(operation.required()) &&
+            operation.any().stream().anyMatch(current.permissions()::contains)
+        );
+    }
 
     /** Auth tự phục vụ vẫn dùng được khi cần đổi mật khẩu tạm; phiên đã thu hồi/tắt bị từ chối. */
     public boolean authenticated(Authentication authentication) {

@@ -4,6 +4,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.common.constant.AccessConstants;
 
 /**
@@ -20,6 +21,12 @@ public @interface AccessFunction {
 
     /** Chức năng trong cây; method để trống sẽ kế thừa function của class. */
     String function() default "";
+
+    /** Module mới khai báo hành động; mã RESOURCE_ACTION được suy ra, không phải thêm hằng Permission/AccessRules. */
+    PermissionAction[] actions() default {};
+
+    /** Bỏ trống dùng group làm resource; đặt riêng khi nhóm menu và tài nguyên quyền khác nhau. */
+    String resource() default "";
 
     /** ANY: quyền tương thích có thể thay thế; ALL: mọi quyền khai báo đều bắt buộc. */
     Match match() default Match.ANY;

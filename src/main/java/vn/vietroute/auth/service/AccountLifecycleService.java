@@ -12,7 +12,6 @@ import java.util.Locale;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import vn.vietroute.auth.config.AccountSettings;
@@ -25,9 +24,9 @@ import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.auth.repository.AccessRepository;
 import vn.vietroute.auth.repository.AccountRepository;
 import vn.vietroute.auth.repository.UserRepository;
-import vn.vietroute.auth.security.AccessRules;
 import vn.vietroute.auth.security.AccountSecrets;
 import vn.vietroute.auth.security.UserPrincipal;
+import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.config.integration.JobSettings;
 import vn.vietroute.common.config.integration.MailSettings;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
@@ -150,7 +149,7 @@ public class AccountLifecycleService {
     }
 
     /** Admin cũ/tài khoản đăng nhập được có thể gắn email; cần JWT còn hạn và mật khẩu hiện tại, email mới phải xác minh. */
-    @PreAuthorize(AccessRules.AUTHENTICATED)
+    @AccessOperation(authenticated = true)
     public void bindEmail(UserPrincipal principal, BindEmailRequest body, Locale locale) {
         requireAvailable();
         transactions.execute(connection -> {

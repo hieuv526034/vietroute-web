@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.business.catalog.dto.request.CatalogCreateRequest;
@@ -71,7 +72,11 @@ public class CatalogController extends BaseController {
         description = "Yêu cầu CATALOG_CREATE (hoặc CATALOG_WRITE tương thích). Server tự sinh mã nếu null; tên vi/en bắt buộc; code trùng trả 409; audit lấy từ principal."
     )
     @ResponseStatus(HttpStatus.CREATED)
-    @AccessFunction(group = Groups.CATALOG, permissions = { Permissions.CATALOG_CREATE, Permissions.CATALOG_WRITE })
+    @AccessFunction(
+        group = Groups.CATALOG,
+        actions = { PermissionAction.CREATE },
+        permissions = { Permissions.CATALOG_WRITE }
+    )
     public ApiResult<CatalogResponse> create(
         @Valid @RequestBody CatalogCreateRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
@@ -88,7 +93,7 @@ public class CatalogController extends BaseController {
         summary = "Đọc danh mục quản trị",
         description = "Yêu cầu CATALOG_READ; xem cả bản đã xóa mềm, không thay đổi API tra cứu công khai"
     )
-    @AccessFunction(group = Groups.CATALOG, permissions = { Permissions.CATALOG_READ })
+    @AccessFunction(group = Groups.CATALOG, actions = { PermissionAction.READ })
     public ApiResult<CatalogResponse> find(
         @Parameter(description = "ID danh mục, số nguyên dương", example = "1") @PathVariable @Min(
             value = 1,
@@ -104,7 +109,11 @@ public class CatalogController extends BaseController {
         summary = "Sửa danh mục",
         description = "Yêu cầu CATALOG_UPDATE (hoặc CATALOG_WRITE tương thích); version cũ trả COM008/409"
     )
-    @AccessFunction(group = Groups.CATALOG, permissions = { Permissions.CATALOG_UPDATE, Permissions.CATALOG_WRITE })
+    @AccessFunction(
+        group = Groups.CATALOG,
+        actions = { PermissionAction.UPDATE },
+        permissions = { Permissions.CATALOG_WRITE }
+    )
     public ApiResult<CatalogResponse> update(
         @Parameter(description = "ID danh mục, số nguyên dương", example = "1") @PathVariable @Min(
             value = 1,
@@ -122,7 +131,7 @@ public class CatalogController extends BaseController {
         summary = "Xóa mềm danh mục",
         description = "Yêu cầu CATALOG_DELETE, body chứa version; WRITE không có quyền xóa. Bản đã xóa biến mất khỏi tra cứu công khai, audit vẫn giữ."
     )
-    @AccessFunction(group = Groups.CATALOG, permissions = { Permissions.CATALOG_DELETE })
+    @AccessFunction(group = Groups.CATALOG, actions = { PermissionAction.DELETE })
     public ApiResult<CatalogResponse> delete(
         @Parameter(description = "ID danh mục, số nguyên dương", example = "1") @PathVariable @Min(
             value = 1,

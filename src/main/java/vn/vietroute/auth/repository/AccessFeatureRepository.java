@@ -29,11 +29,13 @@ public class AccessFeatureRepository extends BaseRepository {
     }
 
     /** Gọi trong transaction sync startup: cùng khóa mapping để không chạy lọt thao tác gán quyền. */
-    public void synchronize(Connection connection, List<AccessResourceResponse> inventory) throws SQLException {
+    public void synchronize(Connection connection, List<AccessResourceResponse> inventory, Set<String> serviceCodes)
+        throws SQLException {
         try (var lock = connection.prepareStatement("SELECT pg_advisory_xact_lock(781205611)")) {
             lock.execute();
         }
         Set<String> codes = new LinkedHashSet<>();
+        codes.addAll(serviceCodes);
         inventory.forEach(item -> codes.addAll(item.declaredPermissions()));
         AccessFeatures.definitions()
             .stream()

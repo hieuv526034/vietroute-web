@@ -5,11 +5,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.AccessConstants.Groups;
-import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
@@ -24,7 +24,7 @@ import vn.vietroute.common.web.response.ApiResult;
 
 @RestController
 @Tag(name = "Vận hành", description = "Quan sát pool/worker/quota và kiểm tra database thật")
-@AccessFunction(group = Groups.SYSTEM, function = Functions.MONITORING, permissions = { Permissions.SYSTEM_READ })
+@AccessFunction(group = Groups.SYSTEM, function = Functions.MONITORING, actions = { PermissionAction.READ })
 public class SystemStatusController extends BaseController {
 
     private final SystemStatusService system;
@@ -67,7 +67,8 @@ public class SystemStatusController extends BaseController {
     @AccessFunction(
         group = Groups.SYSTEM,
         function = Functions.CONFIGURATION,
-        permissions = { Permissions.CONFIGURATION_READ }
+        actions = { PermissionAction.READ },
+        resource = Groups.CONFIGURATION
     )
     @GetMapping(Routes.SYSTEM_CONFIGURATION)
     @Operation(

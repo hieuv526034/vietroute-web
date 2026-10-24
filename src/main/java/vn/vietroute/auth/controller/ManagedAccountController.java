@@ -20,6 +20,7 @@ import vn.vietroute.auth.dto.request.ManagedAccountSearchRequest;
 import vn.vietroute.auth.dto.request.ManagedAccountStateRequest;
 import vn.vietroute.auth.dto.response.ManagedAccountAccessResponse;
 import vn.vietroute.auth.dto.response.ManagedAccountResponse;
+import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.security.AccessResourceSynchronizer;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessFunction;
@@ -43,7 +44,8 @@ import vn.vietroute.common.web.response.ApiResult;
 @AccessFunction(
     group = Groups.ACCOUNTS,
     function = Functions.ACCOUNTS,
-    permissions = { Permissions.ACCOUNT_READ },
+    actions = { PermissionAction.READ },
+    resource = Groups.ACCOUNT,
     adminOnly = true
 )
 public class ManagedAccountController extends BaseController {
@@ -99,7 +101,7 @@ public class ManagedAccountController extends BaseController {
         summary = "Khóa hoặc mở tài khoản",
         description = "ADMIN + ACCOUNT_UPDATE; version bắt buộc, thu hồi mọi JWT/challenge; cấm system/bản thân/ADMIN/chờ kích hoạt"
     )
-    @AccessFunction(group = Groups.ACCOUNTS, permissions = { Permissions.ACCOUNT_UPDATE })
+    @AccessFunction(group = Groups.ACCOUNTS, actions = { PermissionAction.UPDATE }, resource = Groups.ACCOUNT)
     public ApiResult<ManagedAccountResponse> state(
         @Parameter(description = "ID tài khoản cần khóa/mở", example = "2") @PathVariable long id,
         @Valid @RequestBody ManagedAccountStateRequest body,

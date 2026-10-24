@@ -1,5 +1,13 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
+## ACCESS08 — Đang làm
+
+[Issue #63](https://github.com/hieuv526034/vietroute-web/issues/63), hieuv526034, nhánh `hieuv526034/access08-quan-ly-quyen-dong`, base `1fe53b0`. Bỏ lớp AccessRules và các biểu thức theo từng quyền; AccessResource/AccessOperation dùng chung một meta-PreAuthorize với MethodInvocation thật, HTTP actions sinh RESOURCE_ACTION. Startup thu thập cả service và mapping HTTP, registry/ADMIN vẫn sync có cờ/transaction; không tự cấp role thường. Giữ ADMIN/required/legacy alias, nhánh tạo/sửa, self-service và hai context. UI gợi VIEW trong tập ủy quyền và giải thích khi thiếu; không đổi schema/migration.
+
+Đạt clean verify 129 Java và 27 Node tại mốc local; helper CI đã biên dịch với thư viện WAR, không còn class AccessRules cũ trong target. npm ci/format/format:check/rules/docs, actionlint/bash syntax/diff đạt. Có ca module mới không cần hằng Rule/Permission, upsert CREATE/UPDATE, collector service-only và gợi VIEW đơn/nhóm/bộ. Chưa xác nhận CI hoặc merge. Hợp đồng tại [ACCESS08](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#guard-chung-theo-metadata-hàm--access08).
+
+Tiếp tục theo yêu cầu chủ dự án: lịch sử trước–sau, UX/quota registry, nền scope và nghiệm thu chi phí DB vẫn phải xử lý sau phần guard chung, chưa hoàn thành bởi việc đổi annotation. Quy tắc khách chỉ một chuyến đặt/theo dõi đang hoạt động, hoàn tất mới đặt tiếp nhưng tra cứu đầy đủ nhà xe/chuyến đã ghi vào đặc tả BOOKING01; khác với membership quản trị. Không ghi/test trên Neon hoặc coi đặc tả booking là đã có code nghiệp vụ.
+
 ## ACCESS07 — Rà soát mức sẵn sàng, phần bổ sung chưa triển khai
 
 [Issue #61](https://github.com/hieuv526034/vietroute-web/issues/61), hieuv526034, nhánh `hieuv526034/access07-ra-soat-phan-quyen`, đối chiếu source main `0c7ce42` ngày 24/10/2026. Phạm vi lượt này là đánh giá, không sửa hành vi phân quyền. Lõi RBAC, nhiều role/user, cây menu/hành động, guard DB ở HTTP/service, version/transaction, bảo vệ ADMIN và preview user đích đã có tại ACCESS03–06. Không kết luận đã sẵn sàng cho mọi tải hoặc mọi nghiệp vụ từ các bằng chứng đó.

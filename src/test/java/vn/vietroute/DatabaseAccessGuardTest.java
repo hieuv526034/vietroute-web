@@ -18,20 +18,23 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResourceLoader;
 import org.springframework.mock.web.MockServletContext;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import vn.vietroute.auth.entity.AuthorizationState;
+import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.security.AccessRules;
+import vn.vietroute.auth.security.AccessOperationMetadata;
 import vn.vietroute.auth.security.DatabaseAccessGuard;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessFunction;
+import vn.vietroute.auth.security.annotation.AccessOperation;
+import vn.vietroute.auth.security.annotation.AccessResource;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.AccessConstants.Functions;
@@ -129,6 +132,19 @@ class DatabaseAccessGuardTest {
             assertThrows(AccessDeniedException.class, probe::delete);
             fixture.states.put(8L, state(true, false, false, 0, Set.of(Role.DRIVER), Set.of()));
             assertThrows(AccessDeniedException.class, probe::read);
+            // Tài nguyên mới không có AccessRules/Permission constant: action sinh mã và vẫn đối chiếu DB.
+            var future = root.getBean(FutureModule.class);
+            assertEquals(
+                Set.of("FUTUREMODULE_UPDATE"),
+                AccessOperationMetadata.declaredCodes(FutureModule.class, FutureModule.class.getMethod("update"))
+            );
+            fixture.states.put(8L, state(true, false, false, 0, Set.of(Role.DRIVER), Set.of("FUTUREMODULE_UPDATE")));
+            assertTrue(future.update());
+            assertThrows(AccessDeniedException.class, () -> future.upsert(true));
+            assertTrue(future.upsert(false));
+            fixture.states.put(8L, state(true, false, false, 0, Set.of(Role.DRIVER), Set.of("FUTUREMODULE_CREATE")));
+            assertTrue(future.upsert(true));
+            assertThrows(AccessDeniedException.class, future::update);
             SecurityContextHolder.clearContext();
             fixture.states.put(8L, state(true, false, false, 0, Set.of(Role.DRIVER), Set.of("CATALOG_READ")));
             var mvc = MockMvcBuilders.webAppContextSetup(servlet).apply(springSecurity()).build();
@@ -188,19 +204,40 @@ class DatabaseAccessGuardTest {
     static class ProbeConfig {
 
         @Bean
+        FutureModule futureModule() {
+            return new FutureModule();
+        }
+
+        @Bean
         GuardedProbe guardedProbe() {
             return new GuardedProbe();
         }
     }
 
+    /** Module giả chỉ ở test: không thêm hằng hoặc rule vào production để vượt kiểm. */
+    @Service
+    @AccessResource("FUTUREMODULE")
+    static class FutureModule {
+
+        @AccessOperation(action = PermissionAction.UPDATE)
+        public boolean update() {
+            return true;
+        }
+
+        @AccessOperation(createArgument = "create")
+        public boolean upsert(boolean create) {
+            return true;
+        }
+    }
+
     static class GuardedProbe {
 
-        @PreAuthorize(AccessRules.CATALOG_READ)
+        @AccessOperation(resource = Groups.CATALOG, action = PermissionAction.READ)
         public boolean read() {
             return true;
         }
 
-        @PreAuthorize(AccessRules.CATALOG_DELETE)
+        @AccessOperation(resource = Groups.CATALOG, action = PermissionAction.DELETE)
         public boolean delete() {
             return true;
         }
@@ -218,7 +255,7 @@ class DatabaseAccessGuardTest {
 
         @GetMapping("/api/v1/guard-probe")
         @Operation(summary = "Fixture kiểm guard DB")
-        @PreAuthorize(AccessRules.CATALOG_READ)
+        @AccessOperation(resource = Groups.CATALOG, action = PermissionAction.READ)
         public String read() {
             calls.incrementAndGet();
             return "allowed";

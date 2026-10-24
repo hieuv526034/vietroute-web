@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.dto.response.AccessCapabilityResponse;
 import vn.vietroute.auth.dto.response.AccessFeatureResponse;
 import vn.vietroute.auth.dto.response.EffectiveAccessResponse;
+import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.security.AccessPolicyInterceptor;
 import vn.vietroute.auth.security.AccessResourceSynchronizer;
 import vn.vietroute.auth.security.annotation.AccessFunction;
@@ -19,7 +20,6 @@ import vn.vietroute.auth.service.AccessTreeService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.AccessConstants.Groups;
-import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
@@ -28,7 +28,7 @@ import vn.vietroute.common.web.response.ApiResult;
 
 @RestController
 @Tag(name = "Cây chức năng", description = "Gán quyền theo chức năng/hành động và xem nguồn quyền hiệu lực")
-@AccessFunction(group = Groups.ACCESS, function = Functions.ACCESS, permissions = { Permissions.ACCESS_READ })
+@AccessFunction(group = Groups.ACCESS, function = Functions.ACCESS, actions = { PermissionAction.READ })
 public class AccessTreeController extends BaseController {
 
     private final AccessTreeService tree;

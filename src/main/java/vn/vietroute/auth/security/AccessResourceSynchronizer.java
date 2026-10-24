@@ -1,10 +1,14 @@
 package vn.vietroute.auth.security;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
 import vn.vietroute.auth.service.AccessResourceService;
@@ -46,6 +50,21 @@ public final class AccessResourceSynchronizer implements ApplicationListener<Con
         }
         // Validate metadata cả khi tắt ghi DB; cờ sync chỉ điều khiển transaction startup.
         inventory = AccessTargets.discover(context.getBean(RequestMappingHandlerMapping.class));
-        if (settings.isAccessSyncEnabled()) resources.synchronize(inventory);
+        Set<String> serviceCodes = serviceCodes();
+        if (settings.isAccessSyncEnabled()) resources.synchronize(inventory, serviceCodes);
+    }
+
+    /** Root đã khởi tạo xong: chỉ đọc annotation trên bean service, không chạy business hoặc giữ quyền user trong RAM. */
+    private Set<String> serviceCodes() {
+        var source = context.getParent() == null ? context : context.getParent();
+        Set<String> codes = new LinkedHashSet<>();
+        source
+            .getBeansWithAnnotation(Service.class)
+            .values()
+            .forEach(bean -> {
+                Class<?> type = AopUtils.getTargetClass(bean);
+                for (var method : type.getMethods()) codes.addAll(AccessOperationMetadata.declaredCodes(type, method));
+            });
+        return Set.copyOf(codes);
     }
 }

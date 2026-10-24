@@ -20,10 +20,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 import org.springframework.beans.factory.DisposableBean;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.security.AccessRules;
+import vn.vietroute.auth.entity.PermissionAction;
+import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.config.monitoring.MonitoringSettings;
+import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.job.worker.JobWorker;
 import vn.vietroute.common.monitoring.dto.response.RuntimeStatusResponse;
 
@@ -151,7 +152,7 @@ public class ApplicationMetrics implements DisposableBean {
     }
 
     /** Quyền xem chỉ số riêng với chức năng nghiệp vụ; JWT vẫn được kiểm như API quản trị khác. */
-    @PreAuthorize(AccessRules.SYSTEM_READ)
+    @AccessOperation(resource = Groups.SYSTEM, action = PermissionAction.READ)
     public RuntimeStatusResponse snapshot() {
         var memory = ManagementFactory.getMemoryMXBean();
         var state = database.state();

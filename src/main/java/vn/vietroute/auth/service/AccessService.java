@@ -6,7 +6,6 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -17,13 +16,16 @@ import vn.vietroute.auth.dto.response.AccessUserResponse;
 import vn.vietroute.auth.dto.response.PermissionResponse;
 import vn.vietroute.auth.dto.response.RolePermissionsResponse;
 import vn.vietroute.auth.dto.response.UserResponse;
+import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.repository.AccessRepository;
 import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.security.AccessActors;
-import vn.vietroute.auth.security.AccessRules;
 import vn.vietroute.auth.security.UserPrincipal;
+import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.base.PageResponse;
+import vn.vietroute.common.constant.AccessConstants.Groups;
+import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
@@ -41,25 +43,25 @@ public class AccessService {
     private final JdbcTransactions transactions;
 
     /** Registry quyền được dịch theo locale; không truy vấn hay tiết lộ dữ liệu tài khoản. */
-    @PreAuthorize(AccessRules.ACCESS_READ)
+    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.READ)
     public List<PermissionResponse> permissions(Locale locale) {
         return access.permissions(locale);
     }
 
     /** Đọc role chưa xóa, gồm cả role tắt để chuẩn bị mapping; UI không gợi role tắt cho gán mới. */
-    @PreAuthorize(AccessRules.ACCESS_READ)
+    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.READ)
     public List<RolePermissionsResponse> roles() {
         return access.roleSummaries();
     }
 
     /** Danh sách quản trị cần ACCESS_READ; role được ủy quyền cũng đọc được, không trả credential. */
-    @PreAuthorize(AccessRules.ACCESS_READ)
+    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.READ)
     public PageResponse<AccessUserResponse> users(AccessUserSearchRequest page) {
         return users.pageForAccess(page);
     }
 
     /** ADMIN là role cứu hộ cố định; không cho API cấu hình làm mất khả năng quản trị hệ thống. */
-    @PreAuthorize(AccessRules.ASSIGN)
+    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.ASSIGN, aliases = { Permissions.ACCESS_WRITE })
     public RolePermissionsResponse replace(Role role, RolePermissionsRequest request, UserPrincipal actor) {
         AccessActors.requireCurrent(actor);
         if (Role.ADMIN.equals(role)) {
@@ -107,7 +109,7 @@ public class AccessService {
     }
 
     /** Gán role, tăng tokenVersion trong cùng transaction để thu hồi mọi token cũ của user đích. */
-    @PreAuthorize(AccessRules.ASSIGN)
+    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.ASSIGN, aliases = { Permissions.ACCESS_WRITE })
     public UserResponse assign(long id, UserRolesRequest request, UserPrincipal actor) {
         AccessActors.requireCurrent(actor);
         // Actor kỹ thuật chỉ tham chiếu audit, không được biến thành tài khoản có quyền.

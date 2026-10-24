@@ -29,6 +29,7 @@ Tên đề tài đề xuất: **Website quản lý nhà xe, tìm kiếm và đ�
 - Hai chiều của tuyến là hai bản ghi riêng, mỗi chiều có điểm dừng và mức giá riêng.
 - Có yêu cầu đặt chỗ trên website bên cạnh nút gọi điện; nhà xe xác nhận hoặc từ chối.
 - Với đặt qua điện thoại, OPERATOR nhập yêu cầu thay khách và xác nhận bằng cùng nghiệp vụ tồn chỗ; tài xế chuyển thông tin cho nhà xe, không hứa giữ chỗ ngoài hệ thống rồi bỏ qua cập nhật.
+- Bổ sung theo chủ dự án 24/10/2026: khách tra cứu được đầy đủ nhà xe/chuyến phù hợp trước khi lựa chọn. Mỗi khách chỉ có một chuyến đặt đang hoạt động để đặt/theo dõi; hoàn tất chuyến mới đặt chuyến khác. BOOKING01 cần chốt rõ các trạng thái pending/đã xác nhận/đang chạy/hủy/từ chối và kiểm nguyên tử khi tạo đồng thời; chưa triển khai quy tắc này chỉ bằng bộ phân quyền. Không dùng membership quản trị nhà xe để lọc mất kết quả tra cứu công khai của khách.
 - Đặt theo số lượng chỗ, chưa chọn số ghế/giường cụ thể. Kiểm tra chỗ trống theo từng chặng và tái sử dụng chỗ trên các chặng không giao nhau.
 - Yêu cầu chờ xác nhận chưa giữ chỗ. Giao diện phải nói rõ: chỉ đơn đã xác nhận mới bảo đảm chỗ.
 - Thanh toán trực tiếp; có thể ghi nhận đã thu/chưa thu. Chưa tích hợp cổng thanh toán, hoàn tiền tự động, SMS hoặc email.

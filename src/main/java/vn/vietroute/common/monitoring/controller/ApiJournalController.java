@@ -10,11 +10,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
+import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.AccessConstants.Groups;
-import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
@@ -31,7 +31,7 @@ import vn.vietroute.common.web.response.ApiResult;
 @AccessFunction(
     group = Groups.SYSTEM,
     function = Functions.JOURNAL,
-    permissions = { Permissions.SYSTEM_READ },
+    actions = { PermissionAction.READ },
     adminOnly = true
 )
 public class ApiJournalController extends BaseController {

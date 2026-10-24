@@ -26,7 +26,7 @@ View Thymeleaf: `/`, `/login`, `/account` (đăng nhập), `/admin` (CATALOG_VIE
 
 API mở rộng: quản lý `/api/v1/admin/access/**`, theo dõi/retry `/api/v1/admin/jobs/**`, readiness `/api/v1/admin/system/status`, mail queue `/api/v1/admin/mail` (202, cần Idempotency-Key). Mỗi API có authority tương ứng tại service; `/auth/me` trả permissions. Catalog CRUD dùng quyền hành động trong bảng trên. COM012/429 là quota (khác AUTH005 khóa tài khoản), COM013/503 là quá tải/Redis lỗi, COM014/413 là body lớn; MAIL001/503 là mail tắt. Đọc [hợp đồng và luồng đầy đủ](NEN_TANG_MO_RONG.md).
 
-ACCESS06: `@PreAuthorize(AccessRules...)` gọi hàm `accessGuard` đọc trạng thái/mapping quyền hiện hành từ DB, không quyết định bằng authorities cũ. ANY/ALL và ADMIN kèm quyền được gộp trong một SELECT; role/permission tắt, tài khoản khóa/chờ kích hoạt, tokenVersion cũ hoặc mật khẩu tạm đều không có quyền hành động. DB lỗi trả COM007/503 và dừng method, thiếu quyền trả 403. Không đổi payload/đường dẫn API. Đọc [hàm kiểm DB và giới hạn đồng thời](SCHEMA_VA_PHAN_QUYEN.md#hàm-kiểm-db-trong-preauthorize--access06).
+ACCESS08: `@AccessResource`/`@AccessOperation` thay các hằng AccessRules theo từng quyền; meta-PreAuthorize chung gọi `accessGuard.operation` đọc trạng thái/mapping quyền hiện hành từ DB. HTTP AccessFunction khai báo actions để tự sinh RESOURCE_ACTION. ANY/ALL và ADMIN kèm quyền được gộp trong một SELECT; role/permission tắt, tài khoản khóa/chờ kích hoạt, tokenVersion cũ hoặc mật khẩu tạm đều không có quyền hành động. DB lỗi trả COM007/503 và dừng method, thiếu quyền trả 403. Không đổi payload/đường dẫn API. Đọc [guard chung và đăng ký quyền tự động](SCHEMA_VA_PHAN_QUYEN.md#guard-chung-theo-metadata-hàm--access08).
 
 ## Locale và envelope
 
@@ -159,7 +159,7 @@ Upload avatar thành công trả HTTP 201/OK004, OpenAPI có response 201; lỗi
 
 ## Cây quyền UI/API — ACCESS03
 
-Hợp đồng hiện hành và ví dụ nằm ở [cây chức năng](SCHEMA_VA_PHAN_QUYEN.md#cây-chức-năng-và-quyền-hành-động--access03). VIEW mở trang, API đòi hành động riêng, user nhiều role nhận hợp quyền DB. Annotation AccessFunction thực thi guard HTTP; service dùng AccessRules cùng mã, không bỏ scope/version. Registry/user/role management có thể ủy quyền bằng ACCESS_*; ADMIN/system/last-admin và dữ liệu journal/online giữ giới hạn riêng.
+Hợp đồng hiện hành và ví dụ nằm ở [cây chức năng](SCHEMA_VA_PHAN_QUYEN.md#cây-chức-năng-và-quyền-hành-động--access03). VIEW mở trang, API đòi hành động riêng, user nhiều role nhận hợp quyền DB. Annotation AccessFunction thực thi guard HTTP; service dùng AccessResource/AccessOperation để tự sinh cùng mã, không bỏ scope/version. Registry/user/role management có thể ủy quyền bằng ACCESS_*; ADMIN/system/last-admin và dữ liệu journal/online giữ giới hạn riêng.
 
 GET `/api/v1/admin/access/tree` (ACCESS_READ) trả code/parent/name/path/viewPermission/actions + endpoints; GET `/api/v1/auth/capabilities` trả capability của chính principal; GET `/api/v1/admin/access/users/{id}/effective` (ACCESS_READ) trả nguồn role của từng permission. PUT role permissions/user roles bắt buộc version; giới hạn 512 permission và 32 role. Response role thêm active (gồm role tắt chưa xóa) và assignedUsers (snapshot gồm cả user tắt). POST/PUT registry/policy chỉ trả tài nguyên vừa ghi; DELETE trả danh sách rỗng, status giữ nguyên. Không nhận route/public/grant metadata từ client để thay annotation. Triển khai V013 phải dừng/drain code trước VIEW; xem chuyên đề trước khi nâng môi trường đang có dữ liệu.
 
