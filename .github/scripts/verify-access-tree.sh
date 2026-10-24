@@ -3,7 +3,7 @@
 printf 'Access tree stage: bootstrap, actions, multiple roles, delegated assignment and two nodes\n'
 tree_admin_token="$foundation_admin_token"
 token="$tree_admin_token"
-[[ "$(sql 'SELECT count(*) FROM auth_access_functions')" == 11 ]]
+[[ "$(sql 'SELECT count(*) FROM auth_access_functions')" == 12 ]]
 [[ "$(sql "SELECT count(*) FROM auth_access_resources WHERE target='POST /api/v1/admin/catalogs' AND function_code='CATALOG' AND permission_match='ANY' AND declared_permissions LIKE '%CATALOG_CREATE%'")" == 1 ]]
 call 200 GET /api/v1/admin/access/tree '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; f=next(x for x in d if x["code"]=="CATALOG"); assert f["parent"]=="SYSTEM" and f["viewPermission"]=="CATALOG_VIEW"; a=next(x for x in f["actions"] if x["permission"]=="CATALOG_CREATE"); assert any(x["target"]=="POST /api/v1/admin/catalogs" and x["match"]=="ANY" for x in a["endpoints"])' "$result"
@@ -179,7 +179,7 @@ upgrade_hash=$(upgrade_sql "SELECT md5(password_hash) FROM auth_users WHERE id=1
 docker rm --force vietroute-auth-ci2 >/dev/null
 start_app vietroute-auth-ci2 18081 view_upgrade_ci
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors --retry-connrefused --max-time 5 http://127.0.0.1:18081/health >/dev/null
-[[ "$(upgrade_sql 'SELECT count(*) FROM vietroute_schema_history')" == 15 ]]
+[[ "$(upgrade_sql 'SELECT count(*) FROM vietroute_schema_history')" == 16 ]]
 [[ "$(upgrade_sql "SELECT count(*) FROM auth_role_permissions WHERE role_code='UPGRADE_CI' AND permission_code='CATALOG_VIEW'")" == 1 ]]
 [[ "$(upgrade_sql "SELECT permission_version=5 AND updated_by=0 FROM auth_roles WHERE code='UPGRADE_CI'")" == t ]]
 [[ "$(upgrade_sql "SELECT count(*) FROM auth_role_permissions WHERE role_code='LOOKALIKE_CI' AND permission_code='CATALOG_VIEW'")" == 0 ]]

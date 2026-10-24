@@ -1,5 +1,15 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
+## LOCATION01 — Đang chốt nghiệp vụ địa điểm đầu tiên
+
+Nhánh `hiencoi250404-design/location01-dia-diem`, [Issue #101](https://github.com/hieuv526034/vietroute-web/issues/101), base main `b50aa19` ngày 24/10/2026. Phần phụ trách theo kế hoạch là Hien; người thực sự triển khai đợt này là hieuv526034 và giữ nguyên identity đó trên commit, không ghi thành đóng góp đã làm của Hien.
+
+Đã có source V016 hai bảng địa lý, API/service/JDBC tỉnh–địa điểm, projection public chỉ active, quản trị ADMIN + LOCATION_* hai context, version/audit và khóa tỉnh khi tạo/bật con. Hai tab/modal UI vi/en dùng table/forms/workspace chung, tìm tỉnh theo trang và giữ draft khi lỗi; dữ liệu ngừng dùng giữ ID/tham chiếu. Hợp đồng ở [API base](../02-phat-trien/API_BASE.md#danh-mục-địa-lý--location01), [schema](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#danh-mục-địa-lý-dùng-chung--location01), [UI](../03-giao-dien/QUY_UOC_UI.md#quản-lý-địa-điểm--location01).
+
+Local 153 Java/44 Node đạt, renderer vi/en không thiếu key. Browser fixture đạt tạo tỉnh và địa điểm, chặn tọa độ sai, picker giữ lựa chọn khi tìm tiếp, 409 giữ modal/draft, tab bàn phím; 320/390/768/1280px không tràn ngang trang, bảng cuộn riêng. Ảnh fixture ở chuyên đề UI. Đang chốt formatter/check và CI PostgreSQL cho trạng thái cha/con, tham chiếu, version/cạnh tranh, search/paging/projection và guard của module thật. Chưa đánh dấu có trên main hoặc áp V016 lên Neon; giữ V001–V015 nguyên vẹn, không seed địa lý hoặc tích hợp Maps giả.
+
+Bước tiếp: chốt PR/CI rồi bàn giao LOCATION01 cho Hien nghiệm thu/tích hợp tuyến. CARRIER01/AUTH03 của Anh/Hieu là phụ thuộc tiếp theo để mở ROUTE01 và xe/tài xế; Bang chuẩn bị trạng thái/snapshot/lịch chồng trước TRIP01/BOOKING01. Chưa coi các nghiệp vụ đó đã được triển khai cùng LOCATION01.
+
 ## ACCESS23 — Đã có trên main: sẵn sàng bắt đầu nghiệp vụ
 
 Đã merge [PR #99](https://github.com/hieuv526034/vietroute-web/pull/99), merge `9718487`, head đã kiểm `693eb2a`, hieuv526034, nhánh `hieuv526034/access23-hoan-thien-quyen-module`, [Issue #98](https://github.com/hieuv526034/vietroute-web/issues/98), base main `ce690a2` ngày 24/10/2026. Đã xử lý ba phát hiện source của ACCESS22: nguồn quyền nhiều role không bị cắt ở 512 (đủ tới 2048, vượt trần COM016); bảo vệ registry/UI và sync dùng chung tập permission source gồm HTTP/service-only/VIEW/alias kể cả khi tắt ghi startup; key nhãn module mới theo `permission.<CODE>`, thiếu key hiện mã và sync giữ tên đã sửa. Không thêm quyền bypass hoặc tự cấp cho role thường. Hợp đồng ở [chuyên đề phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#bản-đồ-bảng-và-ranh-giới-cấu-hình-phân-quyền).

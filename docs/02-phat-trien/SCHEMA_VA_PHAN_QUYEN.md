@@ -47,6 +47,12 @@ ACCESS23 thống nhất tập mã này bằng `AccessPermissionDefinitions`: g�
 
 Module mới khai báo resource/action và bổ sung `permission.<CODE>` trong cả hai bundle vi/en; không phải thêm từng mã vào `Permission.values()`. Sync dùng đúng key của mã mới, thiếu bản dịch thì hiện chính mã thay nhãn chung `permission.custom`; khi bản ghi đã có, sync giữ tên quản trị đã sửa. API/modal nguồn quyền trả đủ hợp quyền nhiều role tới trần an toàn `Limits.REGISTRY_MAX` (2048), không phụ thuộc quota tạo thủ công thấp hơn; đọc thêm một dòng để báo COM016 nếu dữ liệu ngoài API vượt trần, không trả danh sách thiếu. Giới hạn 512 permission/role và 32 role/user vẫn áp dụng.
 
+## Danh mục địa lý dùng chung — LOCATION01
+
+V016 thêm `location_provinces` và `location_places` trong schema cấu hình, ngoài nhóm bảng cấp quyền ở trên. Hai bảng giữ code nội bộ unique/bất biến, tên vi/en, active, sort_order, version và audit TIMESTAMPTZ/actor NOT NULL. location_places có FK province_id (không đổi qua API), địa chỉ và NUMERIC tọa độ có CHECK giới hạn. Không seed địa danh hoặc có luồng xóa vật lý. Ngừng sử dụng giữ ID/tham chiếu; public chỉ lấy địa điểm và tỉnh cùng active. Thứ tự khóa khi tạo/bật địa điểm là tỉnh FOR SHARE trước INSERT/UPDATE địa điểm, cùng transaction; cập nhật version bằng compare-and-set SQL. Các bảng tuyến/chuyến sau phải tham chiếu ID và snapshot dữ liệu lịch sử theo hợp đồng API.
+
+Danh mục chung không cần scope nhà xe; quản trị ADMIN + LOCATION_* ở cả annotation HTTP và service. LOOKUP công khai có projection riêng, không mở danh sách quản trị hoặc coi mọi hành động READ là public. Startup sync đăng ký VIEW/READ/CREATE/UPDATE từ source và chỉ cấp ADMIN; role thường không được tự cấp. Nâng app cần áp dụng V016 qua init rõ ràng và sync registry khi bật, không sửa V001–V015/checksum hoặc chạy migration để thử build trên Neon. Hợp đồng và giới hạn ở [API base](API_BASE.md#danh-mục-địa-lý--location01).
+
 ## Đổi schema ở một nơi cấu hình
 
 Biến `VIETROUTE_DB_SCHEMA` là nơi cấu hình schema của ứng dụng. Mặc định là `vietroute`, database Neon vẫn là `neondb`. Ví dụ khi tạo một môi trường/DB mới:

@@ -6,6 +6,7 @@ import java.util.Set;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.common.constant.AccessConstants.Functions;
+import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 
@@ -18,6 +19,13 @@ public final class AccessFeatures {
 
     private static final List<Feature> DEFINITIONS = List.of(
         new Feature(Functions.SYSTEM, null, "access.function.SYSTEM", null, null),
+        new Feature(
+            Functions.LOCATION,
+            Functions.SYSTEM,
+            "access.function.LOCATION",
+            Routes.LOCATION_PAGE,
+            Groups.LOCATION + "_VIEW"
+        ),
         new Feature(
             Functions.CATALOG,
             Functions.SYSTEM,

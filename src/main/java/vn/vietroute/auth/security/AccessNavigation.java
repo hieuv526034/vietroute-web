@@ -52,7 +52,7 @@ public final class AccessNavigation {
         return switch (code) {
             case Functions.ACCOUNTS -> "user";
             case Functions.SYSTEM -> "system";
-            case Functions.CATALOG -> "catalog";
+            case Functions.CATALOG, Functions.LOCATION -> "catalog";
             case Functions.MEDIA -> "image";
             case Functions.JOBS -> "clock";
             case Functions.MONITORING, Functions.JOURNAL -> "activity";

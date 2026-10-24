@@ -65,6 +65,7 @@ public final class RenderSystemUi {
             var output = Path.of("target/ui-preview");
             Files.createDirectories(output);
             String[][] pages = {
+                { "locations", "/operations/locations" },
                 { "accounts", "/operations/accounts" },
                 { "access", "/operations/access" },
                 { "admin", "/admin" },

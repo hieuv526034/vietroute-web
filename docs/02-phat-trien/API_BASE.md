@@ -28,6 +28,24 @@ API mở rộng: quản lý `/api/v1/admin/access/**`, theo dõi/retry `/api/v1/
 
 ACCESS08: `@AccessResource`/`@AccessOperation` thay các hằng AccessRules theo từng quyền; meta-PreAuthorize chung gọi `accessGuard.operation` đọc trạng thái/mapping quyền hiện hành từ DB. HTTP AccessFunction khai báo actions để tự sinh RESOURCE_ACTION. ANY/ALL và ADMIN kèm quyền được gộp trong một SELECT; role/permission tắt, tài khoản khóa/chờ kích hoạt, tokenVersion cũ hoặc mật khẩu tạm đều không có quyền hành động. DB lỗi trả COM007/503 và dừng method, thiếu quyền trả 403. Không đổi payload/đường dẫn API. Đọc [guard chung và đăng ký quyền tự động](SCHEMA_VA_PHAN_QUYEN.md#guard-chung-theo-metadata-hàm--access08).
 
+## Danh mục địa lý — LOCATION01
+
+Danh mục dùng chung được ADMIN quản trị, không thuộc membership của một nhà xe. Khai báo LOCATION_* theo annotation/cây chức năng; các mã mới không nằm trong Permission.values(). Quản trị yêu cầu đồng thời ADMIN và đúng quyền ở HTTP lẫn service. `/operations/locations` cần LOCATION_VIEW; VIEW độc lập READ/CREATE/UPDATE. Chính sách bổ sung không nới giới hạn này.
+
+| Method/path | Quyền | Hành vi |
+|---|---|---|
+| GET `/api/v1/provinces` | Công khai | query/page/size; chỉ tỉnh/thành active; trả id/code/name theo locale |
+| GET `/api/v1/locations` | Công khai | query/provinceId/page/size; cả địa điểm và tỉnh/thành phải active; trả id/code/name/provinceId/provinceName/address/latitude/longitude |
+| GET `/api/v1/admin/provinces`, GET `/api/v1/admin/locations` | ADMIN + LOCATION_READ | Tìm/đếm/phân trang tại PostgreSQL; active bỏ trống lấy cả hai trạng thái, locations thêm provinceId. Xem cả địa điểm khi tỉnh tắt |
+| GET `/api/v1/admin/provinces/{id}`, GET `/api/v1/admin/locations/{id}` | ADMIN + LOCATION_READ | Đọc bản mới nhất kèm tên vi/en, audit/version; địa điểm thêm provinceActive và tên tỉnh vi/en |
+| POST `/api/v1/admin/provinces` | ADMIN + LOCATION_CREATE | code nội bộ bắt buộc/bất biến, nameVi/nameEn bắt buộc tối đa 120, sortOrder 0–10000 mặc định 0, active mặc định true; trả 201 |
+| POST `/api/v1/admin/locations` | ADMIN + LOCATION_CREATE | Các trường tên/mã/thứ tự/trạng thái như tỉnh, thêm provinceId đang active, address tối đa 255, latitude -90…90, longitude -180…180; tọa độ bắt buộc, tối đa 6 chữ số thập phân; trả 201 |
+| PUT `/api/v1/admin/provinces/{id}`, PUT `/api/v1/admin/locations/{id}` | ADMIN + LOCATION_UPDATE | Bắt buộc version >=0 và các trường biên tập; code giữ nguyên, location không nhận provinceId khi sửa. Có thể bật/ngừng sử dụng, không có DELETE hoặc xóa vật lý |
+
+Mã nội bộ theo BusinessCode, không giả định là mã hành chính chính thức hoặc cố định số tỉnh/thành. Public lookup không nhận cờ nới điều kiện active và không trả audit/version/trạng thái nội bộ. Request JSON không nhận field lạ/audit. Từ khóa nguyên văn tối đa 160, wildcard được escape; trang 0-based/size tối đa 100. API không gọi Google Maps hoặc chứng thực tọa độ thực địa; không seed danh mục giả.
+
+Tắt tỉnh ẩn con khỏi tra cứu, giữ nguyên active riêng của con; bật lại tỉnh không tự bật con đã ngừng sử dụng. Tạo/bật địa điểm kiểm tỉnh trong cùng transaction với khóa FOR SHARE, không nhận quan hệ tỉnh mới qua PUT. LOC001/409 là tỉnh đã tắt; COM004/404 không tồn tại; COM005/409 mã trùng; COM008/409 version cũ. VAL012/VAL013/VAL014 lần lượt là giới hạn vĩ độ/kinh độ/độ chính xác. Dữ liệu/tọa độ có thể sửa cho lần sử dụng sau; ROUTE01/TRIP01 phải snapshot thông tin cần giữ lịch sử, không dựa vào tên/tọa độ mutable cho chuyến đã chốt.
+
 ## Locale và envelope
 
 Ưu tiên: `?lang=vi|en` → `X-Locale` → `Accept-Language` → vi. Accept-Language en-US/vi-VN được chọn về en/vi; locale tường minh khác trả HTTP 400. Header Content-Language và field locale thể hiện ngôn ngữ đã dùng.

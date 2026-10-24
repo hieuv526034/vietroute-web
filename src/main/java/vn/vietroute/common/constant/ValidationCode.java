@@ -16,7 +16,10 @@ public enum ValidationCode {
     PAGE("VAL008", "validation.page"),
     SIZE("VAL009", "validation.size"),
     SORT_ORDER("VAL010", "validation.sortOrder"),
-    USERNAME_SEARCH("VAL011", "validation.usernameSearch");
+    USERNAME_SEARCH("VAL011", "validation.usernameSearch"),
+    LATITUDE("VAL012", "validation.location.latitude"),
+    LONGITUDE("VAL013", "validation.location.longitude"),
+    COORDINATE_PRECISION("VAL014", "validation.location.coordinatePrecision");
 
     private final String code;
 

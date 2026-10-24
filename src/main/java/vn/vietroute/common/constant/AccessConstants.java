@@ -36,6 +36,8 @@ public final class AccessConstants {
 
         public static final String CATALOG = "CATALOG";
 
+        public static final String LOCATION = "LOCATION";
+
         public static final String MEDIA = "MEDIA";
 
         public static final String SYSTEM = "SYSTEM";
@@ -55,6 +57,8 @@ public final class AccessConstants {
 
     /** Mã cây chức năng ổn định; quan hệ cha/con do AccessFeatures khai báo, không phải role. */
     public static final class Functions {
+
+        public static final String LOCATION = "LOCATION";
 
         public static final String SYSTEM = "SYSTEM";
 

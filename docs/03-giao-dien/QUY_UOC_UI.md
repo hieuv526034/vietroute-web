@@ -161,3 +161,10 @@ Card vai trò đưa hành động chỉnh/xem cùng số quyền và tài khoả
 Danh sách gán tài khoản và ba tab nâng cao chỉ gọi API khi được mở; không tải trước vào trang vai trò. Lỗi không đánh dấu đã tải, không tự thử lại; mở lại tab hoặc Làm mới để chủ động tải. Khi refresh, hồ sơ và capabilities được đọc song song từ server, không thêm cache authority hoặc fallback quyền cũ. Provider/Neon và tốc độ production cần nghiệm thu riêng; bằng chứng ở [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
 
 Ảnh từ HTML thật/API fixture, chỉ dữ liệu giả: [menu điện thoại](../images/ui21-menu-mobile.jpg), [màn vai trò và quyền](../images/ui21-access-desktop.jpg).
+## Quản lý địa điểm — LOCATION01
+
+Trang `/operations/locations` có hai tab Địa điểm/Tỉnh thành, dùng workspace.js cho bàn phím/ARIA và modal thêm/sửa. Danh sách tìm/trạng thái/phân trang server qua table.js; cột thao tác 96px/icon aria-label. Modal dùng grid chung, tự về một cột trên mobile, mã/tỉnh của địa điểm đã có bị khóa. Tìm tỉnh tạo địa điểm dùng public lookup tối đa 20 kết quả, có thể tìm tiếp mà giữ lựa chọn ngoài trang; tỉnh tắt không được dùng tạo địa điểm mới. Bật/ngừng sử dụng ngay trong form có version; không có nút xóa dữ liệu/tham chiếu.
+
+Nút và API đọc dựa trên đúng capabilities/target, không suy từ ADMIN hoặc VIEW. Lỗi giữ modal/draft/version, không tự replay; busy khóa form/tab và chặn đóng modal. Thiếu quyền/401 xóa bảng riêng tư, 401 vẫn có link đăng nhập lại và giữ bản nháp. Ghi chú tỉnh/địa điểm tách riêng; trạng thái tỉnh tắt được hiển thị cùng địa điểm quản trị.
+
+Ảnh từ fixture dữ liệu giả, không dùng đặt chuyến: [desktop](../images/location01-desktop.jpg), [modal mobile tiếng Anh](../images/location01-mobile.jpg). Fixture/renderer dùng hai context và env cách ly, không .env/DB/provider; không thay bằng chứng SQL/bảo mật của CI. Trạng thái kiểm và PR nằm ở [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).

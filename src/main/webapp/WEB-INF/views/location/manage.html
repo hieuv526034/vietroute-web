@@ -1,0 +1,476 @@
+<!doctype html>
+<html
+    th:lang="${currentLocale}"
+    xmlns:th="http://www.thymeleaf.org"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.location.title})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main
+            class="container-xl workspace-page"
+            id="location-workspace"
+            th:attr="data-loading=#{ui.loading},data-empty=#{ui.empty},data-active=#{ui.location.active},data-inactive=#{ui.location.inactive},data-edit=#{ui.location.edit},data-create=#{ui.location.create},data-save=#{ui.location.save},data-no-read=#{ui.accessTree.noRead},data-provinces=#{ui.location.provinces},data-locations=#{ui.location.locations},data-parent-off=#{ui.location.parentOff},data-choose=#{ui.location.chooseProvince},data-province-note=#{ui.location.provinceNote},data-place-note=#{ui.location.editNote}"
+        >
+            <div class="page-heading">
+                <p class="eyebrow">WORKSPACE / LOCATION</p>
+                <h1 th:text="#{ui.location.title}"></h1>
+                <p
+                    class="muted"
+                    th:text="#{ui.location.description}"
+                ></p>
+            </div>
+            <p
+                id="location-status"
+                class="catalog-status"
+                role="status"
+                aria-live="polite"
+            ></p>
+            <div
+                id="location-feedback"
+                class="feedback"
+                role="alert"
+                hidden
+            ></div>
+            <div
+                data-tabs
+                id="location-tabs"
+            >
+                <div
+                    class="workspace-tabs"
+                    role="tablist"
+                    th:attr="aria-label=#{ui.location.title}"
+                >
+                    <button
+                        id="location-places-tab"
+                        type="button"
+                        data-tab-target="location-places-panel"
+                        th:text="#{ui.location.locations}"
+                    ></button>
+                    <button
+                        id="location-provinces-tab"
+                        type="button"
+                        data-tab-target="location-provinces-panel"
+                        th:text="#{ui.location.provinces}"
+                    ></button>
+                </div>
+                <fieldset
+                    id="location-controls"
+                    class="border-0 p-0 m-0 w-100"
+                >
+                    <section
+                        id="location-places-panel"
+                        class="panel"
+                    >
+                        <div class="panel-heading catalog-heading">
+                            <h2 th:text="#{ui.location.locations}"></h2>
+                            <div class="toolbar-actions catalog-toolbar">
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-secondary"
+                                    data-refresh="locations"
+                                    th:text="#{ui.ops.refresh}"
+                                ></button>
+                                <button
+                                    type="button"
+                                    class="btn btn-primary"
+                                    data-create="locations"
+                                    th:text="#{ui.location.create}"
+                                ></button>
+                            </div>
+                        </div>
+                        <form
+                            id="locations-search"
+                            class="toolbar-actions mb-3"
+                            novalidate
+                        >
+                            <div class="flex-grow-1">
+                                <label
+                                    for="locations-query"
+                                    class="visually-hidden"
+                                    th:text="#{ui.location.search}"
+                                ></label>
+                                <input
+                                    class="form-control"
+                                    id="locations-query"
+                                    name="query"
+                                    maxlength="160"
+                                    th:placeholder="#{ui.location.search}"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    for="locations-active"
+                                    class="visually-hidden"
+                                    th:text="#{ui.location.state}"
+                                ></label>
+                                <select
+                                    class="form-select"
+                                    id="locations-active"
+                                    name="active"
+                                >
+                                    <option
+                                        value=""
+                                        th:text="#{ui.location.allStates}"
+                                    ></option>
+                                    <option
+                                        value="true"
+                                        th:text="#{ui.location.active}"
+                                    ></option>
+                                    <option
+                                        value="false"
+                                        th:text="#{ui.location.inactive}"
+                                    ></option>
+                                </select>
+                            </div>
+                            <button
+                                type="submit"
+                                class="btn btn-outline-primary"
+                                th:text="#{ui.location.searchButton}"
+                            ></button>
+                        </form>
+                        <div
+                            class="table-responsive"
+                            tabindex="0"
+                            role="region"
+                            th:attr="aria-label=#{ui.table.scroll}"
+                        >
+                            <table class="table catalog-table">
+                                <thead>
+                                    <tr>
+                                        <th th:text="#{ui.code}"></th>
+                                        <th th:text="#{ui.name}"></th>
+                                        <th th:text="#{ui.location.province}"></th>
+                                        <th th:text="#{ui.location.address}"></th>
+                                        <th th:text="#{ui.location.state}"></th>
+                                        <th
+                                            class="table-actions"
+                                            th:text="#{ui.ops.actions}"
+                                        ></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="locations-body"></tbody>
+                            </table>
+                        </div>
+                        <div th:replace="~{fragments/pagination :: pager('locations', 10)}"></div>
+                    </section>
+                    <section
+                        id="location-provinces-panel"
+                        class="panel"
+                    >
+                        <div class="panel-heading catalog-heading">
+                            <h2 th:text="#{ui.location.provinces}"></h2>
+                            <div class="toolbar-actions catalog-toolbar">
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-secondary"
+                                    data-refresh="provinces"
+                                    th:text="#{ui.ops.refresh}"
+                                ></button>
+                                <button
+                                    type="button"
+                                    class="btn btn-primary"
+                                    data-create="provinces"
+                                    th:text="#{ui.location.create}"
+                                ></button>
+                            </div>
+                        </div>
+                        <form
+                            id="provinces-search"
+                            class="toolbar-actions mb-3"
+                            novalidate
+                        >
+                            <div class="flex-grow-1">
+                                <label
+                                    for="provinces-query"
+                                    class="visually-hidden"
+                                    th:text="#{ui.location.provinceSearch}"
+                                ></label>
+                                <input
+                                    class="form-control"
+                                    id="provinces-query"
+                                    name="query"
+                                    maxlength="160"
+                                    th:placeholder="#{ui.location.provinceSearch}"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    for="provinces-active"
+                                    class="visually-hidden"
+                                    th:text="#{ui.location.state}"
+                                ></label>
+                                <select
+                                    class="form-select"
+                                    id="provinces-active"
+                                    name="active"
+                                >
+                                    <option
+                                        value=""
+                                        th:text="#{ui.location.allStates}"
+                                    ></option>
+                                    <option
+                                        value="true"
+                                        th:text="#{ui.location.active}"
+                                    ></option>
+                                    <option
+                                        value="false"
+                                        th:text="#{ui.location.inactive}"
+                                    ></option>
+                                </select>
+                            </div>
+                            <button
+                                type="submit"
+                                class="btn btn-outline-primary"
+                                th:text="#{ui.location.searchButton}"
+                            ></button>
+                        </form>
+                        <div
+                            class="table-responsive"
+                            tabindex="0"
+                            role="region"
+                            th:attr="aria-label=#{ui.table.scroll}"
+                        >
+                            <table class="table catalog-table">
+                                <thead>
+                                    <tr>
+                                        <th th:text="#{ui.code}"></th>
+                                        <th th:text="#{ui.name}"></th>
+                                        <th th:text="#{ui.order}"></th>
+                                        <th th:text="#{ui.location.state}"></th>
+                                        <th
+                                            class="table-actions"
+                                            th:text="#{ui.ops.actions}"
+                                        ></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="provinces-body"></tbody>
+                            </table>
+                        </div>
+                        <div th:replace="~{fragments/pagination :: pager('provinces', 10)}"></div>
+                    </section>
+                </fieldset>
+            </div>
+            <dialog
+                id="location-dialog"
+                class="workspace-dialog"
+                aria-labelledby="location-editor-title"
+                aria-describedby="location-editor-note"
+            >
+                <fieldset
+                    id="location-dialog-controls"
+                    class="dialog-controls"
+                >
+                    <div class="dialog-heading">
+                        <span
+                            class="eyebrow"
+                            id="location-editor-kind"
+                        ></span>
+                        <button
+                            type="button"
+                            class="dialog-close"
+                            data-dialog-close
+                            th:attr="aria-label=#{ui.ops.close}"
+                        >
+                            <span aria-hidden="true">×</span>
+                        </button>
+                    </div>
+                    <h2 id="location-editor-title"></h2>
+                    <p
+                        id="location-editor-note"
+                        class="form-help"
+                        th:text="#{ui.location.editNote}"
+                    ></p>
+                    <div
+                        id="location-form-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></div>
+                    <p
+                        id="location-conflict"
+                        class="form-help"
+                        th:text="#{ui.location.conflict}"
+                        hidden
+                    ></p>
+                    <form
+                        id="location-form"
+                        novalidate
+                    >
+                        <div class="dialog-form-grid">
+                            <div>
+                                <label
+                                    for="place-code"
+                                    th:text="#{ui.code}"
+                                ></label>
+                                <input
+                                    class="form-control"
+                                    id="place-code"
+                                    name="code"
+                                    required
+                                    pattern="[A-Z][A-Z0-9]{2,39}"
+                                    maxlength="40"
+                                    autocomplete="off"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    for="place-name-vi"
+                                    th:text="#{ui.nameVi}"
+                                ></label>
+                                <input
+                                    class="form-control"
+                                    id="place-name-vi"
+                                    name="nameVi"
+                                    required
+                                    maxlength="120"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    for="place-name-en"
+                                    th:text="#{ui.nameEn}"
+                                ></label>
+                                <input
+                                    class="form-control"
+                                    id="place-name-en"
+                                    name="nameEn"
+                                    required
+                                    maxlength="120"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    for="place-order"
+                                    th:text="#{ui.order}"
+                                ></label>
+                                <input
+                                    class="form-control"
+                                    id="place-order"
+                                    name="sortOrder"
+                                    type="number"
+                                    min="0"
+                                    max="10000"
+                                    value="0"
+                                    required
+                                />
+                            </div>
+                        </div>
+                        <fieldset
+                            id="place-details"
+                            class="border-0 p-0 m-0"
+                        >
+                            <div class="dialog-form-grid">
+                                <div>
+                                    <label
+                                        for="place-province-query"
+                                        th:text="#{ui.location.findProvince}"
+                                    ></label>
+                                    <div class="input-group">
+                                        <input
+                                            class="form-control"
+                                            id="place-province-query"
+                                            maxlength="160"
+                                        />
+                                        <button
+                                            type="button"
+                                            class="btn btn-outline-secondary"
+                                            id="place-province-search"
+                                            th:text="#{ui.location.searchButton}"
+                                        ></button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label
+                                        for="place-province"
+                                        th:text="#{ui.location.province}"
+                                    ></label>
+                                    <select
+                                        class="form-select"
+                                        id="place-province"
+                                        name="provinceId"
+                                        required
+                                    ></select>
+                                </div>
+                            </div>
+                            <p
+                                id="place-picker-note"
+                                class="form-help"
+                                th:text="#{ui.location.pickerNote}"
+                            ></p>
+                            <div class="dialog-form-grid">
+                                <div class="location-address">
+                                    <label
+                                        for="place-address"
+                                        th:text="#{ui.location.address}"
+                                    ></label>
+                                    <input
+                                        class="form-control"
+                                        id="place-address"
+                                        name="address"
+                                        required
+                                        maxlength="255"
+                                    />
+                                </div>
+                                <div>
+                                    <label
+                                        for="place-latitude"
+                                        th:text="#{ui.location.latitude}"
+                                    ></label>
+                                    <input
+                                        class="form-control"
+                                        id="place-latitude"
+                                        name="latitude"
+                                        type="number"
+                                        required
+                                        min="-90"
+                                        max="90"
+                                        step="0.000001"
+                                    />
+                                </div>
+                                <div>
+                                    <label
+                                        for="place-longitude"
+                                        th:text="#{ui.location.longitude}"
+                                    ></label>
+                                    <input
+                                        class="form-control"
+                                        id="place-longitude"
+                                        name="longitude"
+                                        type="number"
+                                        required
+                                        min="-180"
+                                        max="180"
+                                        step="0.000001"
+                                    />
+                                </div>
+                            </div>
+                        </fieldset>
+                        <label class="form-check d-flex gap-2 align-items-center mt-3">
+                            <input
+                                class="form-check-input m-0"
+                                type="checkbox"
+                                name="active"
+                                checked
+                            />
+                            <span th:text="#{ui.location.active}"></span>
+                        </label>
+                        <p
+                            class="form-help"
+                            th:text="#{ui.location.stateNote}"
+                        ></p>
+                        <div class="dialog-actions">
+                            <button
+                                type="submit"
+                                class="btn btn-primary"
+                                id="location-save"
+                                th:text="#{ui.location.save}"
+                            ></button>
+                        </div>
+                    </form>
+                </fieldset>
+            </dialog>
+        </main>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/location.js}"></script>
+    </body>
+</html>

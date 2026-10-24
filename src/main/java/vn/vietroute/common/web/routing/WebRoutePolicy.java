@@ -11,7 +11,7 @@ public final class WebRoutePolicy {
 
     private WebRoutePolicy() {}
 
-    /** Matcher permitAll của Security; catalog chỉ công khai cho GET ở cấu hình riêng. */
+    /** Matcher permitAll của Security; các danh mục tra cứu chỉ công khai cho GET ở cấu hình riêng. */
     public static List<String> publicMatchers() {
         return List.of(
             Routes.HOME,
@@ -52,7 +52,7 @@ public final class WebRoutePolicy {
         );
     }
 
-    /** Cùng điều kiện cho Swagger mô tả API công khai; POST catalog luôn cần quyền ở service. */
+    /** Cùng điều kiện cho Swagger mô tả API công khai; thao tác ghi danh mục luôn cần quyền ở service. */
     public static boolean publicApi(String path, String method) {
         return (
             path.equals(Routes.AUTH_LOGIN) ||
@@ -60,7 +60,7 @@ public final class WebRoutePolicy {
             path.equals(Routes.AUTH_LOGOUT) ||
             path.equals(Routes.PRESENCE) ||
             publicAccountFlow(path) ||
-            publicCatalog(path, method)
+            publicLookup(path, method)
         );
     }
 
@@ -74,12 +74,19 @@ public final class WebRoutePolicy {
             publicAccountFlow(path) ||
             path.equals(Routes.AUTH_LOGOUT) ||
             path.equals(Routes.PRESENCE) ||
-            publicCatalog(path, method)
+            publicLookup(path, method)
         );
     }
 
-    private static boolean publicCatalog(String path, String method) {
-        return method.equals("GET") && path.startsWith(Routes.CATALOG_PREFIX);
+    public static List<String> publicLookupMatchers() {
+        return List.of(Routes.CATALOG_MATCHER, Routes.PROVINCES, Routes.LOCATIONS);
+    }
+
+    private static boolean publicLookup(String path, String method) {
+        return (
+            method.equals("GET") &&
+            (path.startsWith(Routes.CATALOG_PREFIX) || path.equals(Routes.PROVINCES) || path.equals(Routes.LOCATIONS))
+        );
     }
 
     /** Danh sách tường minh; email của user đang đăng nhập không thuộc nhóm public này. */
