@@ -21,6 +21,7 @@ import vn.vietroute.auth.dto.response.AccessUserResponse;
 import vn.vietroute.auth.dto.response.PermissionResponse;
 import vn.vietroute.auth.dto.response.RolePermissionsResponse;
 import vn.vietroute.auth.dto.response.UserResponse;
+import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessFunction;
@@ -40,7 +41,7 @@ import vn.vietroute.common.web.response.ApiResult;
 @RestController
 @RequestMapping(Routes.ACCESS)
 @Tag(name = "Phân quyền", description = "Quản lý role và quyền chức năng, không bỏ qua phạm vi dữ liệu nghiệp vụ")
-@AccessFunction(group = Groups.ACCESS, function = Functions.ACCESS, permissions = { Permissions.ACCESS_READ })
+@AccessFunction(group = Groups.ACCESS, function = Functions.ACCESS, actions = { PermissionAction.READ })
 public class AccessController extends BaseController {
 
     private final AccessService access;
@@ -79,7 +80,11 @@ public class AccessController extends BaseController {
         summary = "Thay quyền chức năng của role",
         description = "Yêu cầu ACCESS_ASSIGN (hoặc ACCESS_WRITE tương thích); không sửa ADMIN; người được ủy quyền không gán quyền vượt tập quyền của mình; version cũ trả 409"
     )
-    @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_ASSIGN, Permissions.ACCESS_WRITE })
+    @AccessFunction(
+        group = Groups.ACCESS,
+        actions = { PermissionAction.ASSIGN },
+        permissions = { Permissions.ACCESS_WRITE }
+    )
     public ApiResult<RolePermissionsResponse> replace(
         @Parameter(
             description = "Mã role từ registry DB, không giới hạn ở role bootstrap",
@@ -97,7 +102,11 @@ public class AccessController extends BaseController {
         summary = "Gán role cho tài khoản",
         description = "Yêu cầu ACCESS_ASSIGN (hoặc ACCESS_WRITE tương thích) trong phạm vi được ủy quyền; thu hồi token cũ, không tự sửa role hoặc xóa admin cuối"
     )
-    @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_ASSIGN, Permissions.ACCESS_WRITE })
+    @AccessFunction(
+        group = Groups.ACCESS,
+        actions = { PermissionAction.ASSIGN },
+        permissions = { Permissions.ACCESS_WRITE }
+    )
     public ApiResult<UserResponse> assign(
         @Parameter(description = "ID bản ghi cần thao tác", example = "1") @PathVariable long id,
         @Valid @RequestBody UserRolesRequest body,

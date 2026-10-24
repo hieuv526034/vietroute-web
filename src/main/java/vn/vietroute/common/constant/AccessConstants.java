@@ -22,6 +22,8 @@ public final class AccessConstants {
 
         public static final String ACCOUNTS = "ACCOUNTS";
 
+        public static final String ACCOUNT = "ACCOUNT";
+
         public static final String CATALOG = "CATALOG";
 
         public static final String MEDIA = "MEDIA";

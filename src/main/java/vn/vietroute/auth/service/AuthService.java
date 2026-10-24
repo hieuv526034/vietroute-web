@@ -5,7 +5,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import vn.vietroute.auth.dto.request.ChangePasswordRequest;
@@ -14,8 +13,8 @@ import vn.vietroute.auth.dto.response.AuthResponse;
 import vn.vietroute.auth.dto.response.UserResponse;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.auth.repository.UserRepository;
-import vn.vietroute.auth.security.AccessRules;
 import vn.vietroute.auth.security.UserPrincipal;
+import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
@@ -97,13 +96,13 @@ public class AuthService {
     }
 
     /** Đọc thông tin mới nhất và map sang response an toàn, không trả hash/tokenVersion của entity. */
-    @PreAuthorize(AccessRules.AUTHENTICATED)
+    @AccessOperation(authenticated = true)
     public UserResponse me(UserPrincipal principal) {
         return UserResponse.from(BusinessRules.requireFound(users.findById(principal.id())));
     }
 
     /** Khóa dòng tài khoản để hai yêu cầu đổi mật khẩu không cùng dùng mật khẩu cũ thành công. */
-    @PreAuthorize(AccessRules.AUTHENTICATED)
+    @AccessOperation(authenticated = true)
     public AuthResponse changePassword(UserPrincipal principal, ChangePasswordRequest request) {
         BusinessRules.require(StrongPasswordValidator.valid(request.getNewPassword()), ErrorCode.VALIDATION_FAILED);
         UserAccount changed = transactions.execute(connection -> {

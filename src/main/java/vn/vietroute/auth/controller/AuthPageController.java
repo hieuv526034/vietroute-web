@@ -1,18 +1,17 @@
 package vn.vietroute.auth.controller;
 
 import java.util.Locale;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.util.UriComponentsBuilder;
-import vn.vietroute.auth.security.AccessRules;
+import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.security.AuthNavigation;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessFunction;
+import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.AccessConstants.Groups;
-import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 
@@ -54,9 +53,9 @@ public class AuthPageController {
         return "auth/account";
     }
 
-    @AccessFunction(group = Groups.CATALOG, function = Functions.CATALOG, permissions = { Permissions.CATALOG_VIEW })
+    @AccessFunction(group = Groups.CATALOG, function = Functions.CATALOG, actions = { PermissionAction.VIEW })
     @GetMapping(Routes.ADMIN)
-    @PreAuthorize(AccessRules.CATALOG_VIEW)
+    @AccessOperation(resource = Groups.CATALOG, action = PermissionAction.VIEW)
     public String admin() {
         return "auth/admin";
     }

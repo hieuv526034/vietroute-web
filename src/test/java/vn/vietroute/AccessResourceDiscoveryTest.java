@@ -146,6 +146,7 @@ class AccessResourceDiscoveryTest {
     void synchronizesOnlyOwningServletContextOnceAndHonorsDisabledFlag() {
         try (var context = new StaticApplicationContext(); var unrelated = new StaticApplicationContext()) {
             context.getBeanFactory().registerSingleton("mapping", new RequestMappingHandlerMapping());
+            context.getBeanFactory().registerSingleton("futureModule", new DatabaseAccessGuardTest.FutureModule());
             var recorder = new RecordingResources();
             var enabled = new AppSettings(Map.of(Env.ACCESS_SYNC_ENABLED.key(), "true")::get);
             var listener = new AccessResourceSynchronizer(context, enabled, recorder);
@@ -154,6 +155,7 @@ class AccessResourceDiscoveryTest {
             listener.onApplicationEvent(new ContextRefreshedEvent(context));
             listener.onApplicationEvent(new ContextRefreshedEvent(context));
             assertEquals(1, recorder.calls);
+            assertTrue(recorder.serviceCodes.containsAll(Set.of("FUTUREMODULE_CREATE", "FUTUREMODULE_UPDATE")));
             new AccessResourceSynchronizer(context, new AppSettings(key -> null), recorder).onApplicationEvent(
                 new ContextRefreshedEvent(context)
             );
@@ -176,13 +178,16 @@ class AccessResourceDiscoveryTest {
 
         private int calls;
 
+        private Set<String> serviceCodes = Set.of();
+
         RecordingResources() {
             super(null, null, null);
         }
 
         @Override
-        public void synchronize(List<AccessResourceResponse> inventory) {
+        public void synchronize(List<AccessResourceResponse> inventory, Set<String> serviceCodes) {
             calls++;
+            this.serviceCodes = serviceCodes;
         }
     }
 }

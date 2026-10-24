@@ -93,7 +93,7 @@ Tab **Tài nguyên UI/API** ở trang Phân quyền đọc `GET /api/v1/admin/ac
 
 Hai loại policy kiểm độc lập: MENU kiểm URL trang và ẩn menu; ENDPOINT kiểm method + template của API. Có quyền menu không tự có quyền API và ẩn menu không thay kiểm backend. Điều kiện role là any-of, permission là all-of; policy chỉ siết thêm guard service/controller, ownership/version vẫn bắt buộc. Public không cần policy/quyền chức năng nhưng CSRF/quota/validation vẫn áp dụng. ADMIN bỏ điều kiện policy bổ sung để cứu hộ, không bỏ guard nền.
 
-Khi thêm module: khai báo constants/function trong AccessFeatures → mapping + Operation + AccessFunction → guard service AccessRules và scope → startup validate/sync → gán role trong cây. Header tự lọc theo VIEW; quản trị tạo policy nếu cần siết riêng endpoint. Không dùng danh bạ như API gateway hoặc cơ chế tự cấp quyền cho code mới chưa có guard.
+Khi thêm module: khai báo function/menu trong AccessFeatures → mapping + Operation + AccessFunction(actions) → guard service AccessResource/AccessOperation và scope → startup validate/sync → gán role trong cây. Không tạo AccessRules cho từng quyền; xem ACCESS08 bên dưới. Header tự lọc theo VIEW; quản trị tạo policy nếu cần siết riêng endpoint. Không dùng danh bạ như API gateway hoặc cơ chế tự cấp quyền cho code mới chưa có guard.
 
 ## Cây chức năng và quyền hành động — ACCESS03
 
@@ -129,7 +129,7 @@ Role là nhóm quyền duy nhất. User nhiều role nhận hợp quyền; thu h
 
 Method ghi đè tập quyền class; function bỏ trống kế thừa class. ANY là một quyền đủ (phục vụ WRITE tương thích), ALL đòi mọi quyền; không đoán điều kiện từ HTTP method. `adminOnly` của class luôn giữ khi method bổ sung annotation. Self-service khai báo `authenticated=true`, owner kiểm riêng; public chỉ từ WebRoutePolicy, không đọc public flag DB để bỏ guard.
 
-`AccessPolicyInterceptor` kiểm annotation trên HandlerMethod thật trước controller, rồi áp policy siết thêm. `AccessRules` gom biểu thức PreAuthorize dùng cùng constants cho service/page; giữ method security ở cả root/servlet context, bảo vệ cả lời gọi bean không qua HTTP. Không parse chuỗi SpEL để sinh quyền. Chuỗi đầy đủ: JWT/trạng thái/tokenVersion → authorities DB → annotation/policy HTTP → guard service → scope/version. Chưa đăng nhập trả 401 hoặc redirect trang login; thiếu quyền trả 403.
+`AccessPolicyInterceptor` kiểm annotation trên HandlerMethod thật trước controller, rồi áp policy siết thêm. `AccessOperation` dùng meta-PreAuthorize chung và suy ra resource/action cho service/page; giữ method security ở cả root/servlet context, bảo vệ cả lời gọi bean không qua HTTP. Không parse chuỗi SpEL để sinh quyền. Chuỗi đầy đủ: JWT/trạng thái/tokenVersion → authorities DB → annotation/policy HTTP → guard service → scope/version. Chưa đăng nhập trả 401 hoặc redirect trang login; thiếu quyền trả 403.
 
 `GET /api/v1/auth/capabilities` chỉ trả quyền của chính principal: function, view, actions, targets. Tính từ cùng mapping/guard/policy, không nhận user ID/client roles. Frontend dùng target cụ thể khi một action có nhiều endpoint, tránh gọi API đọc bị policy chặn. Không lưu quyền/token vào localStorage; API vẫn kiểm lại mỗi request. Một số hành động SYSTEM_READ dùng chung giữa giám sát/journal, cấu hình dùng CONFIGURATION_READ riêng; UI đánh dấu quyền dùng chung, chỉ gợi VIEW của nhánh vừa chọn. Journal/online vẫn cần ADMIN + SYSTEM_READ theo hợp đồng dữ liệu nhạy cảm.
 
@@ -208,7 +208,7 @@ Triển khai ACCESS05: nâng toàn bộ node hoặc drain node cũ trước khi 
 
 ## Hàm kiểm DB trong PreAuthorize — ACCESS06
 
-Quyết định 24/10/2026: giữ `@PreAuthorize`, nhưng mọi biểu thức trong `AccessRules` gọi bean `DatabaseAccessGuard` tên `accessGuard`. Lập trình viên khai báo hợp đồng một lần, còn kết quả cấp/thu hồi lấy từ mapping DB. Ví dụ code thật:
+Mốc ACCESS06 giữ `@PreAuthorize`, nhưng chuyển mọi biểu thức trong `AccessRules` sang bean `DatabaseAccessGuard` tên `accessGuard`. Cách khai báo hằng theo từng quyền dưới đây là lịch sử, đã được thay bằng metadata chung ở ACCESS08; cơ chế đọc DB và giới hạn thu hồi vẫn giữ:
 
 ```java
 @PreAuthorize(AccessRules.CATALOG_UPDATE)
@@ -223,3 +223,24 @@ Hằng này triển khai `@accessGuard.any(authentication, 'CATALOG_UPDATE', 'CA
 DB mất kết nối trả COM007/503 qua mapper chung, không fallback về quyền cũ và không thực hiện method bị chặn. Thiếu quyền trả 403. Mỗi lần gọi hàm thực hiện một SELECT và trả connection trước nghiệp vụ; một request có thể có nhiều lần kiểm, bên cạnh truy vấn xác thực/policy hiện có. Đây là chi phí chủ động để kiểm quyền hiện hành, chưa có bằng chứng tải production. Thu hồi có hiệu lực ở lần kiểm DB tiếp theo; không hủy transaction đang chạy hoặc hứa serialization giữa việc thu hồi và thao tác đã qua kiểm.
 
 Không cần migration/khóa JWT mới. Cần nâng các node trước khi tuyên bố toàn hệ thống dùng guard DB này. Regression `DatabaseAccessGuardTest` dùng state độc lập authorities, kiểm ANY/ALL/mã tùy chỉnh, thu hồi, trạng thái, tokenVersion, hai context WAR, URL trực tiếp và lỗi DB ngay trong PreAuthorize. CI `verify-database-guard.sh` gọi class production với PostgreSQL Docker tạm, cố tình giữ Authentication cũ khi đổi mapping/trạng thái. Bằng chứng chạy/merge nằm ở tiến độ/PR; không thử ghi trên Neon.
+
+## Guard chung theo metadata hàm — ACCESS08
+
+Theo yêu cầu 24/10/2026, bỏ lớp AccessRules và các biểu thức riêng theo CATALOG_UPDATE, MEDIA_DELETE... Mỗi service có thể khai báo tài nguyên một lần, mỗi hàm chỉ đánh dấu hành động. Ví dụ từ CatalogService:
+
+```java
+@Service
+@AccessResource(Groups.CATALOG)
+public class CatalogService {
+    @AccessOperation(action = PermissionAction.DELETE)
+    public CatalogResponse delete(...) { ... }
+}
+```
+
+`AccessOperation` là meta-annotation của một `@PreAuthorize` dùng chung. AccessMethodExpressionHandler ở cả root/servlet context đưa MethodInvocation thật vào `accessGuard.operation`. Resolver lấy tài nguyên/action từ method/class server, sinh `CATALOG_DELETE`, rồi guard kiểm mapping active và account/tokenVersion trong DB. Module mới không cần thêm hằng AccessRules hoặc Permission.values(). Tài nguyên/hành động mô tả hợp đồng của hàm; không thể suy ra chính xác nghiệp vụ từ tên Java hay HTTP verb và không nhận chúng từ payload/header người dùng.
+
+HTTP dùng `AccessFunction(actions = { PermissionAction.DELETE })`, resource mặc định là group hoặc chỉ định riêng khi tên nhóm khác tài nguyên. Guard HTTP, menu/nút, danh bạ và service dùng cùng quy tắc RESOURCE_ACTION. Thu thập startup kiểm cả method guard trên service, không gọi business để đăng ký quyền; ACCESS_SYNC bật mới ghi registry + mapping ADMIN trong cùng transaction/lock hiện có. Không cấp role thường hoặc reset mật khẩu. Metadata function/menu mới vẫn cần đăng ký đường dẫn/nhãn trong AccessFeatures và vi/en; không phải khai báo lại một biểu thức bảo mật cho từng quyền.
+
+`aliases` chỉ giữ mã tương thích cũ như CATALOG_WRITE; `required` là điều kiện bổ sung ALL, ví dụ ACCOUNT_CREATE còn cần ACCESS_ASSIGN. `adminOnly` giữ đường cứu hộ/dữ liệu nhạy cảm; `authenticated` dành cho tự phục vụ và không thay owner check. Hàm upsert dùng tên tham số `createArgument` đã khai báo trong source: boolean true hoặc ID 0 là CREATE, false/ID dương là UPDATE, ID âm hoặc kiểu sai bị từ chối. Không lưu/thực thi SpEL do DB/client cung cấp.
+
+UI chỉ gợi VIEW nếu người gán có quyền gán VIEW đó; trường hợp thiếu VIEW giữ nguyên hành động API và hiện giải thích vi/en. Chọn cả nhánh/bộ hệ thống cũng qua cùng kiểm tra, không thêm quyền ngoài actor và không nới service. Đây là sửa lỗi được tái hiện ở ACCESS07. Lịch sử trước–sau, picker/quota registry, scope và benchmark là các mục triển khai tiếp, không được coi hoàn thành bởi thay annotation.

@@ -6,10 +6,11 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.security.AccessRules;
+import vn.vietroute.auth.entity.PermissionAction;
+import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.config.integration.MailSettings;
+import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
@@ -36,7 +37,7 @@ public class MailService {
     private final RateLimitStore limits;
 
     /** API quản trị yêu cầu quyền; actor và idempotency key được gắn server-side. */
-    @PreAuthorize(AccessRules.MAIL_SEND)
+    @AccessOperation(resource = Groups.MAIL, action = PermissionAction.SEND)
     public JobResponse queue(MailRequest request, String key, long actor) {
         try {
             if (!limits.consume("mail-user:" + actor, 10, 60).allowed()) {

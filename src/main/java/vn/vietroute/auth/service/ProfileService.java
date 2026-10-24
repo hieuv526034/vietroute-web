@@ -1,13 +1,12 @@
 package vn.vietroute.auth.service;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import vn.vietroute.auth.dto.request.ProfileUpdateRequest;
 import vn.vietroute.auth.dto.response.UserResponse;
 import vn.vietroute.auth.repository.UserRepository;
-import vn.vietroute.auth.security.AccessRules;
 import vn.vietroute.auth.security.UserPrincipal;
+import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.media.repository.MediaRepository;
@@ -25,7 +24,7 @@ public class ProfileService {
     private final JdbcTransactions transactions;
 
     /** Khóa ảnh trước user thống nhất với delete media; kiểm owner/READY/token/version trước khi ghi audit. */
-    @PreAuthorize(AccessRules.AUTHENTICATED)
+    @AccessOperation(authenticated = true)
     public UserResponse update(ProfileUpdateRequest body, UserPrincipal actor) {
         return transactions.execute(connection -> {
             if (body.avatarMediaId() != null) images.requireAvatar(connection, body.avatarMediaId(), actor.id());

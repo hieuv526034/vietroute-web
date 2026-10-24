@@ -5,7 +5,6 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,6 +15,7 @@ import vn.vietroute.auth.dto.request.ManagedAccountStateRequest;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
 import vn.vietroute.auth.dto.response.ManagedAccountAccessResponse;
 import vn.vietroute.auth.dto.response.ManagedAccountResponse;
+import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.repository.AccessRepository;
 import vn.vietroute.auth.repository.AccountRepository;
@@ -23,9 +23,11 @@ import vn.vietroute.auth.repository.ManagedAccountRepository;
 import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.AccessCapabilities;
-import vn.vietroute.auth.security.AccessRules;
 import vn.vietroute.auth.security.UserPrincipal;
+import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.base.PageResponse;
+import vn.vietroute.common.constant.AccessConstants.Groups;
+import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.jdbc.JdbcTransactions;
@@ -52,13 +54,18 @@ public class ManagedAccountService {
     private final AccessManagementService policies;
 
     /** Danh sách chỉ ADMIN có ACCOUNT_READ; không cho OPERATOR tra danh tính ngoài nhà xe. */
-    @PreAuthorize(AccessRules.ACCOUNT_READ)
+    @AccessOperation(resource = Groups.ACCOUNT, action = PermissionAction.READ, adminOnly = true)
     public PageResponse<ManagedAccountResponse> page(ManagedAccountSearchRequest page) {
         return accounts.page(page);
     }
 
     /** Hash BCrypt trước transaction để không giữ connection/khóa trong lúc tính toán mật khẩu. */
-    @PreAuthorize(AccessRules.ACCOUNT_CREATE)
+    @AccessOperation(
+        resource = Groups.ACCOUNT,
+        action = PermissionAction.CREATE,
+        required = { Permissions.ACCESS_ASSIGN },
+        adminOnly = true
+    )
     public ManagedAccountResponse create(ManagedAccountCreateRequest body, UserPrincipal actor) {
         AccessActors.requireCurrent(actor);
         BusinessRules.require(StrongPasswordValidator.valid(body.getPassword()), ErrorCode.VALIDATION_FAILED);
@@ -83,7 +90,7 @@ public class ManagedAccountService {
     }
 
     /** Không xóa lịch sử tài khoản. Khóa user và thu hồi JWT/challenge trong cùng transaction. */
-    @PreAuthorize(AccessRules.ACCOUNT_UPDATE)
+    @AccessOperation(resource = Groups.ACCOUNT, action = PermissionAction.UPDATE, adminOnly = true)
     public ManagedAccountResponse state(long id, ManagedAccountStateRequest body, UserPrincipal actor) {
         AccessActors.requireCurrent(actor);
         BusinessRules.require(id != SystemActor.ID && id != actor.id(), ErrorCode.ACCESS_DENIED);
@@ -103,7 +110,7 @@ public class ManagedAccountService {
     }
 
     /** Tính preview từ tài khoản DB thật và policy, không phát token/giả mạo principal hiện tại. */
-    @PreAuthorize(AccessRules.ACCOUNT_READ)
+    @AccessOperation(resource = Groups.ACCOUNT, action = PermissionAction.READ, adminOnly = true)
     public ManagedAccountAccessResponse effective(long id, List<AccessResourceResponse> inventory) {
         BusinessRules.require(id != SystemActor.ID, ErrorCode.NOT_FOUND);
         var user = BusinessRules.requireFound(users.findById(id));

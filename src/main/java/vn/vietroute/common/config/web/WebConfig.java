@@ -14,6 +14,7 @@ import org.springframework.context.annotation.FilterType;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.Validator;
@@ -29,6 +30,7 @@ import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.spring6.templateresolver.SpringResourceTemplateResolver;
 import org.thymeleaf.spring6.view.ThymeleafViewResolver;
 import org.thymeleaf.templatemode.TemplateMode;
+import vn.vietroute.auth.security.AccessMethodExpressionHandler;
 import vn.vietroute.auth.security.AccessPolicyInterceptor;
 import vn.vietroute.auth.security.AccessResourceSynchronizer;
 import vn.vietroute.auth.security.DatabaseAccessGuard;
@@ -54,6 +56,12 @@ import vn.vietroute.common.web.locale.SupportedLocaleResolver;
     )
 )
 public class WebConfig extends DelegatingWebMvcConfiguration {
+
+    /** Servlet context có advisor riêng; dùng cùng handler với service để trang nhập URL trực tiếp vẫn kiểm DB. */
+    @Bean
+    public static MethodSecurityExpressionHandler methodSecurityExpressionHandler() {
+        return new AccessMethodExpressionHandler();
+    }
 
     private final AccessManagementService access;
 

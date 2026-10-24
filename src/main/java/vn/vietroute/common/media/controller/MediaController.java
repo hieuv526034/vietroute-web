@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.common.base.BaseController;
@@ -26,7 +27,6 @@ import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.AccessConstants.Groups;
-import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
@@ -42,7 +42,7 @@ import vn.vietroute.common.web.response.ApiResult;
 @RestController
 @RequestMapping(Routes.MEDIA)
 @Tag(name = "Ảnh công khai", description = "Upload/xem/xóa ảnh xe, logo, avatar; không dùng cho giấy tờ nhạy cảm")
-@AccessFunction(group = Groups.MEDIA, function = Functions.MEDIA, permissions = { Permissions.MEDIA_READ })
+@AccessFunction(group = Groups.MEDIA, function = Functions.MEDIA, actions = { PermissionAction.READ })
 public class MediaController extends BaseController {
 
     private final MediaService media;
@@ -63,7 +63,7 @@ public class MediaController extends BaseController {
         summary = "Đọc thư viện ảnh",
         description = "MEDIA_READ; chỉ ảnh của mình, ADMIN xem tất cả. Sắp mới nhất trước."
     )
-    @AccessFunction(group = Groups.MEDIA, permissions = { Permissions.MEDIA_READ })
+    @AccessFunction(group = Groups.MEDIA, actions = { PermissionAction.READ })
     public ApiResult<PageResponse<MediaResponse>> page(
         @Valid PageRequest page,
         @AuthenticationPrincipal UserPrincipal actor,
@@ -77,7 +77,7 @@ public class MediaController extends BaseController {
         summary = "Đọc metadata ảnh",
         description = "MEDIA_READ và kiểm owner/ADMIN. URL là ảnh công khai trên CDN."
     )
-    @AccessFunction(group = Groups.MEDIA, permissions = { Permissions.MEDIA_READ })
+    @AccessFunction(group = Groups.MEDIA, actions = { PermissionAction.READ })
     public ApiResult<MediaResponse> find(
         @Parameter(description = "ID bản ghi cần thao tác", example = "1") @PathVariable long id,
         @AuthenticationPrincipal UserPrincipal actor,
@@ -91,7 +91,7 @@ public class MediaController extends BaseController {
         summary = "Sửa tên và mô tả ảnh",
         description = "MEDIA_UPDATE + owner/ADMIN; chỉ READY, kiểm version, không thay URL/provider ID"
     )
-    @AccessFunction(group = Groups.MEDIA, permissions = { Permissions.MEDIA_UPDATE })
+    @AccessFunction(group = Groups.MEDIA, actions = { PermissionAction.UPDATE })
     public ApiResult<MediaResponse> update(
         @Parameter(description = "ID bản ghi cần thao tác", example = "1") @PathVariable long id,
         @Valid @RequestBody MediaUpdateRequest body,
@@ -107,7 +107,7 @@ public class MediaController extends BaseController {
         summary = "Upload một ảnh công khai",
         description = "MEDIA_CREATE; JPEG/PNG tối đa 5 MiB, 4096 px mỗi chiều, 6 triệu pixel; chuẩn hóa bỏ metadata. Cookie cần CSRF header."
     )
-    @AccessFunction(group = Groups.MEDIA, permissions = { Permissions.MEDIA_CREATE })
+    @AccessFunction(group = Groups.MEDIA, actions = { PermissionAction.CREATE })
     public ApiResult<MediaResponse> upload(
         @Valid @ModelAttribute MediaUploadRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
@@ -122,7 +122,7 @@ public class MediaController extends BaseController {
         summary = "Yêu cầu xóa ảnh",
         description = "MEDIA_DELETE và owner/ADMIN, version hiện hành; worker xóa CDN rồi xác nhận DELETED. Cache có thể còn trong thời gian invalidation."
     )
-    @AccessFunction(group = Groups.MEDIA, permissions = { Permissions.MEDIA_DELETE })
+    @AccessFunction(group = Groups.MEDIA, actions = { PermissionAction.DELETE })
     public ApiResult<MediaResponse> delete(
         @Parameter(description = "ID bản ghi cần thao tác", example = "1") @PathVariable long id,
         @Valid @RequestBody MediaDeleteRequest body,

@@ -11,7 +11,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import vn.vietroute.auth.dto.response.AccessActionResponse;
@@ -26,7 +25,8 @@ import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.repository.AccessFeatureRepository;
 import vn.vietroute.auth.security.AccessCapabilities;
 import vn.vietroute.auth.security.AccessFeatures;
-import vn.vietroute.auth.security.AccessRules;
+import vn.vietroute.auth.security.annotation.AccessOperation;
+import vn.vietroute.common.constant.AccessConstants.Groups;
 
 /** Danh bạ cây chỉ dùng mapping hiện tại; DB giữ nguồn cấp quyền và metadata đã sync, không kích hoạt route cũ. */
 @Service
@@ -38,7 +38,7 @@ public class AccessTreeService {
     private final AccessService access;
 
     /** Lọc permission active từ registry DB, rồi ghép function/action/endpoint đang có trên node. */
-    @PreAuthorize(AccessRules.ACCESS_READ)
+    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.READ)
     public List<AccessFeatureResponse> tree(List<AccessResourceResponse> inventory, Locale locale) {
         Map<String, String> names = access
             .permissions(locale)
@@ -99,7 +99,7 @@ public class AccessTreeService {
     }
 
     /** Chỉ capabilities của principal hiện tại; không nhận user/role từ request. */
-    @PreAuthorize(AccessRules.AUTHENTICATED)
+    @AccessOperation(authenticated = true)
     public List<AccessCapabilityResponse> own(
         List<AccessResourceResponse> inventory,
         List<AccessPolicyResponse> policies
@@ -108,7 +108,7 @@ public class AccessTreeService {
     }
 
     /** Nguồn role chỉ người có ACCESS_READ xem được; không trả dữ liệu credential/PII ngoài username quản trị. */
-    @PreAuthorize(AccessRules.ACCESS_READ)
+    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.READ)
     public EffectiveAccessResponse effective(long id) {
         return repository.effective(id);
     }

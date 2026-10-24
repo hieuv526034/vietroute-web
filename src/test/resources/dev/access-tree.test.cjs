@@ -17,6 +17,29 @@ test('Tích một quyền làm cha chọn một phần, không tự chọn các 
     assert.equal(state.state(['CATALOG_CREATE', 'CATALOG_DELETE']).partial, true);
     assert.equal(state.has('CATALOG_DELETE'), false);
 });
+
+test('Người được ủy quyền chỉ có CREATE vẫn chọn được hành động mà không tự thêm VIEW ngoài quyền', () => {
+    const scoped = [{code:'CATALOG',name:'Danh mục',viewPermission:'CATALOG_VIEW',actions:[{permission:'CATALOG_CREATE'},{permission:'CATALOG_DELETE'}]}];
+    const state = context.window.VietRouteAccessTree.model([], scoped, ['CATALOG_CREATE']);
+    state.toggle('CATALOG_CREATE',true,'CATALOG');
+    assert.deepEqual(Array.from(state.values()),['CATALOG_CREATE']);
+    assert.deepEqual(Array.from(state.missingViews()),['Danh mục']);
+    state.toggle('CATALOG_DELETE',true,'CATALOG');
+    assert.deepEqual(Array.from(state.values()),['CATALOG_CREATE']);
+    state.toggle('CATALOG_CREATE',false,'CATALOG');
+    assert.deepEqual(Array.from(state.values()),[]);
+    assert.deepEqual(Array.from(state.missingViews()),[]);
+});
+
+test('Chọn nhiều hành động và bộ hệ thống không tự thêm VIEW bị cấm', () => {
+    const scoped=[{code:'CUSTOM',systemBundle:true,viewPermission:'CUSTOM_VIEW',actions:[{permission:'CUSTOM_READ',endpoints:[{adminOnly:false}]},{permission:'CUSTOM_UPDATE',endpoints:[{adminOnly:false}]}]}];
+    const state=context.window.VietRouteAccessTree.model(['OTHER_READ'],scoped,['CUSTOM_READ','CUSTOM_UPDATE']);
+    for(const item of context.window.VietRouteAccessTree.systemSelection(scoped))state.toggle(item.code,true,item.feature);
+    assert.deepEqual(Array.from(state.values()),['CUSTOM_READ','CUSTOM_UPDATE','OTHER_READ']);
+    assert.equal(state.has('CUSTOM_VIEW'),false);
+    for(const action of scoped[0].actions)state.toggle(action.permission,false,'CUSTOM');
+    assert.deepEqual(Array.from(state.values()),['OTHER_READ']);
+});
 test('Quyền dùng chung chỉ lưu một mã; bỏ ở một vị trí bỏ mọi bản hiển thị', () => {
     const state = model(); state.toggle('SYSTEM_READ', true); state.toggle('SYSTEM_READ', true);
     assert.equal(Array.from(state.values()).filter((code) => code === 'SYSTEM_READ').length, 1);

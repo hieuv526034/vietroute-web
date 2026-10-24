@@ -2,7 +2,6 @@ package vn.vietroute.auth.security;
 
 import io.swagger.v3.oas.annotations.Operation;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import org.springframework.core.annotation.AnnotatedElementUtils;
@@ -11,7 +10,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
 import vn.vietroute.auth.dto.response.AccessTargetResponse;
-import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.common.constant.AccessConstants.Groups;
@@ -77,15 +75,7 @@ public final class AccessTargets {
             var binding = AccessAuthorization.binding(handler);
             String group = declared == null ? Groups.GENERAL : declared.group();
             Role.valueOf(group); // Cùng allowlist mã in hoa; chặn metadata sai ngay lúc startup.
-            List<String> declaredPermissions =
-                declared == null
-                    ? List.of()
-                    : Arrays.stream(declared.permissions())
-                          .map(Permission::valueOf)
-                          .map(Permission::name)
-                          .distinct()
-                          .sorted()
-                          .toList();
+            List<String> declaredPermissions = binding.permissions();
             String description = operation == null || operation.summary().isBlank() ? name : operation.summary();
             if (!binding.function().isEmpty()) AccessFeatures.require(binding.function());
             info.getPatternValues().forEach(path ->

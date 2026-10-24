@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,12 +14,14 @@ import vn.vietroute.auth.dto.response.AccessPolicyResponse;
 import vn.vietroute.auth.dto.response.AccessRegistryResponse;
 import vn.vietroute.auth.dto.response.AccessTargetResponse;
 import vn.vietroute.auth.entity.Permission;
+import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.repository.AccessRegistryRepository;
 import vn.vietroute.auth.repository.AccessRepository;
 import vn.vietroute.auth.security.AccessActors;
-import vn.vietroute.auth.security.AccessRules;
 import vn.vietroute.auth.security.UserPrincipal;
+import vn.vietroute.auth.security.annotation.AccessOperation;
+import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.JdbcTransactions;
@@ -37,13 +38,13 @@ public class AccessManagementService {
     private final JdbcTransactions transactions;
 
     /** Registry tên/trạng thái có version riêng; không suy ra quyền từ hằng Java. */
-    @PreAuthorize(AccessRules.ACCESS_READ)
+    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.READ)
     public List<AccessRegistryResponse> registry(String kind) {
         return registry.registry(kind);
     }
 
     /** Mã bất biến, tên/trạng thái có version. Không cho tắt quyền lõi hoặc ADMIN để giữ đường cứu hộ. */
-    @PreAuthorize(AccessRules.REGISTRY_SAVE)
+    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.UPDATE, createArgument = "create")
     public List<AccessRegistryResponse> save(
         String kind,
         String code,
@@ -98,7 +99,7 @@ public class AccessManagementService {
     }
 
     /** Xóa mềm role chưa được dùng; advisory lock thống nhất với gán role/policy để không lọt tham chiếu mới. */
-    @PreAuthorize(AccessRules.ACCESS_DELETE)
+    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.DELETE)
     public List<AccessRegistryResponse> deleteRole(String code, long version, UserPrincipal actor) {
         AccessActors.requireCurrent(actor);
         try {
@@ -114,13 +115,13 @@ public class AccessManagementService {
     }
 
     /** Chỉ quản trị đọc cấu hình toàn hệ thống; không công bố ma trận cho user thường. */
-    @PreAuthorize(AccessRules.ACCESS_READ)
+    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.READ)
     public List<AccessPolicyResponse> policies() {
         return registry.policies();
     }
 
     /** Inventory do server tạo; không nhận route tùy ý, matcher wildcard hoặc route cứu hộ từ client. */
-    @PreAuthorize(AccessRules.POLICY_SAVE)
+    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.UPDATE, createArgument = "id")
     public List<AccessPolicyResponse> savePolicy(
         long id,
         AccessPolicyRequest body,
@@ -148,7 +149,7 @@ public class AccessManagementService {
     }
 
     /** Xóa chỉ chính sách bổ sung; annotation/service guard vẫn còn nguyên. */
-    @PreAuthorize(AccessRules.ACCESS_DELETE)
+    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.DELETE)
     public List<AccessPolicyResponse> deletePolicy(long id, long version) {
         return transactions.execute(connection -> {
             access.lockRoleAssignments(connection);

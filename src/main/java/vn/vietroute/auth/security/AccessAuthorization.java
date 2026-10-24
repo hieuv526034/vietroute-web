@@ -1,5 +1,7 @@
 package vn.vietroute.auth.security;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -9,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.method.HandlerMethod;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
+import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.auth.security.annotation.AccessFunction.Match;
@@ -39,7 +42,7 @@ public final class AccessAuthorization {
               : declaration.function();
         return new Binding(
             function,
-            List.of(declaration.permissions()),
+            permissions(declaration),
             declaration.match().name(),
             declaration.adminOnly() || (type != null && type.adminOnly()),
             declaration.authenticated()
@@ -58,6 +61,16 @@ public final class AccessAuthorization {
         return binding.match().equals(Match.ALL.name())
             ? codes.containsAll(binding.permissions())
             : binding.permissions().stream().anyMatch(codes::contains);
+    }
+
+    /** Gộp quyền sinh từ action với mã tương thích cũ; chỉ metadata server được dùng, không đoán theo HTTP verb. */
+    public static List<String> permissions(AccessFunction declaration) {
+        var result = new ArrayList<String>(List.of(declaration.permissions()));
+        String resource = declaration.resource().isBlank() ? declaration.group() : declaration.resource();
+        Arrays.stream(declaration.actions())
+            .map(action -> resource + "_" + action.name())
+            .forEach(result::add);
+        return result.stream().map(Permission::valueOf).map(Permission::name).distinct().sorted().toList();
     }
 
     public static boolean allows(AccessResourceResponse item, Authentication auth) {

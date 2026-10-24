@@ -1,14 +1,16 @@
 /* Cây quyền dùng một Set cho cả quyền trùng giữa chức năng; tìm kiếm không làm mất lựa chọn ngoài kết quả. */
 (() => {
     'use strict';
-    const model = (initial, features) => {
+    const model = (initial, features, allowed = null) => {
         const selected = new Set(initial);
         const original = new Set(initial);
+        const permitted = (code) => !allowed || allowed.includes(code);
         return {
             values: () => Array.from(selected).sort(),
             has: (code) => selected.has(code),
             toggle(code, checked, featureCode) {
                 if (checked) {
+                    if (!permitted(code)) return;
                     selected.add(code);
                     const matches = features.filter((feature) =>
                         feature.actions.some((action) => action.permission === code),
@@ -16,7 +18,8 @@
                     for (const feature of matches.filter((feature) =>
                         featureCode ? feature.code === featureCode : matches.length === 1,
                     ))
-                        if (feature.viewPermission) selected.add(feature.viewPermission);
+                        if (feature.viewPermission && permitted(feature.viewPermission))
+                            selected.add(feature.viewPermission);
                 } else selected.delete(code);
             },
             changes: () => ({
@@ -27,6 +30,17 @@
                     .filter((code) => !selected.has(code))
                     .sort(),
             }),
+            // VIEW là lựa chọn độc lập: chỉ thông báo thiếu, không thêm quyền ngoài khả năng ủy quyền của actor.
+            missingViews: () =>
+                features
+                    .filter(
+                        (feature) =>
+                            feature.viewPermission &&
+                            !selected.has(feature.viewPermission) &&
+                            !permitted(feature.viewPermission) &&
+                            feature.actions.some((action) => selected.has(action.permission)),
+                    )
+                    .map((feature) => feature.name || feature.code),
             state(codes) {
                 const count = codes.filter((code) => selected.has(code)).length;
                 return {
@@ -80,7 +94,7 @@
     };
     const render = (host, features, registry, initial, options) => {
         const labels = document.getElementById('access-tree-labels').dataset;
-        const state = model(initial, features);
+        const state = model(initial, features, options.allowed);
         const permitted = (code) => options.editable && (!options.allowed || options.allowed.includes(code));
         const extra = unbound(registry, initial, features, labels.inactive);
         const nodes = [
@@ -142,6 +156,9 @@
             const changes = state.changes();
             preview.replaceChildren(element('strong', labels.preview));
             if (!changes.added.length && !changes.removed.length) preview.append(element('p', labels.unchanged));
+            const missing = state.missingViews();
+            if (missing.length)
+                preview.append(element('p', `${labels.viewRestricted}: ${missing.join(', ')}`, 'muted'));
             for (const [key, caption] of [
                 ['added', labels.added],
                 ['removed', labels.removed],

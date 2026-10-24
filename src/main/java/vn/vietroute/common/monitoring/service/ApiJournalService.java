@@ -2,9 +2,10 @@ package vn.vietroute.common.monitoring.service;
 
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.security.AccessRules;
+import vn.vietroute.auth.entity.PermissionAction;
+import vn.vietroute.auth.security.annotation.AccessOperation;
+import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.monitoring.dto.request.ApiJournalSearchRequest;
@@ -18,12 +19,12 @@ public class ApiJournalService {
 
     private final ApiJournalStore store;
 
-    @PreAuthorize(AccessRules.SENSITIVE_READ)
+    @AccessOperation(resource = Groups.SYSTEM, action = PermissionAction.READ, adminOnly = true)
     public ApiJournalResponse page(ApiJournalSearchRequest search) {
         return store.page(search);
     }
 
-    @PreAuthorize(AccessRules.SENSITIVE_READ)
+    @AccessOperation(resource = Groups.SYSTEM, action = PermissionAction.READ, adminOnly = true)
     public ApiJournalDetail find(UUID id) {
         ApiJournalDetail result = store.find(id);
         if (result == null) throw new BusinessException(ErrorCode.NOT_FOUND);

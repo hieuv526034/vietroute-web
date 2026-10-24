@@ -3,15 +3,16 @@ package vn.vietroute.common.media.service;
 import java.time.Duration;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.security.AccessRules;
 import vn.vietroute.auth.security.UserPrincipal;
+import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.config.integration.MediaSettings;
+import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.JdbcTransactions;
@@ -42,7 +43,7 @@ public class MediaService {
     private final RateLimitStore quotas;
 
     /** Người có READ chỉ xem thư viện của mình; ADMIN có quyền xem toàn bộ. */
-    @PreAuthorize(AccessRules.MEDIA_READ)
+    @AccessOperation(resource = Groups.MEDIA, action = PermissionAction.READ)
     public PageResponse<MediaResponse> page(PageRequest page, UserPrincipal actor) {
         var result = images.page(page, actor.id(), actor.roles().contains(Role.ADMIN));
         return new PageResponse<>(
@@ -57,19 +58,19 @@ public class MediaService {
     }
 
     /** Trả 404 cho ảnh của người khác để không lộ sự tồn tại của bản ghi ngoài phạm vi. */
-    @PreAuthorize(AccessRules.MEDIA_READ)
+    @AccessOperation(resource = Groups.MEDIA, action = PermissionAction.READ)
     public MediaResponse find(long id, UserPrincipal actor) {
         return MediaResponse.from(owned(id, actor));
     }
 
     /** Reserve + job dọn cùng transaction trước mạng; chỉ công bố READY sau khi lưu metadata thành công. */
-    @PreAuthorize(AccessRules.MEDIA_CREATE)
+    @AccessOperation(resource = Groups.MEDIA, action = PermissionAction.CREATE)
     public MediaResponse upload(MultipartFile file, UserPrincipal actor) {
         return uploadOwned(file, actor);
     }
 
     /** Tự phục vụ avatar chỉ tạo ảnh thuộc chính mình; không mở quyền đọc/sửa/xóa thư viện của người khác. */
-    @PreAuthorize(AccessRules.AUTHENTICATED)
+    @AccessOperation(authenticated = true)
     public MediaResponse uploadAvatar(MultipartFile file, UserPrincipal actor) {
         return uploadOwned(file, actor);
     }
@@ -100,7 +101,7 @@ public class MediaService {
     }
 
     /** Xóa là yêu cầu bất đồng bộ; HTTP 202 không đồng nghĩa cache CDN đã bị thu hồi ngay lập tức. */
-    @PreAuthorize(AccessRules.MEDIA_DELETE)
+    @AccessOperation(resource = Groups.MEDIA, action = PermissionAction.DELETE)
     public MediaResponse delete(long id, long version, UserPrincipal actor) {
         owned(id, actor);
         return transactions.execute(connection -> {
@@ -119,7 +120,7 @@ public class MediaService {
     }
 
     /** Sửa metadata trong transaction ngắn; không gọi provider, dùng được cả khi upload đang tắt. */
-    @PreAuthorize(AccessRules.MEDIA_UPDATE)
+    @AccessOperation(resource = Groups.MEDIA, action = PermissionAction.UPDATE)
     public MediaResponse update(long id, MediaUpdateRequest body, UserPrincipal actor) {
         owned(id, actor);
         return transactions.execute(connection ->
