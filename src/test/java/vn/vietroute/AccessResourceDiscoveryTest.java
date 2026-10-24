@@ -102,7 +102,7 @@ class AccessResourceDiscoveryTest {
             var envelope = spec.at(ref.substring(1));
             assertTrue(envelope.path("properties").has("data"));
             assertTrue(envelope.path("properties").has("traceId"));
-            // Cả role ADMIN và quyền ACCESS_READ đều bắt buộc, kể cả gọi trực tiếp URL API.
+            // ACCESS_READ được ủy quyền qua DB; chỉ có role ADMIN chưa đủ, kể cả gọi trực tiếp URL API.
             for (var scenario : List.of(
                 List.of("ROLE_ADMIN"),
                 List.of("ACCESS_READ"),
@@ -115,7 +115,7 @@ class AccessResourceDiscoveryTest {
                     scenario.stream().map(SimpleGrantedAuthority::new).toList()
                 );
                 assertEquals(
-                    scenario.size() == 2 ? 200 : 403,
+                    scenario.contains("ACCESS_READ") ? 200 : 403,
                     mvc
                         .perform(get(Routes.ACCESS + Routes.ACCESS_RESOURCES).with(authentication(actor)))
                         .andReturn()
@@ -161,7 +161,7 @@ class AccessResourceDiscoveryTest {
         private int calls;
 
         RecordingResources() {
-            super(null, null);
+            super(null, null, null);
         }
 
         @Override

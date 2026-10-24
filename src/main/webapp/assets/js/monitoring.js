@@ -1,6 +1,7 @@
 /* Chỉ đọc snapshot của instance, không tải token vận hành. Poll tuần tự và dừng khi tab ẩn. */
 (() => {
     'use strict';
+    let readAllowed = false;
     const app = window.VietRoute;
     const labels = document.getElementById('monitor-labels').dataset;
     const button = document.getElementById('monitoring-refresh');
@@ -13,6 +14,10 @@
     };
     const mib = (value) => `${(value / 1024 / 1024).toFixed(1)} MiB`;
     const load = async () => {
+        if (!readAllowed) {
+            window.VietRoute.feedback(document.querySelector('meta[name="access-no-read"]')?.content || '');
+            return;
+        }
         clearTimeout(timer);
         if (loading || document.hidden) {
             return;
@@ -101,5 +106,10 @@
             load();
         }
     });
-    load();
+    window.VietRouteAccess.load('MONITORING')
+        .then((capability) => {
+            readAllowed = capability.targets.includes('GET /api/v1/admin/system/runtime');
+            load();
+        })
+        .catch(window.VietRoute.failure);
 })();

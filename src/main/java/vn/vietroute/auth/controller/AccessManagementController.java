@@ -27,6 +27,7 @@ import vn.vietroute.auth.dto.response.AccessPolicyResponse;
 import vn.vietroute.auth.dto.response.AccessRegistryResponse;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
 import vn.vietroute.auth.dto.response.AccessTargetResponse;
+import vn.vietroute.auth.security.AccessRules;
 import vn.vietroute.auth.security.AccessTargets;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessFunction;
@@ -35,6 +36,7 @@ import vn.vietroute.auth.service.AccessResourceService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
+import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
@@ -46,8 +48,11 @@ import vn.vietroute.common.web.response.ApiResult;
 /** Quản lý cấu hình quyền; mọi mutation đi qua BaseController và service có kiểm quyền độc lập. */
 @RestController
 @RequestMapping(Routes.ACCESS)
-@Tag(name = "Cấu hình phân quyền", description = "ADMIN quản lý registry và chính sách siết thêm menu/endpoint")
-@AccessFunction(group = Groups.ACCESS)
+@Tag(
+    name = "Cấu hình phân quyền",
+    description = "Quản trị theo quyền DB, quản lý registry và chính sách siết thêm menu/endpoint"
+)
+@AccessFunction(group = Groups.ACCESS, function = Functions.ACCESS, permissions = { Permissions.ACCESS_READ })
 public class AccessManagementController extends BaseController {
 
     private final AccessManagementService access;
@@ -70,10 +75,7 @@ public class AccessManagementController extends BaseController {
     }
 
     @GetMapping(Routes.ACCESS_REGISTRY)
-    @Operation(
-        summary = "Danh sách registry roles/permissions",
-        description = "ADMIN + ACCESS_READ, giới hạn 512 mã mỗi loại"
-    )
+    @Operation(summary = "Danh sách registry roles/permissions", description = "ACCESS_READ, giới hạn 512 mã mỗi loại")
     @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_READ })
     public ApiResult<List<AccessRegistryResponse>> registry(@PathVariable String kind, HttpServletRequest request) {
         return execute(SuccessCode.OK, request, () -> access.registry(kind));
@@ -83,7 +85,7 @@ public class AccessManagementController extends BaseController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(
         summary = "Tạo role hoặc quyền hành động",
-        description = "ADMIN + ACCESS_CREATE; mã role in hoa, quyền RESOURCE_ACTION; mã không đổi tên"
+        description = "ACCESS_CREATE; mã role in hoa, quyền RESOURCE_ACTION; mã không đổi tên"
     )
     @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_CREATE })
     public ApiResult<List<AccessRegistryResponse>> create(
@@ -101,7 +103,7 @@ public class AccessManagementController extends BaseController {
     @PutMapping(Routes.ACCESS_REGISTRY_ITEM)
     @Operation(
         summary = "Sửa tên/trạng thái role hoặc quyền",
-        description = "ADMIN + ACCESS_UPDATE; khóa optimistic registry version, không vô hiệu hóa mã lõi"
+        description = "ACCESS_UPDATE; khóa optimistic registry version, không vô hiệu hóa mã lõi"
     )
     @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_UPDATE })
     public ApiResult<List<AccessRegistryResponse>> update(
@@ -115,7 +117,7 @@ public class AccessManagementController extends BaseController {
     }
 
     @GetMapping(Routes.ACCESS_TARGETS)
-    @PreAuthorize("hasRole('ADMIN') and hasAuthority('ACCESS_READ')")
+    @PreAuthorize(AccessRules.ACCESS_READ)
     @Operation(
         summary = "Inventory menu/endpoint có thể cấu hình",
         description = "Chỉ route thật trên server, không cho thay chính sách auth/public/metrics/cứu hộ"
@@ -127,10 +129,7 @@ public class AccessManagementController extends BaseController {
 
     /** ADMIN bất biến; role khác chỉ xóa khi không còn user/policy sử dụng và version còn đúng. */
     @DeleteMapping(Routes.ACCESS_ROLE_ITEM)
-    @Operation(
-        summary = "Xóa role chưa sử dụng",
-        description = "ADMIN + ACCESS_DELETE; version bắt buộc, liên quan trả 409"
-    )
+    @Operation(summary = "Xóa role chưa sử dụng", description = "ACCESS_DELETE; version bắt buộc, liên quan trả 409")
     @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_DELETE })
     public ApiResult<List<AccessRegistryResponse>> deleteRole(
         @PathVariable String code,
@@ -145,7 +144,7 @@ public class AccessManagementController extends BaseController {
     @GetMapping(Routes.ACCESS_RESOURCES)
     @Operation(
         summary = "Danh bạ tài nguyên UI/API đã đồng bộ",
-        description = "ADMIN + ACCESS_READ; công khai và cứu hộ chỉ đọc, không tự cấp quyền"
+        description = "ACCESS_READ; công khai và cứu hộ chỉ đọc, không tự cấp quyền"
     )
     @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_READ })
     public ApiResult<PageResponse<AccessResourceResponse>> resources(
@@ -156,7 +155,7 @@ public class AccessManagementController extends BaseController {
     }
 
     @GetMapping(Routes.ACCESS_POLICIES)
-    @Operation(summary = "Xem chính sách menu/endpoint", description = "ADMIN + ACCESS_READ")
+    @Operation(summary = "Xem chính sách menu/endpoint", description = "ACCESS_READ")
     @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_READ })
     public ApiResult<List<AccessPolicyResponse>> policies(HttpServletRequest request) {
         return execute(SuccessCode.OK, request, access::policies);
@@ -166,7 +165,7 @@ public class AccessManagementController extends BaseController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(
         summary = "Tạo chính sách bổ sung",
-        description = "ADMIN + ACCESS_CREATE, required permissions là all-of, roles là any-of; không mở rộng quyền trong code"
+        description = "ACCESS_CREATE, required permissions là all-of, roles là any-of; không mở rộng quyền trong code"
     )
     @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_CREATE })
     public ApiResult<List<AccessPolicyResponse>> createPolicy(
@@ -182,7 +181,7 @@ public class AccessManagementController extends BaseController {
     @PutMapping(Routes.ACCESS_POLICY_ITEM)
     @Operation(
         summary = "Sửa chính sách với version",
-        description = "ADMIN + ACCESS_UPDATE; thay đổi áp dụng request tiếp theo trên mọi node"
+        description = "ACCESS_UPDATE; thay đổi áp dụng request tiếp theo trên mọi node"
     )
     @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_UPDATE })
     public ApiResult<List<AccessPolicyResponse>> updatePolicy(
@@ -199,7 +198,7 @@ public class AccessManagementController extends BaseController {
     @DeleteMapping(Routes.ACCESS_POLICY_ITEM)
     @Operation(
         summary = "Xóa chính sách bổ sung",
-        description = "ADMIN + ACCESS_DELETE; truyền version, quyền nền vẫn bắt buộc"
+        description = "ACCESS_DELETE; truyền version, quyền nền vẫn bắt buộc"
     )
     @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_DELETE })
     public ApiResult<List<AccessPolicyResponse>> deletePolicy(

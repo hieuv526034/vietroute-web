@@ -12,6 +12,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import vn.vietroute.auth.security.AccessRules;
 import vn.vietroute.common.config.integration.MailSettings;
 import vn.vietroute.common.config.traffic.TrafficSettings;
 import vn.vietroute.common.jdbc.BaseRepository;
@@ -36,7 +37,7 @@ public class SystemStatusService {
 
     private final Clock clock;
 
-    @PreAuthorize("hasAuthority('SYSTEM_READ')")
+    @PreAuthorize(AccessRules.SYSTEM_READ)
     public SystemStatusResponse status() {
         Map<String, Long> queues = new LinkedHashMap<>();
         try (

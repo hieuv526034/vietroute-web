@@ -16,6 +16,7 @@
     });
     let busy = false;
     let me;
+    let currentCapabilities = { actions: [] };
     const has = (permission) => me?.permissions?.includes(permission);
     const canAssign = () => has('ACCESS_ASSIGN') || has('ACCESS_WRITE');
     const isAdmin = () => me?.roles?.includes('ADMIN');
@@ -127,7 +128,8 @@
                     ),
                 );
             }
-            node('job-retry').disabled = !has('JOB_RETRY') || job.status !== 'DEAD';
+            node('job-retry').disabled = !currentCapabilities.actions.includes('RETRY') || job.status !== 'DEAD';
+            node('job-retry').hidden = !currentCapabilities.actions.includes('RETRY');
         };
         const show = async (id) => {
             const job = await get(`${routes.jobs}/${encodeURIComponent(id)}`);
@@ -202,6 +204,8 @@
     };
 
     const access = () => {
+        let treeData = [];
+        let roleTree;
         let registry = [];
         let roles = [];
         let selectedRole;
@@ -242,29 +246,18 @@
                     ? ''
                     : labels.readonly;
             node('role-version').textContent = String(selectedRole.version);
-            permissionsBody.replaceChildren();
-            for (const permission of registry) {
-                const row = document.createElement('tr');
-                row.append(
-                    text('td', permission.resource),
-                    text('td', `${permission.code} · ${permission.name}`),
-                    text('td', permission.actions.join(', ')),
-                );
-                const cell = document.createElement('td');
-                const input = document.createElement('input');
-                input.type = 'checkbox';
-                input.className = 'form-check-input';
-                input.value = permission.code;
-                input.checked = selectedRole.permissions.includes(permission.code);
-                input.disabled = !editable || (!isAdmin() && !has(permission.code));
-                input.setAttribute('aria-label', `${selectedRole.role}: ${permission.name}`);
-                cell.append(input);
-                row.append(cell);
-                permissionsBody.append(row);
-            }
+            roleTree = window.VietRouteAccessTree.render(
+                permissionsBody,
+                treeData,
+                registry,
+                selectedRole.permissions,
+                { editable, allowed: isAdmin() ? null : me.permissions },
+            );
             node('permissions-save').disabled = !editable;
-            node('permissions-edit').disabled = !editable;
-            node('permissions-target').textContent = `${selectedRole.role} · ${selectedRole.version}`;
+            node('permissions-edit').disabled = false;
+            node('permissions-save').hidden = !editable;
+            node('permissions-target').textContent =
+                `${selectedRole.role} · v${selectedRole.version} · ${selectedRole.assignedUsers || 0} ${document.getElementById('access-tree-labels').dataset.impact}`;
             const summary = node('role-permission-summary');
             summary.replaceChildren();
             for (const permission of registry.filter((item) => selectedRole.permissions.includes(item.code))) {
@@ -280,8 +273,16 @@
         });
         const loadRoles = async () => {
             const previous = roleSelect.value;
-            [registry, roles] = await Promise.all([get(`${routes.access}/permissions`), get(`${routes.access}/roles`)]);
-            roleSelect.replaceChildren(...roles.map((role) => option(role.role, role.role)));
+            [registry, roles, treeData] = await Promise.all([
+                get(`${routes.access}/permissions`),
+                get(`${routes.access}/roles`),
+                get(`${routes.access}/tree`),
+            ]);
+            roleSelect.replaceChildren(
+                ...roles.map((role) =>
+                    option(role.role, role.role + (role.active === false ? ' · ' + labels.off : '')),
+                ),
+            );
             if (roles.some((role) => role.role === previous)) {
                 roleSelect.value = previous;
             }
@@ -294,7 +295,7 @@
             node('user-roles-form').hidden = false;
             node('selected-user').textContent = `${user.username} · ${user.displayName} · #${user.id}`;
             node('user-version').textContent = String(user.version);
-            const editable = canAssign() && user.id !== me.id;
+            const editable = canAssign() && user.id !== me.id && (isAdmin() || !user.roles.includes('ADMIN'));
             const options = node('user-role-options');
             options.querySelectorAll('label').forEach((label) => label.remove());
             for (const role of roles) {
@@ -305,21 +306,23 @@
                 input.className = 'form-check-input';
                 input.value = role.role;
                 input.checked = user.roles.includes(role.role);
-                input.disabled = !editable;
-                label.append(input, text('span', role.role));
+                input.disabled =
+                    !editable ||
+                    (role.active === false && !input.checked) ||
+                    (!isAdmin() && (role.role === 'ADMIN' || role.permissions.some((permission) => !has(permission))));
+                label.append(input, text('span', role.role + (role.active === false ? ' · ' + labels.off : '')));
                 options.append(label);
             }
             node('user-roles-save').disabled = !editable;
             if (user.id === me.id) {
                 app.feedback(labels.self, false, 'user-roles-feedback');
             }
+            window.VietRouteAccessTree.sources(node('user-role-options'), () =>
+                get(`${routes.access}/users/${user.id}/effective`),
+            );
             userModal.open();
         };
         const loadUsers = async (query = pager.query) => {
-            if (!isAdmin()) {
-                accessTabs.show('access-users-section', false);
-                return;
-            }
             selectedUser = undefined;
             node('user-roles-form').hidden = true;
             const data = await tables.readPage(
@@ -360,7 +363,7 @@
                 return;
             }
             const target = selectedRole;
-            const permissions = Array.from(permissionsBody.querySelectorAll('input:checked'), (input) => input.value);
+            const permissions = roleTree.values();
             perform(async () => {
                 await app.mutate(
                     `${routes.access}/roles/${encodeURIComponent(target.role)}/permissions`,
@@ -471,8 +474,30 @@
         window.VietRouteUI.initializeTabs(container);
     };
 
-    const load =
+    const loadData =
         root.dataset.operations === 'jobs' ? jobs() : root.dataset.operations === 'access' ? access() : configuration();
+    const load = async () => {
+        const feature =
+            root.dataset.operations === 'jobs'
+                ? 'JOBS'
+                : root.dataset.operations === 'access'
+                  ? 'ACCESS'
+                  : 'CONFIGURATION';
+        const capabilities = await window.VietRouteAccess.load(feature);
+        currentCapabilities = capabilities;
+        if (
+            !capabilities.actions.includes('READ') ||
+            (feature === 'JOBS' && !capabilities.targets.includes('GET /api/v1/admin/jobs'))
+        ) {
+            app.feedback(
+                document.getElementById('access-tree-labels')?.dataset.noRead ||
+                    document.querySelector('meta[name="access-no-read"]')?.content ||
+                    '',
+            );
+            return;
+        }
+        await loadData();
+    };
     document.addEventListener('access-registry-changed', () => perform(load));
     node('ops-refresh').addEventListener('click', () =>
         perform(async () => {

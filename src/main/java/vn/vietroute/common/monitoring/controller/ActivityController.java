@@ -12,7 +12,9 @@ import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
+import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.AccessConstants.Groups;
+import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
@@ -28,7 +30,7 @@ import vn.vietroute.common.web.response.ApiResult;
     name = "Lưu lượng truy cập",
     description = "Hiện diện và tín hiệu bất thường dùng chung PostgreSQL; ADMIN + SYSTEM_READ"
 )
-@AccessFunction(group = Groups.SYSTEM)
+@AccessFunction(group = Groups.SYSTEM, function = Functions.MONITORING)
 public class ActivityController extends BaseController {
 
     private final ActivityService activity;
@@ -47,6 +49,7 @@ public class ActivityController extends BaseController {
         return execute(SuccessCode.OK, request, activity::enabled);
     }
 
+    @AccessFunction(group = Groups.SYSTEM, permissions = { Permissions.SYSTEM_READ }, adminOnly = true)
     @GetMapping(Routes.ACTIVITY)
     @Operation(
         summary = "Tổng quan online và request",
@@ -56,6 +59,7 @@ public class ActivityController extends BaseController {
         return execute(SuccessCode.OK, request, activity::snapshot);
     }
 
+    @AccessFunction(group = Groups.SYSTEM, permissions = { Permissions.SYSTEM_READ }, adminOnly = true)
     @GetMapping(Routes.ACTIVITY_ONLINE)
     @Operation(
         summary = "Phân trang trình duyệt online",
@@ -65,6 +69,7 @@ public class ActivityController extends BaseController {
         return execute(SuccessCode.OK, request, () -> activity.online(page));
     }
 
+    @AccessFunction(group = Groups.SYSTEM, permissions = { Permissions.SYSTEM_READ }, adminOnly = true)
     @GetMapping(Routes.ACTIVITY_ANOMALIES)
     @Operation(
         summary = "Tín hiệu request bất thường",

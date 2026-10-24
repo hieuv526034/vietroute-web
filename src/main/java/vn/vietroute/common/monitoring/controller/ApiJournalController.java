@@ -11,7 +11,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.common.base.BaseController;
+import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.AccessConstants.Groups;
+import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
@@ -25,7 +27,12 @@ import vn.vietroute.common.web.response.ApiResult;
 /** API chỉ đọc nhật ký đã lọc, không có endpoint replay hoặc xem raw credentials. */
 @RestController
 @Tag(name = "API Journal", description = "Nhật ký HTTP lưu PostgreSQL dùng chung, chỉ ADMIN và SYSTEM_READ")
-@AccessFunction(group = Groups.SYSTEM)
+@AccessFunction(
+    group = Groups.SYSTEM,
+    function = Functions.JOURNAL,
+    permissions = { Permissions.SYSTEM_READ },
+    adminOnly = true
+)
 public class ApiJournalController extends BaseController {
 
     private final ApiJournalService journal;

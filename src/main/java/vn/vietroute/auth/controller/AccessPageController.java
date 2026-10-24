@@ -3,17 +3,20 @@ package vn.vietroute.auth.controller;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import vn.vietroute.auth.security.AccessRules;
 import vn.vietroute.auth.security.annotation.AccessFunction;
+import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.AccessConstants.Groups;
+import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 
 /** ACCESS_READ cho xem ma trận; API ghi và danh sách tài khoản tiếp tục có ràng buộc riêng. */
 @Controller
-@AccessFunction(group = Groups.ACCESS)
+@AccessFunction(group = Groups.ACCESS, function = Functions.ACCESS, permissions = { Permissions.ACCESS_VIEW })
 public class AccessPageController {
 
     @GetMapping(Routes.ACCESS_PAGE)
-    @PreAuthorize("hasAuthority('ACCESS_READ')")
+    @PreAuthorize(AccessRules.ACCESS_VIEW)
     public String access() {
         return "operations/access";
     }

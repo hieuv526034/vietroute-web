@@ -2,12 +2,15 @@ package vn.vietroute.support;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.ResourceBundle;
+import java.util.Set;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import vn.vietroute.auth.dto.response.AccessPolicyResponse;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
 import vn.vietroute.auth.dto.response.PermissionResponse;
@@ -21,6 +24,21 @@ import vn.vietroute.common.base.PageResponse;
 /** Fixture chỉ trong test: registry/policy DB giả, không thay hoặc bỏ method security của service/controller. */
 @Configuration
 public class AccessTestConfig {
+
+    /** Các fixture cũ biểu diễn role đã qua V013: VIEW được chuyển tiếp một lần từ quyền legacy. Test ACCESS03 dùng tập quyền tường minh riêng. */
+    public static List<SimpleGrantedAuthority> upgradedAuthorities(String... codes) {
+        Set<String> result = new LinkedHashSet<>(List.of(codes));
+        for (String code : codes) {
+            if (code.startsWith("CATALOG_")) result.add("CATALOG_VIEW");
+            if (code.startsWith("MEDIA_")) result.add("MEDIA_VIEW");
+            if (code.startsWith("ACCESS_")) result.add("ACCESS_VIEW");
+            if (code.equals("JOB_READ")) result.add("JOB_VIEW");
+            if (code.equals("SYSTEM_READ")) result.addAll(
+                List.of("SYSTEM_VIEW", "CONFIGURATION_VIEW", "JOURNAL_VIEW", "CONFIGURATION_READ")
+            );
+        }
+        return result.stream().map(SimpleGrantedAuthority::new).toList();
+    }
 
     /** Projection giả chỉ trong test; giữ method security của AccessResourceService thật. */
     @Bean

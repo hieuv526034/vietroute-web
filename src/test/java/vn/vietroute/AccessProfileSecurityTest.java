@@ -107,7 +107,11 @@ class AccessProfileSecurityTest {
             var allowed = UsernamePasswordAuthenticationToken.authenticated(
                 actor,
                 null,
-                List.of(new SimpleGrantedAuthority("ROLE_CATALOG_EDITOR"), new SimpleGrantedAuthority("CATALOG_READ"))
+                List.of(
+                    new SimpleGrantedAuthority("ROLE_CATALOG_EDITOR"),
+                    new SimpleGrantedAuthority("CATALOG_READ"),
+                    new SimpleGrantedAuthority("CATALOG_VIEW")
+                )
             );
             var denied = UsernamePasswordAuthenticationToken.authenticated(
                 actor,

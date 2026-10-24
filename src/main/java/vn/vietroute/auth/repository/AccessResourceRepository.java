@@ -14,7 +14,7 @@ import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.jdbc.BaseRepository;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 
-/** Danh bạ route chỉ phục vụ quản trị; DB không có quyền đổi route public hoặc cấp authority cho user. */
+/** DAO danh bạ route; metadata public không thay WebRoutePolicy và mapping quyền của user. */
 @Repository
 public class AccessResourceRepository extends BaseRepository {
 
@@ -32,10 +32,10 @@ public class AccessResourceRepository extends BaseRepository {
         }
         try (
             PreparedStatement query = connection.prepareStatement(
-                "INSERT INTO auth_access_resources(kind,target,handler,description,public_route,configurable,created_by,updated_by,resource_group,declared_permissions) " +
-                    "VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT (kind,target) DO UPDATE SET handler=EXCLUDED.handler," +
+                "INSERT INTO auth_access_resources(kind,target,handler,description,public_route,configurable,created_by,updated_by,resource_group,declared_permissions,function_code,permission_match,admin_only) " +
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (kind,target) DO UPDATE SET handler=EXCLUDED.handler," +
                     "description=EXCLUDED.description,public_route=EXCLUDED.public_route,configurable=EXCLUDED.configurable," +
-                    "resource_group=EXCLUDED.resource_group,declared_permissions=EXCLUDED.declared_permissions,last_seen_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP,updated_by=EXCLUDED.updated_by,version=auth_access_resources.version+1"
+                    "function_code=EXCLUDED.function_code,permission_match=EXCLUDED.permission_match,admin_only=EXCLUDED.admin_only,resource_group=EXCLUDED.resource_group,declared_permissions=EXCLUDED.declared_permissions,last_seen_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP,updated_by=EXCLUDED.updated_by,version=auth_access_resources.version+1"
             )
         ) {
             for (AccessResourceResponse resource : resources) {
@@ -49,6 +49,9 @@ public class AccessResourceRepository extends BaseRepository {
                 query.setLong(8, SystemActor.ID);
                 query.setString(9, resource.group());
                 query.setString(10, String.join(",", resource.declaredPermissions()));
+                query.setString(11, resource.function().isEmpty() ? null : resource.function());
+                query.setString(12, resource.match());
+                query.setBoolean(13, resource.adminOnly());
                 query.addBatch();
             }
             query.executeBatch();
@@ -69,7 +72,7 @@ public class AccessResourceRepository extends BaseRepository {
             List<AccessResourceResponse> result = new ArrayList<>();
             try (
                 PreparedStatement query = connection.prepareStatement(
-                    "SELECT kind,target,handler,description,public_route,configurable,first_seen_at,last_seen_at,resource_group,declared_permissions " +
+                    "SELECT kind,target,handler,description,public_route,configurable,first_seen_at,last_seen_at,resource_group,declared_permissions,function_code,permission_match,admin_only " +
                         "FROM auth_access_resources ORDER BY kind,target LIMIT ? OFFSET ?"
                 )
             ) {
@@ -88,7 +91,10 @@ public class AccessResourceRepository extends BaseRepository {
                                 rows.getTimestamp(7).toInstant(),
                                 rows.getTimestamp(8).toInstant(),
                                 rows.getString(9),
-                                rows.getString(10).isEmpty() ? List.of() : List.of(rows.getString(10).split(","))
+                                rows.getString(10).isEmpty() ? List.of() : List.of(rows.getString(10).split(",")),
+                                rows.getString(11) == null ? "" : rows.getString(11),
+                                rows.getString(12),
+                                rows.getBoolean(13)
                             )
                         );
                     }

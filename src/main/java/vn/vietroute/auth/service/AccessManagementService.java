@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import vn.vietroute.auth.dto.request.AccessPolicyRequest;
 import vn.vietroute.auth.dto.request.AccessRegistryRequest;
@@ -17,6 +18,8 @@ import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.repository.AccessRegistryRepository;
 import vn.vietroute.auth.repository.AccessRepository;
+import vn.vietroute.auth.security.AccessActors;
+import vn.vietroute.auth.security.AccessRules;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
@@ -34,15 +37,13 @@ public class AccessManagementService {
     private final JdbcTransactions transactions;
 
     /** Registry tên/trạng thái có version riêng; không suy ra quyền từ hằng Java. */
-    @PreAuthorize("hasRole('ADMIN') and hasAuthority('ACCESS_READ')")
+    @PreAuthorize(AccessRules.ACCESS_READ)
     public List<AccessRegistryResponse> registry(String kind) {
         return registry.registry(kind);
     }
 
     /** Mã bất biến, tên/trạng thái có version. Không cho tắt quyền lõi hoặc ADMIN để giữ đường cứu hộ. */
-    @PreAuthorize(
-        "hasRole('ADMIN') and ((#create and hasAuthority('ACCESS_CREATE')) or (!#create and hasAuthority('ACCESS_UPDATE')))"
-    )
+    @PreAuthorize(AccessRules.REGISTRY_SAVE)
     public List<AccessRegistryResponse> save(
         String kind,
         String code,
@@ -50,6 +51,7 @@ public class AccessManagementService {
         UserPrincipal actor,
         boolean create
     ) {
+        AccessActors.requireCurrent(actor);
         try {
             if ("roles".equals(kind)) {
                 Role.valueOf(code);
@@ -69,14 +71,36 @@ public class AccessManagementService {
         }
         return transactions.execute(connection -> {
             access.lockRoleAssignments(connection);
+            // Bật lại role/permission cũng là cấp quyền gián tiếp: người được ủy quyền không được kích hoạt tập quyền vượt chính mình.
+            if (!create && !actor.roles().contains(Role.ADMIN)) {
+                Set<String> granted = SecurityContextHolder.getContext()
+                    .getAuthentication()
+                    .getAuthorities()
+                    .stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toSet());
+                boolean outside = "roles".equals(kind)
+                    ? access
+                          .role(connection, Role.valueOf(code))
+                          .permissions()
+                          .stream()
+                          .anyMatch(permission -> !granted.contains(permission.name()))
+                    : !granted.contains(code);
+                if (outside) throw new BusinessException(ErrorCode.ACCESS_DENIED);
+            }
             registry.save(connection, kind, code, body, actor.id(), create);
-            return registry.registry(connection, kind);
+            return registry
+                .registry(connection, kind)
+                .stream()
+                .filter(item -> item.code().equals(code))
+                .toList();
         });
     }
 
     /** Xóa mềm role chưa được dùng; advisory lock thống nhất với gán role/policy để không lọt tham chiếu mới. */
-    @PreAuthorize("hasRole('ADMIN') and hasAuthority('ACCESS_DELETE')")
+    @PreAuthorize(AccessRules.ACCESS_DELETE)
     public List<AccessRegistryResponse> deleteRole(String code, long version, UserPrincipal actor) {
+        AccessActors.requireCurrent(actor);
         try {
             if (Role.ADMIN.equals(Role.valueOf(code))) throw new BusinessException(ErrorCode.ACCESS_DENIED);
         } catch (IllegalArgumentException error) {
@@ -85,26 +109,25 @@ public class AccessManagementService {
         return transactions.execute(connection -> {
             access.lockRoleAssignments(connection);
             registry.deleteRole(connection, code, version, actor.id());
-            return registry.registry(connection, "roles");
+            return List.of();
         });
     }
 
     /** Chỉ quản trị đọc cấu hình toàn hệ thống; không công bố ma trận cho user thường. */
-    @PreAuthorize("hasRole('ADMIN') and hasAuthority('ACCESS_READ')")
+    @PreAuthorize(AccessRules.ACCESS_READ)
     public List<AccessPolicyResponse> policies() {
         return registry.policies();
     }
 
     /** Inventory do server tạo; không nhận route tùy ý, matcher wildcard hoặc route cứu hộ từ client. */
-    @PreAuthorize(
-        "hasRole('ADMIN') and ((#id == 0 and hasAuthority('ACCESS_CREATE')) or (#id > 0 and hasAuthority('ACCESS_UPDATE')))"
-    )
+    @PreAuthorize(AccessRules.POLICY_SAVE)
     public List<AccessPolicyResponse> savePolicy(
         long id,
         AccessPolicyRequest body,
         UserPrincipal actor,
         List<AccessTargetResponse> targets
     ) {
+        AccessActors.requireCurrent(actor);
         if (
             targets
                 .stream()
@@ -116,17 +139,21 @@ public class AccessManagementService {
             access.lockRoleAssignments(connection);
             access.validateMappings(connection, body.roles(), body.permissions());
             registry.savePolicy(connection, id, body, actor.id());
-            return registry.policies(connection);
+            return registry
+                .policies(connection)
+                .stream()
+                .filter(item -> item.kind().equals(body.kind()) && item.target().equals(body.target()))
+                .toList();
         });
     }
 
     /** Xóa chỉ chính sách bổ sung; annotation/service guard vẫn còn nguyên. */
-    @PreAuthorize("hasRole('ADMIN') and hasAuthority('ACCESS_DELETE')")
+    @PreAuthorize(AccessRules.ACCESS_DELETE)
     public List<AccessPolicyResponse> deletePolicy(long id, long version) {
         return transactions.execute(connection -> {
             access.lockRoleAssignments(connection);
             registry.deletePolicy(connection, id, version);
-            return registry.policies(connection);
+            return List.of();
         });
     }
 

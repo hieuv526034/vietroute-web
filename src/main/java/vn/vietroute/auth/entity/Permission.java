@@ -139,6 +139,54 @@ public final class Permission {
         Set.of(PermissionAction.DELETE)
     );
 
+    public static final Permission CATALOG_VIEW = new Permission(
+        Permissions.CATALOG_VIEW,
+        "CATALOG",
+        Set.of(PermissionAction.VIEW)
+    );
+
+    public static final Permission MEDIA_VIEW = new Permission(
+        Permissions.MEDIA_VIEW,
+        "MEDIA",
+        Set.of(PermissionAction.VIEW)
+    );
+
+    public static final Permission ACCESS_VIEW = new Permission(
+        Permissions.ACCESS_VIEW,
+        "ACCESS",
+        Set.of(PermissionAction.VIEW)
+    );
+
+    public static final Permission JOB_VIEW = new Permission(
+        Permissions.JOB_VIEW,
+        "JOB",
+        Set.of(PermissionAction.VIEW)
+    );
+
+    public static final Permission SYSTEM_VIEW = new Permission(
+        Permissions.SYSTEM_VIEW,
+        "SYSTEM",
+        Set.of(PermissionAction.VIEW)
+    );
+
+    public static final Permission CONFIGURATION_VIEW = new Permission(
+        Permissions.CONFIGURATION_VIEW,
+        Groups.CONFIGURATION,
+        Set.of(PermissionAction.VIEW)
+    );
+
+    public static final Permission CONFIGURATION_READ = new Permission(
+        Permissions.CONFIGURATION_READ,
+        Groups.CONFIGURATION,
+        Set.of(PermissionAction.READ)
+    );
+
+    public static final Permission JOURNAL_VIEW = new Permission(
+        Permissions.JOURNAL_VIEW,
+        Groups.JOURNAL,
+        Set.of(PermissionAction.VIEW)
+    );
+
     private final String code;
 
     private final String resource;
@@ -179,6 +227,14 @@ public final class Permission {
 
     public static Permission[] values() {
         return new Permission[] {
+            CATALOG_VIEW,
+            MEDIA_VIEW,
+            ACCESS_VIEW,
+            JOB_VIEW,
+            SYSTEM_VIEW,
+            CONFIGURATION_VIEW,
+            CONFIGURATION_READ,
+            JOURNAL_VIEW,
             CATALOG_READ,
             CATALOG_CREATE,
             CATALOG_UPDATE,

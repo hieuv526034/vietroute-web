@@ -129,6 +129,12 @@ public final class ApplicationConstants {
         public static final String ACCESS_REGISTRY_ITEM = "/registry/{kind}/{code}";
         public static final String ACCESS_TARGETS = "/targets";
         public static final String ACCESS_RESOURCES = "/resources";
+
+        public static final String ACCESS_TREE = "/tree";
+
+        public static final String ACCESS_EFFECTIVE = "/users/{id}/effective";
+
+        public static final String AUTH_CAPABILITIES = "/capabilities";
         public static final String ACCESS_POLICIES = "/policies";
         public static final String ACCESS_POLICY_ITEM = "/policies/{id}";
 

@@ -1,5 +1,6 @@
 package vn.vietroute.auth.service;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -19,6 +20,8 @@ import vn.vietroute.auth.dto.response.UserResponse;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.repository.AccessRepository;
 import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.security.AccessActors;
+import vn.vietroute.auth.security.AccessRules;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
@@ -38,27 +41,28 @@ public class AccessService {
     private final JdbcTransactions transactions;
 
     /** Registry quyền được dịch theo locale; không truy vấn hay tiết lộ dữ liệu tài khoản. */
-    @PreAuthorize("hasAuthority('ACCESS_READ')")
+    @PreAuthorize(AccessRules.ACCESS_READ)
     public List<PermissionResponse> permissions(Locale locale) {
         return access.permissions(locale);
     }
 
-    /** Đọc role đang hoạt động để gán quyền/role; mã đã tắt vẫn quản lý tại registry, không gợi ý để gán mới. */
-    @PreAuthorize("hasAuthority('ACCESS_READ')")
+    /** Đọc role chưa xóa, gồm cả role tắt để chuẩn bị mapping; UI không gợi role tắt cho gán mới. */
+    @PreAuthorize(AccessRules.ACCESS_READ)
     public List<RolePermissionsResponse> roles() {
-        return access.roles().stream().map(access::role).toList();
+        return access.roleSummaries();
     }
 
-    /** Danh sách tài khoản toàn hệ thống chỉ cho ADMIN; ACCESS_READ riêng không cho liệt kê người dùng. */
-    @PreAuthorize("hasAuthority('ACCESS_READ') and hasRole('ADMIN')")
+    /** Danh sách quản trị cần ACCESS_READ; role được ủy quyền cũng đọc được, không trả credential. */
+    @PreAuthorize(AccessRules.ACCESS_READ)
     public PageResponse<AccessUserResponse> users(AccessUserSearchRequest page) {
         return users.pageForAccess(page);
     }
 
     /** ADMIN là role cứu hộ cố định; không cho API cấu hình làm mất khả năng quản trị hệ thống. */
-    @PreAuthorize("hasAnyAuthority('ACCESS_ASSIGN','ACCESS_WRITE')")
+    @PreAuthorize(AccessRules.ASSIGN)
     public RolePermissionsResponse replace(Role role, RolePermissionsRequest request, UserPrincipal actor) {
-        if (role == Role.ADMIN) {
+        AccessActors.requireCurrent(actor);
+        if (Role.ADMIN.equals(role)) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }
         // Người được ủy quyền chỉ được gán các quyền chính họ đang có, không tự tạo đường nâng quyền.
@@ -80,21 +84,34 @@ public class AccessService {
         }
         return transactions.execute(connection -> {
             access.lockRoleAssignments(connection);
-            access.validateMappings(connection, Set.of(role), request.getPermissions());
+            if (!actor.roles().contains(Role.ADMIN)) {
+                Set<String> granted = SecurityContextHolder.getContext()
+                    .getAuthentication()
+                    .getAuthorities()
+                    .stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toSet());
+                if (
+                    access
+                        .role(connection, role)
+                        .permissions()
+                        .stream()
+                        .anyMatch(permission -> !granted.contains(permission.name()))
+                ) throw new BusinessException(ErrorCode.ACCESS_DENIED);
+            }
+            access.requireExistingRole(connection, role);
+            access.validateMappings(connection, Set.of(), request.getPermissions());
             access.replacePermissions(connection, role, request.getPermissions(), request.getVersion(), actor.id());
             return access.role(connection, role);
         });
     }
 
     /** Gán role, tăng tokenVersion trong cùng transaction để thu hồi mọi token cũ của user đích. */
-    @PreAuthorize("hasAnyAuthority('ACCESS_ASSIGN','ACCESS_WRITE')")
+    @PreAuthorize(AccessRules.ASSIGN)
     public UserResponse assign(long id, UserRolesRequest request, UserPrincipal actor) {
+        AccessActors.requireCurrent(actor);
         // Actor kỹ thuật chỉ tham chiếu audit, không được biến thành tài khoản có quyền.
         if (actor.id() == id || id == SystemActor.ID) {
-            throw new BusinessException(ErrorCode.ACCESS_DENIED);
-        }
-        // Gán role cấp quyền gián tiếp; giới hạn cho ADMIN để người có quyền gán mapping không tự nâng vai trò.
-        if (!actor.roles().contains(Role.ADMIN)) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }
         return transactions.execute(connection -> {
@@ -103,6 +120,28 @@ public class AccessService {
             var target = users.findById(connection, id, true);
             if (target == null) {
                 throw new BusinessException(ErrorCode.NOT_FOUND);
+            }
+            // Người được ủy quyền không đụng user ADMIN và chỉ gán role có tập quyền nằm trong quyền của chính họ.
+            if (!actor.roles().contains(Role.ADMIN)) {
+                if (
+                    target.getRoles().contains(Role.ADMIN) || request.getRoles().contains(Role.ADMIN)
+                ) throw new BusinessException(ErrorCode.ACCESS_DENIED);
+                Set<String> granted = SecurityContextHolder.getContext()
+                    .getAuthentication()
+                    .getAuthorities()
+                    .stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toSet());
+                Set<Role> affected = new LinkedHashSet<>(target.getRoles());
+                affected.addAll(request.getRoles());
+                for (Role assigned : affected)
+                    if (
+                        access
+                            .role(connection, assigned)
+                            .permissions()
+                            .stream()
+                            .anyMatch(permission -> !granted.contains(permission.name()))
+                    ) throw new BusinessException(ErrorCode.ACCESS_DENIED);
             }
             if (
                 target.isActive() &&

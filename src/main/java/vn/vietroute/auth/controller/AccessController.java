@@ -26,6 +26,7 @@ import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.auth.service.AccessService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageResponse;
+import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
@@ -38,7 +39,7 @@ import vn.vietroute.common.web.response.ApiResult;
 @RestController
 @RequestMapping(Routes.ACCESS)
 @Tag(name = "Phân quyền", description = "Quản lý role và quyền chức năng, không bỏ qua phạm vi dữ liệu nghiệp vụ")
-@AccessFunction(group = Groups.ACCESS)
+@AccessFunction(group = Groups.ACCESS, function = Functions.ACCESS, permissions = { Permissions.ACCESS_READ })
 public class AccessController extends BaseController {
 
     private final AccessService access;
@@ -63,7 +64,7 @@ public class AccessController extends BaseController {
     @GetMapping(Routes.USERS_ACTION)
     @Operation(
         summary = "Tra tài khoản để gán role",
-        description = "Chỉ ADMIN có ACCESS_READ; phân trang/prefix username, không trả credential. Gán role dùng API PUT riêng có version và kiểm quyền."
+        description = "Cần ACCESS_READ, hỗ trợ role được ủy quyền; phân trang/prefix username, không trả credential. Gán role dùng API PUT riêng có version và kiểm quyền."
     )
     public ApiResult<PageResponse<AccessUserResponse>> users(
         @Valid AccessUserSearchRequest page,

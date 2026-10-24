@@ -32,7 +32,37 @@ public final class AccessConstants {
 
         public static final String MAIL = "MAIL";
 
+        public static final String CONFIGURATION = "CONFIGURATION";
+
+        public static final String JOURNAL = "JOURNAL";
+
         private Groups() {}
+    }
+
+    /** Mã cây chức năng ổn định; quan hệ cha/con do AccessFeatures khai báo, không phải role. */
+    public static final class Functions {
+
+        public static final String SYSTEM = "SYSTEM";
+
+        public static final String AUTHORIZATION = "AUTHORIZATION";
+
+        public static final String CATALOG = "CATALOG";
+
+        public static final String MEDIA = "MEDIA";
+
+        public static final String JOBS = "JOBS";
+
+        public static final String MONITORING = "MONITORING";
+
+        public static final String CONFIGURATION = "CONFIGURATION";
+
+        public static final String JOURNAL = "JOURNAL";
+
+        public static final String MAIL = "MAIL";
+
+        public static final String ACCESS = "ACCESS";
+
+        private Functions() {}
     }
 
     /** Mã quyền lõi dùng chung giữa AccessFunction và Permission; không giới hạn registry tùy chỉnh trong DB. */
@@ -77,6 +107,22 @@ public final class AccessConstants {
         public static final String MEDIA_UPDATE = Groups.MEDIA + "_UPDATE";
 
         public static final String MEDIA_DELETE = Groups.MEDIA + "_DELETE";
+
+        public static final String CATALOG_VIEW = "CATALOG_VIEW";
+
+        public static final String MEDIA_VIEW = "MEDIA_VIEW";
+
+        public static final String ACCESS_VIEW = "ACCESS_VIEW";
+
+        public static final String JOB_VIEW = "JOB_VIEW";
+
+        public static final String SYSTEM_VIEW = "SYSTEM_VIEW";
+
+        public static final String CONFIGURATION_VIEW = "CONFIGURATION_VIEW";
+
+        public static final String CONFIGURATION_READ = "CONFIGURATION_READ";
+
+        public static final String JOURNAL_VIEW = "JOURNAL_VIEW";
 
         private Permissions() {}
     }

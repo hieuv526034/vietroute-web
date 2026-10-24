@@ -34,7 +34,7 @@ import vn.vietroute.common.web.response.ApiResult;
 /** API tự phục vụ; dùng MediaService chung, không triển khai upload/Cloudinary lần thứ hai trong auth. */
 @RestController
 @RequestMapping(Routes.AUTH)
-@AccessFunction(group = Groups.PROFILE)
+@AccessFunction(group = Groups.PROFILE, authenticated = true)
 public class ProfileController extends BaseController {
 
     private final ProfileService profiles;

@@ -8,7 +8,7 @@ import vn.vietroute.common.constant.AccessConstants;
 
 /**
  * Mô tả nhóm chức năng/quyền nền để danh bạ startup thu thập cùng mapping Spring.
- * Annotation chỉ là metadata: không tự cấp quyền, không đổi public và không thay guard tại service.
+ * Annotation khai báo guard HTTP và metadata: không đổi public, không thay scope/guard tại service.
  * Dùng mã compile-time trong AccessConstants để annotation và registry quyền không lệch mã.
  *
  * @see AccessConstants
@@ -18,6 +18,23 @@ import vn.vietroute.common.constant.AccessConstants;
 public @interface AccessFunction {
     String group();
 
-    /** Các mã quyền liên quan để quản trị tra cứu; biểu thức all/any thực thi vẫn ở guard service. */
+    /** Chức năng trong cây; method để trống sẽ kế thừa function của class. */
+    String function() default "";
+
+    /** ANY: quyền tương thích có thể thay thế; ALL: mọi quyền khai báo đều bắt buộc. */
+    Match match() default Match.ANY;
+
+    /** Chỉ dùng cho dữ liệu nhật ký/hiện diện nhạy cảm, không gắn ADMIN lên nghiệp vụ thông thường. */
+    boolean adminOnly() default false;
+
+    /** Self-service chỉ đòi principal đã xác thực; owner vẫn được kiểm trong service. */
+    boolean authenticated() default false;
+
+    enum Match {
+        ANY,
+        ALL,
+    }
+
+    /** Quyền guard HTTP và danh bạ; service giữ cùng điều kiện ở AccessRules để bảo vệ lời gọi ngoài HTTP. */
     String[] permissions() default {};
 }

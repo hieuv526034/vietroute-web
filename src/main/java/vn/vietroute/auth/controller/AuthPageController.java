@@ -6,16 +6,19 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.util.UriComponentsBuilder;
+import vn.vietroute.auth.security.AccessRules;
 import vn.vietroute.auth.security.AuthNavigation;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessFunction;
+import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.AccessConstants.Groups;
+import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 
 /** Các trang Thymeleaf chỉ render giao diện; submit bằng Axios vào API auth dùng chung. */
 @Controller
-@AccessFunction(group = Groups.AUTH)
+@AccessFunction(group = Groups.AUTH, authenticated = true)
 public class AuthPageController {
 
     /** Trang public không chứa token trên URL; mọi xác minh gửi POST JSON có CSRF. */
@@ -51,8 +54,9 @@ public class AuthPageController {
         return "auth/account";
     }
 
+    @AccessFunction(group = Groups.CATALOG, function = Functions.CATALOG, permissions = { Permissions.CATALOG_VIEW })
     @GetMapping(Routes.ADMIN)
-    @PreAuthorize("hasAnyAuthority('CATALOG_READ','CATALOG_CREATE','CATALOG_UPDATE','CATALOG_DELETE','CATALOG_WRITE')")
+    @PreAuthorize(AccessRules.CATALOG_VIEW)
     public String admin() {
         return "auth/admin";
     }

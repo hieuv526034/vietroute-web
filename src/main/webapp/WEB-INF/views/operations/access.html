@@ -62,21 +62,21 @@
                         id="registry-tab"
                         type="button"
                         data-tab-target="access-registry-section"
-                        th:if="${adminUser}"
+                        th:if="${accessAllowed}"
                         th:text="#{ui.foundation.registry}"
                     ></button>
                     <button
                         id="policies-tab"
                         type="button"
                         data-tab-target="access-policies-section"
-                        th:if="${adminUser}"
+                        th:if="${accessAllowed}"
                         th:text="#{ui.foundation.policies}"
                     ></button>
                     <button
                         id="resources-tab"
                         type="button"
                         data-tab-target="access-resources-section"
-                        th:if="${adminUser}"
+                        th:if="${accessAllowed}"
                         th:text="#{ui.accessResources.title}"
                     ></button>
                 </div>
@@ -193,7 +193,7 @@
                     id="access-resources-section"
                     class="card p-4"
                     hidden
-                    th:if="${adminUser}"
+                    th:if="${accessAllowed}"
                     aria-labelledby="resources-title"
                 >
                     <h2
@@ -241,7 +241,7 @@
                 <section
                     id="access-registry-section"
                     class="card p-4"
-                    th:if="${adminUser}"
+                    th:if="${accessAllowed}"
                 >
                     <h2
                         class="h4"
@@ -306,7 +306,7 @@
                 <section
                     id="access-policies-section"
                     class="card p-4"
-                    th:if="${adminUser}"
+                    th:if="${accessAllowed}"
                 >
                     <h2
                         class="h4"
@@ -386,23 +386,9 @@
                     ></p>
                     <form id="permissions-form">
                         <div
-                            class="table-responsive permission-table"
-                            tabindex="0"
-                            role="region"
-                            th:attr="aria-label=#{ui.table.scroll}"
-                        >
-                            <table class="table align-middle">
-                                <thead>
-                                    <tr>
-                                        <th th:text="#{ui.ops.resource}"></th>
-                                        <th th:text="#{ui.ops.permission}"></th>
-                                        <th th:text="#{ui.ops.actions}"></th>
-                                        <th th:text="#{ui.ops.granted}"></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="permissions-body"></tbody>
-                            </table>
-                        </div>
+                            id="permissions-body"
+                            class="access-tree"
+                        ></div>
                         <div class="dialog-actions">
                             <button
                                 class="button button-outline"
@@ -496,7 +482,7 @@
                 hidden
                 th:attr="data-empty=#{ui.ops.empty},data-loading=#{ui.ops.loading},data-saved=#{ui.ops.saved},data-confirm-retry=#{ui.ops.confirmRetry},data-confirm-permissions=#{ui.ops.confirmPermissions},data-confirm-roles=#{ui.ops.confirmRoles},data-details=#{ui.ops.details},data-retry=#{ui.ops.retry},data-select=#{ui.ops.select},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off},data-page=#{ui.ops.page},data-fixed=#{ui.ops.fixed},data-readonly=#{ui.ops.readonly},data-restricted=#{ui.ops.restricted},data-self=#{ui.ops.self},data-conflict=#{ui.ops.conflict}"
             ></div>
-            <th:block th:if="${adminUser}">
+            <th:block th:if="${accessAllowed}">
                 <dialog
                     id="registry-dialog"
                     class="workspace-dialog"
@@ -715,6 +701,11 @@
                 </dialog>
             </th:block>
             <div
+                id="access-tree-labels"
+                hidden
+                th:attr="data-impact=#{ui.accessTree.impact},data-inactive=#{ui.accessTree.inactive},data-search=#{ui.accessTree.search},data-all=#{ui.accessTree.all},data-expand=#{ui.accessTree.expand},data-collapse=#{ui.accessTree.collapse},data-preview=#{ui.accessTree.preview},data-added=#{ui.accessTree.added},data-removed=#{ui.accessTree.removed},data-unchanged=#{ui.accessTree.unchanged},data-endpoints=#{ui.accessTree.endpoints},data-dependency=#{ui.accessTree.dependency},data-source=#{ui.accessTree.source},data-empty=#{ui.accessTree.empty},data-no-read=#{ui.accessTree.noRead},data-custom=#{ui.accessTree.custom},data-shared=#{ui.accessTree.shared},data-admin=#{ui.accessTree.admin},data-show-sources=#{ui.accessTree.showSources}"
+            ></div>
+            <div
                 id="foundation-labels"
                 hidden
                 th:attr="data-delete-role=#{ui.foundation.deleteRole},data-confirm-role=#{ui.foundation.confirmRole},data-empty=#{ui.foundation.empty},data-edit=#{ui.foundation.edit},data-confirm=#{ui.foundation.confirm},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off},data-public=#{ui.accessResources.public},data-protected=#{ui.accessResources.protected},data-reserved=#{ui.accessResources.reserved},data-menu=#{ui.accessResources.menu},data-api=#{ui.accessResources.api}"
@@ -722,9 +713,10 @@
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/access-tree.js}"></script>
         <script th:src="@{/assets/js/operations.js}"></script>
         <script
-            th:if="${adminUser}"
+            th:if="${accessAllowed}"
             th:src="@{/assets/js/access-management.js}"
         ></script>
     </body>
