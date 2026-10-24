@@ -20,6 +20,17 @@ CI_OLD="$admin_password" CI_NEW="$next_password" python3 -c 'import json,os,sys;
 call 200 POST /api/v1/auth/change-password "$work/recovery-password.json" bearer
 token=$(field data.accessToken)
 call 403 POST /api/v1/auth/admin-recovery "$work/recovery.json" bearer
+assert_code AUTH012
+# Ngay cả role ADMIN cũng phải xác minh email trước khi dùng chức năng, khác bootstrap gốc.
+CI_PASSWORD="$next_password" python3 -c 'import json,os,sys;json.dump({"email":"recoveryotherci@example.invalid","currentPassword":os.environ["CI_PASSWORD"]},sys.stdout)' > "$work/recovery-email.json"
+call 202 POST /api/v1/auth/email "$work/recovery-email.json" bearer
+recovery_saved_account_id="$account_id"
+account_id=$(sql "SELECT id FROM auth_users WHERE username='recoveryotherci'")
+account_code
+account_id="$recovery_saved_account_id"
+python3 -c 'import json,sys;json.dump({"email":"recoveryotherci@example.invalid","token":open(sys.argv[1]).read()},sys.stdout)' "$work/account-code.txt" > "$work/recovery-activate.json"
+call 200 POST /api/v1/auth/activate "$work/recovery-activate.json" cookie
+call 403 POST /api/v1/auth/admin-recovery "$work/recovery.json" bearer
 assert_code AUTH003
 call 200 GET /account '' bearer
 if grep -q 'id="admin-recovery-open"' "$result"; then exit 1; fi

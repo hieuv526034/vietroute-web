@@ -136,7 +136,7 @@ API ảnh ở `/api/v1/media` có upload multipart, đọc/phân trang và xóa 
 | POST `/password/reset` | Public + CSRF/quota, email/token/newPassword; token 15 phút, đổi hash/history/thu hồi JWT trong cùng transaction |
 | POST `/email` | Đăng nhập + currentPassword/email; gắn email cho tài khoản cũ, email mới chưa dùng reset trước xác minh |
 
-UI `/account-access` có tab đăng ký, xác minh, quên mật khẩu và đặt mật khẩu mới; link từ login. Trang tài khoản có modal gắn email; admin cũ không bị bắt kích hoạt lại. Đăng ký mới không nhận role/audit/user ID. Không nhận token qua URL; mã trong email được nhập vào form/JSON, không storage. Kích hoạt không phục hồi tài khoản đã bị vô hiệu hóa, chỉ tài khoản mới có activation_pending hoặc user đang active được xác minh.
+UI `/account-access` có tab đăng ký, xác minh, quên mật khẩu và đặt mật khẩu mới; link từ login. Trang tài khoản có modal gắn email; AUTH17 chỉ cấp sẵn xác minh cho bootstrap; account khác chưa xác minh phải gắn email, kể cả ADMIN cũ. Trang /account-access mở form xác minh cả khi đang đăng nhập, không chuyển vòng về account. Đăng ký mới không nhận role/audit/user ID. Không nhận token qua URL; mã trong email được nhập vào form/JSON, không storage. Kích hoạt không phục hồi tài khoản đã bị vô hiệu hóa, chỉ tài khoản mới có activation_pending hoặc user đang active được xác minh.
 
 Theo lựa chọn chủ dự án ngày 24/10/2026, sai 5 lần liên tiếp **khóa 15 phút**, không ép reset để tránh người khác cố tình nhập sai khóa vĩnh viễn tài khoản. Chủ tài khoản có thể dùng email đã xác minh để đặt lại khi khóa tạm. Mật khẩu mới không trùng hiện tại và **hai mật khẩu trước đó**; sau ba lần đổi mới được dùng lại mật khẩu đã ra khỏi cửa sổ. V011 chỉ bắt đầu giữ lịch sử từ lúc áp dụng, không thể suy lại hash cũ. Reset xong phải login lại; không tự kích hoạt user đã bị khóa bởi admin.
 
@@ -183,7 +183,7 @@ Permission là value object JSON string từ registry; constants/values() chỉ 
 
 Mọi payload/tham số/projection được mô tả OpenAPI. ACCOUNT_* khai báo tập trung tại AccessConstants và Permission; sync enabled bổ sung registry/ADMIN khi startup. Không cần thay migration hiện hữu. POST cấp tài khoản và đổi mật khẩu đi qua quota/semaphore credential để giới hạn BCrypt đồng thời; GET tìm tài khoản chỉ dùng quota request thông thường, không làm cạn quota đăng nhập.
 
-AUTH011 (403) yêu cầu đổi mật khẩu tạm. Filter xác minh token/DB rồi bỏ toàn bộ authority trong phiên hạn chế; chỉ mở GET hồ sơ/me, capabilities rỗng, đổi mật khẩu/logout, trang account và dữ liệu công khai. Quy tắc bắt đổi áp dụng cả bootstrap đang mang must_change_password=true; đổi xong mới dùng chức năng. Đừng hiểu accessToken nhận từ login mật khẩu tạm là đã có quyền quản trị. Nhật ký mặc định bỏ payload/response các DTO quản trị mới, không thêm password/PII vào projection.
+AUTH011 (403) yêu cầu đổi mật khẩu tạm. Filter xác minh token/DB rồi bỏ toàn bộ authority trong phiên hạn chế; chỉ mở GET hồ sơ/me, capabilities rỗng, đổi mật khẩu/logout, trang account và dữ liệu công khai. AUTH17 cấp sẵn email đã xác minh và bỏ cờ mật khẩu tạm riêng cho danh tính bootstrap khi init/sync bật; tài khoản ADMIN khác vẫn phải hoàn tất cả đổi mật khẩu và xác minh email. Đừng hiểu accessToken nhận từ login mật khẩu tạm là đã có quyền quản trị. Nhật ký mặc định bỏ payload/response các DTO quản trị mới, không thêm password/PII vào projection.
 
 ## API lịch sử phân quyền — ACCESS09
 
@@ -214,3 +214,9 @@ Không endpoint xóa hoặc nhận audit/tenant claim tin cậy từ client. Mem
 ### Khôi phục quyền admin gốc — ACCESS15
 
 POST /api/v1/auth/admin-recovery, JSON currentPassword (write-only, tối đa 72 byte UTF-8); không có userId/username/role/permission phía client. Chỉ principal của username bootstrap cấu hình server; ADMIN khác trả AUTH003/403, mật khẩu tạm AUTH011/403, sai password AUTH007/400, 5 lần sai hoặc đang khóa AUTH005/429. Cookie cần CSRF; đi cùng quota/semaphore credential. Kết quả data gồm userId, permissionCount (số mapping ADMIN), loginRequired=true. Thành công thu hồi phiên; đăng nhập lại bằng mật khẩu hiện tại. Role/mapping/registry/history cùng transaction; lỗi DB/history trả 503 và rollback, không tự gửi lại mutation. Không reset mật khẩu hoặc bỏ guard DB. Luồng và giới hạn xem [cứu hộ bootstrap](SCHEMA_VA_PHAN_QUYEN.md#cứu-hộ-tài-khoản-bootstrap--access15).
+
+### AUTH17 — bootstrap và trạng thái email
+
+Login/me trả thêm data.user.emailVerificationRequired (login) hoặc data.emailVerificationRequired (me). AUTH012/403 nghĩa là email chưa xác minh: private API bị chặn, trang chức năng chuyển /account và capabilities không có quyền. Phiên này vẫn gọi me, capabilities, change-password, POST auth/email và logout; kích hoạt email vẫn qua mã một lần. ADMIN được gán cho user thường không được miễn. Service AccessOperation và DataScopeGuard kiểm cùng điều kiện DB, không tin cờ từ client.
+
+Bootstrap admin lấy email từ VIETROUTE_BOOTSTRAP_ADMIN_EMAIL hoặc bootstrap.properties đã cấu hình mặc định theo chủ hệ thống. Init/sync cấp sẵn trạng thái xác minh, active và mustChangePassword=false, giữ hash/khóa chống dò; không gọi provider. Email gốc không sửa bằng POST auth/email (AUTH003 khi luồng mail bật), dùng cấu hình vận hành. Trạng thái thay đổi thu hồi phiên cũ; đăng nhập lại bằng mật khẩu hiện có. Các node cũ phải được dừng khi triển khai; account khác chưa xác minh cần mail/worker thật đã cấu hình. Chi tiết ở [hợp đồng bootstrap và email](SCHEMA_VA_PHAN_QUYEN.md#tài-khoản-gốc-sẵn-sàng-và-xác-minh-email--auth17).

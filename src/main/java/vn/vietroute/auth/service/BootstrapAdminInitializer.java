@@ -25,11 +25,17 @@ public class BootstrapAdminInitializer {
         return settings.getBootstrapUsername().toLowerCase(Locale.ROOT);
     }
 
-    /** Caller phải sở hữu transaction; account đã có luôn giữ mật khẩu, trạng thái và yêu cầu đổi mật khẩu. */
+    /** Địa chỉ dành riêng cho quản trị gốc, không cho luồng public chiếm khi bản ghi gốc đang thiếu. */
+    public String email() {
+        return settings.getBootstrapEmail();
+    }
+
+    /** Caller sở hữu transaction: cấp sẵn email/trạng thái cho tài khoản gốc, giữ hash và khóa chống dò mật khẩu. */
     public long initialize(Connection connection, long actor) throws SQLException {
         return recovery.initialize(
             connection,
             username(),
+            email(),
             () -> {
                 if (!StrongPasswordValidator.valid(settings.getBootstrapPassword())) throw new IllegalStateException(
                     "Cần cấu hình mật khẩu bootstrap hợp lệ để tạo lại tài khoản quản trị"

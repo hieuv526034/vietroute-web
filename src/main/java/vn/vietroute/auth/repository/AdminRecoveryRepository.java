@@ -23,8 +23,13 @@ public class AdminRecoveryRepository {
     }
 
     /** Chỉ sửa role lõi và quyền khai báo bởi source; giữ trạng thái/mapping của các role thường. */
-    public long initialize(Connection connection, String username, Supplier<String> passwordHash, long actor)
-        throws SQLException {
+    public long initialize(
+        Connection connection,
+        String username,
+        String email,
+        Supplier<String> passwordHash,
+        long actor
+    ) throws SQLException {
         lock(connection);
         try (
             var role = connection.prepareStatement(
@@ -63,19 +68,20 @@ public class AdminRecoveryRepository {
             permission.executeBatch();
         }
         Long id = null;
-        try (var query = connection.prepareStatement("SELECT id FROM auth_users WHERE username=?")) {
+        try (var query = connection.prepareStatement("SELECT id FROM auth_users WHERE username=? FOR UPDATE")) {
             query.setString(1, username);
             try (var row = query.executeQuery()) {
                 if (row.next()) id = row.getLong(1);
             }
         }
-        // Chỉ mã hóa mật khẩu cấu hình khi phải tạo mới; không đặt lại hash/trạng thái/khóa của account đã có.
+        // Chỉ mã hóa khi tạo mới. Email do chủ hệ thống cấp sẵn, không suy luận đặc quyền từ role ADMIN.
         boolean created = id == null;
         if (created) try (
             var insert = connection.prepareStatement(
                 """
-                INSERT INTO auth_users(username,password_hash,display_name,created_by,updated_by)
-                VALUES (?,?,'Quản trị viên',?,?) RETURNING id
+                INSERT INTO auth_users(username,password_hash,display_name,created_by,updated_by,email,
+                  email_verified_at,active,activation_pending,must_change_password)
+                VALUES (?,?,'Quản trị viên',?,?,?,CURRENT_TIMESTAMP,true,false,false) RETURNING id
                 """
             )
         ) {
@@ -83,9 +89,37 @@ public class AdminRecoveryRepository {
             insert.setString(2, passwordHash.get());
             insert.setLong(3, actor);
             insert.setLong(4, actor);
+            insert.setString(5, email);
             try (var row = insert.executeQuery()) {
                 row.next();
                 id = row.getLong(1);
+            }
+        }
+        // Chỉ danh tính bootstrap được sửa về trạng thái sẵn sàng. Không xóa failed_attempts/locked_until,
+        // không đổi hash/lịch sử mật khẩu, không cập nhật account khác dù account đó có role ADMIN.
+        if (!created) try (
+            var update = connection.prepareStatement(
+                """
+                UPDATE auth_users SET email=?,email_verified_at=CASE WHEN email IS DISTINCT FROM ?
+                  OR email_verified_at IS NULL THEN CURRENT_TIMESTAMP ELSE email_verified_at END,
+                  active=true,activation_pending=false,must_change_password=false,
+                  token_version=token_version+1,version=version+1,updated_at=CURRENT_TIMESTAMP,updated_by=?
+                WHERE id=? AND (email IS DISTINCT FROM ? OR email_verified_at IS NULL
+                  OR NOT active OR activation_pending OR must_change_password)
+                """
+            )
+        ) {
+            update.setString(1, email);
+            update.setString(2, email);
+            update.setLong(3, actor);
+            update.setLong(4, id);
+            update.setString(5, email);
+            if (update.executeUpdate() > 0) try (
+                var invalidate = connection.prepareStatement("DELETE FROM auth_account_challenges WHERE user_id=?")
+            ) {
+                // Mã reset/kích hoạt cũ không được tiếp tục dùng sau khi sửa email/trạng thái gốc.
+                invalidate.setLong(1, id);
+                invalidate.executeUpdate();
             }
         }
         try (

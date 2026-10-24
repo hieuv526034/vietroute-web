@@ -18,7 +18,7 @@ public class AuthorizationRepository extends BaseRepository {
         return read(connection -> {
             try (
                 var query = connection.prepareStatement(
-                    "SELECT u.id,u.active,u.activation_pending,u.must_change_password,u.token_version" +
+                    "SELECT u.id,u.active,u.activation_pending,u.must_change_password,u.token_version,(u.email_verified_at IS NOT NULL) AS email_verified" +
                         AccountAccessSql.ARRAYS +
                         " FROM auth_users u WHERE u.id=?"
                 )
@@ -35,6 +35,7 @@ public class AuthorizationRepository extends BaseRepository {
                         active,
                         pending,
                         temporary,
+                        rows.getBoolean("email_verified"),
                         version,
                         AccountAccessSql.roles(rows),
                         AccountAccessSql.strings(rows, "permission_codes")

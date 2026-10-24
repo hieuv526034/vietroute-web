@@ -70,7 +70,7 @@ call 200 GET /account '' bearer
 grep -q 'CI profile' "$result"
 grep -q 'avatar-small.png' "$result"
 if grep -q 'href="/login?lang=' "$result"; then exit 1; fi
-call 302 GET '/account-access?lang=vi' '' bearer
+call 200 GET '/account-access?lang=vi' '' bearer
 call 200 GET /api/v1/auth/me '' bearer
 account_version=$(field data.version)
 printf '{"displayName":"CI profile","avatarMediaId":%s,"version":%s,"roles":["ADMIN"]}\n' "$own_avatar" "$account_version" > "$work/foundation-forged.json"

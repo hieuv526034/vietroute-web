@@ -47,6 +47,19 @@ CI_OLD="$admin_password" CI_NEW="$next_password" python3 -c 'import json,os,sys;
 call 200 POST /api/v1/auth/change-password "$work/managed-password.json" bearer
 managed_token=$(field data.accessToken)
 token="$managed_token"
+call 403 GET /api/v1/admin/catalogs/1 '' bearer
+assert_code AUTH012
+call 302 GET /operations/accounts '' bearer
+grep -qi '^Location: .*/account' "$work/headers"
+# Xác minh thật bằng mã outbox CI, không đánh dấu email qua SQL hoặc gửi Gmail thật.
+CI_PASSWORD="$next_password" python3 -c 'import json,os,sys;json.dump({"email":"manageddriver@example.invalid","currentPassword":os.environ["CI_PASSWORD"]},sys.stdout)' > "$work/managed-email.json"
+call 202 POST /api/v1/auth/email "$work/managed-email.json" bearer
+managed_saved_account_id="$account_id"
+account_id="$managed_id"
+account_code
+account_id="$managed_saved_account_id"
+python3 -c 'import json,sys;json.dump({"email":"manageddriver@example.invalid","token":open(sys.argv[1]).read()},sys.stdout)' "$work/account-code.txt" > "$work/managed-activate.json"
+call 200 POST /api/v1/auth/activate "$work/managed-activate.json" cookie
 call 403 GET /operations/accounts '' bearer
 assert_code AUTH003
 call 403 GET /api/v1/admin/accounts '' bearer

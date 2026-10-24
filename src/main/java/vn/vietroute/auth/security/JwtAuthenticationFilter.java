@@ -48,7 +48,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     /** Whitelist chỉ là các luồng tự phục vụ hoặc dữ liệu công khai; không nhận URL tùy ý từ người dùng. */
-    private static boolean passwordSetupRoute(String path, String method) {
+    private static boolean accountSetupRoute(String path, String method) {
         return (
             WebRoutePolicy.publicApi(path, method) ||
             Set.of(
@@ -58,6 +58,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Routes.AUTH_LIFECYCLE_PAGE,
                 Routes.AUTH + Routes.ME_ACTION,
                 Routes.AUTH + Routes.PASSWORD_ACTION,
+                Routes.AUTH + Routes.AUTH_EMAIL,
                 Routes.AUTH + Routes.AUTH_CAPABILITIES
             ).contains(path)
         );
@@ -129,18 +130,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     UsernamePasswordAuthenticationToken.authenticated(
                         principal,
                         null,
-                        user.isMustChangePassword() ? List.of() : authorities
+                        user.isMustChangePassword() || user.getEmailVerifiedAt() == null ? List.of() : authorities
                     )
                 );
                 SecurityContextHolder.setContext(context);
                 request.setAttribute(Http.VERIFIED_USER_ATTRIBUTE, user.getId());
                 request.setAttribute(Http.JOURNAL_USER_ATTRIBUTE, user.getId());
-                // Tài khoản dùng mật khẩu tạm chỉ được vào hồ sơ/đổi mật khẩu; bỏ mọi authority trong phiên hạn chế.
-                if (user.isMustChangePassword() && !passwordSetupRoute(path, request.getMethod())) {
+                // Phiên chưa hoàn tất thiết lập chỉ được tự phục vụ; không miễn xác thực theo role hay username.
+                // Bootstrap đã được cấp sẵn email xác minh trong DB khi init/sync, vẫn đi qua cùng guard này.
+                if (
+                    (user.isMustChangePassword() || user.getEmailVerifiedAt() == null) &&
+                    !accountSetupRoute(path, request.getMethod())
+                ) {
                     if (path.startsWith(Routes.API_ROOT)) errors.write(
                         request,
                         response,
-                        ErrorCode.PASSWORD_CHANGE_REQUIRED
+                        user.isMustChangePassword()
+                            ? ErrorCode.PASSWORD_CHANGE_REQUIRED
+                            : ErrorCode.EMAIL_VERIFICATION_REQUIRED
                     );
                     else response.sendRedirect(request.getContextPath() + Routes.ACCOUNT);
                     return;

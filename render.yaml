@@ -78,5 +78,7 @@ services:
         generateValue: true
       - key: VIETROUTE_BOOTSTRAP_ADMIN_USERNAME
         value: admin
+      - key: VIETROUTE_BOOTSTRAP_ADMIN_EMAIL
+        value: hieuv526034@gmail.com
       - key: VIETROUTE_BOOTSTRAP_ADMIN_PASSWORD
         sync: false

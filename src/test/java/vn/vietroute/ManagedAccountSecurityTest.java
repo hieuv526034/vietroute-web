@@ -207,6 +207,15 @@ class ManagedAccountSecurityTest {
 
     @Test
     void temporaryPasswordSessionHasNoAuthoritiesUntilPasswordChange() throws Exception {
+        assertSetupSession(true, true);
+    }
+
+    @Test
+    void assignedAdminStillMustVerifyEmailAndCannotUsePrivateFunctions() throws Exception {
+        assertSetupSession(false, false);
+    }
+
+    private void assertSetupSession(boolean temporary, boolean verified) throws Exception {
         try (
             var root = new AnnotationConfigWebApplicationContext();
             var child = new AnnotationConfigWebApplicationContext()
@@ -215,6 +224,8 @@ class ManagedAccountSecurityTest {
             root.setServletContext(web);
             root.register(RootConfig.class, AccessTestConfig.class, JournalTestConfig.class, TemporaryUsers.class);
             root.refresh();
+            root.getBean(SetupState.class).temporary = temporary;
+            root.getBean(SetupState.class).verified = verified;
             child.setServletContext(web);
             child.setParent(root);
             child.register(WebConfig.class);
@@ -226,9 +237,10 @@ class ManagedAccountSecurityTest {
                     8,
                     true,
                     false,
-                    true,
+                    temporary,
+                    verified,
                     0,
-                    Set.of(Role.DRIVER),
+                    Set.of(Role.ADMIN),
                     Set.of("CATALOG_VIEW", "CATALOG_CREATE")
                 )
             );
@@ -238,7 +250,7 @@ class ManagedAccountSecurityTest {
                 .andReturn()
                 .getResponse();
             assertEquals(403, blocked.getStatus());
-            assertTrue(blocked.getContentAsString().contains("AUTH011"));
+            assertTrue(blocked.getContentAsString().contains(temporary ? "AUTH011" : "AUTH012"));
             assertEquals(
                 302,
                 mvc
@@ -377,6 +389,7 @@ class ManagedAccountSecurityTest {
             .displayName("Driver test")
             .active(true)
             .mustChangePassword(temporary)
+            .emailVerifiedAt(Instant.EPOCH)
             .roles(Set.of(Role.DRIVER))
             .permissions(Set.of(Permission.CATALOG_VIEW, Permission.CATALOG_CREATE))
             .createdAt(Instant.EPOCH)
@@ -402,16 +415,32 @@ class ManagedAccountSecurityTest {
         }
     }
 
+    static class SetupState {
+
+        boolean temporary = true;
+
+        boolean verified = true;
+    }
+
     @Configuration
     static class TemporaryUsers {
 
         @Bean
+        SetupState setupState() {
+            return new SetupState();
+        }
+
+        @Bean
         @Primary
-        UserRepository temporaryUsers() {
+        UserRepository temporaryUsers(SetupState state) {
             return new UserRepository(null) {
                 @Override
                 public UserAccount findById(Long id) {
-                    return fixture(true);
+                    var user = fixture(state.temporary);
+                    user.setUsername("hieuboy");
+                    user.setRoles(Set.of(Role.ADMIN));
+                    user.setEmailVerifiedAt(state.verified ? Instant.EPOCH : null);
+                    return user;
                 }
             };
         }

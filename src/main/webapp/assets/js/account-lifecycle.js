@@ -4,7 +4,8 @@
     const root = document.getElementById('account-flow-workspace');
     if (!root) return;
     const app = window.VietRoute;
-    const view = new URLSearchParams(window.location.search).get('view');
+    const authenticated = root.dataset.authenticated === 'true';
+    const view = new URLSearchParams(window.location.search).get('view') || (authenticated ? 'activate' : 'register');
     if (['register', 'activate', 'forgot', 'reset'].includes(view))
         window.VietRouteUI.tabs(root.querySelector('[data-tabs]') || root).select(`${view}-panel`);
     const forms = Array.from(root.querySelectorAll('form[data-account-action]'));
@@ -28,6 +29,12 @@
             const response = await app.mutate('/api/v1/auth' + path, body);
             form.reset();
             app.feedback(response.data.message, true, feedbackId);
+            if (authenticated && form.dataset.accountAction === 'activate') {
+                // DB đã xác minh: tải lại hồ sơ/header để hiện đúng quyền, không lưu mã hoặc token trên URL/storage.
+                const base = document.querySelector('meta[name="app-base"]')?.content || '';
+                const locale = document.querySelector('meta[name="app-locale"]')?.content || 'vi';
+                window.location.assign(`${base}/account?lang=${locale}`);
+            }
         } catch (error) {
             // Lỗi giữ form trên tab hiện tại; người dùng tự sửa, không tự gửi lại mutation.
             app.failure(error, feedbackId);

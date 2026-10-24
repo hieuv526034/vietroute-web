@@ -44,6 +44,11 @@ public class UserResponse extends BaseResponse {
     @Schema(description = "Cần đổi mật khẩu khởi tạo")
     private boolean mustChangePassword;
 
+    @Schema(
+        description = "Phải gắn và xác minh email trước khi sử dụng chức năng riêng tư, không được miễn theo role ADMIN"
+    )
+    private boolean emailVerificationRequired;
+
     @Schema(description = "Các vai trò hệ thống")
     private Set<Role> roles;
 
@@ -66,6 +71,7 @@ public class UserResponse extends BaseResponse {
             .emailVerifiedAt(user.getEmailVerifiedAt())
             .active(user.isActive())
             .mustChangePassword(user.isMustChangePassword())
+            .emailVerificationRequired(user.getEmailVerifiedAt() == null)
             .roles(Set.copyOf(user.getRoles()))
             .permissions(Set.copyOf(user.getPermissions()))
             .build();

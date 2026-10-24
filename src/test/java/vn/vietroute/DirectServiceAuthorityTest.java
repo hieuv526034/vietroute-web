@@ -52,7 +52,7 @@ class DirectServiceAuthorityTest {
             db.strict = true;
             db.states.put(
                 8L,
-                new AuthorizationState(8, true, false, false, 0, Set.of(Role.DRIVER), Set.of("ACCESS_ASSIGN"))
+                new AuthorizationState(8, true, false, false, true, 0, Set.of(Role.DRIVER), Set.of("ACCESS_ASSIGN"))
             );
             var request = new RolePermissionsRequest();
             request.setPermissions(Set.of(Permission.CATALOG_DELETE));

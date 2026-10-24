@@ -115,7 +115,13 @@
         form.reset();
         const user = response.data.data.user;
         window.location.assign(
-            route(user.mustChangePassword ? '/account' : user.roles.includes('ADMIN') ? '/admin' : '/account'),
+            route(
+                user.mustChangePassword || user.emailVerificationRequired
+                    ? '/account'
+                    : user.roles.includes('ADMIN')
+                      ? '/admin'
+                      : '/account',
+            ),
         );
     });
 
@@ -141,6 +147,8 @@
                 { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh' },
             ).format(new Date(user.createdAt));
             document.getElementById('initial-password').hidden = !user.mustChangePassword;
+            const emailNotice = document.getElementById('initial-email');
+            if (emailNotice) emailNotice.hidden = !user.emailVerificationRequired;
             // Query chỉ giữ thông báo qua lần tải trang; trạng thái mật khẩu/quyền vẫn phải đọc từ server.
             if (!user.mustChangePassword && passwordChangedNotice) {
                 feedback(document.getElementById('form-feedback').dataset.passwordChanged, true);

@@ -117,7 +117,7 @@ public class AccountLifecycleController extends BaseController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     @Operation(
         summary = "Gắn email cho tài khoản đang đăng nhập",
-        description = "Cần JWT và mật khẩu hiện tại; email mới chưa dùng reset trước khi được xác minh"
+        description = "Cần JWT và mật khẩu hiện tại; email mới chưa dùng reset trước khi xác minh. Email bootstrap quản lý bằng cấu hình, không sửa qua API này"
     )
     public ApiResult<Void> email(
         @AuthenticationPrincipal UserPrincipal user,

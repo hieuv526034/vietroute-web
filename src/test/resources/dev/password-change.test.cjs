@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const path = require('node:path');
 
 // Chạy client thật với DOM/Axios giả; không mạng, cookie, DB hoặc mật khẩu tài khoản thật.
-function fixture({ base = '/demo', locale = 'en', changed = false, temporary = true } = {}) {
+function fixture({ base = '/demo', locale = 'en', changed = false, temporary = true, verified = true } = {}) {
     const state = { requests: [], navigation: [], valid: true, serverErrors: [] };
     const nodes = new Map();
     const node = (id) => {
@@ -34,6 +34,7 @@ function fixture({ base = '/demo', locale = 'en', changed = false, temporary = t
         'account-email-status',
         'account-created',
         'initial-password',
+        'initial-email',
         'form-feedback',
         'password-feedback',
         'password-open',
@@ -60,6 +61,7 @@ function fixture({ base = '/demo', locale = 'en', changed = false, temporary = t
         roles: ['ADMIN'],
         createdAt: '2026-10-24T00:00:00Z',
         mustChangePassword: temporary,
+        emailVerificationRequired: !verified,
     };
     const api = {
         async get(url) {
@@ -150,6 +152,16 @@ function fixture({ base = '/demo', locale = 'en', changed = false, temporary = t
 }
 
 const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+test('email setup notice follows server readiness independently of assigned ADMIN role', async () => {
+    for (const verified of [true, false]) {
+        const ui = fixture({ temporary: false, verified });
+        await settle();
+        assert.equal(ui.nodes.get('initial-email').hidden, verified);
+        assert.equal(ui.nodes.get('initial-password').hidden, true);
+        assert.equal(ui.state.navigation.length, 0);
+    }
+});
 
 test('password success rebuilds server navigation with context and locale after clearing fields', async () => {
     for (const [base, locale] of [
