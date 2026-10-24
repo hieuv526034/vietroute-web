@@ -69,6 +69,18 @@ public final class AccessFeatures {
         return DEFINITIONS;
     }
 
+    /** Bộ quản trị nền tảng để gán nhanh; không gom CRUD danh mục/ảnh hoặc nghiệp vụ tương lai vào quyền hệ thống. */
+    public static boolean inSystemBundle(String function) {
+        return Set.of(
+            Functions.JOBS,
+            Functions.MONITORING,
+            Functions.CONFIGURATION,
+            Functions.JOURNAL,
+            Functions.MAIL,
+            Functions.ACCESS
+        ).contains(function);
+    }
+
     /** Fail trước publish nếu trùng mã, parent sai/chu trình hoặc VIEW không hợp lệ. */
     public static void validate(List<Feature> definitions) {
         Set<String> codes = new HashSet<>();

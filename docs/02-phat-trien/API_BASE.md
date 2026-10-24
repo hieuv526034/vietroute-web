@@ -22,7 +22,7 @@ Giám sát bổ sung: `GET /api/v1/admin/system/runtime` dùng SYSTEM_READ và e
 | GET | `/v3/api-docs` | Công khai | OpenAPI JSON tạo từ Spring mapping và Swagger annotations |
 | GET | `/docs` | Công khai | Swagger UI được đóng gói cùng WAR |
 
-View Thymeleaf: `/`, `/login`, `/account` (đăng nhập), `/admin` (ADMIN). Trên Tomcat deploy WAR theo tên, thêm context `/vietroute`; Docker deploy `ROOT.war` nên dùng đường dẫn ở bảng trực tiếp.
+View Thymeleaf: `/`, `/login`, `/account` (đăng nhập), `/admin` (CATALOG_VIEW). Trên Tomcat deploy WAR theo tên, thêm context `/vietroute`; Docker deploy `ROOT.war` nên dùng đường dẫn ở bảng trực tiếp.
 
 API mở rộng: quản lý `/api/v1/admin/access/**`, theo dõi/retry `/api/v1/admin/jobs/**`, readiness `/api/v1/admin/system/status`, mail queue `/api/v1/admin/mail` (202, cần Idempotency-Key). Mỗi API có authority tương ứng tại service; `/auth/me` trả permissions. Catalog CRUD dùng quyền hành động trong bảng trên. COM012/429 là quota (khác AUTH005 khóa tài khoản), COM013/503 là quá tải/Redis lỗi, COM014/413 là body lớn; MAIL001/503 là mail tắt. Đọc [hợp đồng và luồng đầy đủ](NEN_TANG_MO_RONG.md).
 
@@ -160,3 +160,11 @@ Upload avatar thành công trả HTTP 201/OK004, OpenAPI có response 201; lỗi
 Hợp đồng hiện hành và ví dụ nằm ở [cây chức năng](SCHEMA_VA_PHAN_QUYEN.md#cây-chức-năng-và-quyền-hành-động--access03). VIEW mở trang, API đòi hành động riêng, user nhiều role nhận hợp quyền DB. Annotation AccessFunction thực thi guard HTTP; service dùng AccessRules cùng mã, không bỏ scope/version. Registry/user/role management có thể ủy quyền bằng ACCESS_*; ADMIN/system/last-admin và dữ liệu journal/online giữ giới hạn riêng.
 
 GET `/api/v1/admin/access/tree` (ACCESS_READ) trả code/parent/name/path/viewPermission/actions + endpoints; GET `/api/v1/auth/capabilities` trả capability của chính principal; GET `/api/v1/admin/access/users/{id}/effective` (ACCESS_READ) trả nguồn role của từng permission. PUT role permissions/user roles bắt buộc version; giới hạn 512 permission và 32 role. Response role thêm active (gồm role tắt chưa xóa) và assignedUsers (snapshot gồm cả user tắt). POST/PUT registry/policy chỉ trả tài nguyên vừa ghi; DELETE trả danh sách rỗng, status giữ nguyên. Không nhận route/public/grant metadata từ client để thay annotation. Triển khai V013 phải dừng/drain code trước VIEW; xem chuyên đề trước khi nâng môi trường đang có dữ liệu.
+
+## Resource và Swagger — ACCESS04
+
+GET `/api/v1/admin/access/resources` cần ACCESS_READ; query gồm `kind` (rỗng/MENU/ENDPOINT), `query` (rỗng hoặc tối đa 160 ký tự không chứa control), `page`, `size`. Count và danh sách cùng lọc ở PostgreSQL trước phân trang. Tìm không phân biệt hoa/thường theo route/controller/mô tả/group/function/mã quyền; `%` và `_` là ký tự thường, không phải wildcard. Loại sai/từ khóa quá dài trả 400/COM001. UI giữ bộ lọc khi đổi trang/size, tìm mới về trang 0.
+
+OpenAPI xuất từ mapping thật + Operation/Parameter/Schema. Path/query/header có mô tả/ví dụ; ModelAttribute và mọi lớp con PageRequest trải phẳng field kế thừa thành query parameters, giữ default/min/max/maxLength/enum và phân biệt required với giá trị mặc định của DTO. Body JSON và multipart có schema riêng, response vẫn là ApiResponse với đúng status. Tên alias Spring `value`/`name` được resolve, giữ đúng Idempotency-Key; principal/servlet request do server tiêm không thành input của client. Regression đối chiếu toàn bộ route API với JSON spec, payload/response fields và query để tránh thêm controller nhưng quên Swagger.
+
+Permission là value object JSON string từ registry; constants/values() chỉ là từ vựng bootstrap, không khóa client vào enum role/quyền cố định. Các mã như BOOKING_LIST/BOOKING_DETAIL hợp lệ, chưa có nghĩa booking đã triển khai hoặc ai đã được cấp. Guard của từng endpoint phải khai báo đúng mã hành động; có mã trong registry chưa tự mở API. Bộ quyền hệ thống là mẫu chọn/gán các mapping cụ thể, xem hợp đồng ở [schema và phân quyền](SCHEMA_VA_PHAN_QUYEN.md#bộ-quyền-hệ-thống-và-quyền-db--access04).

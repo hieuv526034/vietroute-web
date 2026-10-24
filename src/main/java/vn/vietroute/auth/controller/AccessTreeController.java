@@ -1,6 +1,7 @@
 package vn.vietroute.auth.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -58,7 +59,10 @@ public class AccessTreeController extends BaseController {
         summary = "Xem nguồn cấp quyền của user",
         description = "ACCESS_READ; hợp các role active, tài khoản tắt không có quyền hiệu lực"
     )
-    public ApiResult<EffectiveAccessResponse> effective(@PathVariable long id, HttpServletRequest request) {
+    public ApiResult<EffectiveAccessResponse> effective(
+        @Parameter(description = "ID bản ghi cần thao tác", example = "1") @PathVariable long id,
+        HttpServletRequest request
+    ) {
         return execute(SuccessCode.OK, request, () -> tree.effective(id));
     }
 

@@ -4,6 +4,8 @@ package vn.vietroute.auth.entity;
 public enum PermissionAction {
     VIEW,
     READ,
+    LIST,
+    DETAIL,
     CREATE,
     UPDATE,
     DELETE,

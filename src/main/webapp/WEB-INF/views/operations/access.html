@@ -205,14 +205,61 @@
                         class="text-secondary"
                         th:text="#{ui.accessResources.note}"
                     ></p>
-                    <div class="toolbar-actions">
-                        <button
-                            id="resources-refresh"
-                            type="button"
-                            class="button button-outline"
-                            th:text="#{ui.foundation.refresh}"
-                        ></button>
-                    </div>
+                    <form
+                        id="resources-filter"
+                        class="table-filter mb-3 resources-filter"
+                    >
+                        <div class="filter-field">
+                            <label
+                                for="resources-kind"
+                                th:text="#{ui.accessResources.kind}"
+                            ></label>
+                            <select
+                                id="resources-kind"
+                                class="form-select"
+                            >
+                                <option
+                                    value=""
+                                    th:text="#{ui.accessResources.allKinds}"
+                                ></option>
+                                <option
+                                    value="MENU"
+                                    th:text="#{ui.accessResources.menu}"
+                                ></option>
+                                <option
+                                    value="ENDPOINT"
+                                    th:text="#{ui.accessResources.api}"
+                                ></option>
+                            </select>
+                        </div>
+                        <div class="filter-field">
+                            <label
+                                for="resources-query"
+                                th:text="#{ui.accessResources.search}"
+                            ></label>
+                            <input
+                                id="resources-query"
+                                class="form-control"
+                                type="search"
+                                maxlength="160"
+                                th:placeholder="#{ui.accessResources.searchHint}"
+                            />
+                        </div>
+                        <div class="toolbar-actions">
+                            <button
+                                id="resources-search"
+                                type="submit"
+                                class="button"
+                                th:text="#{ui.ops.filter}"
+                            ></button>
+                            <button
+                                id="resources-refresh"
+                                type="button"
+                                class="button button-outline"
+                                th:text="#{ui.foundation.refresh}"
+                            ></button>
+                        </div>
+                    </form>
                     <p
                         id="resources-status"
                         role="status"
@@ -703,7 +750,7 @@
             <div
                 id="access-tree-labels"
                 hidden
-                th:attr="data-impact=#{ui.accessTree.impact},data-inactive=#{ui.accessTree.inactive},data-search=#{ui.accessTree.search},data-all=#{ui.accessTree.all},data-expand=#{ui.accessTree.expand},data-collapse=#{ui.accessTree.collapse},data-preview=#{ui.accessTree.preview},data-added=#{ui.accessTree.added},data-removed=#{ui.accessTree.removed},data-unchanged=#{ui.accessTree.unchanged},data-endpoints=#{ui.accessTree.endpoints},data-dependency=#{ui.accessTree.dependency},data-source=#{ui.accessTree.source},data-empty=#{ui.accessTree.empty},data-no-read=#{ui.accessTree.noRead},data-custom=#{ui.accessTree.custom},data-shared=#{ui.accessTree.shared},data-admin=#{ui.accessTree.admin},data-show-sources=#{ui.accessTree.showSources}"
+                th:attr="data-system-bundle=#{ui.accessTree.systemBundle},data-system-bundle-note=#{ui.accessTree.systemBundleNote},data-impact=#{ui.accessTree.impact},data-inactive=#{ui.accessTree.inactive},data-search=#{ui.accessTree.search},data-all=#{ui.accessTree.all},data-expand=#{ui.accessTree.expand},data-collapse=#{ui.accessTree.collapse},data-preview=#{ui.accessTree.preview},data-added=#{ui.accessTree.added},data-removed=#{ui.accessTree.removed},data-unchanged=#{ui.accessTree.unchanged},data-endpoints=#{ui.accessTree.endpoints},data-dependency=#{ui.accessTree.dependency},data-source=#{ui.accessTree.source},data-empty=#{ui.accessTree.empty},data-no-read=#{ui.accessTree.noRead},data-custom=#{ui.accessTree.custom},data-shared=#{ui.accessTree.shared},data-admin=#{ui.accessTree.admin},data-show-sources=#{ui.accessTree.showSources}"
             ></div>
             <div
                 id="foundation-labels"

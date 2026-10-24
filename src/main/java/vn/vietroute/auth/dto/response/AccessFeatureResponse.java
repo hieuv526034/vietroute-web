@@ -10,5 +10,7 @@ public record AccessFeatureResponse(
     @Schema(description = "Tên theo locale") String name,
     @Schema(description = "URL trang trong ứng dụng; null khi chỉ có API/nhóm") String path,
     @Schema(description = "Quyền vào trang; null cho nhóm/API thuần") String viewPermission,
-    @Schema(description = "Các hành động và endpoint đang đăng ký trên node") List<AccessActionResponse> actions
+    @Schema(description = "Các hành động và endpoint đang đăng ký trên node") List<AccessActionResponse> actions,
+    @Schema(description = "Thuộc mẫu gán nhanh bộ quyền hệ thống; không tự cấp quyền, không bỏ kiểm ADMIN/scope")
+    boolean systemBundle
 ) {}

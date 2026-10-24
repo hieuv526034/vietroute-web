@@ -97,3 +97,11 @@ Header dựng từ AccessFeatures sau khi lọc VIEW bằng cùng guard/policy v
 Component access-tree.js giữ một Set cho các bản hiển thị của quyền dùng chung; tìm kiếm không làm mất lựa chọn ngoài kết quả. Nhóm ba trạng thái, chọn trong kết quả hiển thị, gợi VIEW đúng nhánh, preview mã thêm/bỏ/số user snapshot, endpoint ANY/ALL và mã inactive để ADMIN loại bỏ. Dùng details/summary, checkbox/label và search native cho bàn phím; modal giữ focus, vùng cây cuộn riêng và footer bên phải. Lỗi 403/409/timeout không đóng/replay và không làm mất draft. Nguồn quyền của user được tải theo yêu cầu, không lưu lịch sử/quyền/token vào storage.
 
 Ảnh kiểm bằng HTML thật và API fixture cô lập: [cây quyền/preview](../images/access03-tree.png). Không dùng dữ liệu/token production để chụp.
+
+## Lọc resource và loading icon — ACCESS04
+
+Tab Tài nguyên UI/API có select loại + từ khóa + nút Tra cứu/Làm mới trên cùng hàng khi đủ chỗ, co xuống hàng trên khung hẹp và giữ nút bên phải. Tìm mới về trang đầu, phân trang giữ query đã áp dụng. Form/filter dùng validation/loading chung, tìm nguyên văn; backend thực hiện count/filter/paging, không lọc riêng trang dữ liệu tại browser.
+
+Nút icon thao tác 32×32: trong lúc request, spinner tuyệt đối đặt giữa, SVG chỉ ẩn bằng visibility để giữ kích thước. Không chèn spinner cạnh icon làm tràn cột thao tác. API chi tiết về mới mở form; lỗi không mở dữ liệu giả hoặc tự retry. Bộ cây có mẫu chọn quyền hệ thống, xem [hợp đồng/phạm vi](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#bộ-quyền-hệ-thống-và-quyền-db--access04).
+
+Ảnh từ HTML thật/API fixture cô lập, không phải dữ liệu production: [lọc tài nguyên](../images/access04-resources.png), [nút Sửa khi API chậm](../images/access04-loading.png).

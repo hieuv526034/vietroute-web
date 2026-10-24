@@ -2,7 +2,10 @@ package vn.vietroute.auth.security;
 
 import vn.vietroute.common.constant.AccessConstants.Permissions;
 
-/** Guard service dùng cùng mã với annotation HTTP; không có danh sách user/role nghiệp vụ trong code. */
+/**
+ * Guard service dùng cùng mã với annotation HTTP. hasAuthority đối chiếu authorities đã nạp từ DB mỗi request,
+ * không cấp quyền từ tên hằng. Giữ guard này để lời gọi service nội bộ không bỏ qua kiểm tra ở controller.
+ */
 public final class AccessRules {
 
     private AccessRules() {}

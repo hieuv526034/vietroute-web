@@ -75,3 +75,9 @@ Tab **Menu và endpoint** chọn target từ inventory thật, chọn tất cả
 Chọn role, mở **Chỉnh sửa quyền vai trò** để xem cây nhóm → chức năng → hành động. Có tìm kiếm theo tên/mã/nhóm, checkbox ba trạng thái, mở/thu gọn và chi tiết endpoint/ANY/ALL. ADMIN mở cây chỉ đọc. Chọn tất cả áp dụng trong kết quả đang hiển thị; preview luôn liệt kê mã thêm/bỏ và số tài khoản gán role ở snapshot. VIEW và READ độc lập; UI gợi VIEW cho nhánh đang chọn, đánh dấu quyền dùng chung. Sửa qua UI cần READ+UPDATE; API-only có thể chỉ dùng hành động.
 
 Tab tài khoản có nút xem nguồn quyền, chỉ rõ role nào cấp từng permission. Bỏ quyền ở một role không làm mất quyền đến từ role khác. Registry role/permission ngừng hoạt động không được actor thiếu quyền kích hoạt lại để tự nâng quyền. Lưu có version/CSRF/loading, lỗi giữ draft, không tự gửi lại. Giới hạn và hợp đồng đầy đủ ở [schema và phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#cây-chức-năng-và-quyền-hành-động--access03); nâng V012 lên V013 cần dừng/drain các node cũ trước.
+
+## Gán bộ hệ thống và tìm tài nguyên — ACCESS04
+
+Ở Phân quyền, chọn role → Chỉnh sửa quyền vai trò → Chọn bộ quyền hệ thống → xem preview → Lưu. Đây là gán nhiều mapping quyền một lần, vẫn có thể bỏ riêng một quyền sau đó. Không gồm CRUD danh mục/ảnh/nghiệp vụ, không mở quyền chỉ ADMIN; actor được ủy quyền phải có đủ bộ quyền mới chọn được mẫu. Quyền chưa lưu chỉ ở draft; mở lại role đọc mapping từ DB. Module nghiệp vụ tiếp tục gán VIEW/LIST/DETAIL/CREATE/UPDATE/DELETE theo nhu cầu, READ cũ giữ hợp đồng.
+
+Tab Tài nguyên UI/API chọn MENU/ENDPOINT hoặc tất cả, nhập route/controller/mô tả/mã quyền rồi Tra cứu. Lọc thực hiện trước paging; đổi trang giữ bộ lọc đã tìm, tìm mới về trang đầu. Từ khóa tối đa 160 ký tự, không phải biểu thức SQL/wildcard. Tài liệu Swagger ở menu API có đủ query kế thừa cùng body JSON/multipart để thử trực tiếp; dùng token/cookie của chính tài khoản đang kiểm.

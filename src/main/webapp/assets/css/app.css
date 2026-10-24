@@ -1736,6 +1736,18 @@ fieldset:disabled .button[type='submit']::before,
     animation: request-spin 0.7s linear infinite;
     flex-shrink: 0;
 }
+/* Nút thao tác giữ nguyên khung vuông: spinner thay icon, không chen thêm làm tràn cột 96px. */
+.icon-button[data-request-loading] {
+    position: relative;
+}
+.icon-button[data-request-loading]::before {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+}
+.icon-button[data-request-loading] svg {
+    visibility: hidden;
+}
 .request-progress {
     position: fixed;
     inset: 0 0 auto;
@@ -1977,4 +1989,15 @@ fieldset:disabled .button[type='submit']::before,
     display: grid;
     gap: 0.4rem;
     padding-left: 0.5rem;
+}
+
+.resources-filter .filter-field:first-child {
+    min-width: 180px;
+}
+.resources-filter .filter-field:nth-child(2) {
+    flex: 1 1 260px;
+}
+.resources-filter .toolbar-actions {
+    margin-left: auto;
+    justify-content: flex-end;
 }

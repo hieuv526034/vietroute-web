@@ -1,6 +1,7 @@
 package vn.vietroute.auth.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -80,7 +81,10 @@ public class AccessController extends BaseController {
     )
     @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_ASSIGN, Permissions.ACCESS_WRITE })
     public ApiResult<RolePermissionsResponse> replace(
-        @PathVariable Role role,
+        @Parameter(
+            description = "Mã role từ registry DB, không giới hạn ở role bootstrap",
+            example = "OPERATOR"
+        ) @PathVariable Role role,
         @Valid @RequestBody RolePermissionsRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
@@ -95,7 +99,7 @@ public class AccessController extends BaseController {
     )
     @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_ASSIGN, Permissions.ACCESS_WRITE })
     public ApiResult<UserResponse> assign(
-        @PathVariable long id,
+        @Parameter(description = "ID bản ghi cần thao tác", example = "1") @PathVariable long id,
         @Valid @RequestBody UserRolesRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request

@@ -41,3 +41,20 @@ test('Chỉ đổi kết quả đang lọc vẫn giữ quyền ngoài kết qu�
     assert.deepEqual(Array.from(state.changes().removed), ['CATALOG_DELETE']);
     const draft = Array.from(state.values()); assert.deepEqual(Array.from(state.values()), draft);
 });
+
+test('Bộ hệ thống chỉ chọn endpoint quản trị được khai báo, không gom CRUD nghiệp vụ, WRITE cũ hay ADMIN-only', () => {
+    const definitions = [
+        { code: 'ACCESS', systemBundle: true, actions: [
+            { permission: 'ACCESS_ASSIGN', endpoints: [{ adminOnly: false }] },
+            { permission: 'ACCESS_WRITE', endpoints: [{ adminOnly: false }] },
+        ] },
+        { code: 'JOURNAL', systemBundle: true, actions: [{ permission: 'JOURNAL_VIEW', endpoints: [{ adminOnly: true }] }] },
+        { code: 'CATALOG', systemBundle: false, actions: [{ permission: 'CATALOG_DELETE', endpoints: [{ adminOnly: false }] }] },
+    ];
+    const selection = context.window.VietRouteAccessTree.systemSelection(definitions);
+    assert.deepEqual(Array.from(selection, (item) => item.code), ['ACCESS_ASSIGN']);
+    const state = context.window.VietRouteAccessTree.model(['CATALOG_READ'], definitions);
+    for (const item of selection) state.toggle(item.code, true, item.feature);
+    assert.deepEqual(Array.from(state.values()), ['ACCESS_ASSIGN', 'CATALOG_READ']);
+    assert.deepEqual(Array.from(state.changes().added), ['ACCESS_ASSIGN']);
+});

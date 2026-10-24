@@ -122,6 +122,22 @@ class AccessResourceDiscoveryTest {
                         .getResponse()
                         .getStatus()
                 );
+                if (scenario.contains("ACCESS_READ")) {
+                    for (var invalid : Map.of("kind", "INVALID", "query", "a".repeat(161)).entrySet()) {
+                        assertEquals(
+                            400,
+                            mvc
+                                .perform(
+                                    get(Routes.ACCESS + Routes.ACCESS_RESOURCES)
+                                        .param(invalid.getKey(), invalid.getValue())
+                                        .with(authentication(actor))
+                                )
+                                .andReturn()
+                                .getResponse()
+                                .getStatus()
+                        );
+                    }
+                }
             }
         }
     }

@@ -7,10 +7,47 @@ token="$tree_admin_token"
 [[ "$(sql "SELECT count(*) FROM auth_access_resources WHERE target='POST /api/v1/admin/catalogs' AND function_code='CATALOG' AND permission_match='ANY' AND declared_permissions LIKE '%CATALOG_CREATE%'")" == 1 ]]
 call 200 GET /api/v1/admin/access/tree '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; f=next(x for x in d if x["code"]=="CATALOG"); assert f["parent"]=="SYSTEM" and f["viewPermission"]=="CATALOG_VIEW"; a=next(x for x in f["actions"] if x["permission"]=="CATALOG_CREATE"); assert any(x["target"]=="POST /api/v1/admin/catalogs" and x["match"]=="ANY" for x in a["endpoints"])' "$result"
+# Lấy bộ quyền từ metadata API thật giống thao tác chọn mẫu; lưu mapping, không có authority bypass toàn cục.
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; codes={a["permission"] for f in d if f["systemBundle"] for a in f["actions"] if not a["permission"].endswith("_WRITE") and any(not e["adminOnly"] for e in a["endpoints"])}; assert "CONFIGURATION_READ" in codes and "ACCESS_ASSIGN" in codes and "CATALOG_CREATE" not in codes and "JOURNAL_VIEW" not in codes; json.dump({"permissions":sorted(codes),"version":0},open(sys.argv[2],"w"))' "$result" "$work/tree-system-permissions.json"
+# Bộ lọc dùng chung predicate count/data trên DB, từ khóa nguyên văn không diễn giải wildcard hoặc SQL.
+call 200 GET '/api/v1/admin/access/resources?kind=ENDPOINT&query=CATALOG&page=0&size=2' '' bearer
+tree_resource_total=$(sql "SELECT count(*) FROM auth_access_resources WHERE kind='ENDPOINT' AND strpos(lower(concat_ws(' ',target,handler,description,resource_group,function_code,declared_permissions)),'catalog')>0")
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["totalElements"]==int(sys.argv[2]) and d["totalElements"]>2 and len(d["content"])==2; assert all(x["kind"]=="ENDPOINT" for x in d["content"])' "$result" "$tree_resource_total"
+call 200 GET '/api/v1/admin/access/resources?kind=MENU&query=MediaPageController' '' bearer
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["totalElements"]==1 and d["content"][0]["kind"]=="MENU"' "$result"
+call 200 GET '/api/v1/admin/access/resources?query=%25_%27%20OR%20true%20--' '' bearer
+[[ "$(field data.totalElements)" == 0 ]]
+call 400 GET '/api/v1/admin/access/resources?kind=INVALID' '' bearer
+assert_code COM001
+tree_long_query=$(printf 'a%.0s' {1..161})
+call 400 GET "/api/v1/admin/access/resources?query=$tree_long_query" '' bearer
+assert_code COM001
 printf '%s\n' '{"nameVi":"Nhập liệu CI","nameEn":"CI entry","active":true,"version":0}' > "$work/tree-registry.json"
-for tree_role in ENTRY_CI ALT_CI MANAGER_CI TARGET_CI POWER_CI; do
+for tree_role in ENTRY_CI ALT_CI MANAGER_CI TARGET_CI POWER_CI SYSTEMSET_CI; do
   call 201 POST "/api/v1/admin/access/registry/roles/$tree_role" "$work/tree-registry.json" bearer
 done
+# Mã quyền ngoài bootstrap được registry DB chấp nhận; LIST và DETAIL là hai hành động độc lập.
+for tree_action in LIST DETAIL; do
+  call 201 POST "/api/v1/admin/access/registry/permissions/BOOKING_$tree_action" "$work/tree-registry.json" bearer
+done
+call 200 GET /api/v1/admin/access/permissions '' bearer
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert next(x for x in d if x["code"]=="BOOKING_LIST")["actions"]==["LIST"]; assert next(x for x in d if x["code"]=="BOOKING_DETAIL")["actions"]==["DETAIL"]' "$result"
+call 200 PUT /api/v1/admin/access/roles/SYSTEMSET_CI/permissions "$work/tree-system-permissions.json" bearer
+tree_system_user=$(sql "INSERT INTO auth_users(username,display_name,password_hash,active,must_change_password,created_by,updated_by) SELECT 'treesystem','System set CI',password_hash,true,false,1,1 FROM auth_users WHERE id=1 RETURNING id" | head -n1)
+printf '%s\n' '{"roles":["SYSTEMSET_CI"],"version":0}' > "$work/tree-system-roles.json"
+call 200 PUT "/api/v1/admin/access/users/$tree_system_user/roles" "$work/tree-system-roles.json" bearer
+login_body treesystem "$next_password"
+call 200 POST /api/v1/auth/login "$work/login.json" cookie
+token=$(field data.accessToken)
+for tree_system_path in /operations/access /operations/jobs /operations/configuration /monitoring /api/v1/admin/access/tree /api/v1/admin/access/roles /api/v1/admin/access/resources /api/v1/admin/jobs /api/v1/admin/system/configuration /api/v1/admin/system/runtime; do
+  call 200 GET "$tree_system_path" '' bearer
+done
+for tree_admin_path in /operations/api-journal /api/v1/admin/system/api-journal /api/v1/admin/system/activity/online /api/v1/admin/catalogs/1; do
+  call 403 GET "$tree_admin_path" '' bearer
+done
+call 403 GET /admin '' bearer
+call 403 GET /media '' bearer
+token="$tree_admin_token"
 printf '%s\n' '{"permissions":["CATALOG_VIEW","CATALOG_CREATE"],"version":0}' > "$work/tree-permissions.json"
 call 200 PUT /api/v1/admin/access/roles/ENTRY_CI/permissions "$work/tree-permissions.json" bearer
 call 200 PUT /api/v1/admin/access/roles/ALT_CI/permissions "$work/tree-permissions.json" bearer

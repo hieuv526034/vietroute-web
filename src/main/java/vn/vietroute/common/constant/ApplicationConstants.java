@@ -256,6 +256,10 @@ public final class ApplicationConstants {
     /** Regex chỉ mô tả từng loại dữ liệu cụ thể; không áp quy tắc mã cho tên người/địa chỉ/mật khẩu. */
     public static final class Regex {
 
+        public static final String ACCESS_RESOURCE_KIND = "|MENU|ENDPOINT";
+
+        public static final String ACCESS_RESOURCE_SEARCH = "[^\\p{Cntrl}]{0,160}";
+
         public static final String POLICY_KIND = "MENU|ENDPOINT";
 
         public static final String ENV_KEY = "[A-Z][A-Z0-9_]*";

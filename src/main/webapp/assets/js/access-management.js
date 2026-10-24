@@ -10,7 +10,8 @@
         selectedRegistry,
         selectedPolicy,
         targets = [],
-        me;
+        me,
+        resourceFilters = { kind: '', query: '' };
     const registryForm = node('registry-form'),
         policyForm = node('policy-form');
     const registryModal = window.VietRouteUI.modal('registry-dialog', { busy: () => busy });
@@ -33,7 +34,15 @@
         if (busy) return;
         busy = true;
         const scope = document.querySelector('[data-operations]');
-        const controls = ['registry-kind', 'registry-refresh', 'policies-refresh', 'resources-refresh']
+        const controls = [
+            'registry-kind',
+            'registry-refresh',
+            'policies-refresh',
+            'resources-refresh',
+            'resources-kind',
+            'resources-query',
+            'resources-search',
+        ]
             .map(node)
             .filter(Boolean);
         const disabled = controls.map((control) => control.disabled);
@@ -56,7 +65,7 @@
     const renderResources = async (query = resourcePager.query) => {
         if (!me?.permissions.includes('ACCESS_READ')) return;
         const page = await window.VietRouteTable.readPage(
-            (params) => get('/resources?' + new URLSearchParams(params)),
+            (params) => get('/resources?' + new URLSearchParams({ ...params, ...resourceFilters })),
             query,
         );
         const body = node('resources-body');
@@ -284,6 +293,12 @@
     node('registry-kind').addEventListener('change', () => read(renderRegistry));
     node('registry-refresh').addEventListener('click', () => read(renderRegistry));
     node('policies-refresh').addEventListener('click', () => read(renderPolicies));
+    node('resources-filter').addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (busy || !window.VietRouteForms.validate(event.target)) return;
+        resourceFilters = { kind: node('resources-kind').value, query: node('resources-query').value.trim() };
+        void read(() => renderResources({ page: 0, size: resourcePager.query.size }));
+    });
     node('resources-refresh').addEventListener('click', () => read(renderResources));
     app.api
         .get('/api/v1/auth/me')
