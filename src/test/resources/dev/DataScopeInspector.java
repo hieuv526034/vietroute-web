@@ -61,8 +61,9 @@ public final class DataScopeInspector {
                 long other = Long.parseLong(args[5]);
                 // DAO mẫu chỉ trong bảng TEMP: có quyền A vẫn không đọc/sửa row B bằng đổi ID khi SQL có scope predicate.
                 try (var query = connection.createStatement()) {
+                    // PostgreSQL không cho FK từ bảng TEMP tới bảng thường; FK auth thật đã nằm nguyên trong V015.
                     query.execute(
-                        "CREATE TEMP TABLE ci_scope_rows(id BIGINT PRIMARY KEY,scope_id BIGINT NOT NULL REFERENCES auth_data_scopes(id)) ON COMMIT DROP"
+                        "CREATE TEMP TABLE ci_scope_rows(id BIGINT PRIMARY KEY,scope_id BIGINT NOT NULL) ON COMMIT DROP"
                     );
                 }
                 try (var query = connection.prepareStatement("INSERT INTO ci_scope_rows VALUES (1,?),(2,?)")) {
