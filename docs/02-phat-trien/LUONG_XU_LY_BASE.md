@@ -30,7 +30,7 @@ Xem `common/base/BaseController.java`, `auth/controller/AuthController.java` và
 
 ## Transaction và đăng nhập
 
-`JdbcTransactions.execute` mượn connection từ HikariCP → đặt schema → tắt autocommit → chạy callback → commit → trả connection về pool. `SQLException`, lỗi nghiệp vụ/runtime hoặc `Error` làm rollback trước khi trả connection; `Error` vẫn ném tiếp lên JVM, không chuyển thành lỗi nghiệp vụ. DAO trong callback dùng cùng connection và không tự commit/đóng connection được truyền vào. Spring đóng pool khi ứng dụng dừng; pool tạo lười và không mở DB chỉ vì khởi tạo context. Các giới hạn pool/timeout nằm trong `DatabaseSettings`, xem `database/README.md`.
+`JdbcTransactions.execute` mượn connection từ HikariCP → tắt autocommit → đặt schema LOCAL → chạy callback → commit → trả connection về pool. `SQLException`, lỗi nghiệp vụ/runtime hoặc `Error` làm rollback trước khi trả connection; `Error` vẫn ném tiếp lên JVM, không chuyển thành lỗi nghiệp vụ. DAO trong callback dùng cùng connection và không tự commit/đóng connection được truyền vào. Spring đóng pool khi ứng dụng dừng; pool tạo lười và không mở DB chỉ vì khởi tạo context. Các giới hạn pool/timeout nằm trong `DatabaseSettings`, xem `database/README.md`.
 
 Luồng đăng nhập khóa dòng user để các lần sai đồng thời không làm mất bộ đếm. Nếu sai mật khẩu, callback trả `LoginOutcome` để **commit bộ đếm sai trước**, sau đó service mới ném `BusinessException`. Ném lỗi ngay trong transaction sẽ rollback bộ đếm và làm cơ chế khóa sai. Khi đổi mật khẩu, service kiểm tra mật khẩu cũ/tokenVersion dưới khóa, đổi hash và tăng tokenVersion trong cùng transaction; hoàn tất mới phát cookie/token mới.
 
@@ -73,3 +73,7 @@ public ApiResult<UserResponse> me(HttpServletRequest request) {
 ```
 
 Ví dụ minh họa chữ ký; import ApiResult ở đầu file và giữ cách lấy principal/service của endpoint thực tế. Filter metrics/health/HTML vẫn dùng hợp đồng riêng của chúng.
+
+## Ranh giới transaction và schema — AUTH19
+
+Luồng JDBC hiện hành là mượn connection → autocommit=false → schema LOCAL → callback/DAO → commit hoặc rollback → close. BaseRepository tái sử dụng JdbcTransactions, không chỉ đóng connection sau callback thành công. DAO trong transaction dịch vụ dùng connection caller; journal/activity ghi trực tiếp phải commit tường minh. Không đặt schema ở transaction riêng rồi dùng tiếp khi qua Neon pooler. Chi tiết và bằng chứng CI ở [schema cùng transaction](SCHEMA_VA_PHAN_QUYEN.md#schema-cùng-transaction-trên-neon-pooler--auth19).

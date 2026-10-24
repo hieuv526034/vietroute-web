@@ -40,14 +40,17 @@ public final class JdbcSchema {
     }
 
     /**
-     * Mỗi lần mượn pool đều đặt lại path, không tin currentSchema trong URL hoặc trạng thái borrower trước.
+     * Đặt path LOCAL trong transaction hiện hành; không tin currentSchema hoặc trạng thái backend trước.
      * Không có public/$user fallback; pg_temp ở cuối để bảng tạm không che bảng ứng dụng.
      * pg_catalog được PostgreSQL ưu tiên ngầm trước path để bảo vệ hàm/kiểu hệ thống.
      */
     public void select(Connection connection) throws SQLException {
+        if (connection.getAutoCommit()) {
+            throw new SQLException("Chọn schema cần transaction chứa cả truy vấn nghiệp vụ", "25000");
+        }
         try (
             PreparedStatement statement = connection.prepareStatement(
-                "SELECT pg_catalog.set_config('search_path', ?, false)"
+                "SELECT pg_catalog.set_config('search_path', ?, true)"
             )
         ) {
             statement.setString(1, quoted() + ", pg_temp");

@@ -17,7 +17,7 @@ Tên schema chỉ nhận chữ thường ASCII/số/underscore, bắt đầu b�
 Luồng cấu hình:
 
 1. DatabaseSettings đọc key một lần khi tạo root context, kiểm tra tên; JdbcSchema là bean immutable, không có tên schema static dùng chung.
-2. JdbcConnectionFactory mượn connection rồi gọi `pg_catalog.set_config('search_path', ?, false)` với path `"<schema>", pg_temp`. Mỗi lần mượn đều đặt lại, kể cả URL có currentSchema khác hoặc borrower trước đã đổi trạng thái session.
+2. JdbcConnectionFactory mượn connection, tắt autocommit rồi gọi `pg_catalog.set_config('search_path', ?, true)` trong transaction (AUTH19) với path `"<schema>", pg_temp`. Mỗi lần mượn đều đặt lại, kể cả URL có currentSchema khác hoặc borrower trước đã đổi trạng thái session.
 3. Repository/seed/job query dùng tên bảng không gắn schema. Không có public/$user fallback; pg_temp đứng cuối để bảng tạm không che bảng ứng dụng. PostgreSQL ưu tiên pg_catalog ngầm trước path cho hàm/kiểu hệ thống. Người không tin cậy không được có quyền CREATE trên schema ứng dụng; xem [PostgreSQL schema/search_path](https://www.postgresql.org/docs/17/ddl-schemas.html).
 4. `@JdbcTable(name, primaryKey, indexes)` chỉ mô tả table/PK/index; JdbcSchemaValidator dùng schema thực tế trên connection sau bootstrap. Entity không phải sửa annotation khi đổi môi trường.
 5. Bootstrap tạo schema/history trong transaction startup có advisory lock. DB mới tạo tất cả bảng/index/seed ở schema cấu hình. Legacy V001/history trong public được chuyển vào schema cấu hình rồi tiếp tục migration, giữ dữ liệu/hash/ID/FK/sequence.
@@ -330,3 +330,13 @@ Nguồn quyền GET access/users/{id}/effective xét cùng điều kiện sẵn 
 Các service tự phục vụ me, đổi mật khẩu, đăng xuất có principal, hồ sơ và gắn email đối chiếu actor với SecurityContext vừa được guard refresh trước khi đọc/ghi. HTTP vẫn lấy principal server; kiểm này bảo vệ cả caller nội bộ truyền nhầm principal người khác. Token/role thu hồi ở DB không fallback authority cũ; recovery/ADMIN/system và scope vẫn giữ giới hạn trước đó.
 
 Rà soát chưa phát hiện đường bỏ kiểm quyền DB trong các ca hiện có: nhiều role, hành động riêng theo tài nguyên, VIEW độc lập, policy chỉ siết, không tự cấp quyền cho role thường, thu hồi liên node ở lần kiểm tiếp theo, bảo vệ ADMIN/system/bootstrap và rollback lịch sử. Không coi đây là kiểm thử xâm nhập toàn diện hoặc chứng minh phạm vi business đã hoàn thành. Nguồn quyền là mapping quyền chung; menu/thao tác cuối cùng vẫn dùng capabilities kết hợp policy/guard, scope còn phải gắn vào DAO nghiệp vụ.
+
+## Schema cùng transaction trên Neon pooler — AUTH19
+
+JdbcConnectionFactory.open tắt autocommit trước khi JdbcSchema.select gọi set_config(search_path, ..., true). Schema được chọn LOCAL, ghép cấu hình đã whitelist và pg_temp ở cuối, không public/$user. Toàn bộ truy vấn/callback dùng cùng transaction và backend; commit/rollback không để path rò sang caller khác. Không đổi schema cứng trong DAO hoặc migration V001–V015. Không được setAutoCommit(true) rồi tiếp tục dùng connection đã mượn.
+
+BaseRepository dùng chung JdbcTransactions cho callback độc lập: thành công commit, SQLException/RuntimeException/Error rollback, close trả connection về pool. Service vẫn truyền connection hiện hành cho DAO trong transaction để không tạo transaction con. Callback DAO độc lập có ghi dữ liệu (như claim worker) cũng được commit đúng. Journal append và hàm ghi activity commit tường minh; các thao tác đọc trực tiếp chỉ đóng pool để rollback transaction còn mở, không chờ HTTP hoặc gọi provider trong lúc giữ connection. Factory chọn schema lỗi rollback/close, không mất nguyên nhân SQL gốc.
+
+Lý do: [Neon transaction pooling](https://neon.com/docs/connect/connection-pooling) không bảo đảm session state giữa transaction; đặt search_path ở autocommit rồi mới truy vấn có thể dùng backend khác. Đây là lỗi tương thích thiết kế xác định từ code và hợp đồng provider, chưa phải kết luận nguyên nhân trace 503 cũ đã mất.
+
+CI bổ sung PgBouncer bên trong container PostgreSQL tạm, transaction mode và DISCARD ALL sau mỗi transaction. Helper chứng minh cách đặt path cũ bị reset, rồi kiểm schema LOCAL, commit callback, rollback lỗi, pg_temp không che bảng và node ứng dụng login/guard/journal qua pooler. Chỉ fixture CI, không thêm PgBouncer/Docker service vào app hoặc Render, không thử sửa schema/mutation trên Neon.

@@ -72,7 +72,7 @@ Lỗi trước controller vào GlobalExceptionHandler, lỗi trong execute vào 
 
 ## 5. Transaction, job và provider
 
-JdbcTransactions mượn connection → đặt search_path → tắt autocommit → callback DAO dùng cùng connection → commit/rollback → trả pool. Không gọi Gmail/Cloudinary trong transaction giữ khóa DB dài. Client không được ghi audit, quyền hoặc tenant.
+JdbcTransactions mượn connection → tắt autocommit → đặt search_path LOCAL → callback DAO dùng cùng transaction/backend → commit/rollback → trả pool. Không gọi Gmail/Cloudinary trong transaction giữ khóa DB dài. Client không được ghi audit, quyền hoặc tenant.
 
 Outbox: transaction lưu `system_jobs` cùng thay đổi nghiệp vụ → commit → worker claim `SKIP LOCKED` và lease → commit claim → handler mạng → transaction ACK/NACK. Retry backoff+jitter, lỗi cuối DEAD; token lease ngăn worker cũ ghi đè. Đây là at least once: provider đã nhận nhưng ACK mất thì có thể gửi lặp. Handler cần idempotent và timeout nhỏ hơn lease; tác vụ dài cần thiết kế gia hạn riêng.
 

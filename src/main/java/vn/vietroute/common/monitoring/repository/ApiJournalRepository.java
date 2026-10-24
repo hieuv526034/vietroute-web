@@ -41,7 +41,7 @@ public class ApiJournalRepository {
     (SELECT u.username FROM auth_users u WHERE u.id=api_request_journal.request_user_id) AS request_username
     """;
 
-    /** Autocommit chỉ thành công khi PostgreSQL xác nhận insert; không giữ payload hoặc batch trong bộ nhớ. */
+    /** Insert và schema cùng transaction; chỉ báo thành công khi PostgreSQL xác nhận commit, không queue RAM. */
     public void append(ApiJournalDetail detail) {
         try (
             Connection connection = database.open();
@@ -76,6 +76,7 @@ public class ApiJournalRepository {
             query.setString(18, detail.contentKind());
             query.setObject(19, e.userId());
             query.executeUpdate();
+            connection.commit();
         } catch (SQLException exception) {
             throw BaseRepository.translate(exception);
         } catch (IOException exception) {
