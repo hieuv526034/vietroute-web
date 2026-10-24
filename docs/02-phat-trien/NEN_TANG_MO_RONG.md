@@ -55,21 +55,21 @@ MemoryRateLimitStore dùng một khóa đồng bộ để check/increment nguyê
 
 Role gom Permission theo resource và hành động READ/CREATE/UPDATE/DELETE/ASSIGN/RETRY/SEND; registry API trả resource/actions để dựng ma trận. CATALOG_WRITE và ACCESS_WRITE giữ tương thích giới hạn, không thành toàn quyền. Xem [ma trận quyền và schema cấu hình](SCHEMA_VA_PHAN_QUYEN.md). Bảng auth_permissions là registry; auth_role_permissions gán quyền cho role. ADMIN có quyền cứu hộ cố định; role thường không tự có các quyền quản trị mới.
 
-JWT filter kiểm chữ ký/thời hạn rồi đọc active/tokenVersion/roles/permissions từ DB mỗi request. Authorities gồm ROLE_... và mã Permission. Không cache quyền và không tin claim role/quyền từ client. Thay mapping role có hiệu lực từ request tiếp theo, kể cả JWT cũ; request đang chạy có thể đã qua kiểm quyền. Service dùng @PreAuthorize với authority hành động (ví dụ CATALOG_DELETE), nên gọi qua bean mà thiếu quyền vẫn bị chặn, không chỉ chặn URL.
+JWT filter kiểm chữ ký/thời hạn rồi đọc active/tokenVersion/roles/permissions từ DB mỗi request. Authorities gồm ROLE_... và mã Permission. Không cache quyền và không tin claim role/quyền từ client. Thay mapping role có hiệu lực từ request tiếp theo, kể cả JWT cũ; request đang chạy có thể đã qua kiểm quyền. Service dùng AccessResource/AccessOperation; một meta-PreAuthorize gọi DatabaseAccessGuard với MethodInvocation thật và đọc DB hiện hành. Resource + action sinh mã, không thêm AccessRules hoặc hằng riêng cho từng quyền mới. Role/Permission là value object chuỗi nhận registry DB, constants/values() chỉ bootstrap; gọi bean thiếu quyền vẫn bị chặn, không chỉ URL. Xem [hợp đồng guard hiện hành](SCHEMA_VA_PHAN_QUYEN.md#guard-chung-theo-metadata-hàm--access08).
 
 | API | Quyền | Quy tắc |
 |---|---|---|
 | GET /api/v1/admin/access/permissions | ACCESS_READ | Registry quyền có tên vi/en |
 | GET /api/v1/admin/access/roles | ACCESS_READ | Tập quyền, version và audit của từng role |
 | PUT /api/v1/admin/access/roles/{role}/permissions | ACCESS_ASSIGN hoặc ACCESS_WRITE cũ | Body permissions + version; ADMIN không sửa; người được ủy quyền không gán quyền vượt tập của mình |
-| PUT /api/v1/admin/access/users/{id}/roles | ACCESS_ASSIGN hoặc ACCESS_WRITE cũ + role ADMIN | Body roles + version; không tự sửa role, không bỏ admin cuối |
+| PUT /api/v1/admin/access/users/{id}/roles | ACCESS_ASSIGN hoặc ACCESS_WRITE cũ + giới hạn ủy quyền | Body roles + version; không tự sửa role, không bỏ admin cuối |
 | POST /api/v1/admin/catalogs | CATALOG_CREATE hoặc CATALOG_WRITE cũ | Tạo; đọc quản trị/sửa/xóa có permission riêng |
 
-API `/api/v1/admin/**` yêu cầu xác thực ở URL và quyền cụ thể ở service; không đồng nghĩa mọi API dưới đó chỉ chấp nhận role ADMIN. Trang `/admin` tổng quản trị vẫn dành cho ADMIN; giao diện theo quyền chi tiết của module sẽ triển khai cùng module. `/auth/me` có field permissions để UI quyết định hiển thị, còn backend luôn kiểm lại quyền.
+API `/api/v1/admin/**` yêu cầu xác thực ở URL và quyền cụ thể ở service; không đồng nghĩa mọi API dưới đó chỉ chấp nhận role ADMIN. Trang `/admin` danh mục kiểm CATALOG_VIEW và dữ liệu cần CATALOG_READ; custom role DB có thể dùng khi được cấp, không bắt buộc ADMIN. Các màn nhạy cảm ADMIN-only giữ guard riêng. `/auth/me` có field permissions để UI quyết định hiển thị, còn backend luôn kiểm lại quyền.
 
 Sửa mapping lấy khóa role qua UPDATE có version, rồi xóa/chèn mapping cùng transaction. Version cũ trả COM008/409. Gán role cho user dùng advisory transaction lock chung, khóa user, kiểm admin cuối, cập nhật version/audit/tokenVersion và mapping cùng transaction; token cũ của user đích bị thu hồi. Tự sửa role bị chặn để tránh tự làm mất đường quản trị. Seed giữ nguyên quyền role thường đã chỉnh sau restart; ADMIN cố định được bổ sung quyền mới của hệ thống.
 
-Quyền chức năng **không thay quyền trên dữ liệu**. Khi có nhà xe/chuyến/booking, service phải tra quan hệ nhà xe/owner từ DB theo principal, đưa scope vào WHERE, kiểm quan hệ cha/con và tenant ở cả đọc/ghi. Chưa có bảng membership/module nghiệp vụ thì không dựng companyId giả hoặc tin companyId HTTP. Không dùng permission để bỏ qua kiểm quyền đối tượng. Thêm Permission mới phải có bundle vi/en, migration khi cần đổi cấu trúc và kiểm thử deny/allow ở service cùng kiểm tra scope của module.
+Quyền chức năng **không thay quyền trên dữ liệu**. Khi có nhà xe/chuyến/booking, service phải tra quan hệ nhà xe/owner từ DB theo principal, đưa scope vào WHERE, kiểm quan hệ cha/con và tenant ở cả đọc/ghi. Nền scope/membership/role scoped đã được tách tại [SCOPE01](SCHEMA_VA_PHAN_QUYEN.md#nền-phạm-vi-dữ-liệu--scope01); module nghiệp vụ chưa có không được dựng companyId giả hoặc tin companyId HTTP. DataScopeGuard bổ sung kiểm quyền đúng scope, DAO vẫn phải bind ID + scope_id và kiểm owner/tài xế. UI phải giao quyền scoped với capabilities/policy chung. Không dùng permission để bỏ qua kiểm quyền đối tượng. Thêm Permission mới phải có bundle vi/en, migration khi cần đổi cấu trúc và kiểm thử deny/allow ở service cùng kiểm tra scope của module.
 
 
 ## Registry động, chính sách menu/endpoint

@@ -9,6 +9,7 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import vn.vietroute.auth.entity.AuthorizationState;
 import vn.vietroute.auth.entity.Permission;
@@ -40,12 +41,15 @@ public class DatabaseAccessGuard {
         if (
             operation.adminOnly() && (current.mustChangePassword() || !current.roles().contains(Role.ADMIN))
         ) return false;
-        if (operation.authenticated()) return true;
-        return (
-            !current.mustChangePassword() &&
-            current.permissions().containsAll(operation.required()) &&
-            operation.any().stream().anyMatch(current.permissions()::contains)
-        );
+        boolean allowed =
+            operation.authenticated() ||
+            (!current.mustChangePassword() &&
+                current.permissions().containsAll(operation.required()) &&
+                operation.any().stream().anyMatch(current.permissions()::contains));
+        // Gọi bean trực tiếp không qua HTTP interceptor: thân service cũng phải kiểm ủy quyền bằng đúng snapshot mới.
+        // Actor truyền vào còn role cũ sẽ bị AccessActors từ chối, thay vì dùng ADMIN/authority đã bị thu hồi.
+        if (allowed) SecurityContextHolder.getContext().setAuthentication(snapshot(authentication, current));
+        return allowed;
     }
 
     /** Auth tự phục vụ vẫn dùng được khi cần đổi mật khẩu tạm; phiên đã thu hồi/tắt bị từ chối. */
@@ -99,6 +103,11 @@ public class DatabaseAccessGuard {
     public Authentication refresh(Authentication authentication) {
         var current = state(authentication);
         if (current == null) return null;
+        return snapshot(authentication, current);
+    }
+
+    /** Tạo Authentication từ snapshot vừa kiểm, không đọc DB lần hai hoặc cache quyền qua request/node. */
+    private Authentication snapshot(Authentication authentication, AuthorizationState current) {
         var principal = (UserPrincipal) authentication.getPrincipal();
         var granted = current.mustChangePassword()
             ? List.<SimpleGrantedAuthority>of()
