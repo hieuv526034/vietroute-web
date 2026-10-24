@@ -1,8 +1,12 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
-## ACCESS10 — Đang làm
+## ACCESS11 — Đang làm
 
-[Issue #67](https://github.com/hieuv526034/vietroute-web/issues/67), hieuv526034, nhánh `hieuv526034/access10-tra-cuu-registry`, base `31a30fd`. Role picker tên vi/en kèm mã, tìm không dấu và giữ lựa chọn khi lọc; registry tìm/trạng thái/count/phân trang PostgreSQL, quota hữu hạn từ cấu hình và không tính tombstone role. API danh sách tương thích đọc đủ trong trần an toàn, không cắt ở 512. Giữ ADMIN/delegation/version/history, không migration mới. Local verify 135 Java/28 Node, format/check/rules/docs/actionlint/bash/diff đạt; renderer hai context xuất vi/en không thiếu key. Bộ SQL kiểm search/count/page, danh sách 599 mã, quota 600, hai request tranh suất cuối và tombstone đã viết, chờ CI. Browser URL policy chặn mở lại fixture, chưa nghiệm thu trực quan picker/registry mới; ảnh ACCESS09 không thay bằng chứng này. Scope/chi phí DB còn tiếp tục.
+[Issue #69](https://github.com/hieuv526034/vietroute-web/issues/69), hieuv526034, nhánh `hieuv526034/access11-chi-phi-kiem-quyen`, base `69dbbf4`. Filter/me dùng một snapshot user/role/quyền không hash thay hai SELECT; guard dùng mảng thay lặp cột user theo mapping. Không cache hoặc bỏ lần kiểm DB interceptor/service. Verify local 135 Java đạt; helper JDBC đã biên dịch sau khi bỏ phụ thuộc Spring JDBC không có trong stack. Chuẩn bị CI đo 4 worker/100 lượt DAO, pool 2, statement count/borrow/p95 và 80 GET đọc hai node/p95/lỗi. Chưa có số đo thành công để kết luận tải, không gửi tải Neon/Render. Scope tiếp tục trước business.
+
+## ACCESS10 — Đã có trên main
+
+[PR #68](https://github.com/hieuv526034/vietroute-web/pull/68), merge `69dbbf4`, head đã kiểm `1287b48`, [Issue #67](https://github.com/hieuv526034/vietroute-web/issues/67), hieuv526034, nhánh `hieuv526034/access10-tra-cuu-registry`, base `31a30fd`. Role picker tên vi/en kèm mã, tìm không dấu và giữ lựa chọn khi lọc; registry tìm/trạng thái/count/phân trang PostgreSQL, quota hữu hạn từ cấu hình và không tính tombstone role. API danh sách tương thích đọc đủ trong trần an toàn, không cắt ở 512. Giữ ADMIN/delegation/version/history, không migration mới. Local verify 135 Java/28 Node, format/check/rules/docs/actionlint/bash/diff đạt; renderer hai context xuất vi/en không thiếu key. Ba CI đúng head đạt: [Docker/PostgreSQL](https://github.com/hieuv526034/vietroute-web/actions/runs/40070195877), [format/quy tắc](https://github.com/hieuv526034/vietroute-web/actions/runs/40070195818), [tài liệu](https://github.com/hieuv526034/vietroute-web/actions/runs/40070195795). SQL kiểm search/count/page, danh sách 599 mã, quota 600, hai request tranh suất cuối (chỉ một 201, một COM016/409) và tombstone trả suất đều đạt. Browser URL policy chặn mở lại fixture, chưa nghiệm thu trực quan picker/registry mới; ảnh ACCESS09 không thay bằng chứng này. Scope/chi phí DB còn tiếp tục.
 
 ## ACCESS09 — Đã có trên main
 

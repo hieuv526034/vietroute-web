@@ -37,9 +37,47 @@ public class UserRepository extends BaseRepository {
         super(connections);
     }
 
-    /** Đọc độc lập cho filter/me; BaseRepository tự đóng connection sau khi map user và role. */
+    /** Projection filter/me: một statement cho user + role/quyền hiện hành, không đọc password hash hoặc bộ đếm đăng nhập. */
     public UserAccount findById(Long id) {
-        return read(connection -> find(connection, "id", id, false));
+        return read(connection -> {
+            try (
+                var query = connection.prepareStatement(
+                    """
+                    SELECT u.id,u.username,u.display_name,u.email,u.avatar_media_id,u.email_verified_at,
+                           u.activation_pending,u.active,u.must_change_password,u.token_version,
+                           u.version,u.created_at,u.updated_at,u.created_by,u.updated_by,
+                           (SELECT thumbnail_url FROM media_assets WHERE id=u.avatar_media_id AND status='READY') AS avatar_url
+                    """ +
+                        AccountAccessSql.ARRAYS +
+                        " FROM auth_users u WHERE u.id=?"
+                )
+            ) {
+                query.setLong(1, id);
+                try (var row = query.executeQuery()) {
+                    if (!row.next()) return null;
+                    return UserAccount.builder()
+                        .id(row.getLong("id"))
+                        .username(row.getString("username"))
+                        .displayName(row.getString("display_name"))
+                        .email(row.getString("email"))
+                        .avatarMediaId(row.getObject("avatar_media_id", Long.class))
+                        .avatarUrl(row.getString("avatar_url"))
+                        .emailVerifiedAt(instant(row, "email_verified_at"))
+                        .activationPending(row.getBoolean("activation_pending"))
+                        .active(row.getBoolean("active"))
+                        .mustChangePassword(row.getBoolean("must_change_password"))
+                        .tokenVersion(row.getLong("token_version"))
+                        .version(row.getLong("version"))
+                        .createdAt(instant(row, "created_at"))
+                        .updatedAt(instant(row, "updated_at"))
+                        .createdBy(row.getLong("created_by"))
+                        .updatedBy(row.getLong("updated_by"))
+                        .roles(AccountAccessSql.roles(row))
+                        .permissions(AccountAccessSql.permissions(row))
+                        .build();
+                }
+            }
+        });
     }
 
     /** Chọn tường minh cột công khai, lấy role trong cùng query để không N+1 hoặc đọc password hash. */
