@@ -239,7 +239,11 @@
             );
             row.append(
                 title,
-                text('td', value?.view ? labels.allowed : labels.denied, value?.view ? 'text-success' : 'muted'),
+                text(
+                    'td',
+                    feature.path ? (value?.view ? labels.allowed : labels.denied) : labels.apiOnly,
+                    feature.path && value?.view ? 'text-success' : 'muted',
+                ),
                 actions,
             );
             body.append(row);
