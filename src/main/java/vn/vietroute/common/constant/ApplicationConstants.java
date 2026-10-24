@@ -121,6 +121,8 @@ public final class ApplicationConstants {
 
         public static final String AUTH_PROFILE = "/profile";
 
+        public static final String AUTH_ADMIN_RECOVERY = "/admin-recovery";
+
         public static final String AUTH_AVATAR = "/avatar";
 
         public static final String ACCESS_ROLE_ITEM = "/registry/roles/{code}";

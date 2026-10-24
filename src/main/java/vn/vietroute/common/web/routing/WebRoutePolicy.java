@@ -101,6 +101,7 @@ public final class WebRoutePolicy {
         return (
             method.equals("POST") &&
             (path.equals(Routes.AUTH_LOGIN) ||
+                path.equals(Routes.AUTH + Routes.AUTH_ADMIN_RECOVERY) ||
                 path.equals(Routes.AUTH + Routes.AUTH_EMAIL) ||
                 path.equals(Routes.AUTH + Routes.PASSWORD_ACTION) ||
                 path.equals(Routes.ACCOUNTS) ||

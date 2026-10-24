@@ -43,6 +43,8 @@ import vn.vietroute.common.validation.StrongPasswordValidator;
 @RequiredArgsConstructor
 public class ManagedAccountService {
 
+    private final BootstrapAdminInitializer bootstrap;
+
     private final ManagedAccountRepository accounts;
 
     private final UserRepository users;
@@ -74,6 +76,10 @@ public class ManagedAccountService {
     )
     public ManagedAccountResponse create(ManagedAccountCreateRequest body, UserPrincipal actor) {
         AccessActors.requireCurrent(actor);
+        BusinessRules.require(
+            !bootstrap.username().equals(body.getUsername().toLowerCase(Locale.ROOT)),
+            ErrorCode.CONFLICT
+        );
         BusinessRules.require(StrongPasswordValidator.valid(body.getPassword()), ErrorCode.VALIDATION_FAILED);
         String hash = passwords.encode(body.getPassword());
         return transactions.execute(connection -> {
@@ -125,6 +131,7 @@ public class ManagedAccountService {
         return transactions.execute(connection -> {
             access.lockRoleAssignments(connection);
             var target = BusinessRules.requireFound(users.findById(connection, id, true));
+            BusinessRules.require(!bootstrap.username().equals(target.getUsername()), ErrorCode.ACCESS_DENIED);
             BusinessRules.require(!target.isActivationPending(), ErrorCode.CONFLICT);
             // ADMIN registry và tài khoản cứu hộ được bảo vệ; không khóa ADMIN khác bằng màn danh tính.
             BusinessRules.require(!target.getRoles().contains(Role.ADMIN), ErrorCode.ACCESS_DENIED);

@@ -51,6 +51,7 @@ public final class AccessResourceSynchronizer implements ApplicationListener<Con
         // Validate metadata cả khi tắt ghi DB; cờ sync chỉ điều khiển transaction startup.
         inventory = AccessTargets.discover(context.getBean(RequestMappingHandlerMapping.class));
         Set<String> serviceCodes = serviceCodes();
+        resources.remember(inventory, serviceCodes);
         if (settings.isAccessSyncEnabled()) resources.synchronize(inventory, serviceCodes);
     }
 

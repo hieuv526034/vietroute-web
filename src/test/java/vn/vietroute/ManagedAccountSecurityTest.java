@@ -300,6 +300,7 @@ class ManagedAccountSecurityTest {
             }
         };
         var service = new ManagedAccountService(
+            null,
             new ManagedAccountRepository(null) {
                 @Override
                 public Set<Role> assignedRoles(long id) {

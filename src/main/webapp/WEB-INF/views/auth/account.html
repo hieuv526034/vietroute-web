@@ -71,6 +71,97 @@
                     ></button>
                 </div>
             </section>
+            <section
+                class="panel"
+                th:if="${adminRecoveryVisible == true}"
+            >
+                <h2 th:text="#{ui.adminRecovery.title}"></h2>
+                <p
+                    class="muted"
+                    th:text="#{ui.adminRecovery.description}"
+                ></p>
+                <div class="toolbar-actions">
+                    <button
+                        id="admin-recovery-open"
+                        class="button button-outline"
+                        type="button"
+                        th:text="#{ui.adminRecovery.open}"
+                    ></button>
+                </div>
+            </section>
+            <dialog
+                id="admin-recovery-dialog"
+                class="workspace-dialog"
+                aria-labelledby="admin-recovery-title"
+                th:if="${adminRecoveryVisible == true}"
+            >
+                <fieldset
+                    id="admin-recovery-controls"
+                    class="dialog-controls"
+                >
+                    <div class="dialog-heading">
+                        <h2
+                            id="admin-recovery-title"
+                            th:text="#{ui.adminRecovery.title}"
+                        ></h2>
+                        <button
+                            class="dialog-close"
+                            type="button"
+                            data-dialog-close
+                            th:attr="aria-label=#{ui.ops.close}"
+                        >
+                            ×
+                        </button>
+                    </div>
+                    <p th:text="#{ui.adminRecovery.confirm}"></p>
+                    <p
+                        id="admin-recovery-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></p>
+                    <form
+                        id="admin-recovery-form"
+                        novalidate
+                        th:attr="data-endpoint=@{/api/v1/auth/admin-recovery},data-login=@{/login(lang=${currentLocale})},data-success=#{ui.adminRecovery.success}"
+                    >
+                        <label
+                            for="admin-recovery-password"
+                            class="form-label"
+                            th:text="#{ui.currentPassword}"
+                        ></label>
+                        <input
+                            id="admin-recovery-password"
+                            name="currentPassword"
+                            type="password"
+                            class="form-control"
+                            required
+                            maxlength="72"
+                            autocomplete="current-password"
+                        />
+                        <div class="dialog-actions">
+                            <button
+                                class="button button-outline"
+                                type="button"
+                                data-dialog-close
+                                th:text="#{ui.ops.close}"
+                            ></button>
+                            <button
+                                type="submit"
+                                class="button"
+                                th:text="#{ui.adminRecovery.submit}"
+                            ></button>
+                        </div>
+                    </form>
+                    <a
+                        id="admin-recovery-login"
+                        class="button"
+                        hidden
+                        th:href="@{/login(lang=${currentLocale})}"
+                        th:text="#{ui.login}"
+                    ></a>
+                </fieldset>
+            </dialog>
             <dialog
                 id="profile-dialog"
                 class="workspace-dialog"
@@ -323,5 +414,6 @@
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
         <script th:src="@{/assets/js/account-email.js}"></script>
         <script th:src="@{/assets/js/profile.js}"></script>
+        <script th:src="@{/assets/js/admin-recovery.js}"></script>
     </body>
 </html>

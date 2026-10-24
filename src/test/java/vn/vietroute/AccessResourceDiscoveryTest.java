@@ -181,7 +181,7 @@ class AccessResourceDiscoveryTest {
         private Set<String> serviceCodes = Set.of();
 
         RecordingResources() {
-            super(null, null, null);
+            super(null, null, null, null, null);
         }
 
         @Override

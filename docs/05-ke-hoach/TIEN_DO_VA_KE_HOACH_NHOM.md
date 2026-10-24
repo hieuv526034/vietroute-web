@@ -1,5 +1,11 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
+## ACCESS15 — Đang làm: khôi phục tài khoản bootstrap
+
+[Issue #76](https://github.com/hieuv526034/vietroute-web/issues/76), hieuv526034, nhánh hieuv526034/access15-khoi-phuc-admin, base d1fe84e. Theo yêu cầu chủ dự án: root init/servlet sync sửa role/permission/mapping ADMIN và tài khoản bootstrap thiếu, giữ hash/trạng thái/khóa/mật khẩu tạm của account đã có. Nút cứu hộ ở /account chỉ chính username bootstrap; API kiểm ID/username/tokenVersion/mật khẩu DB, không cần quyền đang mất, giữ CSRF/quota và AUTH011. Giữ tên bootstrap khỏi đăng ký/managed create, không cho gỡ ADMIN của account gốc; history ADMIN_RECOVERED cùng transaction và thu hồi phiên sau thành công. Chuyên đề phân quyền/API/UI đã ghi hợp đồng và giới hạn.
+
+Local Maven verify 140 Java/30 Node đạt; formatter/check/rules/docs, actionlint/bash syntax/diff đạt. Helper CI biên dịch, renderer hai context xuất vi/en không thiếu key. Modal fixture kiểm submit lặp/busy, 503 giữ bản nháp và thành công xóa password/hiện đăng nhập lại. Chuẩn bị CI PostgreSQL phá dữ liệu có rollback, mất role/mapping, giữ hash và restart. Chưa đánh dấu trên main hoặc kiểm Neon/Render/browser thật. Bước tiếp: PR/CI đúng head, xử lý lỗi thực nếu có rồi merge theo quy trình. Không thay migration V001–V015.
+
 ## Mốc bàn giao nền phân quyền
 
 Guard chung/registry động (ACCESS08), lịch sử DB (ACCESS09), picker/quota/phân trang (ACCESS10), chi phí query (ACCESS11), auth scope (SCOPE01) và snapshot service (ACCESS13) đã merge, bằng chứng ở các mục dưới. Thực hiện dưới identity hieuv526034; không phân bổ lại đóng góp đã có cho thành viên khác. Source đợt hoàn thiện này đã chốt, không có việc code dang dở chỉ giữ trong chat/.tools.
