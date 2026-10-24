@@ -113,6 +113,11 @@ call 403 GET /api/v1/admin/system/runtime '' bearer
 assert_code AUTH011
 call 302 GET /admin '' cookie
 grep -qi '^Location: .*/account' "$work/headers"
+call 200 GET '/account?lang=en' '' cookie
+if grep -Fq 'href="/admin?lang=en"' "$result"; then
+  printf 'Temporary-password session must not expose the catalog menu\n' >&2
+  exit 1
+fi
 CI_OLD="$admin_password" CI_NEW="$next_password" python3 -c 'import json,os,sys; json.dump({"currentPassword":os.environ["CI_OLD"],"newPassword":os.environ["CI_NEW"]},sys.stdout)' > "$work/password.json"
 printf 'Auth stage: password change and token revocation\n'
 call 200 POST /api/v1/auth/change-password "$work/password.json" cookie
@@ -125,6 +130,12 @@ token="$new_token"
 call 200 GET /api/v1/auth/me '' bearer
 call 200 GET /api/v1/auth/me '' cookie
 [[ "$(field data.username)" == admin ]]
+# Document mới dùng cookie sau đổi mật khẩu phải dựng đủ menu từ quyền DB, không giữ header phiên tạm.
+call 200 GET '/account?lang=en&passwordChanged=true' '' cookie
+for page_path in /admin /media /monitoring /operations/jobs /operations/access /operations/accounts /operations/configuration /operations/api-journal; do
+  grep -Fq "href=\"$page_path?lang=en\"" "$result"
+done
+grep -q 'data-password-changed=' "$result"
 printf 'Navigation stage: authenticated home enters workspace and login redirects without another password\n'
 call 200 GET '/?lang=vi' '' cookie
 python3 -c 'import re,sys; h=open(sys.argv[1]).read(); a=re.search(r"id=\"home-workspace\"[\s\S]*?</a>",h).group(); assert "href=\"/admin?lang=vi\"" in a' "$result"
