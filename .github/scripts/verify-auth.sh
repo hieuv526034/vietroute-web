@@ -20,6 +20,8 @@ for attempt in {1..30}; do
 done
 start_app() {
   local database="${3:-vietroute_ci}"
+  local database_port="${8:-5432}"
+  local database_options="${9-?currentSchema=public}"
   docker run --detach --name "$1" --network vietroute-auth-net --memory 512m \
     -e PORT=10001 -p "127.0.0.1:$2:10001" \
     -e VIETROUTE_ENV=production -e VIETROUTE_COOKIE_SECURE=false -e VIETROUTE_DB_INIT_ENABLED=true \
@@ -33,7 +35,7 @@ start_app() {
     -e VIETROUTE_SMTP_HOST=127.0.0.1 -e VIETROUTE_SMTP_PORT=1 -e VIETROUTE_SMTP_USER=ci-only -e VIETROUTE_SMTP_PASSWORD=ci-only \
     -e VIETROUTE_REDIS_URL="${5:-}" \
     -e VIETROUTE_DB_SCHEMA="${6:-vietroute}" \
-    -e VIETROUTE_DB_URL="jdbc:postgresql://vietroute-db-ci:5432/$database?currentSchema=public" \
+    -e VIETROUTE_DB_URL="jdbc:postgresql://vietroute-db-ci:$database_port/$database$database_options" \
     -e VIETROUTE_DB_USER=vietroute_ci -e VIETROUTE_DB_PASSWORD="$db_password" \
     -e VIETROUTE_JWT_SECRET="$jwt_secret" -e VIETROUTE_BOOTSTRAP_ADMIN_USERNAME=admin \
     -e VIETROUTE_BOOTSTRAP_ADMIN_EMAIL=bootstrap-ci@example.invalid \
@@ -745,4 +747,5 @@ source "$(dirname "${BASH_SOURCE[0]}")/verify-access-history.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-access-registry.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-access-cost.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-admin-recovery.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/verify-pooler.sh"
 printf 'Function permissions, durable workers, per-node quota, metrics isolation and DB/node recovery checks passed.\n'

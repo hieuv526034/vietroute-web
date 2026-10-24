@@ -12,10 +12,9 @@ public class JdbcTransactions {
 
     private final JdbcConnectionFactory connections;
 
-    /** Mở một connection, tắt autocommit, chạy callback rồi commit; lỗi SQL/nghiệp vụ đều rollback và đóng. */
+    /** Factory mở transaction và chọn schema LOCAL trước callback; thành công commit, lỗi rollback rồi đóng. */
     public <T> T execute(BaseRepository.SqlWork<T> work) {
         try (Connection connection = connections.open()) {
-            connection.setAutoCommit(false);
             try {
                 T result = work.apply(connection);
                 connection.commit();

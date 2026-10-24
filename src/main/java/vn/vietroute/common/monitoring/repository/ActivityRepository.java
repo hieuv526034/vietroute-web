@@ -38,7 +38,10 @@ public class ActivityRepository {
             query.setInt(4, status);
             try (ResultSet rows = query.executeQuery()) {
                 rows.next();
-                return rows.getBoolean(1);
+                boolean recorded = rows.getBoolean(1);
+                // Hàm có ghi dữ liệu: commit tường minh vì factory đã chọn schema trong transaction LOCAL.
+                connection.commit();
+                return recorded;
             }
         } catch (SQLException exception) {
             throw BaseRepository.translate(exception);

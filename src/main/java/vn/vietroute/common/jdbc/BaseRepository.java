@@ -10,8 +10,11 @@ public abstract class BaseRepository {
 
     protected final JdbcConnectionFactory connections;
 
+    private final JdbcTransactions transactions;
+
     protected BaseRepository(JdbcConnectionFactory connections) {
         this.connections = connections;
+        transactions = new JdbcTransactions(connections);
     }
 
     @FunctionalInterface
@@ -19,13 +22,9 @@ public abstract class BaseRepository {
         T apply(Connection connection) throws SQLException;
     }
 
-    /** Truy vấn độc lập tự đóng connection; DAO đang trong transaction phải dùng connection do service truyền vào. */
+    /** Callback độc lập dùng cùng transaction với schema; dùng chung luồng commit/rollback, không dựa vào close ngầm. */
     protected <T> T read(SqlWork<T> work) {
-        try (Connection connection = connections.open()) {
-            return work.apply(connection);
-        } catch (SQLException exception) {
-            throw translate(exception);
-        }
+        return transactions.execute(work);
     }
 
     public static BusinessException translate(SQLException error) {
