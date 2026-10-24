@@ -56,7 +56,7 @@ public final class TrafficGuardFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
             return;
         }
-        boolean login = WebRoutePolicy.credentialMutation(path);
+        boolean login = WebRoutePolicy.credentialMutation(path, request.getMethod());
         boolean upload =
             (path.equals(Routes.MEDIA) || path.equals(Routes.AUTH + Routes.AUTH_AVATAR)) &&
             request.getMethod().equals("POST") &&

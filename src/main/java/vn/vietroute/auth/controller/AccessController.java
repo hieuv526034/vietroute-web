@@ -95,7 +95,7 @@ public class AccessController extends BaseController {
     @PutMapping(Routes.USER_ROLES_ACTION)
     @Operation(
         summary = "Gán role cho tài khoản",
-        description = "Yêu cầu ACCESS_ASSIGN (hoặc ACCESS_WRITE tương thích) và role ADMIN; thu hồi token cũ, không tự sửa role hoặc xóa admin cuối"
+        description = "Yêu cầu ACCESS_ASSIGN (hoặc ACCESS_WRITE tương thích) trong phạm vi được ủy quyền; thu hồi token cũ, không tự sửa role hoặc xóa admin cuối"
     )
     @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_ASSIGN, Permissions.ACCESS_WRITE })
     public ApiResult<UserResponse> assign(

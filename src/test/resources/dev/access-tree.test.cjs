@@ -58,3 +58,11 @@ test('Bộ hệ thống chỉ chọn endpoint quản trị được khai báo, k
     assert.deepEqual(Array.from(state.values()), ['ACCESS_ASSIGN', 'CATALOG_READ']);
     assert.deepEqual(Array.from(state.changes().added), ['ACCESS_ASSIGN']);
 });
+
+test('Quyền đã tắt vẫn hiện để gỡ mapping, không lẫn quyền đã gắn chức năng', () => {
+    const rows=context.window.VietRouteAccessTree.unbound([{code:'CATALOG_CREATE',name:'Tạo',actions:['CREATE']},{code:'EXTRA_READ',name:'Bổ sung',actions:['READ']}],['CATALOG_CREATE','ARCHIVE_READ'],features,'Đã tắt');
+    assert.deepEqual(Array.from(rows,row=>row.permission),['EXTRA_READ','ARCHIVE_READ']);
+    assert.equal(rows[1].inactive,true); assert.match(rows[1].name,/Đã tắt/);
+    const state=context.window.VietRouteAccessTree.model(['ARCHIVE_READ'],features);state.toggle(rows[1].permission,false);
+    assert.deepEqual(Array.from(state.values()),[]);assert.deepEqual(Array.from(state.changes().removed),['ARCHIVE_READ']);
+});

@@ -90,6 +90,21 @@
                         class="h4"
                         th:text="#{ui.ops.rolePermissions}"
                     ></h2>
+                    <div class="toolbar-actions mb-3">
+                        <a
+                            class="button button-outline"
+                            th:if="${adminUser}"
+                            th:href="@{/operations/accounts(lang=${currentLocale})}"
+                            th:text="#{ui.accounts.title}"
+                        ></a>
+                        <button
+                            id="access-new-role"
+                            class="button"
+                            type="button"
+                            hidden
+                            th:text="#{ui.foundation.newRole}"
+                        ></button>
+                    </div>
                     <label
                         for="access-role"
                         class="form-label"
@@ -750,7 +765,7 @@
             <div
                 id="access-tree-labels"
                 hidden
-                th:attr="data-system-bundle=#{ui.accessTree.systemBundle},data-system-bundle-note=#{ui.accessTree.systemBundleNote},data-impact=#{ui.accessTree.impact},data-inactive=#{ui.accessTree.inactive},data-search=#{ui.accessTree.search},data-all=#{ui.accessTree.all},data-expand=#{ui.accessTree.expand},data-collapse=#{ui.accessTree.collapse},data-preview=#{ui.accessTree.preview},data-added=#{ui.accessTree.added},data-removed=#{ui.accessTree.removed},data-unchanged=#{ui.accessTree.unchanged},data-endpoints=#{ui.accessTree.endpoints},data-dependency=#{ui.accessTree.dependency},data-source=#{ui.accessTree.source},data-empty=#{ui.accessTree.empty},data-no-read=#{ui.accessTree.noRead},data-custom=#{ui.accessTree.custom},data-shared=#{ui.accessTree.shared},data-admin=#{ui.accessTree.admin},data-show-sources=#{ui.accessTree.showSources}"
+                th:attr="data-menu=#{ui.accessMatrix.menu},data-action-view=#{ui.accessMatrix.VIEW},data-action-read=#{ui.accessMatrix.READ},data-action-list=#{ui.accessMatrix.LIST},data-action-detail=#{ui.accessMatrix.DETAIL},data-action-create=#{ui.accessMatrix.CREATE},data-action-update=#{ui.accessMatrix.UPDATE},data-action-delete=#{ui.accessMatrix.DELETE},data-action-assign=#{ui.accessMatrix.ASSIGN},data-action-retry=#{ui.accessMatrix.RETRY},data-action-send=#{ui.accessMatrix.SEND},data-action-write=#{ui.accessMatrix.WRITE},data-system-bundle=#{ui.accessTree.systemBundle},data-system-bundle-note=#{ui.accessTree.systemBundleNote},data-impact=#{ui.accessTree.impact},data-inactive=#{ui.accessTree.inactive},data-search=#{ui.accessTree.search},data-all=#{ui.accessTree.all},data-expand=#{ui.accessTree.expand},data-collapse=#{ui.accessTree.collapse},data-preview=#{ui.accessTree.preview},data-added=#{ui.accessTree.added},data-removed=#{ui.accessTree.removed},data-unchanged=#{ui.accessTree.unchanged},data-endpoints=#{ui.accessTree.endpoints},data-dependency=#{ui.accessTree.dependency},data-source=#{ui.accessTree.source},data-empty=#{ui.accessTree.empty},data-no-read=#{ui.accessTree.noRead},data-custom=#{ui.accessTree.custom},data-shared=#{ui.accessTree.shared},data-admin=#{ui.accessTree.admin},data-show-sources=#{ui.accessTree.showSources}"
             ></div>
             <div
                 id="foundation-labels"

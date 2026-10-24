@@ -188,3 +188,20 @@ Nghiệp vụ mới có thể dùng RESOURCE_LIST (danh sách), RESOURCE_DETAIL 
 ## Phân tích cây chức năng và quyền hành động — ACCESS02
 
 Thiết kế ban đầu ở [Issue #46](https://github.com/hieuv526034/vietroute-web/issues/46)/PR #47 đã được triển khai theo hợp đồng ACCESS03 phía trên. Trạng thái và bằng chứng nghiệm thu luôn xem tiến độ/PR, không coi bản phân tích cũ là kết quả chạy thật.
+
+## Quản trị tài khoản và ma trận menu — ACCESS05
+
+Màn `/operations/accounts` là khu danh tính toàn hệ thống dành riêng ADMIN, có ACCOUNT_VIEW cho trang, ACCOUNT_READ cho danh sách/preview, ACCOUNT_CREATE + ACCESS_ASSIGN để cấp tài khoản, ACCOUNT_UPDATE để khóa/mở. Các guard nằm ở annotation HTTP và service trong hai context WAR. Role DRIVER/CUSTOMER là lựa chọn nhanh cho tài khoản; một user có nhiều role active. Không tạo tầng nhóm quyền thứ hai, không tạo membership nhà xe giả và không mở quyền quản trị toàn hệ thống cho OPERATOR. Hồ sơ tài xế/liên kết nhà xe tiếp tục thuộc SCOPE01/AUTH03.
+
+Quy trình thao tác:
+
+1. Vào Quản trị truy cập → Phân quyền; dùng **Tạo vai trò** nếu cần role riêng. Role ADMIN bất biến. Role mới chưa được cấp quyền tự động.
+2. Chọn role → Chỉnh quyền: ma trận cho thấy tất cả menu/chức năng hiện có, mỗi cột là một hành động. Tick từng ô hoặc cả nhánh, xem mã thêm/bỏ trước Lưu. Mở menu VIEW độc lập với quyền dữ liệu; dấu gạch ngang nghĩa là chưa có endpoint cho hành động đó. Chi tiết API vẫn hiển thị guard ANY/ALL và ADMIN-only. Tìm theo tên/mã/nhóm giữ nguyên lựa chọn ngoài kết quả.
+3. Vào Tài khoản → Tạo tài khoản: username, tên, mật khẩu tạm và ít nhất một role active. Service BCrypt trước khi lấy connection, rồi khóa mapping, kiểm role và INSERT user/mapping/audit trong một transaction. Trùng username trả 409, không tạo user dở dang. Không trả password/hash/token/email trong DTO quản trị.
+4. Bàn giao mật khẩu tạm qua kênh riêng. Sau login, JWT hợp lệ nhưng không có authority; chỉ dùng hồ sơ đọc, đổi mật khẩu, logout và API công khai. Trang chức năng chuyển về `/account`; API riêng trả AUTH011. Đổi mật khẩu thành công tăng tokenVersion và phát phiên mới; authorities lại đọc DB. Quy tắc này cũng áp dụng tài khoản bootstrap còn must_change_password=true.
+5. Danh sách lọc prefix username, role và active, phân trang PostgreSQL. Gán role dùng API/version hiện có và thu hồi mọi JWT cũ. Nút xem cho biết menu/thao tác hiệu lực của user, đã xét trạng thái, mật khẩu tạm, role/quyền active và policy của **user đích**, không dùng snapshot bỏ qua policy của admin đang xem.
+6. Khóa/mở dùng version; cùng khóa gán role rồi khóa dòng user, đổi active + tokenVersion + audit, xóa challenge cũ nguyên tử. Không khóa system/bản thân/ADMIN; không mở/khóa tài khoản đang chờ kích hoạt để tránh bỏ xác minh email. Không xóa user hoặc lịch sử. Mở lại không khôi phục JWT/challenge đã thu hồi.
+
+Không cần migration mới: tái sử dụng auth_users/auth_user_roles; startup sync đăng ký ACCOUNT_* và function ACCOUNTS khi bật, chỉ tự cấp ADMIN. Giữ V001–V013 nguyên vẹn. ADMIN-only của khu danh tính không thể bị nới bằng policy hay cấp ACCOUNT_* cho role khác. Không gộp khu danh tính vào mẫu quyền hệ thống cho ordinary roles. Preview là ảnh chụp trạng thái đọc tại thời điểm yêu cầu, không giữ quyền hoặc lịch sử trong RAM, không phát token impersonation; guard backend luôn kiểm lại lúc thao tác. Email mời tự động và quản lý tài xế theo phạm vi nhà xe chưa nằm trong đợt này.
+
+Triển khai ACCESS05: nâng toàn bộ node hoặc drain node cũ trước khi cấp tài khoản mật khẩu tạm. Code cũ chưa cưỡng chế flag này nên không được duy trì mixed-version rồi tuyên bố bắt đổi mật khẩu đồng nhất. Không đổi khóa JWT hoặc reset mật khẩu admin đang dùng.

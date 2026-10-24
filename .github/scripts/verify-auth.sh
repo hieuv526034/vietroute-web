@@ -108,6 +108,20 @@ login_trace=$(field traceId)
 grep -qi 'HttpOnly' "$work/headers"
 grep -qi 'SameSite=Lax' "$work/headers"
 [[ "$(field data.user.mustChangePassword)" == True ]]
+call 403 GET /api/v1/admin/system/runtime '' bearer
+assert_code AUTH011
+call 302 GET /admin '' cookie
+grep -qi '^Location: .*/account' "$work/headers"
+CI_OLD="$admin_password" CI_NEW="$next_password" python3 -c 'import json,os,sys; json.dump({"currentPassword":os.environ["CI_OLD"],"newPassword":os.environ["CI_NEW"]},sys.stdout)' > "$work/password.json"
+printf 'Auth stage: password change and token revocation\n'
+call 200 POST /api/v1/auth/change-password "$work/password.json" cookie
+new_token=$(field data.accessToken)
+[[ "$(field data.user.mustChangePassword)" == False ]]
+token="$initial_token"
+call 401 GET /api/v1/auth/me '' bearer
+assert_code AUTH004
+token="$new_token"
+call 200 GET /api/v1/auth/me '' bearer
 call 200 GET /api/v1/auth/me '' cookie
 [[ "$(field data.username)" == admin ]]
 printf 'Navigation stage: authenticated home enters workspace and login redirects without another password\n'
@@ -226,16 +240,6 @@ call 200 GET "/api/v1/admin/system/api-journal?endpoint=api-journal" '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); del d["code"]; json.dump(d,sys.stdout)' "$work/catalog.json" > "$work/generated.json"
 call 201 POST /api/v1/admin/catalogs "$work/generated.json" bearer
 python3 -c 'import json,re,sys; d=json.load(open(sys.argv[1])); assert re.fullmatch(r"[A-Z][A-Z0-9]{2,39}",d["data"]["code"])' "$result"
-CI_OLD="$admin_password" CI_NEW="$next_password" python3 -c 'import json,os,sys; json.dump({"currentPassword":os.environ["CI_OLD"],"newPassword":os.environ["CI_NEW"]},sys.stdout)' > "$work/password.json"
-printf 'Auth stage: password change and token revocation\n'
-call 200 POST /api/v1/auth/change-password "$work/password.json" cookie
-new_token=$(field data.accessToken)
-[[ "$(field data.user.mustChangePassword)" == False ]]
-token="$initial_token"
-call 401 GET /api/v1/auth/me '' bearer
-assert_code AUTH004
-token="$new_token"
-call 200 GET /api/v1/auth/me '' bearer
 call 200 POST /api/v1/auth/logout '' cookie
 call 401 GET /api/v1/auth/me '' bearer
 assert_code AUTH004
@@ -618,6 +622,10 @@ refresh_csrf
 login_body admin "$admin_password"
 call 200 POST /api/v1/auth/login "$work/login.json" cookie
 token=$(field data.accessToken)
+call 200 POST /api/v1/auth/change-password "$work/password.json" bearer
+token=$(field data.accessToken)
+custom_sql "SELECT password_hash FROM auth_users WHERE username='admin'" > "$work/custom-hash"
+login_body admin "$next_password"
 call 200 GET /api/v1/catalogs/VEHICLE_TYPE
 [[ "$(field data.totalElements)" == 3 ]]
 call 201 POST /api/v1/admin/catalogs "$work/catalog.json" bearer
@@ -718,6 +726,7 @@ docker stop vietroute-auth-ci2 >/dev/null
 scrape
 if curl --fail --silent --max-time 3 -H "Authorization: Bearer $metrics_token" http://127.0.0.1:18081/internal/metrics >/dev/null 2>&1; then exit 1; fi
 source "$(dirname "${BASH_SOURCE[0]}")/verify-account.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/verify-managed-accounts.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-foundation.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-access-tree.sh"
 printf 'Function permissions, durable workers, per-node quota, metrics isolation and DB/node recovery checks passed.\n'

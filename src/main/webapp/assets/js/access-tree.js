@@ -55,17 +55,47 @@
                     )
                     .map((action) => ({ code: action.permission, feature: feature.code })),
             );
+    // Hiển thị cả mã đã tắt/ngoài registry để ADMIN bỏ mapping cũ, tránh không thể lưu vì quyền vô hình.
+    const unbound = (registry, initial, features, inactiveCaption) => {
+        const indexed = new Set(features.flatMap((feature) => feature.actions.map((action) => action.permission)));
+        return [
+            ...registry
+                .filter((item) => !indexed.has(item.code))
+                .map((item) => ({
+                    permission: item.code,
+                    name: item.name,
+                    action: item.actions.join('/'),
+                    endpoints: [],
+                })),
+            ...initial
+                .filter((code) => !indexed.has(code) && !registry.some((item) => item.code === code))
+                .map((code) => ({
+                    permission: code,
+                    name: `${code} · ${inactiveCaption}`,
+                    action: code.substring(code.lastIndexOf('_') + 1),
+                    endpoints: [],
+                    inactive: true,
+                })),
+        ];
+    };
     const render = (host, features, registry, initial, options) => {
         const labels = document.getElementById('access-tree-labels').dataset;
         const state = model(initial, features);
         const permitted = (code) => options.editable && (!options.allowed || options.allowed.includes(code));
-        const indexed = new Set(features.flatMap((feature) => feature.actions.map((action) => action.permission)));
-        const extra = registry
-            .filter((item) => !indexed.has(item.code))
-            .map((item) => ({ permission: item.code, name: item.name, action: item.actions.join('/'), endpoints: [] }));
+        const extra = unbound(registry, initial, features, labels.inactive);
         const nodes = [
             ...features,
-            ...(extra.length ? [{ code: 'UNBOUND', parent: null, name: labels.custom, actions: extra }] : []),
+            ...(extra.length
+                ? [
+                      { code: 'UNBOUND', parent: null, name: labels.custom, actions: [] },
+                      ...extra.map((action) => ({
+                          code: 'UNBOUND:' + action.permission,
+                          parent: 'UNBOUND',
+                          name: action.name,
+                          actions: [action],
+                      })),
+                  ]
+                : []),
         ];
         const toolbar = element('div', null, 'access-tree-toolbar');
         const search = element('input');
@@ -138,6 +168,7 @@
                     feature.actions.filter(
                         (action) =>
                             !query ||
+                            matchesBranch(feature) ||
                             `${feature.name} ${feature.code} ${action.name} ${action.permission}`
                                 .toLocaleLowerCase()
                                 .includes(query),
@@ -148,20 +179,42 @@
                 ...matching.get(feature.code),
                 ...nodes.filter((item) => item.parent === feature.code).flatMap(descendants),
             ];
-            const build = (feature) => {
-                const actions = matching.get(feature.code);
+            const columns = Array.from(
+                new Set(nodes.flatMap((feature) => feature.actions.map((action) => action.action))),
+            );
+            const order = ['VIEW', 'READ', 'LIST', 'DETAIL', 'CREATE', 'UPDATE', 'DELETE', 'ASSIGN', 'RETRY', 'SEND'];
+            columns.sort(
+                (left, right) =>
+                    (order.indexOf(left) < 0 ? 99 : order.indexOf(left)) -
+                    (order.indexOf(right) < 0 ? 99 : order.indexOf(right)),
+            );
+            const table = element('table', null, 'access-matrix');
+            const head = element('thead');
+            const header = element('tr');
+            header.append(element('th', labels.menu));
+            for (const column of columns)
+                header.append(
+                    element('th', labels['action' + column.charAt(0) + column.slice(1).toLowerCase()] || column),
+                );
+            header.append(element('th', labels.endpoints));
+            head.append(header);
+            table.append(head);
+            const body = element('tbody');
+            const build = (feature, depth = 0) => {
                 const below = descendants(feature);
-                if (!below.length) return null;
-                const details = element('details', null, 'access-tree-node');
-                details.open = true;
-                const summary = element('summary');
+                if (!below.length) return;
+                const actions = matching.get(feature.code);
+                const row = element('tr', null, feature.parent ? 'access-matrix-feature' : 'access-matrix-group');
+                row.dataset.feature = feature.code;
+                const title = element('td');
+                const label = element('label', null, 'access-matrix-title');
+                label.style.paddingInlineStart = `${depth * 12}px`;
                 const group = element('input');
                 group.type = 'checkbox';
                 group.className = 'form-check-input';
-                const codes = Array.from(new Set(below.map((action) => action.permission))).filter(permitted);
-                group.disabled = !codes.length;
+                const codes = Array.from(new Set(below.map((action) => action.permission)));
+                group.disabled = !codes.some(permitted);
                 group.setAttribute('aria-label', feature.name);
-                group.addEventListener('click', (event) => event.stopPropagation());
                 group.addEventListener('change', () => {
                     const branch = (node) => [
                         node,
@@ -172,66 +225,75 @@
                             if (permitted(action.permission)) state.toggle(action.permission, group.checked, item.code);
                     update();
                 });
-                groups.push({ input: group, codes: below.map((action) => action.permission) });
-                summary.append(
-                    group,
-                    element('span', feature.name),
-                    element('code', feature.code),
-                    element('small', String(new Set(below.map((action) => action.permission)).size)),
-                );
-                details.append(summary);
-                if (actions.length) {
-                    const grid = element('div', null, 'access-action-grid');
-                    for (const action of actions) {
-                        const card = element('div', null, 'access-action-card');
+                groups.push({ input: group, codes });
+                const name = element('span');
+                name.append(element('strong', feature.name));
+                if (feature.path) name.append(element('small', feature.path, 'muted'));
+                if (
+                    actions.length &&
+                    actions.every(
+                        (action) => action.endpoints.length && action.endpoints.every((endpoint) => endpoint.adminOnly),
+                    )
+                )
+                    name.append(element('small', labels.admin, 'muted'));
+                label.append(group, name);
+                title.append(label);
+                row.append(title);
+                for (const column of columns) {
+                    const cell = element('td', null, 'access-matrix-check');
+                    const choices = actions.filter((action) => action.action === column);
+                    for (const action of choices) {
                         const label = element('label');
+                        label.title = `${action.name} · ${action.permission}`;
                         const input = element('input');
                         input.type = 'checkbox';
                         input.className = 'form-check-input';
                         input.disabled = !permitted(action.permission);
-                        input.setAttribute('aria-label', `${feature.name}: ${action.name}`);
+                        input.setAttribute('aria-label', `${feature.name}: ${action.name} (${action.permission})`);
                         input.addEventListener('change', () => {
                             state.toggle(action.permission, input.checked, feature.code);
                             update();
                         });
                         inputs.push({ input, code: action.permission });
-                        label.append(input, element('span', action.name), element('code', action.action));
-                        card.append(label);
-                        if (
-                            features.filter((item) =>
-                                item.actions.some((candidate) => candidate.permission === action.permission),
-                            ).length > 1
-                        )
-                            card.append(element('small', labels.shared, 'muted'));
-                        const endpoints = element('details', null, 'access-endpoints');
-                        endpoints.append(element('summary', `${labels.endpoints} (${action.endpoints.length})`));
-                        for (const endpoint of action.endpoints) {
-                            const item = element('div');
-                            item.append(
-                                element('code', endpoint.target),
-                                element('p', endpoint.description, 'muted'),
-                                element(
-                                    'small',
-                                    `${endpoint.match}: ${endpoint.permissions.join(', ')}${endpoint.adminOnly ? ' · ' + labels.admin : ''}`,
-                                ),
-                            );
-                            endpoints.append(item);
-                        }
-                        card.append(endpoints);
-                        grid.append(card);
+                        label.append(input);
+                        if (action.permission.endsWith('_WRITE')) label.append(element('small', 'WRITE', 'muted'));
+                        cell.append(label);
                     }
-                    details.append(grid);
+                    if (!choices.length) cell.append(element('span', '—', 'muted'));
+                    row.append(cell);
                 }
-                for (const child of nodes.filter((item) => item.parent === feature.code)) {
-                    const row = build(child);
-                    if (row) details.append(row);
+                const endpoints = element('td');
+                if (actions.length) {
+                    const details = element('details', null, 'access-endpoints');
+                    const targets = Array.from(
+                        new Map(
+                            actions
+                                .flatMap((action) => action.endpoints)
+                                .map((endpoint) => [endpoint.target, endpoint]),
+                        ).values(),
+                    );
+                    details.append(element('summary', `${labels.endpoints} (${targets.length})`));
+                    for (const endpoint of targets) {
+                        const item = element('div');
+                        item.append(
+                            element('code', endpoint.target),
+                            element('p', endpoint.description, 'muted'),
+                            element(
+                                'small',
+                                `${endpoint.match}: ${endpoint.permissions.join(', ')}${endpoint.adminOnly ? ' · ' + labels.admin : ''}`,
+                            ),
+                        );
+                        details.append(item);
+                    }
+                    endpoints.append(details);
                 }
-                return details;
+                row.append(endpoints);
+                body.append(row);
+                for (const child of nodes.filter((item) => item.parent === feature.code)) build(child, depth + 1);
             };
-            for (const feature of nodes.filter((item) => !item.parent)) {
-                const row = build(feature);
-                if (row) content.append(row);
-            }
+            for (const feature of nodes.filter((item) => !item.parent)) build(feature);
+            table.append(body);
+            if (body.childElementCount) content.append(table);
             visibleCodes = Array.from(
                 new Set(
                     Array.from(matching.values())
@@ -260,12 +322,12 @@
         });
         search.addEventListener('input', paint);
         expand.addEventListener('click', () =>
-            content.querySelectorAll('.access-tree-node').forEach((item) => {
+            content.querySelectorAll('.access-endpoints').forEach((item) => {
                 item.open = true;
             }),
         );
         collapse.addEventListener('click', () =>
-            content.querySelectorAll('.access-tree-node').forEach((item) => {
+            content.querySelectorAll('.access-endpoints').forEach((item) => {
                 item.open = false;
             }),
         );
@@ -300,5 +362,5 @@
         section.append(button, output);
         host.append(section);
     };
-    window.VietRouteAccessTree = { model, render, sources, systemSelection };
+    window.VietRouteAccessTree = { model, render, sources, systemSelection, unbound };
 })();

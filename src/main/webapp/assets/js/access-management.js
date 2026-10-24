@@ -289,6 +289,11 @@
             );
     });
     node('registry-create').addEventListener('click', () => openRegistry());
+    node('access-new-role')?.addEventListener('click', () => {
+        if (busy || document.querySelector('[data-operations]').getAttribute('aria-busy') === 'true') return;
+        node('registry-kind').value = 'roles';
+        openRegistry();
+    });
     node('policies-create').addEventListener('click', () => openPolicy().catch(app.failure));
     node('registry-kind').addEventListener('change', () => read(renderRegistry));
     node('registry-refresh').addEventListener('click', () => read(renderRegistry));
@@ -306,6 +311,7 @@
             me = response.data.data;
             node('registry-create').disabled = !canCreate();
             node('registry-create').hidden = !canCreate();
+            if (node('access-new-role')) node('access-new-role').hidden = !canCreate();
             node('policies-create').disabled = !canCreate() || !me.permissions.includes('ACCESS_READ');
             node('policies-create').hidden = !canCreate();
             node('policy-delete').disabled = !me.permissions.includes('ACCESS_DELETE');

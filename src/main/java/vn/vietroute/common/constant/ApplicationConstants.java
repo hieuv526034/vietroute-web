@@ -190,6 +190,10 @@ public final class ApplicationConstants {
 
         public static final String ADMIN_CATALOG_BY_ID = ADMIN_CATALOGS + BY_ID;
 
+        public static final String ACCOUNTS = ADMIN_API + "/accounts";
+        public static final String ACCOUNT_STATE = BY_ID + "/state";
+        public static final String ACCOUNT_ACCESS = BY_ID + "/access";
+
         public static final String ACCESS = ADMIN_API + "/access";
 
         public static final String USERS_ACTION = "/users";
@@ -219,6 +223,8 @@ public final class ApplicationConstants {
         public static final String OPERATIONS = "/operations";
 
         public static final String JOBS_PAGE = OPERATIONS + "/jobs";
+
+        public static final String ACCOUNTS_PAGE = OPERATIONS + "/accounts";
 
         public static final String ACCESS_PAGE = OPERATIONS + "/access";
 
@@ -265,6 +271,8 @@ public final class ApplicationConstants {
         public static final String ENV_KEY = "[A-Z][A-Z0-9_]*";
 
         public static final String ROLE_CODE = "[A-Z][A-Z0-9_]{1,23}";
+
+        public static final String ROLE_SEARCH = "(?:" + ROLE_CODE + ")?";
         public static final String PERMISSION_CODE = "[A-Z][A-Z0-9_]{1,38}_[A-Z]+";
 
         public static final String BUSINESS_CODE = "^[A-Z][A-Z0-9]{2,39}$";

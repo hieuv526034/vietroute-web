@@ -97,9 +97,14 @@ public final class WebRoutePolicy {
     }
 
     /** Các mutation dùng password/mã email cùng chịu quota và semaphore login để hạn chế spam/BCrypt CPU. */
-    public static boolean credentialMutation(String path) {
+    public static boolean credentialMutation(String path, String method) {
         return (
-            path.equals(Routes.AUTH_LOGIN) || path.equals(Routes.AUTH + Routes.AUTH_EMAIL) || publicAccountFlow(path)
+            method.equals("POST") &&
+            (path.equals(Routes.AUTH_LOGIN) ||
+                path.equals(Routes.AUTH + Routes.AUTH_EMAIL) ||
+                path.equals(Routes.AUTH + Routes.PASSWORD_ACTION) ||
+                path.equals(Routes.ACCOUNTS) ||
+                publicAccountFlow(path))
         );
     }
 }

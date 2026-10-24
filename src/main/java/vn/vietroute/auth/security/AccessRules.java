@@ -79,5 +79,12 @@ public final class AccessRules {
         Permissions.ACCESS_UPDATE +
         "')))";
 
+    /** Quản lý danh tính toàn hệ thống chỉ dành cho ADMIN; quyền gán role vẫn là hành động độc lập. */
+    public static final String ACCOUNT_READ = ADMIN + " and hasAuthority('" + Permissions.ACCOUNT_READ + "')";
+    public static final String ACCOUNT_CREATE =
+        ADMIN + " and hasAuthority('" + Permissions.ACCOUNT_CREATE + "') and " + ACCESS_ASSIGN;
+    public static final String ACCOUNT_UPDATE = ADMIN + " and hasAuthority('" + Permissions.ACCOUNT_UPDATE + "')";
+    public static final String ACCOUNT_VIEW = ADMIN + " and hasAuthority('" + Permissions.ACCOUNT_VIEW + "')";
+
     public static final String SENSITIVE_READ = ADMIN + " and " + SYSTEM_READ;
 }
