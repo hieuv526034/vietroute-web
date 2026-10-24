@@ -125,3 +125,9 @@ Tab Lịch sử phân quyền chỉ hiện với ADMIN. Mở tab mới tải API
 Kiểm UI bằng `src/test/resources/dev/RenderSystemUi.java` với hai context thật và ConfigurationEnvironment fixture riêng (DB loopback cổng 1, init/sync/worker/provider/journal tắt), xuất HTML vào target/ui-preview; Node `src/test/resources/dev/ui-fixture.cjs` chỉ nghe 127.0.0.1:18119, dữ liệu giả. Fixture không đọc .env/OS credentials hoặc gọi Neon/provider. Đây là kiểm layout/luồng browser, không thay bộ SQL/bảo mật CI. Renderer cũng xuất public webjar assets từ dependency đã có, không tải hay đóng gói tooling vào WAR.
 
 Ảnh dữ liệu giả: [modal lịch sử vi/en và delta](../images/access09-history-vi.jpg). Cách biên dịch renderer: chạy Maven `test-compile dependency:build-classpath -Dmdep.outputFile=target/ui-classpath.txt -DincludeScope=test`, javac với classpath target/test-classes, target/classes và file vừa xuất, rồi chạy RenderSystemUi bằng cùng classpath. Các file xuất/bytecode nằm target hoặc .tools được ignore; source fixture được Git quản lý để máy khác chạy lại.
+
+## Tìm role và registry — ACCESS10
+
+Role ở ma trận/gán tài khoản hiển thị tên theo locale cùng mã, có ô tìm không dấu; role đang chọn và checkbox ngoài kết quả không bị mất. Component role-picker.js dùng chung ở khu Phân quyền/Tài khoản, giới hạn chiều cao danh sách và giữ khả năng bàn phím. Bộ lọc registry loại/từ khóa/trạng thái/nút cùng toolbar khi đủ chỗ, bảng phân trang server và quota riêng không đổi theo bộ lọc. Lỗi giữ bản nháp/version; tìm không cấp quyền và UI không thay guard DB.
+
+Renderer hai context/locale phải không có key dịch thiếu; Node kiểm tìm tên không dấu và không làm mất selection. Browser fixture của lượt ACCESS10 bị URL policy chặn mở lại tab, nên chưa có bằng chứng thao tác trực quan mới cho picker/registry; ảnh ACCESS09 trước đó không được tính là kiểm giao diện mới. Kiểm PostgreSQL phân trang/quota không thay nghiệm thu UX với người dùng thật.

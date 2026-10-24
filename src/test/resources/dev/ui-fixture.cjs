@@ -93,6 +93,12 @@ const page = (values, query) => {
             if (route === '/api/v1/admin/access/roles') return respond(roles);
             if (route === '/api/v1/admin/access/users') return respond(page(users.filter(user => user.username.startsWith(url.searchParams.get('username') || '')), url.searchParams));
             if (route === '/api/v1/admin/access/resources') return respond(page(resources.filter(item => (!url.searchParams.get('kind') || item.kind === url.searchParams.get('kind')) && `${item.target} ${item.description}`.toLowerCase().includes((url.searchParams.get('query') || '').toLowerCase())), url.searchParams));
+            if (/^\/api\/v1\/admin\/access\/registry\/(roles|permissions)\/page$/.test(route)) {
+                const values = route.includes('/roles/') ? registry : permissions.map(code => ({code, nameVi: permissionNames.get(code), nameEn: code, active: true, builtIn: true, version: 0}));
+                const query = (url.searchParams.get('query') || '').toLowerCase();
+                const filtered = values.filter(item => `${item.code} ${item.nameVi} ${item.nameEn}`.toLowerCase().includes(query) && (!url.searchParams.get('active') || String(item.active) === url.searchParams.get('active')));
+                return respond({page: page(filtered, url.searchParams), capacity: 512, allocated: values.length});
+            }
             if (route === '/api/v1/admin/access/registry/roles' && req.method === 'GET') return respond(registry);
             if (route === '/api/v1/admin/access/registry/permissions' && req.method === 'GET') return respond(permissions.map(code => ({code, nameVi: permissionNames.get(code), nameEn: code, active: true, builtIn: true, version: 0})));
             if (route === '/api/v1/admin/access/policies' || route === '/api/v1/admin/access/targets') return respond([]);

@@ -117,6 +117,23 @@
                         class="form-label"
                         th:text="#{ui.ops.role}"
                     ></label>
+                    <label
+                        for="access-role-search"
+                        class="form-label"
+                        th:text="#{ui.accessRoles.search}"
+                    ></label>
+                    <input
+                        id="access-role-search"
+                        type="search"
+                        class="form-control mb-2"
+                        maxlength="160"
+                        autocomplete="off"
+                    />
+                    <p
+                        id="access-role-count"
+                        role="status"
+                        class="muted"
+                    ></p>
                     <select
                         id="access-role"
                         class="form-select mb-3"
@@ -242,7 +259,7 @@
                             >
                                 <option
                                     value=""
-                                    th:text="#{ui.accessResources.allKinds}"
+                                    th:text="#{ui.ops.all}"
                                 ></option>
                                 <option
                                     value="MENU"
@@ -317,25 +334,70 @@
                         th:text="#{ui.foundation.registry}"
                     ></h2>
                     <p th:text="#{ui.foundation.registryNote}"></p>
-                    <div class="d-flex gap-3 justify-content-end mb-3">
-                        <label
-                            for="registry-kind"
-                            class="form-label"
-                            th:text="#{ui.foundation.kind}"
-                        ></label>
-                        <select
-                            id="registry-kind"
-                            class="form-select w-auto"
-                        >
-                            <option
-                                value="roles"
-                                th:text="#{ui.foundation.roles}"
-                            ></option>
-                            <option
-                                value="permissions"
-                                th:text="#{ui.foundation.permissions}"
-                            ></option>
-                        </select>
+                    <form
+                        id="registry-filter"
+                        class="table-filter mb-3"
+                    >
+                        <div>
+                            <label
+                                for="registry-kind"
+                                th:text="#{ui.foundation.kind}"
+                            ></label>
+                            <select
+                                id="registry-kind"
+                                class="form-select"
+                            >
+                                <option
+                                    value="roles"
+                                    th:text="#{ui.foundation.roles}"
+                                ></option>
+                                <option
+                                    value="permissions"
+                                    th:text="#{ui.foundation.permissions}"
+                                ></option>
+                            </select>
+                        </div>
+                        <div>
+                            <label
+                                for="registry-query"
+                                th:text="#{ui.accessRoles.registrySearch}"
+                            ></label>
+                            <input
+                                id="registry-query"
+                                class="form-control"
+                                type="search"
+                                maxlength="160"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                for="registry-active"
+                                th:text="#{ui.foundation.active}"
+                            ></label>
+                            <select
+                                id="registry-active"
+                                class="form-select"
+                            >
+                                <option
+                                    value=""
+                                    th:text="#{ui.accessResources.allKinds}"
+                                ></option>
+                                <option
+                                    value="true"
+                                    th:text="#{ui.monitoring.on}"
+                                ></option>
+                                <option
+                                    value="false"
+                                    th:text="#{ui.monitoring.off}"
+                                ></option>
+                            </select>
+                        </div>
+                        <button
+                            id="registry-search"
+                            type="submit"
+                            class="button button-outline"
+                            th:text="#{ui.ops.filter}"
+                        ></button>
                         <button
                             id="registry-refresh"
                             type="button"
@@ -348,7 +410,12 @@
                             class="button button-outline"
                             th:text="#{ui.foundation.new}"
                         ></button>
-                    </div>
+                    </form>
+                    <p
+                        id="registry-capacity"
+                        class="muted"
+                        role="status"
+                    ></p>
                     <p
                         id="registry-status"
                         role="status"
@@ -371,6 +438,7 @@
                             <tbody id="registry-body"></tbody>
                         </table>
                     </div>
+                    <nav th:replace="~{fragments/pagination :: pager('registry', 20)}"></nav>
                 </section>
                 <section
                     id="access-policies-section"
@@ -631,6 +699,23 @@
                             :
                             <strong id="user-version"></strong>
                         </p>
+                        <label
+                            for="user-role-search"
+                            class="form-label"
+                            th:text="#{ui.accessRoles.search}"
+                        ></label>
+                        <input
+                            id="user-role-search"
+                            type="search"
+                            class="form-control"
+                            maxlength="160"
+                            autocomplete="off"
+                        />
+                        <p
+                            id="user-role-count"
+                            role="status"
+                            class="muted"
+                        ></p>
                         <fieldset
                             id="user-role-options"
                             data-required-selection
@@ -889,6 +974,7 @@
             ></div>
             <div
                 id="foundation-labels"
+                th:data-capacity="#{ui.accessRoles.capacity}"
                 hidden
                 th:attr="data-delete-role=#{ui.foundation.deleteRole},data-confirm-role=#{ui.foundation.confirmRole},data-empty=#{ui.foundation.empty},data-edit=#{ui.foundation.edit},data-confirm=#{ui.foundation.confirm},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off},data-public=#{ui.accessResources.public},data-protected=#{ui.accessResources.protected},data-reserved=#{ui.accessResources.reserved},data-menu=#{ui.accessResources.menu},data-api=#{ui.accessResources.api}"
             ></div>
@@ -963,6 +1049,7 @@
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
         <script th:src="@{/assets/js/access-tree.js}"></script>
+        <script th:src="@{/assets/js/role-picker.js}"></script>
         <script th:src="@{/assets/js/operations.js}"></script>
         <script
             th:if="${accessAllowed}"

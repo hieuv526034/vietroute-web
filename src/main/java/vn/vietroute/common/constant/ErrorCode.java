@@ -27,6 +27,7 @@ public enum ErrorCode {
     PASSWORD_CHANGE_REQUIRED("AUTH011", "auth.passwordChangeRequired", HttpStatus.FORBIDDEN),
     STALE_VERSION("COM008", "error.staleVersion", HttpStatus.CONFLICT),
     RESOURCE_IN_USE("COM015", "error.inUse", HttpStatus.CONFLICT),
+    ACCESS_CAPACITY_REACHED("COM016", "error.accessCapacity", HttpStatus.CONFLICT),
     METHOD_NOT_ALLOWED("COM009", "error.method", HttpStatus.METHOD_NOT_ALLOWED),
     UNSUPPORTED_MEDIA("COM010", "error.media", HttpStatus.UNSUPPORTED_MEDIA_TYPE),
     NOT_ACCEPTABLE("COM011", "error.accept", HttpStatus.NOT_ACCEPTABLE),

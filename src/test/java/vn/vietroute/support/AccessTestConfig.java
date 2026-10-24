@@ -19,10 +19,12 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import vn.vietroute.auth.config.AccessSettings;
 import vn.vietroute.auth.dto.request.AccessChangeSearchRequest;
+import vn.vietroute.auth.dto.request.AccessRegistrySearchRequest;
 import vn.vietroute.auth.dto.request.AccessResourceSearchRequest;
 import vn.vietroute.auth.dto.response.AccessChangeResponse;
 import vn.vietroute.auth.dto.response.AccessChangeStateResponse;
 import vn.vietroute.auth.dto.response.AccessPolicyResponse;
+import vn.vietroute.auth.dto.response.AccessRegistryPageResponse;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
 import vn.vietroute.auth.dto.response.PermissionResponse;
 import vn.vietroute.auth.entity.AuthorizationState;
@@ -228,12 +230,17 @@ public class AccessTestConfig {
         public List<AccessPolicyResponse> rules = List.of();
 
         public PolicyFixture() {
-            super(null);
+            super(null, new AccessSettings(key -> null));
         }
 
         @Override
         public List<AccessPolicyResponse> policies() {
             return List.copyOf(rules);
+        }
+
+        @Override
+        public AccessRegistryPageResponse page(String kind, AccessRegistrySearchRequest search) {
+            return new AccessRegistryPageResponse(PageResponse.of(List.of(), search, 0), 512, 4);
         }
     }
 }

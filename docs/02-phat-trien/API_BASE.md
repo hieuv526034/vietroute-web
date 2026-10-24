@@ -190,3 +190,9 @@ AUTH011 (403) yêu cầu đổi mật khẩu tạm. Filter xác minh token/DB r�
 GET `/api/v1/admin/access/history` chỉ ADMIN + ACCESS_READ; query `event` theo enum sự kiện, `target` tiền tố nguyên văn tối đa 120 ký tự, `actorId` không âm, `page/size` theo PageRequest (size tối đa 100). Count và page lọc trong PostgreSQL, `%`, `_`, `!` được escape thành ký tự thường. Sai enum/giới hạn trả 400. Không có endpoint sửa/xóa lịch sử.
 
 Response PageResponse chứa ID, event, targetKind/targetKey, actorId/actorUsername, traceId, createdAt và before/after có schema tường minh. Với `delta=true`, các set trước/sau lần lượt là mã bị bỏ/thêm, mappingCount/version thể hiện tổng thực trước/sau; không hiểu danh sách delta là toàn bộ quyền tại thời điểm đó. Không password/hash/token/email/body/header. Đọc lịch sử không tải vào cache/storage; các giới hạn retention/rollback tại [chuyên đề](SCHEMA_VA_PHAN_QUYEN.md#lịch-sử-quản-trị-quyền--access09).
+
+## Registry phân trang — ACCESS10
+
+GET `/api/v1/admin/access/registry/{kind}/page` cần ACCESS_READ, kind là roles/permissions, query nguyên văn tối đa 160 ký tự trong code/nameVi/nameEn không phân biệt hoa thường, active tùy chọn, page/size kế thừa (size tối đa 100). Response có page, capacity và allocated chưa xóa của toàn loại. `%`, `_`, `!` là ký tự thường; sai loại/query/size trả 400. Hai query count/page dùng projection registry rõ ràng, không credential. API danh sách cũ giữ shape tương thích; lưu registry/audit đọc trực tiếp theo code, không tải toàn danh sách để tìm một mã.
+
+COM016/409 báo đạt quota cấu hình, khác COM005 trùng mã và COM008 stale version. Quota/tombstone/giới hạn mở rộng tại [chuyên đề](SCHEMA_VA_PHAN_QUYEN.md#tìm-role-và-quota-registry--access10). Tăng quota không tự tăng permission trên role đã lưu hoặc nới guard.

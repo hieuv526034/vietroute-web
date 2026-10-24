@@ -27,6 +27,7 @@ start_app() {
     -e VIETROUTE_ACTIVITY_ENABLED=true -e VIETROUTE_ACTIVITY_REQUEST_THRESHOLD=120 \
     -e VIETROUTE_METRICS_TOKEN="$metrics_token" -e VIETROUTE_MONITORING_DB_ENABLED=true -e VIETROUTE_MONITORING_POLL_SECONDS=15 \
     -e VIETROUTE_RATE_REQUESTS="${4:-1000}" -e VIETROUTE_RATE_LOGINS=200 \
+    -e VIETROUTE_ACCESS_REGISTRY_CAPACITY=600 \
     -e VIETROUTE_AUTH_SELF_SERVICE_ENABLED="${7:-false}" -e VIETROUTE_MAIL_ENABLED="${7:-false}" \
     -e VIETROUTE_MAIL_PROVIDER=smtp -e VIETROUTE_MAIL_FROM=noreply@example.invalid \
     -e VIETROUTE_SMTP_HOST=127.0.0.1 -e VIETROUTE_SMTP_PORT=1 -e VIETROUTE_SMTP_USER=ci-only -e VIETROUTE_SMTP_PASSWORD=ci-only \
@@ -731,4 +732,5 @@ source "$(dirname "${BASH_SOURCE[0]}")/verify-foundation.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-access-tree.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-database-guard.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-access-history.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/verify-access-registry.sh"
 printf 'Function permissions, durable workers, per-node quota, metrics isolation and DB/node recovery checks passed.\n'

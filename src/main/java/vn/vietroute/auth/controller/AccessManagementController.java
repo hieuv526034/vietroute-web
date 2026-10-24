@@ -23,8 +23,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import vn.vietroute.auth.dto.request.AccessPolicyRequest;
 import vn.vietroute.auth.dto.request.AccessRegistryRequest;
+import vn.vietroute.auth.dto.request.AccessRegistrySearchRequest;
 import vn.vietroute.auth.dto.request.AccessResourceSearchRequest;
 import vn.vietroute.auth.dto.response.AccessPolicyResponse;
+import vn.vietroute.auth.dto.response.AccessRegistryPageResponse;
 import vn.vietroute.auth.dto.response.AccessRegistryResponse;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
 import vn.vietroute.auth.dto.response.AccessTargetResponse;
@@ -75,13 +77,30 @@ public class AccessManagementController extends BaseController {
     }
 
     @GetMapping(Routes.ACCESS_REGISTRY)
-    @Operation(summary = "Danh sách registry roles/permissions", description = "ACCESS_READ, giới hạn 512 mã mỗi loại")
+    @Operation(
+        summary = "Danh sách registry roles/permissions",
+        description = "ACCESS_READ; API tương thích đầy đủ trong trần an toàn, màn registry dùng API phân trang"
+    )
     @AccessFunction(group = Groups.ACCESS, actions = { PermissionAction.READ })
     public ApiResult<List<AccessRegistryResponse>> registry(
         @Parameter(description = "Loại registry: roles hoặc permissions", example = "roles") @PathVariable String kind,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> access.registry(kind));
+    }
+
+    @GetMapping(Routes.ACCESS_REGISTRY_PAGE)
+    @Operation(
+        summary = "Tìm và phân trang registry",
+        description = "ACCESS_READ; query nguyên văn trong mã/tên vi/en, active tùy chọn, page/size. Trả quota toàn loại chưa xóa, không tính tombstone role."
+    )
+    @AccessFunction(group = Groups.ACCESS, actions = { PermissionAction.READ })
+    public ApiResult<AccessRegistryPageResponse> registryPage(
+        @Parameter(description = "Loại registry roles hoặc permissions", example = "roles") @PathVariable String kind,
+        @Valid @ModelAttribute AccessRegistrySearchRequest search,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () -> access.registryPage(kind, search));
     }
 
     @PostMapping(Routes.ACCESS_REGISTRY_ITEM)

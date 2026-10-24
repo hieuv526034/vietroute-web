@@ -16,6 +16,7 @@ import vn.vietroute.auth.dto.response.PermissionResponse;
 import vn.vietroute.auth.dto.response.RolePermissionsResponse;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
+import vn.vietroute.common.constant.AccessConstants.Limits;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.BaseRepository;
@@ -34,7 +35,8 @@ public class AccessRepository extends BaseRepository {
             List<Role> roles = new ArrayList<>();
             try (
                 PreparedStatement query = connection.prepareStatement(
-                    "SELECT code FROM auth_roles WHERE active AND NOT deleted ORDER BY code LIMIT 512"
+                    "SELECT code FROM auth_roles WHERE active AND NOT deleted ORDER BY code LIMIT " +
+                        (Limits.REGISTRY_MAX + 1)
                 );
                 ResultSet rows = query.executeQuery()
             ) {
@@ -42,6 +44,10 @@ public class AccessRepository extends BaseRepository {
                     roles.add(Role.valueOf(rows.getString(1)));
                 }
             }
+            if (roles.size() > Limits.REGISTRY_MAX) throw new BusinessException(
+                ErrorCode.ACCESS_CAPACITY_REACHED,
+                Limits.REGISTRY_MAX
+            );
             return List.copyOf(roles);
         });
     }
@@ -51,7 +57,8 @@ public class AccessRepository extends BaseRepository {
             List<PermissionResponse> permissions = new ArrayList<>();
             try (
                 PreparedStatement query = connection.prepareStatement(
-                    "SELECT code,name_vi,name_en FROM auth_permissions WHERE active ORDER BY code LIMIT 512"
+                    "SELECT code,name_vi,name_en FROM auth_permissions WHERE active ORDER BY code LIMIT " +
+                        (Limits.REGISTRY_MAX + 1)
                 );
                 ResultSet rows = query.executeQuery()
             ) {
@@ -68,6 +75,10 @@ public class AccessRepository extends BaseRepository {
                     );
                 }
             }
+            if (permissions.size() > Limits.REGISTRY_MAX) throw new BusinessException(
+                ErrorCode.ACCESS_CAPACITY_REACHED,
+                Limits.REGISTRY_MAX
+            );
             return List.copyOf(permissions);
         });
     }
@@ -78,7 +89,8 @@ public class AccessRepository extends BaseRepository {
             List<RolePermissionsResponse> result = new ArrayList<>();
             try (
                 var query = connection.prepareStatement(
-                    "SELECT r.code,r.permission_version,r.updated_at,r.updated_by,r.active,(SELECT COUNT(*) FROM auth_user_roles ur WHERE ur.role_code=r.code),COALESCE((SELECT string_agg(rp.permission_code,',' ORDER BY rp.permission_code) FROM auth_role_permissions rp WHERE rp.role_code=r.code),'') FROM auth_roles r WHERE NOT r.deleted ORDER BY r.code LIMIT 512"
+                    "SELECT r.code,r.permission_version,r.updated_at,r.updated_by,r.active,(SELECT COUNT(*) FROM auth_user_roles ur WHERE ur.role_code=r.code),COALESCE((SELECT string_agg(rp.permission_code,',' ORDER BY rp.permission_code) FROM auth_role_permissions rp WHERE rp.role_code=r.code),'') FROM auth_roles r WHERE NOT r.deleted ORDER BY r.code LIMIT " +
+                        (Limits.REGISTRY_MAX + 1)
                 );
                 var rows = query.executeQuery()
             ) {
@@ -100,6 +112,10 @@ public class AccessRepository extends BaseRepository {
                     );
                 }
             }
+            if (result.size() > Limits.REGISTRY_MAX) throw new BusinessException(
+                ErrorCode.ACCESS_CAPACITY_REACHED,
+                Limits.REGISTRY_MAX
+            );
             return List.copyOf(result);
         });
     }

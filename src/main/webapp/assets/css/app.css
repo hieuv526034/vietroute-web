@@ -2320,3 +2320,13 @@ fieldset:disabled .button[type='submit']::before,
         grid-template-columns: 1fr;
     }
 }
+
+/* Tìm role phải ẩn cả label có Bootstrap display utility, giữ nguyên checkbox đã chọn. */
+[data-role-choice][hidden] {
+    display: none !important;
+}
+#account-role-options,
+#user-role-options {
+    max-height: 22rem;
+    overflow-y: auto;
+}

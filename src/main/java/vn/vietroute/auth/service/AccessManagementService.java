@@ -10,8 +10,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import vn.vietroute.auth.dto.request.AccessPolicyRequest;
 import vn.vietroute.auth.dto.request.AccessRegistryRequest;
+import vn.vietroute.auth.dto.request.AccessRegistrySearchRequest;
 import vn.vietroute.auth.dto.response.AccessChangeStateResponse;
 import vn.vietroute.auth.dto.response.AccessPolicyResponse;
+import vn.vietroute.auth.dto.response.AccessRegistryPageResponse;
 import vn.vietroute.auth.dto.response.AccessRegistryResponse;
 import vn.vietroute.auth.dto.response.AccessTargetResponse;
 import vn.vietroute.auth.entity.Permission;
@@ -48,6 +50,12 @@ public class AccessManagementService {
         return registry.registry(kind);
     }
 
+    /** Danh sách quản trị được tìm và đếm tại DB; quota là toàn registry, không phải chỉ kết quả lọc. */
+    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.READ)
+    public AccessRegistryPageResponse registryPage(String kind, AccessRegistrySearchRequest search) {
+        return registry.page(kind, search);
+    }
+
     /** Mã bất biến, tên/trạng thái có version. Không cho tắt quyền lõi hoặc ADMIN để giữ đường cứu hộ. */
     @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.UPDATE, createArgument = "create")
     public List<AccessRegistryResponse> save(
@@ -77,12 +85,7 @@ public class AccessManagementService {
         }
         return transactions.execute(connection -> {
             access.lockRoleAssignments(connection);
-            var before = registry
-                .registry(connection, kind)
-                .stream()
-                .filter(item -> item.code().equals(code))
-                .findFirst()
-                .orElse(null);
+            var before = registry.find(connection, kind, code);
             // Bật lại role/permission cũng là cấp quyền gián tiếp: người được ủy quyền không được kích hoạt tập quyền vượt chính mình.
             if (!create && !actor.roles().contains(Role.ADMIN)) {
                 Set<String> granted = SecurityContextHolder.getContext()
@@ -101,11 +104,7 @@ public class AccessManagementService {
                 if (outside) throw new BusinessException(ErrorCode.ACCESS_DENIED);
             }
             registry.save(connection, kind, code, body, actor.id(), create);
-            var result = registry
-                .registry(connection, kind)
-                .stream()
-                .filter(item -> item.code().equals(code))
-                .toList();
+            var result = List.of(registry.find(connection, kind, code));
             boolean role = kind.equals("roles");
             changes.record(
                 connection,
@@ -137,17 +136,13 @@ public class AccessManagementService {
         }
         return transactions.execute(connection -> {
             access.lockRoleAssignments(connection);
-            var before = registry
-                .registry(connection, "roles")
-                .stream()
-                .filter(item -> item.code().equals(code))
-                .findFirst()
-                .orElseThrow(() -> new BusinessException(ErrorCode.STALE_VERSION));
+            var before = registry.find(connection, "roles", code);
+            if (before == null) throw new BusinessException(ErrorCode.STALE_VERSION);
             var permissions = access
                 .role(connection, Role.valueOf(code))
                 .permissions()
                 .stream()
-                .map(Object::toString)
+                .map(Permission::name)
                 .collect(Collectors.toSet());
             registry.deleteRole(connection, code, version, actor.id());
             changes.record(
