@@ -15,6 +15,7 @@
         registryFilters = { query: '', active: '' };
     const registryForm = node('registry-form'),
         policyForm = node('policy-form');
+    const loadedTabs = new Set();
     const registryModal = window.VietRouteUI.modal('registry-dialog', { busy: () => busy });
     const policyModal = window.VietRouteUI.modal('policy-dialog', { busy: () => busy });
     const text = (tag, value) => {
@@ -245,7 +246,8 @@
         try {
             await action();
             node(id).close();
-            await Promise.all([renderRegistry(), renderPolicies()]);
+            loadedTabs.clear();
+            await loadVisibleTab();
             document.dispatchEvent(new Event('access-registry-changed'));
         } catch (error) {
             app.failure(error, node(id).open ? id + '-feedback' : 'form-feedback');
@@ -332,6 +334,32 @@
         void read(() => renderResources({ page: 0, size: resourcePager.query.size }));
     });
     node('resources-refresh').addEventListener('click', () => read(renderResources));
+    // Registry/policy/inventory chỉ tải khi mở tab; lỗi giữ trạng thái chưa tải để người dùng chủ động thử lại.
+    const tabLoaders = new Map([
+        ['access-registry-section', renderRegistry],
+        ['access-policies-section', renderPolicies],
+        ['access-resources-section', renderResources],
+    ]);
+    const loadVisibleTab = async () => {
+        if (!me?.permissions.includes('ACCESS_READ')) return;
+        for (const [id, load] of tabLoaders) {
+            if (node(id).hidden) continue;
+            await load();
+            loadedTabs.add(id);
+        }
+    };
+    const observeTab = () => {
+        if (busy || !me?.permissions.includes('ACCESS_READ')) return;
+        for (const id of tabLoaders.keys()) {
+            if (!node(id).hidden && !loadedTabs.has(id)) {
+                void read(loadVisibleTab);
+                break;
+            }
+        }
+    };
+    for (const id of tabLoaders.keys()) {
+        new MutationObserver(observeTab).observe(node(id), { attributes: true, attributeFilter: ['hidden'] });
+    }
     app.api
         .get('/api/v1/auth/me')
         .then(async (response) => {
@@ -343,8 +371,7 @@
             node('policies-create').hidden = !canCreate();
             node('policy-delete').disabled = !me.permissions.includes('ACCESS_DELETE');
             node('policy-delete').hidden = !me.permissions.includes('ACCESS_DELETE');
-            if (me.permissions.includes('ACCESS_READ'))
-                await read(() => Promise.all([renderRegistry(), renderPolicies(), renderResources()]));
+            observeTab();
         })
         .catch(app.failure);
 })();

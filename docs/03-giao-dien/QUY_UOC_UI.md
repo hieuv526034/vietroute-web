@@ -147,3 +147,17 @@ Tắt membership/role có version, lỗi giữ modal/draft, không tự nạp ve
 ### Cứu hộ quyền từ trang cá nhân — ACCESS15
 
 Nút Khôi phục quản trị gốc nằm tại /account, chỉ render cho chính username bootstrap từ server, không cần quyền mở trang quản trị. Modal xác nhận mật khẩu, dấu required từ forms.js, chặn submit lặp/đóng khi đang gửi và báo lỗi ngay tại modal. Thành công xóa password khỏi form, tắt submit và hiện link đăng nhập lại vì JWT cũ đã thu hồi. ADMIN khác không có nút; backend vẫn kiểm chính chủ độc lập UI. Không lưu credential vào storage. Xem [hợp đồng cứu hộ](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#cứu-hộ-tài-khoản-bootstrap--access15); kiểm hai context/renderer không thay nghiệm thu trực quan desktop/mobile.
+
+## Menu hẹp, chuyển trang đăng nhập và luồng phân quyền — UI21
+
+Menu dưới 1200px dùng grid một cột `minmax(0, 1fr)` và căn stretch tường minh, không kế thừa căn phải của flex desktop. Link/accordion chiếm chiều rộng panel; menu con nằm trong luồng cuộn của panel. Giữ avatar riêng, Escape/click ngoài/Tab và fallback không JavaScript như UIRESP01.
+
+Đăng nhập phân biệt đang xác thực và đã thành công/đang mở trang. Khi đã nhận cookie thành công, xóa dữ liệu form, giữ nút khóa/spinner và thông báo cho tới khi document chuyển; không mở lại nút trong khoảng chờ trang đích. Lỗi cho sửa/gửi lại có chủ đích, không tự replay. Back/forward cache xóa dữ liệu và giải phóng trạng thái chờ khi khôi phục trang. Thông báo này không bảo đảm thời gian phản hồi DB hoặc bỏ các bước xác minh/mật khẩu tạm.
+
+Phân quyền mặc định hiện Vai trò và quyền, Gán tài khoản, Phạm vi dữ liệu, Lịch sử theo quyền hiện có. Hướng dẫn ba bước và ví dụ dùng danh mục giúp quản trị biết thứ tự tạo vai trò → chọn quyền → gán người dùng. Danh bạ mã quyền, Điều kiện truy cập và Tài nguyên UI/API mở bằng nút Nâng cao; thu gọn tab nâng cao đang chọn thì trở về Vai trò và quyền. Tái sử dụng tab/ARIA/bàn phím của workspace, không lưu trạng thái/quyền vào storage.
+
+Card vai trò đưa hành động chỉnh/xem cùng số quyền và tài khoản lên trước; chi tiết quyền nhóm theo chức năng nằm trong disclosure đóng mặc định. ADMIN/role chỉ đọc dùng nhãn Xem quyền, không làm người dùng tưởng có thể lưu. Modal vẫn giữ ma trận/preview/mã cũ và kiểm tập quyền gán; phần nâng cao chỉ thay cách trình bày, không thay mapping hay guard.
+
+Danh sách gán tài khoản và ba tab nâng cao chỉ gọi API khi được mở; không tải trước vào trang vai trò. Lỗi không đánh dấu đã tải, không tự thử lại; mở lại tab hoặc Làm mới để chủ động tải. Khi refresh, hồ sơ và capabilities được đọc song song từ server, không thêm cache authority hoặc fallback quyền cũ. Provider/Neon và tốc độ production cần nghiệm thu riêng; bằng chứng ở [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
+
+Ảnh từ HTML thật/API fixture, chỉ dữ liệu giả: [menu điện thoại](../images/ui21-menu-mobile.jpg), [màn vai trò và quyền](../images/ui21-access-desktop.jpg).

@@ -213,6 +213,7 @@
             `${roleNames.get(role.role) || role.role} · ${role.role}${role.active === false ? ' · ' + labels.off : ''}`;
         let selectedRole;
         let selectedUser;
+        let usersLoaded = false;
         const pager = tables.pager('users', { busy: () => busy, onChange: (query) => perform(() => loadUsers(query)) });
         let prefix = '';
         const roleSelect = node('access-role');
@@ -254,6 +255,23 @@
             },
         });
         const accessTabs = window.VietRouteUI.tabs(node('ops-controls'));
+        const advancedToggle = node('access-advanced-toggle');
+        const advancedTabs = Array.from(root.querySelectorAll('[data-access-advanced]'));
+        // Mặc định chỉ hiện công việc thường dùng; thu gọn không thay mapping hoặc guard backend.
+        if (advancedToggle) {
+            advancedTabs.forEach((tab) => accessTabs.show(tab.dataset.tabTarget, false));
+            advancedToggle.hidden = false;
+            advancedToggle.addEventListener('click', () => {
+                if (busy || root.getAttribute('aria-busy') === 'true' || document.querySelector('dialog[open]')) return;
+                const expanded = advancedToggle.getAttribute('aria-expanded') !== 'true';
+                if (!expanded && advancedTabs.some((tab) => tab.getAttribute('aria-selected') === 'true')) {
+                    accessTabs.select('access-roles-section');
+                }
+                advancedTabs.forEach((tab) => accessTabs.show(tab.dataset.tabTarget, expanded));
+                advancedToggle.setAttribute('aria-expanded', String(expanded));
+                advancedToggle.textContent = expanded ? advancedToggle.dataset.hide : advancedToggle.dataset.show;
+            });
+        }
         const drawRole = () => {
             selectedRole = roles.find((role) => role.role === roleSelect.value);
             if (!selectedRole) {
@@ -279,15 +297,32 @@
             );
             node('permissions-save').disabled = !editable;
             node('permissions-edit').disabled = false;
+            node('permissions-edit').textContent = editable
+                ? node('permissions-edit').dataset.edit
+                : node('permissions-edit').dataset.readonly;
             node('permissions-save').hidden = !editable;
             node('permissions-target').textContent =
                 `${roleLabel(selectedRole)} · v${selectedRole.version} · ${selectedRole.assignedUsers || 0} ${document.getElementById('access-tree-labels').dataset.impact}`;
             const summary = node('role-permission-summary');
             summary.replaceChildren();
-            for (const permission of registry.filter((item) => selectedRole.permissions.includes(item.code))) {
-                summary.append(text('span', permission.name, 'permission-chip'));
+            const selected = new Set(selectedRole.permissions);
+            const covered = new Set();
+            node('role-permission-count').textContent =
+                `${selected.size} ${summary.dataset.permissions} · ${selectedRole.assignedUsers || 0} ${summary.dataset.accounts}`;
+            for (const feature of treeData) {
+                const actions = feature.actions.filter((action) => selected.has(action.permission));
+                if (!actions.length) continue;
+                const item = text('div', '', 'access-role-feature');
+                item.append(
+                    text('strong', feature.name),
+                    text('span', actions.map((action) => action.name).join(' · '), 'muted'),
+                );
+                summary.append(item);
+                actions.forEach((action) => covered.add(action.permission));
             }
-            if (!summary.childElementCount) summary.append(text('p', labels.empty));
+            const extra = selectedRole.permissions.filter((permission) => !covered.has(permission));
+            if (extra.length) summary.append(text('p', `${summary.dataset.extra}: ${extra.length}`, 'muted'));
+            if (!selected.size) summary.append(text('p', summary.dataset.empty, 'muted'));
         };
         node('permissions-edit').addEventListener('click', () => {
             if (!busy && !node('permissions-edit').disabled) {
@@ -380,8 +415,14 @@
                 empty(body, 6);
             }
             pager.update(data);
-            accessTabs.show('access-users-section', true);
+            usersLoaded = true;
         };
+        const usersSection = node('access-users-section');
+        new MutationObserver(() => {
+            if (!usersSection.hidden && !usersLoaded && !busy && isAdmin() && has('ACCESS_READ')) {
+                void perform(() => loadUsers());
+            }
+        }).observe(usersSection, { attributes: true, attributeFilter: ['hidden'] });
         roleSelect.addEventListener('change', drawRole);
         node('permissions-form').addEventListener('submit', (event) => {
             event.preventDefault();
@@ -445,8 +486,10 @@
             });
         });
         return async () => {
+            usersLoaded = false;
+            accessTabs.show('access-users-section', isAdmin() && has('ACCESS_READ'));
             await loadRoles();
-            await loadUsers();
+            if (!usersSection.hidden) await loadUsers();
         };
     };
 
@@ -509,7 +552,12 @@
                 : root.dataset.operations === 'access'
                   ? 'ACCESS'
                   : 'CONFIGURATION';
-        const capabilities = await window.VietRouteAccess.load(feature);
+        // Hai truy vấn độc lập chạy cùng lúc; vẫn đọc server mỗi lần refresh, không cache authority.
+        const [profile, capabilities] = await Promise.all([
+            get('/api/v1/auth/me'),
+            window.VietRouteAccess.load(feature),
+        ]);
+        me = profile;
         currentCapabilities = capabilities;
         if (
             !capabilities.actions.includes('READ') ||
@@ -525,14 +573,6 @@
         await loadData();
     };
     document.addEventListener('access-registry-changed', () => perform(load));
-    node('ops-refresh').addEventListener('click', () =>
-        perform(async () => {
-            me = await get('/api/v1/auth/me');
-            await load();
-        }),
-    );
-    perform(async () => {
-        me = await get('/api/v1/auth/me');
-        await load();
-    });
+    node('ops-refresh').addEventListener('click', () => perform(load));
+    perform(load);
 })();

@@ -22,6 +22,7 @@ const pages = {
     '/operations/api-journal': 'api-journal',
 };
 let requestDelay = 0;
+let documentDelay = 0;
 let readFailure = 0;
 let conflict = false;
 let pending = false;
@@ -224,6 +225,7 @@ const page = (values, query) => {
             if (route === '/_fixture/control' && req.method === 'POST') {
                 const control = await body(req);
                 requestDelay = Number(control.delayNext || 0);
+                documentDelay = Number(control.delayPageNext || 0);
                 readFailure = Number(control.failNext || 0);
                 conflict = Boolean(control.conflictNext);
                 return respond({ configured: true });
@@ -248,6 +250,11 @@ const page = (values, query) => {
                 return res.end(await fs.readFile(file));
             }
             if (pages[route]) {
+                if (documentDelay) {
+                    const delay = documentDelay;
+                    documentDelay = 0;
+                    await new Promise((resolve) => setTimeout(resolve, delay));
+                }
                 const suffix = url.searchParams.get('lang') === 'en' ? '-en' : '';
                 res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                 return res.end(await fs.readFile(path.join(preview, pages[route] + suffix + '.html')));
@@ -268,6 +275,10 @@ const page = (values, query) => {
                 return respond(null, status);
             }
             if (route === '/api/v1/auth/me') return respond(profile);
+            if (route === '/api/v1/auth/login' && req.method === 'POST') {
+                await body(req); // Bỏ thông tin đăng nhập fixture, không ghi mật khẩu vào log/trạng thái.
+                return respond({ user: profile });
+            }
             if (route === '/api/v1/auth/csrf') {
                 res.setHeader('Set-Cookie', 'XSRF-TOKEN=fixture-csrf; Path=/; SameSite=Lax');
                 return respond({ token: 'fixture-csrf', headerName: 'X-XSRF-TOKEN' });
