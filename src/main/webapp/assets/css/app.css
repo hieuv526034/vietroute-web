@@ -47,19 +47,25 @@ button:focus-visible {
 }
 
 .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
     border-bottom: 1px solid var(--line);
-    background: rgba(247, 248, 243, 0.96);
+    background: var(--paper);
 }
 
 .site-nav {
+    position: relative;
     display: flex;
     min-height: 72px;
     align-items: center;
     justify-content: space-between;
-    gap: 24px;
+    gap: 18px;
 }
 
 .brand {
+    flex-shrink: 0;
+    white-space: nowrap;
     display: flex;
     align-items: center;
     gap: 9px;
@@ -88,9 +94,11 @@ button:focus-visible {
 }
 
 .nav-links {
+    flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: flex-end;
     gap: 6px;
     font-size: 13px;
@@ -99,6 +107,54 @@ button:focus-visible {
 
 .nav-links a {
     text-decoration: none;
+}
+
+.nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.nav-links > a,
+.operations-menu > summary {
+    white-space: nowrap;
+}
+
+.navigation-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: white;
+    color: var(--green);
+    cursor: pointer;
+}
+
+.navigation-toggle:hover {
+    background: var(--mint);
+}
+
+.navigation-toggle span {
+    display: flex;
+}
+
+.navigation-toggle .ui-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.navigation-toggle-close,
+.navigation-toggle[aria-expanded='true'] .navigation-toggle-open {
+    display: none !important;
+}
+
+.navigation-toggle[aria-expanded='true'] .navigation-toggle-close {
+    display: flex !important;
 }
 
 .nav-links > a:not(.button) {
@@ -621,6 +677,109 @@ form .button {
     margin: 6px 0;
 }
 
+/* Hồ sơ và cứu hộ là hai khu riêng; gap vẫn tồn tại khi card chuyển về một cột trên điện thoại. */
+.account-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.account-layout.has-recovery {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+}
+
+.account-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.account-panel-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--mint);
+    color: var(--green);
+}
+
+.account-panel-header h2 {
+    margin: 0;
+    font-size: 22px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.account-panel-header .eyebrow {
+    margin-bottom: 5px;
+    font-size: 10px;
+    letter-spacing: 1.2px;
+}
+
+.account-panel-copy {
+    min-width: 0;
+}
+
+.panel .account-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px;
+    margin: 0;
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+}
+
+.account-details dt {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+.account-details dd {
+    margin: 5px 0 0;
+    overflow-wrap: anywhere;
+    line-height: 1.6;
+}
+
+.account-actions {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+}
+
+.account-recovery .account-panel-header {
+    align-items: start;
+    margin-bottom: 16px;
+}
+
+.account-recovery .account-panel-header h2 {
+    font-size: 19px;
+}
+
+.account-recovery > p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.8;
+}
+
+.account-recovery .toolbar-actions {
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+}
+
+.account-recovery .button {
+    width: 100%;
+}
+
+.account-profile .initial-password {
+    margin: 22px 0 0;
+}
+
 .initial-password {
     background: #f3f4dc;
     color: #77732c;
@@ -716,12 +875,8 @@ form .button {
 }
 
 @media (max-width: 900px) {
-    .site-nav {
-        min-height: 80px;
-    }
-
-    .nav-links {
-        gap: 14px;
+    .account-layout.has-recovery {
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .hero {
@@ -759,32 +914,12 @@ form .button {
 }
 
 @media (max-width: 700px) {
-    .site-nav {
-        position: relative;
-    }
-
     .container-xl {
         padding-inline: 22px;
     }
 
-    .site-nav {
-        flex-wrap: wrap;
-        gap: 12px;
-        padding-block: 17px;
-    }
-
     .brand {
         font-size: 23px;
-    }
-
-    .nav-links {
-        flex-wrap: wrap;
-        gap: 13px;
-        font-size: 11px;
-    }
-
-    .nav-links .button {
-        padding: 7px 10px;
     }
 
     .page {
@@ -1037,6 +1172,138 @@ form .button {
 
 .operations-menu-items a[aria-current='page'] {
     font-weight: 750;
+}
+
+/* Cùng breakpoint với navigation.js: header luôn một hàng, menu dài cuộn trong panel thay vì đẩy logo. */
+@media (max-width: 1199px) {
+    .site-nav {
+        min-height: 64px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .site-nav.navigation-ready {
+        flex-wrap: nowrap;
+    }
+
+    .site-nav .brand {
+        font-size: 22px;
+    }
+
+    .nav-actions {
+        margin-left: auto;
+    }
+
+    .nav-links {
+        flex-basis: 100%;
+        order: 3;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding-block: 12px;
+    }
+
+    .site-nav.navigation-ready .nav-links {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 12px;
+        right: 12px;
+        display: grid;
+        padding: 12px;
+        max-height: calc(100vh - 88px);
+        max-height: calc(100dvh - 88px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: 0 14px 36px #142d241a;
+    }
+
+    .nav-links > a,
+    .nav-links .operations-menu > summary {
+        min-height: 44px;
+        padding: 12px;
+    }
+
+    .nav-links .operations-menu > summary::after {
+        margin-left: auto;
+    }
+
+    .nav-links .operations-menu-items {
+        position: static;
+        min-width: 0;
+        max-width: none;
+        margin-top: 6px;
+        padding: 8px;
+        border: 0;
+        box-shadow: none;
+        background: var(--paper);
+    }
+
+    .nav-links .language-switch {
+        justify-self: start;
+        align-self: start;
+        margin-block: 4px;
+    }
+
+    .nav-links .language-switch a {
+        min-width: 40px;
+        min-height: 36px;
+        display: grid;
+        place-items: center;
+    }
+
+    .nav-actions .account-menu {
+        position: static;
+    }
+
+    .nav-actions .account-menu > summary {
+        width: 44px;
+        height: 44px;
+        padding: 7px;
+        gap: 0;
+        justify-content: center;
+    }
+
+    .account-menu > summary::after {
+        display: none;
+    }
+
+    /* Giữ tên đầy đủ cho trình đọc màn hình; thanh hẹp chỉ vẽ avatar để không xuống hàng. */
+    .account-menu .header-user-name {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
+    .nav-actions .operations-menu-items {
+        top: calc(100% + 8px);
+        right: 12px;
+        left: auto;
+        min-width: 240px;
+        max-width: calc(100vw - 24px);
+        max-height: calc(100vh - 88px);
+        max-height: calc(100dvh - 88px);
+        overflow-y: auto;
+    }
+}
+
+@media (max-width: 575px) {
+    .panel .account-details {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 18px;
+    }
+
+    .account-actions .button {
+        flex: 1 1 100%;
+        min-height: 44px;
+    }
 }
 
 .operations-dialog {
@@ -1382,36 +1649,7 @@ body:has(dialog[open]) {
     white-space: nowrap;
 }
 
-@media (max-width: 900px) {
-    .site-nav {
-        flex-wrap: wrap;
-        gap: 12px;
-        padding-block: 16px;
-    }
-
-    .nav-links {
-        gap: 5px;
-    }
-}
-
 @media (max-width: 700px) {
-    .nav-links {
-        width: 100%;
-        justify-content: flex-start;
-    }
-
-    .nav-links > a:not(.button),
-    .operations-menu summary {
-        padding: 9px;
-        min-height: 38px;
-    }
-
-    .operations-menu-items {
-        left: 0;
-        right: auto;
-        max-width: calc(100vw - 44px);
-    }
-
     .operations-details {
         grid-template-columns: 1fr;
         gap: 5px;
@@ -1801,25 +2039,6 @@ fieldset:disabled .button[type='submit']::before,
     .button[data-request-loading]::before,
     .is-request-loading .table-responsive::before {
         animation: none;
-    }
-}
-@media (max-width: 700px) {
-    .header-user-name {
-        max-width: 110px;
-    }
-    .account-menu {
-        margin-left: auto;
-    }
-
-    .operations-menu {
-        position: static;
-    }
-    .operations-menu-items {
-        left: 12px;
-        right: 12px;
-        top: calc(100% - 4px);
-        min-width: 0;
-        max-width: none;
     }
 }
 /* Cây phân quyền: ô chọn nhỏ, vùng đọc thoáng; chi tiết endpoint không kéo rộng toàn màn hình. */
