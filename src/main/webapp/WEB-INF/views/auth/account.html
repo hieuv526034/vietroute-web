@@ -15,81 +15,130 @@
                     th:text="#{ui.accountDescription}"
                 ></p>
             </div>
-            <section class="panel">
-                <h2
-                    id="account-name"
-                    th:text="#{ui.loading}"
-                ></h2>
-                <dl>
-                    <dt th:text="#{ui.username}"></dt>
-                    <dd id="account-username">—</dd>
-                    <dt th:text="#{ui.roles}"></dt>
-                    <dd id="account-roles">—</dd>
-                    <dt th:text="#{ui.accountFlow.emailStatus}"></dt>
-                    <dd id="account-email">—</dd>
-                    <dt th:text="#{ui.accountFlow.activate}"></dt>
-                    <dd
-                        id="account-email-status"
-                        th:attr="data-verified=#{ui.accountFlow.verified},data-unverified=#{ui.accountFlow.unverified}"
-                    >
-                        —
-                    </dd>
-                    <dt th:text="#{ui.createdAt}"></dt>
-                    <dd id="account-created">—</dd>
-                </dl>
-
-                <p
-                    class="initial-password"
-                    id="initial-password"
-                    hidden
-                    th:text="#{ui.initialPassword}"
-                ></p>
-                <div
-                    id="form-feedback"
-                    class="feedback"
-                    role="alert"
-                    th:attr="data-password-changed=#{success.passwordChanged}"
-                    hidden
-                ></div>
-                <div class="toolbar-actions">
-                    <button
-                        id="profile-open"
-                        class="button button-outline mt-3"
-                        type="button"
-                        th:text="#{ui.profile.edit}"
-                    ></button>
-                    <button
-                        id="email-open"
-                        class="button button-outline mt-3"
-                        type="button"
-                        th:text="#{ui.accountFlow.bind}"
-                    ></button>
-                    <button
-                        id="password-open"
-                        class="button mt-3"
-                        type="button"
-                        th:text="#{ui.changePassword}"
-                    ></button>
-                </div>
-            </section>
-            <section
-                class="panel"
-                th:if="${adminRecoveryVisible == true}"
+            <div
+                class="account-layout"
+                th:classappend="${adminRecoveryVisible == true} ? 'has-recovery'"
             >
-                <h2 th:text="#{ui.adminRecovery.title}"></h2>
-                <p
-                    class="muted"
-                    th:text="#{ui.adminRecovery.description}"
-                ></p>
-                <div class="toolbar-actions">
-                    <button
-                        id="admin-recovery-open"
-                        class="button button-outline"
-                        type="button"
-                        th:text="#{ui.adminRecovery.open}"
-                    ></button>
-                </div>
-            </section>
+                <section
+                    class="panel account-profile"
+                    aria-labelledby="account-name"
+                >
+                    <div class="account-panel-header">
+                        <span
+                            class="account-panel-icon"
+                            aria-hidden="true"
+                        >
+                            <svg th:replace="~{fragments/layout :: icon('user')}"></svg>
+                        </span>
+                        <div class="account-panel-copy">
+                            <p
+                                class="eyebrow"
+                                th:text="#{ui.profile.label}"
+                            ></p>
+                            <h2
+                                id="account-name"
+                                th:text="#{ui.loading}"
+                            ></h2>
+                        </div>
+                    </div>
+                    <dl class="account-details">
+                        <div>
+                            <dt th:text="#{ui.username}"></dt>
+                            <dd id="account-username">—</dd>
+                        </div>
+                        <div>
+                            <dt th:text="#{ui.roles}"></dt>
+                            <dd id="account-roles">—</dd>
+                        </div>
+                        <div>
+                            <dt th:text="#{ui.accountFlow.emailStatus}"></dt>
+                            <dd id="account-email">—</dd>
+                        </div>
+                        <div>
+                            <dt th:text="#{ui.accountFlow.activate}"></dt>
+                            <dd
+                                id="account-email-status"
+                                th:attr="data-verified=#{ui.accountFlow.verified},data-unverified=#{ui.accountFlow.unverified}"
+                            >
+                                —
+                            </dd>
+                        </div>
+                        <div>
+                            <dt th:text="#{ui.createdAt}"></dt>
+                            <dd id="account-created">—</dd>
+                        </div>
+                    </dl>
+                    <p
+                        class="initial-password"
+                        id="initial-password"
+                        hidden
+                        th:text="#{ui.initialPassword}"
+                    ></p>
+                    <div
+                        id="form-feedback"
+                        class="feedback"
+                        role="alert"
+                        th:attr="data-password-changed=#{success.passwordChanged}"
+                        hidden
+                    ></div>
+                    <div class="toolbar-actions account-actions">
+                        <button
+                            id="profile-open"
+                            class="button button-outline"
+                            type="button"
+                            th:text="#{ui.profile.edit}"
+                        ></button>
+                        <button
+                            id="email-open"
+                            class="button button-outline"
+                            type="button"
+                            th:text="#{ui.accountFlow.bind}"
+                        ></button>
+                        <button
+                            id="password-open"
+                            class="button"
+                            type="button"
+                            th:text="#{ui.changePassword}"
+                        ></button>
+                    </div>
+                </section>
+                <section
+                    class="panel account-recovery"
+                    th:if="${adminRecoveryVisible == true}"
+                    aria-labelledby="account-recovery-title"
+                >
+                    <div class="account-panel-header">
+                        <span
+                            class="account-panel-icon"
+                            aria-hidden="true"
+                        >
+                            <svg th:replace="~{fragments/layout :: icon('shield')}"></svg>
+                        </span>
+                        <div class="account-panel-copy">
+                            <p
+                                class="eyebrow"
+                                th:text="#{ui.admin}"
+                            ></p>
+                            <h2
+                                id="account-recovery-title"
+                                th:text="#{ui.adminRecovery.title}"
+                            ></h2>
+                        </div>
+                    </div>
+                    <p
+                        class="muted"
+                        th:text="#{ui.adminRecovery.description}"
+                    ></p>
+                    <div class="toolbar-actions">
+                        <button
+                            id="admin-recovery-open"
+                            class="button button-outline"
+                            type="button"
+                            th:text="#{ui.adminRecovery.open}"
+                        ></button>
+                    </div>
+                </section>
+            </div>
             <dialog
                 id="admin-recovery-dialog"
                 class="workspace-dialog"

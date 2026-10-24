@@ -192,23 +192,7 @@
         }
     });
 
-    // Mỗi lần chỉ mở một menu; Escape/click ngoài đóng menu và trả focus cho bàn phím.
-    const menus = Array.from(document.querySelectorAll('.operations-menu'));
-    for (const menu of menus)
-        menu.addEventListener('toggle', () => {
-            if (menu.open) for (const other of menus) if (other !== menu) other.open = false;
-        });
-    document.addEventListener('click', (event) => {
-        for (const menu of menus) if (!menu.contains(event.target)) menu.open = false;
-    });
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape')
-            for (const menu of menus)
-                if (menu.open) {
-                    menu.open = false;
-                    menu.querySelector('summary').focus();
-                }
-    });
+    // Navigation đã gắn hành vi responsive/bàn phím trong navigation.js trước khi phát sự kiện sẵn sàng.
     document.dispatchEvent(new Event('vietroute-navigation-ready'));
     document.addEventListener('vietroute-profile-updated', (event) => {
         const user = event.detail;

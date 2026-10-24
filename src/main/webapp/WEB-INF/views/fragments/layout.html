@@ -101,7 +101,10 @@
                     VietRoute
                     <span class="brand-dot">.</span>
                 </a>
-                <div class="nav-links">
+                <div
+                    id="navigation-links"
+                    class="nav-links"
+                >
                     <a
                         th:href="@{/(lang=${currentLocale})}"
                         th:text="#{ui.home}"
@@ -167,6 +170,8 @@
                         th:href="@{/login(lang=${currentLocale})}"
                         th:text="#{ui.login}"
                     ></a>
+                </div>
+                <div class="nav-actions">
                     <details
                         class="operations-menu account-menu"
                         th:if="${currentUser != null}"
@@ -175,6 +180,7 @@
                             <span
                                 class="avatar avatar-small"
                                 data-avatar-shell
+                                aria-hidden="true"
                             >
                                 <img
                                     th:if="${currentUser.avatarUrl != null}"
@@ -213,6 +219,28 @@
                             </button>
                         </div>
                     </details>
+                    <button
+                        id="navigation-toggle"
+                        class="navigation-toggle"
+                        type="button"
+                        aria-controls="navigation-links"
+                        aria-expanded="false"
+                        th:attr="aria-label=#{ui.nav.open},data-open-label=#{ui.nav.open},data-close-label=#{ui.nav.close}"
+                        hidden
+                    >
+                        <span
+                            class="navigation-toggle-open"
+                            aria-hidden="true"
+                        >
+                            <svg th:replace="~{fragments/layout :: icon('menu')}"></svg>
+                        </span>
+                        <span
+                            class="navigation-toggle-close"
+                            aria-hidden="true"
+                        >
+                            <svg th:replace="~{fragments/layout :: icon('close')}"></svg>
+                        </span>
+                    </button>
                 </div>
             </nav>
         </header>
@@ -234,6 +262,7 @@
             <script th:src="@{/assets/js/table.js}"></script>
             <script th:src="@{/assets/js/forms.js}"></script>
             <script th:src="@{/assets/js/request-state.js}"></script>
+            <script th:src="@{/assets/js/navigation.js}"></script>
             <script th:src="@{/assets/js/app.js}"></script>
             <script th:src="@{/assets/js/presence.js}"></script>
         </th:block>
