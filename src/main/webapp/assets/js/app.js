@@ -100,12 +100,20 @@
             try {
                 await action(body, form);
             } catch (error) {
+                if (form.dataset.navigating === 'true') {
+                    delete form.dataset.navigating;
+                    form.removeAttribute('aria-busy');
+                    button.removeAttribute('data-request-loading');
+                }
                 failure(error, feedbackId);
             } finally {
-                button.disabled = false;
-                button.textContent = label;
-                form.dataset.submitting = 'false';
-                if (controls) controls.disabled = false;
+                // Chuyển document có thể còn chờ server: giữ trạng thái bận để không đăng nhập lại lần hai.
+                if (form.dataset.navigating !== 'true') {
+                    button.disabled = false;
+                    button.textContent = label;
+                    form.dataset.submitting = 'false';
+                    if (controls) controls.disabled = false;
+                }
             }
         });
     };
@@ -114,6 +122,12 @@
         const response = await mutate('/api/v1/auth/login', body);
         form.reset();
         const user = response.data.data.user;
+        const button = form.querySelector('button[type="submit"]');
+        form.dataset.navigating = 'true';
+        form.setAttribute('aria-busy', 'true');
+        button.textContent = button.dataset.redirecting;
+        button.setAttribute('data-request-loading', 'true');
+        feedback(form.dataset.redirecting, true);
         window.location.assign(
             route(
                 user.mustChangePassword || user.emailVerificationRequired
@@ -124,6 +138,24 @@
             ),
         );
     });
+
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        const button = loginForm.querySelector('button[type="submit"]');
+        const idleLabel = button.textContent;
+        // Back/forward cache có thể khôi phục document cũ; không giữ mật khẩu hoặc khóa nút vĩnh viễn.
+        window.addEventListener('pageshow', (event) => {
+            if (!event.persisted) return;
+            loginForm.reset();
+            delete loginForm.dataset.navigating;
+            loginForm.dataset.submitting = 'false';
+            loginForm.removeAttribute('aria-busy');
+            button.disabled = false;
+            button.removeAttribute('data-request-loading');
+            button.textContent = idleLabel;
+            feedback('');
+        });
+    }
 
     let passwordChangedNotice = new URLSearchParams(window.location.search).get('passwordChanged') === 'true';
     const loadAccount = async () => {

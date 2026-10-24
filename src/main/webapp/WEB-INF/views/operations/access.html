@@ -22,8 +22,41 @@
             </div>
             <p
                 class="text-secondary"
-                th:text="#{ui.ops.accessNote}"
+                th:text="#{ui.accessWorkspace.intro}"
             ></p>
+            <section
+                class="access-intro"
+                th:attr="aria-label=#{ui.accessWorkspace.guide}"
+            >
+                <ol class="access-workflow">
+                    <li>
+                        <span aria-hidden="true">1</span>
+                        <div>
+                            <strong th:text="#{ui.accessWorkspace.stepRole}"></strong>
+                            <small th:text="#{ui.accessWorkspace.stepRoleNote}"></small>
+                        </div>
+                    </li>
+                    <li>
+                        <span aria-hidden="true">2</span>
+                        <div>
+                            <strong th:text="#{ui.accessWorkspace.stepPermissions}"></strong>
+                            <small th:text="#{ui.accessWorkspace.stepPermissionsNote}"></small>
+                        </div>
+                    </li>
+                    <li>
+                        <span aria-hidden="true">3</span>
+                        <div>
+                            <strong th:text="#{ui.accessWorkspace.stepAccounts}"></strong>
+                            <small th:text="#{ui.accessWorkspace.stepAccountsNote}"></small>
+                        </div>
+                    </li>
+                </ol>
+                <details class="access-help">
+                    <summary th:text="#{ui.accessWorkspace.guide}"></summary>
+                    <p th:text="#{ui.accessWorkspace.example}"></p>
+                    <p th:text="#{ui.accessWorkspace.advancedNote}"></p>
+                </details>
+            </section>
             <p
                 id="form-feedback"
                 class="feedback"
@@ -40,6 +73,23 @@
                 data-tabs
                 class="border-0 p-0 m-0 w-100"
             >
+                <div class="access-workspace-heading">
+                    <p
+                        class="eyebrow"
+                        th:text="#{ui.accessWorkspace.common}"
+                    ></p>
+                    <button
+                        id="access-advanced-toggle"
+                        type="button"
+                        class="button button-outline button-small"
+                        th:if="${accessAllowed}"
+                        aria-expanded="false"
+                        aria-controls="registry-tab policies-tab resources-tab"
+                        th:attr="data-show=#{ui.accessWorkspace.advanced},data-hide=#{ui.accessWorkspace.hideAdvanced}"
+                        th:text="#{ui.accessWorkspace.advanced}"
+                        hidden
+                    ></button>
+                </div>
                 <div
                     class="workspace-tabs"
                     role="tablist"
@@ -49,28 +99,14 @@
                         id="permissions-tab"
                         type="button"
                         data-tab-target="access-roles-section"
-                        th:text="#{ui.ops.rolePermissions}"
+                        th:text="#{ui.accessWorkspace.roles}"
                     ></button>
                     <button
                         id="users-tab"
                         type="button"
                         data-tab-target="access-users-section"
                         hidden
-                        th:text="#{ui.ops.userRoles}"
-                    ></button>
-                    <button
-                        id="registry-tab"
-                        type="button"
-                        data-tab-target="access-registry-section"
-                        th:if="${accessAllowed}"
-                        th:text="#{ui.foundation.registry}"
-                    ></button>
-                    <button
-                        id="policies-tab"
-                        type="button"
-                        data-tab-target="access-policies-section"
-                        th:if="${accessAllowed}"
-                        th:text="#{ui.foundation.policies}"
+                        th:text="#{ui.accessWorkspace.accounts}"
                     ></button>
                     <button
                         id="scopes-tab"
@@ -87,9 +123,26 @@
                         th:text="#{ui.accessHistory.title}"
                     ></button>
                     <button
+                        id="registry-tab"
+                        type="button"
+                        data-tab-target="access-registry-section"
+                        data-access-advanced
+                        th:if="${accessAllowed}"
+                        th:text="#{ui.accessWorkspace.registry}"
+                    ></button>
+                    <button
+                        id="policies-tab"
+                        type="button"
+                        data-tab-target="access-policies-section"
+                        data-access-advanced
+                        th:if="${accessAllowed}"
+                        th:text="#{ui.accessWorkspace.policies}"
+                    ></button>
+                    <button
                         id="resources-tab"
                         type="button"
                         data-tab-target="access-resources-section"
+                        data-access-advanced
                         th:if="${accessAllowed}"
                         th:text="#{ui.accessResources.title}"
                     ></button>
@@ -99,76 +152,94 @@
                     class="card p-4"
                     aria-labelledby="role-title"
                 >
-                    <h2
-                        id="role-title"
-                        class="h4"
-                        th:text="#{ui.ops.rolePermissions}"
-                    ></h2>
-                    <div class="toolbar-actions mb-3">
-                        <a
-                            class="button button-outline"
-                            th:if="${adminUser}"
-                            th:href="@{/operations/accounts(lang=${currentLocale})}"
-                            th:text="#{ui.accounts.title}"
-                        ></a>
-                        <button
-                            id="access-new-role"
-                            class="button"
-                            type="button"
-                            hidden
-                            th:text="#{ui.foundation.newRole}"
-                        ></button>
+                    <div class="access-role-heading">
+                        <h2
+                            id="role-title"
+                            class="h4"
+                            th:text="#{ui.accessWorkspace.roles}"
+                        ></h2>
+                        <div class="toolbar-actions">
+                            <a
+                                class="button button-outline"
+                                th:if="${adminUser}"
+                                th:href="@{/operations/accounts(lang=${currentLocale})}"
+                                th:text="#{ui.accounts.title}"
+                            ></a>
+                            <button
+                                id="access-new-role"
+                                class="button"
+                                type="button"
+                                hidden
+                                th:text="#{ui.foundation.newRole}"
+                            ></button>
+                        </div>
                     </div>
-                    <label
-                        for="access-role"
-                        class="form-label"
-                        th:text="#{ui.ops.role}"
-                    ></label>
-                    <label
-                        for="access-role-search"
-                        class="form-label"
-                        th:text="#{ui.accessRoles.search}"
-                    ></label>
-                    <input
-                        id="access-role-search"
-                        type="search"
-                        class="form-control mb-2"
-                        maxlength="160"
-                        autocomplete="off"
-                    />
-                    <p
-                        id="access-role-count"
-                        role="status"
-                        class="muted"
-                    ></p>
-                    <select
-                        id="access-role"
-                        class="form-select mb-3"
-                        disabled
-                    ></select>
+                    <div class="access-role-picker">
+                        <div>
+                            <label
+                                for="access-role-search"
+                                class="form-label"
+                                th:text="#{ui.accessRoles.search}"
+                            ></label>
+                            <input
+                                id="access-role-search"
+                                type="search"
+                                class="form-control mb-2"
+                                maxlength="160"
+                                autocomplete="off"
+                            />
+                            <p
+                                id="access-role-count"
+                                role="status"
+                                class="muted"
+                            ></p>
+                        </div>
+                        <div>
+                            <label
+                                for="access-role"
+                                class="form-label"
+                                th:text="#{ui.ops.role}"
+                            ></label>
+                            <select
+                                id="access-role"
+                                class="form-select mb-3"
+                                disabled
+                            ></select>
+                        </div>
+                    </div>
                     <p
                         id="role-note"
                         class="text-secondary"
                         role="status"
                     ></p>
-                    <p>
-                        <span th:text="#{ui.ops.version}"></span>
-                        :
-                        <strong id="role-version">—</strong>
-                    </p>
-                    <div
-                        id="role-permission-summary"
-                        class="permission-summary"
-                    ></div>
-                    <div class="toolbar-actions">
+                    <div class="access-role-toolbar">
+                        <p
+                            id="role-permission-count"
+                            class="access-role-count"
+                            role="status"
+                        ></p>
                         <button
                             id="permissions-edit"
                             class="button"
                             type="button"
                             disabled
+                            th:attr="data-edit=#{ui.workspace.editPermissions},data-readonly=#{ui.accessWorkspace.viewPermissions}"
                             th:text="#{ui.workspace.editPermissions}"
                         ></button>
                     </div>
+                    <details class="access-help">
+                        <summary th:text="#{ui.accessWorkspace.assignedFeatures}"></summary>
+                        <p class="muted">
+                            <span th:text="#{ui.ops.version}"></span>
+                            :
+                            <strong id="role-version">—</strong>
+                        </p>
+                        <div
+                            id="role-permission-summary"
+                            class="access-role-summary"
+                            th:attr="data-permissions=#{ui.accessWorkspace.permissionCount},data-accounts=#{ui.accessWorkspace.accountCount},data-extra=#{ui.accessWorkspace.extra},data-empty=#{ui.accessWorkspace.empty}"
+                        ></div>
+                    </details>
                 </section>
                 <section
                     class="card p-4"

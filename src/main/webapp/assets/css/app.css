@@ -1209,6 +1209,9 @@ form .button {
         left: 12px;
         right: 12px;
         display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        justify-content: stretch;
+        justify-items: stretch;
         padding: 12px;
         max-height: calc(100vh - 88px);
         max-height: calc(100dvh - 88px);
@@ -1218,6 +1221,10 @@ form .button {
         border: 1px solid var(--line);
         border-radius: 14px;
         box-shadow: 0 14px 36px #142d241a;
+    }
+
+    .nav-links > .operations-menu {
+        min-width: 0;
     }
 
     .nav-links > a,
@@ -1383,6 +1390,135 @@ form .button {
     max-height: 520px;
     border: 1px solid var(--line);
     border-radius: 9px;
+}
+
+/* Phân quyền bắt đầu từ công việc của quản trị viên; chi tiết kỹ thuật mở khi cần. */
+.access-intro {
+    margin-block: 20px 24px;
+    padding: 18px 20px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: white;
+}
+
+.access-workflow {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.access-workflow li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+}
+
+.access-workflow li > span {
+    display: grid;
+    place-items: center;
+    flex: 0 0 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--mint);
+    color: var(--green);
+    font-weight: 700;
+}
+
+.access-workflow strong,
+.access-workflow small {
+    display: block;
+}
+
+.access-workflow small {
+    margin-top: 4px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.access-help {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    font-size: 14px;
+}
+
+.access-help summary {
+    color: var(--green);
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.access-help p {
+    margin: 12px 0 0;
+    max-width: 85ch;
+    color: var(--muted);
+}
+
+.access-workspace-heading,
+.access-role-toolbar,
+.access-role-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.access-workspace-heading .eyebrow {
+    margin: 0;
+}
+
+.access-role-heading h2 {
+    margin: 0;
+}
+
+.access-role-picker {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.operations-page .access-role-picker select {
+    max-width: none;
+}
+
+.access-role-summary {
+    display: grid;
+    gap: 12px;
+    margin-block: 16px 24px;
+}
+
+.access-role-count {
+    margin: 0;
+    font-weight: 650;
+}
+
+.access-role-feature {
+    display: grid;
+    grid-template-columns: minmax(130px, 1fr) minmax(0, 3fr);
+    gap: 6px 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+@media (max-width: 700px) {
+    .access-workflow,
+    .access-role-feature,
+    .access-role-picker {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .access-workflow {
+        gap: 14px;
+    }
 }
 
 .permission-table th {

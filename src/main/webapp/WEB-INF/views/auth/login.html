@@ -47,6 +47,7 @@
                 <form
                     id="login-form"
                     novalidate
+                    th:attr="data-redirecting=#{ui.loginOpening}"
                 >
                     <label
                         for="username"
@@ -84,7 +85,7 @@
                         class="button full-width"
                         type="submit"
                         th:text="#{ui.signIn}"
-                        th:attr="data-loading=#{ui.signingIn}"
+                        th:attr="data-loading=#{ui.signingIn},data-redirecting=#{ui.loginOpeningButton}"
                     >
                         Đăng nhập
                     </button>
