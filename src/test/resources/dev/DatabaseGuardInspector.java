@@ -8,6 +8,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import vn.vietroute.auth.entity.PermissionAction;
@@ -88,6 +89,12 @@ public final class DatabaseGuardInspector {
 
         @AccessOperation(action = PermissionAction.LIST)
         public boolean list() {
+            // Thân service phải nhận snapshot DB mới, không chỉ guard trả true rồi giữ authority/ADMIN giả cũ.
+            var current = SecurityContextHolder.getContext().getAuthentication();
+            if (
+                ((UserPrincipal) current.getPrincipal()).roles().contains(Role.ADMIN) ||
+                current.getAuthorities().stream().map(GrantedAuthority::getAuthority).anyMatch("BOOKING_DETAIL"::equals)
+            ) throw new IllegalStateException("Context service còn quyền cũ ngoài DB");
             return true;
         }
     }

@@ -1,6 +1,6 @@
 # Giao diện quản trị hệ thống
 
-Cập nhật 23/10/2026. Các màn này hoàn thiện nền tảng trước nghiệp vụ nhà xe/chuyến/booking. Dùng menu **Hệ thống** sau khi đăng nhập; link chỉ xuất hiện theo quyền hiện hành. Backend vẫn kiểm quyền kể cả khi nhập URL hoặc gọi API trực tiếp.
+Cập nhật 24/10/2026. Các màn này hoàn thiện nền tảng trước nghiệp vụ nhà xe/chuyến/booking. Dùng menu **Hệ thống** sau khi đăng nhập; link chỉ xuất hiện theo quyền hiện hành. Backend vẫn kiểm quyền kể cả khi nhập URL hoặc gọi API trực tiếp.
 
 ## Các màn đã triển khai trong source
 
@@ -9,7 +9,7 @@ Cập nhật 23/10/2026. Các màn này hoàn thiện nền tảng trước nghi
 | `/operations/jobs` | JOB_VIEW; dữ liệu cần JOB_READ | Lọc trạng thái, phân trang, xem metadata và mã lỗi, retry DEAD khi có JOB_RETRY |
 | `/operations/access` | ACCESS_VIEW; dữ liệu cần ACCESS_READ | Ma trận quyền của role; sửa role thường nếu có ACCESS_ASSIGN/ACCESS_WRITE trong phạm vi cho phép |
 | `/operations/configuration` | CONFIGURATION_VIEW; dữ liệu cần CONFIGURATION_READ | Xem snapshot whitelist thông số không nhạy cảm của instance; chỉ đọc |
-| `/monitoring` | CONFIGURATION_VIEW; dữ liệu cần CONFIGURATION_READ | JVM/heap/CPU/HTTP/pool/worker và mẫu probe DB opt-in; hướng dẫn tại [giám sát](GIAM_SAT_VA_VAN_HANH.md) |
+| `/monitoring` | SYSTEM_VIEW; dữ liệu cần SYSTEM_READ | JVM/heap/CPU/HTTP/pool/worker và mẫu probe DB opt-in; hướng dẫn tại [giám sát](GIAM_SAT_VA_VAN_HANH.md) |
 
 Mỗi màn có vi/en, trạng thái tải/rỗng/lỗi, nút làm mới và menu theo quyền. JavaScript dùng Axios/CSRF/lỗi chung, không localStorage token, không đưa giá trị server vào innerHTML. Fieldset khóa trong lúc xử lý để hạn chế gửi lặp. Quyền hiển thị UI chỉ hỗ trợ thao tác; service là nơi quyết định quyền thực tế.
 
@@ -37,7 +37,7 @@ GET /api/v1/admin/access/users?username=Ad&page=0&size=20
 
 `username` là prefix không phân biệt hoa/thường, chữ/số tối đa 32 ký tự; rỗng để xem tất cả. Chọn tường minh id/username/displayName/active/roles/version/createdAt/updatedAt; không đọc password hash vào DTO hoặc trả token/credential. Role được ủy quyền có ACCESS_READ cũng liệt kê tài khoản, không trả credential. Query dùng PreparedStatement, không wildcard do người dùng cung cấp và không N+1 theo từng user. Nếu dữ liệu lớn cần đo query plan và cân nhắc index prefix qua migration mới, không sửa migration đã áp dụng.
 
-Chọn tài khoản để sửa các role; không tự sửa role bản thân. Ghi dùng API PUT đã có, cần thêm ACCESS_ASSIGN/ACCESS_WRITE và version hiện hành; actor không ADMIN chỉ gán role có quyền nằm trong tập mình có, không đụng user ADMIN/system hoặc bản thân; backend bảo vệ admin cuối và thu hồi token cũ của user đích. UI không cấp tài khoản mới, đổi mật khẩu người khác, gắn nhà xe hoặc thay scope; các phần đó theo AUTH02/AUTH03/SCOPE01 trong [kế hoạch nhóm](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
+Chọn tài khoản để sửa các role; không tự sửa role bản thân. Ghi dùng API PUT đã có, cần thêm ACCESS_ASSIGN/ACCESS_WRITE và version hiện hành; actor không ADMIN chỉ gán role có quyền nằm trong tập mình có, không đụng user ADMIN/system hoặc bản thân; backend bảo vệ admin cuối và thu hồi token cũ của user đích. ADMIN cấp tài khoản/mật khẩu tạm tại menu Tài khoản; người nhận tự đổi mật khẩu. Scope quản trị có tab riêng trong Phân quyền, khác hồ sơ nhà xe/tài xế và phạm vi booking chưa triển khai; xem [kế hoạch nhóm](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
 
 ## Trang cấu hình an toàn
 
@@ -87,3 +87,16 @@ Tab Tài nguyên UI/API chọn MENU/ENDPOINT hoặc tất cả, nhập route/con
 Vào **Quản trị truy cập → Tài khoản** bằng admin đã đổi mật khẩu bootstrap. Tạo tài xế/người dùng với role phù hợp, bàn giao mật khẩu tạm qua kênh riêng và yêu cầu người nhận đổi tại Thông tin cá nhân trước khi dùng chức năng. Màn này không phụ thuộc Gmail để cấp danh tính nội bộ; đăng ký công khai vẫn theo kích hoạt email. Email nhận reset được người dùng gắn/xác minh qua luồng hồ sơ hiện có.
 
 Cấu hình role tại Phân quyền → Tạo vai trò → chọn menu/thao tác → Lưu; sau đó gán role tại Tài khoản. Dùng nút xem để kiểm quyền thực tế của tài khoản, gồm policy bổ sung. Lưu gán/khóa/mở làm token cũ hết hiệu lực; người nhận đăng nhập lại. Khóa không xóa lịch sử, không cho khóa ADMIN/system/bản thân hoặc mở bỏ qua email đang chờ. Version 409 cần đọc lại có chủ đích. Xem [hợp đồng chi tiết](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#quản-trị-tài-khoản-và-ma-trận-menu--access05).
+
+
+## Tìm role và tra lịch sử đổi quyền
+
+Ma trận/gán tài khoản tìm role theo tên vi/en hoặc mã, gõ không dấu vẫn tìm được. Lọc không bỏ các checkbox đã chọn; trước Lưu xem preview thêm/bỏ và số tài khoản bị ảnh hưởng. Tab Role và quyền có từ khóa/trạng thái/phân trang server, số mã đã dùng và quota; COM016 là đạt quota, khác 409 do trùng/version. Tombstone giữ mã role đã xóa nhưng không chiếm suất tạo mã khác.
+
+Tab Lịch sử phân quyền chỉ ADMIN + ACCESS_READ: lọc loại, tiền tố mã/ID đối tượng và ID người thực hiện, mở icon để xem actor/time/traceId/version trước–sau. Mapping hiển thị mã bị bỏ/thêm, không phải toàn bộ quyền; thao tác thất bại không có sự kiện thành công giả. TraceId có thể tra thêm Nhật ký API bằng ADMIN + SYSTEM_READ, nhưng không phải mọi request đều có mutation hoặc mọi trace đều được lưu khi DB lỗi. Lịch sử quyền mặc định giữ 7 ngày/mục tiêu 1.000 sự kiện, không bất biến trước quản trị DB và không có dữ liệu quá khứ trước V014.
+
+## Gán phạm vi cho nhân viên
+
+Sau khi triển khai đồng nhất V015 trên mọi node: tạo role/quyền và tài khoản toàn cục trước, vào Phân quyền → Phạm vi dữ liệu → Tạo phạm vi → chọn icon thành viên → Gán tài khoản. Tìm prefix username, chọn đúng user, tick tập con role của chính user cho phạm vi này rồi Lưu. Không gán ADMIN/system/self. Một user có thể có quyền quản lý ở A và chỉ đọc ở B; backend không trộn hai tập quyền. Tắt membership/thu hồi global role làm mất quyền scoped ở lần DB check tiếp theo, không hủy transaction đã chạy.
+
+Scope là metadata bảo mật nền, chưa tạo hồ sơ nhà xe/chuyến/booking; CARRIER01/AUTH03 phải gắn quan hệ và DAO đúng scope khi viết business. Khách xem đủ nhà xe/chuyến công khai không cần membership nhân viên. Tắt scope bảo mật chặn mọi thao tác scoped, khác nhà xe ngừng nhận booking nhưng còn xử lý chuyến cũ. Xem [hợp đồng nâng phiên bản/giới hạn](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#nền-phạm-vi-dữ-liệu--scope01). Kiểm trực quan picker/tab scope mới còn giới hạn do browser policy; trạng thái/bằng chứng thực tế nằm ở tiến độ, không suy đã nghiệm thu UX từ hướng dẫn này.
