@@ -729,4 +729,5 @@ source "$(dirname "${BASH_SOURCE[0]}")/verify-account.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-managed-accounts.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-foundation.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-access-tree.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/verify-database-guard.sh"
 printf 'Function permissions, durable workers, per-node quota, metrics isolation and DB/node recovery checks passed.\n'

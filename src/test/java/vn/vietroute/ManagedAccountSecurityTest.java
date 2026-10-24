@@ -32,6 +32,7 @@ import vn.vietroute.auth.dto.request.ManagedAccountSearchRequest;
 import vn.vietroute.auth.dto.response.AccessPolicyResponse;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
 import vn.vietroute.auth.dto.response.ManagedAccountResponse;
+import vn.vietroute.auth.entity.AuthorizationState;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
@@ -219,6 +220,18 @@ class ManagedAccountSecurityTest {
             child.register(WebConfig.class);
             child.refresh();
             var mvc = MockMvcBuilders.webAppContextSetup(child).apply(springSecurity()).build();
+            root.getBean(AccessTestConfig.AuthorizationFixture.class).states.put(
+                8L,
+                new AuthorizationState(
+                    8,
+                    true,
+                    false,
+                    true,
+                    0,
+                    Set.of(Role.DRIVER),
+                    Set.of("CATALOG_VIEW", "CATALOG_CREATE")
+                )
+            );
             var token = root.getBean(JwtService.class).issue(fixture(true)).accessToken();
             var blocked = mvc
                 .perform(get(Routes.ADMIN_CATALOGS + "/1").header("Authorization", "Bearer " + token))

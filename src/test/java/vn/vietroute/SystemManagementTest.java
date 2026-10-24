@@ -16,6 +16,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,7 +30,9 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import vn.vietroute.auth.dto.request.AccessUserSearchRequest;
 import vn.vietroute.auth.dto.response.AccessUserResponse;
+import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.AccessService;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.config.RootConfig;
@@ -75,7 +78,12 @@ class SystemManagementTest {
 
     private UsernamePasswordAuthenticationToken actor(String... authorities) {
         return UsernamePasswordAuthenticationToken.authenticated(
-            "isolated-test",
+            new UserPrincipal(
+                2L,
+                "isolated",
+                Set.of(List.of(authorities).contains("ROLE_ADMIN") ? Role.ADMIN : Role.OPERATOR),
+                0
+            ),
             null,
             AccessTestConfig.upgradedAuthorities(authorities)
         );

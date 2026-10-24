@@ -153,7 +153,7 @@ class FoundationSecurityTest {
     private void authenticate(String authority) {
         SecurityContextHolder.getContext().setAuthentication(
             UsernamePasswordAuthenticationToken.authenticated(
-                "test-user",
+                new UserPrincipal(2L, "testuser", Set.of(Role.OPERATOR), 0),
                 null,
                 List.of(new SimpleGrantedAuthority(authority))
             )
