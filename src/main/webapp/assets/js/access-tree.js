@@ -55,17 +55,47 @@
                     )
                     .map((action) => ({ code: action.permission, feature: feature.code })),
             );
+    // Hiển thị cả mã đã tắt/ngoài registry để ADMIN bỏ mapping cũ, tránh không thể lưu vì quyền vô hình.
+    const unbound = (registry, initial, features, inactiveCaption) => {
+        const indexed = new Set(features.flatMap((feature) => feature.actions.map((action) => action.permission)));
+        return [
+            ...registry
+                .filter((item) => !indexed.has(item.code))
+                .map((item) => ({
+                    permission: item.code,
+                    name: item.name,
+                    action: item.actions.join('/'),
+                    endpoints: [],
+                })),
+            ...initial
+                .filter((code) => !indexed.has(code) && !registry.some((item) => item.code === code))
+                .map((code) => ({
+                    permission: code,
+                    name: `${code} · ${inactiveCaption}`,
+                    action: code.substring(code.lastIndexOf('_') + 1),
+                    endpoints: [],
+                    inactive: true,
+                })),
+        ];
+    };
     const render = (host, features, registry, initial, options) => {
         const labels = document.getElementById('access-tree-labels').dataset;
         const state = model(initial, features);
         const permitted = (code) => options.editable && (!options.allowed || options.allowed.includes(code));
-        const indexed = new Set(features.flatMap((feature) => feature.actions.map((action) => action.permission)));
-        const extra = registry
-            .filter((item) => !indexed.has(item.code))
-            .map((item) => ({ permission: item.code, name: item.name, action: item.actions.join('/'), endpoints: [] }));
+        const extra = unbound(registry, initial, features, labels.inactive);
         const nodes = [
             ...features,
-            ...(extra.length ? [{ code: 'UNBOUND', parent: null, name: labels.custom, actions: extra }] : []),
+            ...(extra.length
+                ? [
+                      { code: 'UNBOUND', parent: null, name: labels.custom, actions: [] },
+                      ...extra.map((action) => ({
+                          code: 'UNBOUND:' + action.permission,
+                          parent: 'UNBOUND',
+                          name: action.name,
+                          actions: [action],
+                      })),
+                  ]
+                : []),
         ];
         const toolbar = element('div', null, 'access-tree-toolbar');
         const search = element('input');
@@ -332,5 +362,5 @@
         section.append(button, output);
         host.append(section);
     };
-    window.VietRouteAccessTree = { model, render, sources, systemSelection };
+    window.VietRouteAccessTree = { model, render, sources, systemSelection, unbound };
 })();

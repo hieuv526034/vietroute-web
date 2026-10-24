@@ -115,3 +115,5 @@ Màn phân quyền có nút Tạo vai trò trực tiếp và đường sang Tài
 Preview của tài khoản lấy capabilities từ server, không suy từ tên role hoặc raw permission ở trình duyệt. Phiên mật khẩu tạm không hiện chức năng được bảo vệ. HTML kiểm thử lấy từ Thymeleaf thật, API fixture chỉ dữ liệu giả; SQL/bảo mật có bộ kiểm riêng trên PostgreSQL Docker CI.
 
 Ảnh ACCESS05 từ fixture cô lập: [ma trận menu/hành động](../images/access05-matrix.png), [gán nhiều role và giữ bản nháp khi 409](../images/access05-assignment.png), [xem quyền tài khoản](../images/access05-account.png), [danh sách và trạng thái sau khóa](../images/access05-accounts.png).
+
+Ma trận còn hiện từng mã quyền ngoài chức năng hoặc đã tắt đang nằm trong role, để ADMIN có thể bỏ mapping cũ; không giữ quyền vô hình khiến mọi lần Lưu đều bị từ chối. Những dòng này không tự tạo endpoint hoặc VIEW.
