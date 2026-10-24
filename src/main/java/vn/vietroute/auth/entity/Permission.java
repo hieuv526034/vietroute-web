@@ -238,12 +238,7 @@ public final class Permission {
     }
 
     public String messageKey() {
-        for (Permission builtIn : values()) {
-            if (builtIn.equals(this)) {
-                return "permission." + code;
-            }
-        }
-        return "permission.custom";
+        return "permission." + code;
     }
 
     public boolean grantedInitially(Role role) {

@@ -38,6 +38,7 @@ import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.auth.repository.ManagedAccountRepository;
 import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.security.AccessPermissionDefinitions;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.AccessManagementService;
 import vn.vietroute.auth.service.JwtService;
@@ -289,7 +290,7 @@ class ManagedAccountSecurityTest {
 
     @Test
     void previewLoadsPoliciesForTargetUserInsteadOfAdminsBypassedSnapshot() {
-        var registry = new AccessTestConfig.PolicyFixture();
+        var registry = new AccessTestConfig.PolicyFixture(new AccessPermissionDefinitions());
         registry.rules = List.of(
             new AccessPolicyResponse(
                 1,

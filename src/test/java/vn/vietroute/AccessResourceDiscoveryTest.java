@@ -4,8 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
@@ -15,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.support.StaticApplicationContext;
 import org.springframework.core.io.FileSystemResourceLoader;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockServletContext;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -23,6 +26,8 @@ import org.springframework.web.context.support.AnnotationConfigWebApplicationCon
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
 import vn.vietroute.auth.entity.Role;
+import vn.vietroute.auth.repository.AccessRegistryRepository;
+import vn.vietroute.auth.security.AccessPermissionDefinitions;
 import vn.vietroute.auth.security.AccessResourceSynchronizer;
 import vn.vietroute.auth.security.AccessTargets;
 import vn.vietroute.auth.security.UserPrincipal;
@@ -46,7 +51,12 @@ class AccessResourceDiscoveryTest {
         ) {
             var web = new MockServletContext("src/main/webapp", new FileSystemResourceLoader());
             root.setServletContext(web);
-            root.register(RootConfig.class, AccessTestConfig.class, JournalTestConfig.class);
+            root.register(
+                RootConfig.class,
+                AccessTestConfig.class,
+                JournalTestConfig.class,
+                DatabaseAccessGuardTest.FutureModule.class
+            );
             root.refresh();
             child.setParent(root);
             child.setServletContext(web);
@@ -91,6 +101,32 @@ class AccessResourceDiscoveryTest {
                     .anyMatch(item -> item.target().endsWith(" " + Routes.AUTH_LOGIN))
             );
             var mvc = MockMvcBuilders.webAppContextSetup(child).apply(springSecurity()).build();
+            // Service-only module không có Permission constant vẫn được bảo vệ trên node tắt ghi sync.
+            assertFalse(root.getBean(AppSettings.class).isAccessSyncEnabled());
+            var registry = root.getBean(AccessRegistryRepository.class);
+            assertTrue(registry.builtIn("permissions", "FUTUREMODULE_UPDATE"));
+            assertFalse(registry.builtIn("permissions", "CUSTOMMODULE_READ"));
+            var admin = UsernamePasswordAuthenticationToken.authenticated(
+                new UserPrincipal(1L, "fixture", Set.of(Role.ADMIN), 0),
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"), new SimpleGrantedAuthority("ACCESS_UPDATE"))
+            );
+            assertEquals(
+                403,
+                mvc
+                    .perform(
+                        put("/api/v1/admin/access/registry/permissions/FUTUREMODULE_UPDATE")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(
+                                "{\"nameVi\":\"Module mới\",\"nameEn\":\"New module\",\"active\":false,\"version\":0}"
+                            )
+                            .with(authentication(admin))
+                            .with(csrf())
+                    )
+                    .andReturn()
+                    .getResponse()
+                    .getStatus()
+            );
             var spec = root
                 .getBean(ObjectMapper.class)
                 .readTree(mvc.perform(get(Routes.OPENAPI)).andReturn().getResponse().getContentAsString());
@@ -181,7 +217,7 @@ class AccessResourceDiscoveryTest {
         private Set<String> serviceCodes = Set.of();
 
         RecordingResources() {
-            super(null, null, null, null, null);
+            super(null, null, null, null, null, new AccessPermissionDefinitions());
         }
 
         @Override

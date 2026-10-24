@@ -20,6 +20,7 @@ import vn.vietroute.auth.dto.response.AccessRegistryPageResponse;
 import vn.vietroute.auth.dto.response.AccessRegistryResponse;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
+import vn.vietroute.auth.security.AccessPermissionDefinitions;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.AccessConstants.Limits;
 import vn.vietroute.common.constant.ErrorCode;
@@ -33,9 +34,16 @@ public class AccessRegistryRepository extends BaseRepository {
 
     private final AccessSettings settings;
 
-    public AccessRegistryRepository(JdbcConnectionFactory connections, AccessSettings settings) {
+    private final AccessPermissionDefinitions permissions;
+
+    public AccessRegistryRepository(
+        JdbcConnectionFactory connections,
+        AccessSettings settings,
+        AccessPermissionDefinitions permissions
+    ) {
         super(connections);
         this.settings = settings;
+        this.permissions = permissions;
     }
 
     /** Quota chỉ tính mã chưa xóa; service giữ khóa gán toàn cục trước khi gọi để chống vượt hạn mức chéo node. */
@@ -117,7 +125,7 @@ public class AccessRegistryRepository extends BaseRepository {
         for (int index = 3; index <= 5; index++) query.setString(index, value);
     }
 
-    private static AccessRegistryResponse row(String kind, ResultSet rows) throws SQLException {
+    private AccessRegistryResponse row(String kind, ResultSet rows) throws SQLException {
         String code = rows.getString(1);
         return new AccessRegistryResponse(
             code,
@@ -341,10 +349,8 @@ public class AccessRegistryRepository extends BaseRepository {
         }
     }
 
-    public static boolean builtIn(String kind, String code) {
-        return "roles".equals(kind)
-            ? Role.ADMIN.name().equals(code)
-            : Arrays.stream(Permission.values()).anyMatch(value -> value.name().equals(code));
+    public boolean builtIn(String kind, String code) {
+        return "roles".equals(kind) ? Role.ADMIN.name().equals(code) : permissions.contains(code);
     }
 
     private static String table(String kind) {
