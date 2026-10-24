@@ -1,4 +1,12 @@
 package vn.vietroute.common.mail.model;
 
-/** Nội dung outbox nội bộ, không log hoặc trả payload qua API quản trị. Chỉ hỗ trợ plain text để tránh HTML không tin cậy. */
-public record MailPayload(String to, String subject, String text) {}
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+
+/** Nội dung outbox nội bộ; HTML chỉ do template server tạo, không nhận từ API hoặc xuất qua nhật ký quản trị. */
+public record MailPayload(String to, String subject, String text, @JsonInclude(Include.NON_NULL) String html) {
+    /** Giữ tương thích module và job plain text đã có trước template HTML. */
+    public MailPayload(String to, String subject, String text) {
+        this(to, subject, text, null);
+    }
+}

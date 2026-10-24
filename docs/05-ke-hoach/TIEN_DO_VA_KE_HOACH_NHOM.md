@@ -1,5 +1,17 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
+## MAIL02 — Template email tài khoản và sender Gmail
+
+Đang kiểm trên nhánh `hieuv526034/mail02-template-email`, base main `ad49425`, người thực hiện thực tế hieuv526034, [Issue #104](https://github.com/hieuv526034/vietroute-web/issues/104), ngày 24/10/2026. Phạm vi theo yêu cầu chủ dự án: báo đúng phần nghiệp vụ đã có và làm email đẹp từ mailbox được chỉ định. Chưa ghi có trên main khi chưa merge.
+
+Đã triển khai template HTML vi/en cho kích hoạt/gắn email và reset, plain-text dự phòng, escape biến và mã xuống dòng; Gmail/SMTP dùng chung multipart MIME, job ba field cũ vẫn đọc được. Giữ challenge 256 bit, thời hạn và outbox AES-GCM/transaction, không thêm schema hoặc API HTML. Fixture/test ở src/test, không dùng secret/Neon/provider thật. Hợp đồng/quy trình cấu hình trong [nền mail](../02-phat-trien/NEN_TANG_MO_RONG.md#template-email-tài-khoản--mail02).
+
+Local: 159 Java/44 Node đạt; MIME round-trip UTF-8/plain/HTML/Message-ID, escape, locale/thời hạn, outbox mã hóa và chặn thư hết hạn; API quản trị từ chối html. Formatter/check/rules/docs và diff đạt. Browser bốn template vi/en ở 320px không tràn ngang, mã giữ nguyên; thêm preview 390px/1000px, ảnh [desktop](../images/mail02-desktop.jpg)/[điện thoại](../images/mail02-mobile.jpg) chỉ dùng mã giả. CI PostgreSQL sẽ kiểm HTML/mã khớp trong outbox thực của các luồng auth, không gửi provider thật.
+
+Giới hạn còn dở: đã chuẩn bị sender trong `.env` local bị ignore; chưa có bộ OAuth Gmail để gửi thật, mail/worker vẫn tắt. Mật khẩu đăng nhập web không dùng làm credential gửi; Render Free chặn SMTP. Chưa xác nhận Environment Render, giao email, Spam/Inbox hoặc hiển thị trong client Gmail/Outlook thật. Cần dừng worker cũ khi nâng cấp trước khi producer tạo payload HTML. Tự review source, chưa có review độc lập của thành viên khác; PR/CI sẽ chốt sau kiểm.
+
+Nghiệp vụ hiện mới có catalog và LOCATION01 cùng nền auth/quản trị; chưa có CARRIER01/VEHICLE01/DRIVER01/ROUTE01/TRIP01/CAPACITY01/BOOKING01/SEARCH01/TRACK01/REPORT01. “Sẵn sàng nhận việc nghiệp vụ” nghĩa là có nền để bắt đầu các module, không phải toàn hệ thống đã hoàn chỉnh. Bước tiếp theo: cấu hình OAuth riêng và nghiệm thu mailbox; phát triển CARRIER01/AUTH03 theo phụ thuộc và identity thật ở [phân công](PHAN_CONG.md).
+
 ## LOCATION01 — Đã có trên main: nghiệp vụ địa điểm đầu tiên
 
 Đã merge [PR #102](https://github.com/hieuv526034/vietroute-web/pull/102), merge `3f3105d`, head đã kiểm `998e96a`, nhánh `hiencoi250404-design/location01-dia-diem`, [Issue #101](https://github.com/hieuv526034/vietroute-web/issues/101), base main `b50aa19` ngày 24/10/2026. Phần phụ trách theo kế hoạch là Hien; người thực sự triển khai đợt này là hieuv526034 và giữ nguyên identity đó trên commit, không ghi thành đóng góp đã làm của Hien.
