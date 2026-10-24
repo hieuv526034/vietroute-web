@@ -67,6 +67,8 @@ Gọi `VietRouteForms.validate(form)` và lấy FormData **trước khi disable 
 
 Home “Vào hệ thống” và trang login chọn đích từ principal: khách → login, ADMIN → admin, role khác → account; giữ locale/context WAR. Đây là điều hướng, kiểm quyền trực tiếp ở backend vẫn bắt buộc.
 
+Sau POST đổi mật khẩu thành công, client xóa input và tải document `/account` bằng cookie mới, giữ context/locale để server dựng lại toàn bộ menu từ quyền DB. Chỉ gọi lại `/me` sẽ để header mắc ở menu của phiên mật khẩu tạm. Query `passwordChanged=true` chỉ giữ thông báo thành công qua điều hướng; UI chỉ hiện sau `/me` xác nhận tài khoản hết cờ mật khẩu tạm, không dùng query để mở quyền hoặc bỏ AUTH011. Lỗi 401/409/503 vẫn giữ modal/bản nháp và không điều hướng, không tự gửi lại. Chủ tài khoản tự nhập/lưu mật khẩu mới; kiểm thử dùng dữ liệu cách ly, không tự tắt cờ hoặc sửa mật khẩu trên Neon để kiểm UI.
+
 ## 4. Bằng chứng và giới hạn
 
 Các đợt UI đã có tại [PR #29](https://github.com/hieuv526034/vietroute-web/pull/29)/[#30](https://github.com/hieuv526034/vietroute-web/pull/30); trạng thái/test theo [nghiệm thu](../05-ke-hoach/NGHIEM_THU_NEN_TANG.md). Java kiểm Home/login với root/servlet tách biệt, khách/ADMIN/CUSTOMER, vi/en và context ROOT/`/vietroute`; Docker CI dùng cookie JWT/PostgreSQL tạm. Node kiểm pager lớn, giới hạn, trang biến mất và lỗi không tự retry.
