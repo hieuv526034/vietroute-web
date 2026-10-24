@@ -1,6 +1,7 @@
 package vn.vietroute.common.media.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -78,7 +79,7 @@ public class MediaController extends BaseController {
     )
     @AccessFunction(group = Groups.MEDIA, permissions = { Permissions.MEDIA_READ })
     public ApiResult<MediaResponse> find(
-        @PathVariable long id,
+        @Parameter(description = "ID bản ghi cần thao tác", example = "1") @PathVariable long id,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
@@ -92,7 +93,7 @@ public class MediaController extends BaseController {
     )
     @AccessFunction(group = Groups.MEDIA, permissions = { Permissions.MEDIA_UPDATE })
     public ApiResult<MediaResponse> update(
-        @PathVariable long id,
+        @Parameter(description = "ID bản ghi cần thao tác", example = "1") @PathVariable long id,
         @Valid @RequestBody MediaUpdateRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
@@ -123,7 +124,7 @@ public class MediaController extends BaseController {
     )
     @AccessFunction(group = Groups.MEDIA, permissions = { Permissions.MEDIA_DELETE })
     public ApiResult<MediaResponse> delete(
-        @PathVariable long id,
+        @Parameter(description = "ID bản ghi cần thao tác", example = "1") @PathVariable long id,
         @Valid @RequestBody MediaDeleteRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request

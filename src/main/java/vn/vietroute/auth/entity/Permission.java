@@ -23,6 +23,10 @@ import vn.vietroute.common.jdbc.JdbcTable;
 @Schema(type = "string", description = "Mã Permission ổn định từ registry, JSON dạng chuỗi")
 public final class Permission {
 
+    // Các hằng dưới đây là từ vựng chuẩn cho bootstrap/annotation, không phải danh sách quyền hiệu lực của user.
+    // Permission.valueOf nhận cả mã tùy chỉnh hợp lệ; UserRepository luôn đọc mapping role/quyền active trong DB.
+    // Giữ mã ở source để endpoint mới khai báo hợp đồng rõ ràng; ADMIN gán/thu hồi ở DB mà không sửa các hằng này.
+
     public static final Permission CATALOG_READ = new Permission(
         Permissions.CATALOG_READ,
         Groups.CATALOG,
@@ -225,6 +229,7 @@ public final class Permission {
         return Role.ADMIN.equals(role);
     }
 
+    /** Chỉ danh mục bootstrap/tương thích; tuyệt đối không dùng values() để suy quyền của tài khoản hiện tại. */
     public static Permission[] values() {
         return new Permission[] {
             CATALOG_VIEW,

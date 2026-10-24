@@ -1,6 +1,7 @@
 package vn.vietroute.business.catalog.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -56,7 +57,7 @@ public class CatalogController extends BaseController {
         description = "Công khai, chỉ trả mục đang hoạt động. page bắt đầu từ 0, size tối đa 100. Tên trả theo locale."
     )
     public ApiResult<PageResponse<CatalogResponse>> page(
-        @PathVariable CatalogType type,
+        @Parameter(description = "Nhóm danh mục cần tra cứu", example = "VEHICLE_TYPE") @PathVariable CatalogType type,
         @Valid @ModelAttribute PageRequest page,
         HttpServletRequest request
     ) {
@@ -89,7 +90,10 @@ public class CatalogController extends BaseController {
     )
     @AccessFunction(group = Groups.CATALOG, permissions = { Permissions.CATALOG_READ })
     public ApiResult<CatalogResponse> find(
-        @PathVariable @Min(value = 1, message = "{validation.invalid}") long id,
+        @Parameter(description = "ID danh mục, số nguyên dương", example = "1") @PathVariable @Min(
+            value = 1,
+            message = "{validation.invalid}"
+        ) long id,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> catalogs.find(id, locale(request)));
@@ -102,7 +106,10 @@ public class CatalogController extends BaseController {
     )
     @AccessFunction(group = Groups.CATALOG, permissions = { Permissions.CATALOG_UPDATE, Permissions.CATALOG_WRITE })
     public ApiResult<CatalogResponse> update(
-        @PathVariable @Min(value = 1, message = "{validation.invalid}") long id,
+        @Parameter(description = "ID danh mục, số nguyên dương", example = "1") @PathVariable @Min(
+            value = 1,
+            message = "{validation.invalid}"
+        ) long id,
         @Valid @RequestBody CatalogUpdateRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
@@ -117,7 +124,10 @@ public class CatalogController extends BaseController {
     )
     @AccessFunction(group = Groups.CATALOG, permissions = { Permissions.CATALOG_DELETE })
     public ApiResult<CatalogResponse> delete(
-        @PathVariable @Min(value = 1, message = "{validation.invalid}") long id,
+        @Parameter(description = "ID danh mục, số nguyên dương", example = "1") @PathVariable @Min(
+            value = 1,
+            message = "{validation.invalid}"
+        ) long id,
         @Valid @RequestBody CatalogDeleteRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request

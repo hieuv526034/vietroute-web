@@ -4,11 +4,11 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import vn.vietroute.auth.dto.request.AccessResourceSearchRequest;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
 import vn.vietroute.auth.repository.AccessFeatureRepository;
 import vn.vietroute.auth.repository.AccessResourceRepository;
 import vn.vietroute.auth.security.AccessRules;
-import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 
@@ -34,7 +34,7 @@ public class AccessResourceService {
 
     /** Quyền đặt tại service để lời gọi ngoài controller cũng không đọc được danh bạ quản trị. */
     @PreAuthorize(AccessRules.ACCESS_READ)
-    public PageResponse<AccessResourceResponse> page(PageRequest page) {
+    public PageResponse<AccessResourceResponse> page(AccessResourceSearchRequest page) {
         return resources.page(page);
     }
 }

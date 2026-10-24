@@ -1,6 +1,7 @@
 package vn.vietroute.common.mail.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -51,7 +52,10 @@ public class MailController extends BaseController {
     )
     public ApiResult<JobResponse> queue(
         @Valid @RequestBody MailRequest body,
-        @RequestHeader(Http.IDEMPOTENCY_HEADER) @Pattern(
+        @Parameter(
+            description = "Khóa duy nhất cho yêu cầu gửi thư; gửi lại cùng khóa không tạo job trùng",
+            example = "mail-example-20261024-01"
+        ) @RequestHeader(Http.IDEMPOTENCY_HEADER) @Pattern(
             regexp = Regex.IDEMPOTENCY_KEY,
             message = "{validation.invalid}"
         ) String key,

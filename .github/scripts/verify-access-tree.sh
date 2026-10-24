@@ -7,6 +7,19 @@ token="$tree_admin_token"
 [[ "$(sql "SELECT count(*) FROM auth_access_resources WHERE target='POST /api/v1/admin/catalogs' AND function_code='CATALOG' AND permission_match='ANY' AND declared_permissions LIKE '%CATALOG_CREATE%'")" == 1 ]]
 call 200 GET /api/v1/admin/access/tree '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; f=next(x for x in d if x["code"]=="CATALOG"); assert f["parent"]=="SYSTEM" and f["viewPermission"]=="CATALOG_VIEW"; a=next(x for x in f["actions"] if x["permission"]=="CATALOG_CREATE"); assert any(x["target"]=="POST /api/v1/admin/catalogs" and x["match"]=="ANY" for x in a["endpoints"])' "$result"
+# Bộ lọc dùng chung predicate count/data trên DB, từ khóa nguyên văn không diễn giải wildcard hoặc SQL.
+call 200 GET '/api/v1/admin/access/resources?kind=ENDPOINT&query=CATALOG&page=0&size=2' '' bearer
+tree_resource_total=$(sql "SELECT count(*) FROM auth_access_resources WHERE kind='ENDPOINT' AND strpos(lower(concat_ws(' ',target,handler,description,resource_group,function_code,declared_permissions)),'catalog')>0")
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["totalElements"]==int(sys.argv[2]) and d["totalElements"]>2 and len(d["content"])==2; assert all(x["kind"]=="ENDPOINT" for x in d["content"])' "$result" "$tree_resource_total"
+call 200 GET '/api/v1/admin/access/resources?kind=MENU&query=MediaPageController' '' bearer
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["totalElements"]==1 and d["content"][0]["kind"]=="MENU"' "$result"
+call 200 GET '/api/v1/admin/access/resources?query=%25_%27%20OR%20true%20--' '' bearer
+[[ "$(field data.totalElements)" == 0 ]]
+call 400 GET '/api/v1/admin/access/resources?kind=INVALID' '' bearer
+assert_code COM001
+tree_long_query=$(printf 'a%.0s' {1..161})
+call 400 GET "/api/v1/admin/access/resources?query=$tree_long_query" '' bearer
+assert_code COM001
 printf '%s\n' '{"nameVi":"Nhập liệu CI","nameEn":"CI entry","active":true,"version":0}' > "$work/tree-registry.json"
 for tree_role in ENTRY_CI ALT_CI MANAGER_CI TARGET_CI POWER_CI; do
   call 201 POST "/api/v1/admin/access/registry/roles/$tree_role" "$work/tree-registry.json" bearer

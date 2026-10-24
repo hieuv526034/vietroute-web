@@ -90,7 +90,8 @@ public class AccessTreeService {
                     messages.getMessage(feature.nameKey(), null, locale),
                     feature.path(),
                     feature.viewPermission(),
-                    actions
+                    actions,
+                    AccessFeatures.inSystemBundle(feature.code())
                 )
             );
         }

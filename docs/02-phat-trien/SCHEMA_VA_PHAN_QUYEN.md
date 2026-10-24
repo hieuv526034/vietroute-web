@@ -169,6 +169,22 @@ Danh sách role dùng một statement tổng hợp mapping/số user, tránh que
 
 Các API dùng BaseController/ApiResult, Swagger @Operation/@Schema, vi/en và traceId. Không tự replay mutation, không xuất token debug thật hoặc credentials.
 
+## Bộ quyền hệ thống và quyền DB — ACCESS04
+
+Theo yêu cầu và lựa chọn chủ dự án ngày 24/10/2026: **gán cả bộ quyền hệ thống, giữ bảo vệ ADMIN**. Màn cây có nút Chọn bộ quyền hệ thống; `AccessFeatures.inSystemBundle` đánh dấu JOBS/MONITORING/CONFIGURATION/JOURNAL/MAIL/ACCESS, response cây có `systemBundle`. Bộ chọn lấy các permission active từ cây/endpoint hiện có, bỏ WRITE tương thích và endpoint chỉ ADMIN; không gom CRUD danh mục/ảnh hoặc nghiệp vụ tương lai. Chọn chỉ sửa draft, preview ghi đủ mã; Lưu dùng API thay mapping có version/CSRF và giới hạn ủy quyền đang có. Mẫu bị khóa nếu actor thiếu một quyền trong cả bộ, không lặng lẽ gán một phần. Quyền ngoài bộ đang có được giữ nguyên.
+
+Không tạo một authority toàn cục để bỏ mọi guard. DB vẫn lưu permission riêng trong auth_role_permissions, nên thu hồi từng quyền và xem nguồn role vẫn hoạt động. Đây là snapshot được quản trị chủ động gán: thêm endpoint/quyền mới không tự tăng quyền cho role thường. ADMIN vẫn được bootstrap/sync bổ sung quyền source khi bật, không tự đổi mật khẩu. Nhật ký/online và tài khoản ADMIN/system/cứu hộ giữ giới hạn đã có; gán mẫu không cho role thường vượt ADMIN.
+
+| Thành phần | Trách nhiệm |
+|---|---|
+| AccessConstants/Permission constants | Mã ổn định để lập trình viên khai báo chức năng endpoint/service; không chứa user được cấp |
+| Registry + user-role + role-permission DB | Admin tạo role/mã tùy chỉnh, gán/tắt/thu hồi; là dữ liệu quyết định quyền hiệu lực |
+| JWT filter → AccessFunction → PreAuthorize | Đọc lại user/quyền active từ DB mỗi request, kiểm HTTP rồi service; lời gọi nội bộ cũng bị kiểm |
+
+`@PreAuthorize(AccessRules.CATALOG_UPDATE)` không có nghĩa cấp quyền thủ công cho ai: hasAuthority so mã endpoint cần với authorities hiện hành đã lấy từ DB. Giữ kiểm service vì worker/bean nội bộ có thể gọi mà không qua interceptor HTTP. Xóa annotation service sẽ làm mất lớp bảo vệ đó. `Permission.values()` chỉ phục vụ bootstrap/tương thích; valueOf/JSON nhận mã registry hợp lệ, không giới hạn những hằng đã biết. Không dùng values() để trả quyền của user.
+
+Nghiệp vụ mới có thể dùng RESOURCE_LIST (danh sách), RESOURCE_DETAIL (chi tiết), CREATE/UPDATE/DELETE/ASSIGN; VIEW vẫn riêng cho menu. LIST và DETAIL độc lập, không bao hàm READ hoặc lẫn nhau. READ giữ hợp đồng cũ cho các API hiện tại, lookup công khai không bị đổi thành API kín trong đợt này. Khi làm module mới phải khai báo guard/actions và kiểm scope tại service, startup thu thập endpoint, rồi quản trị gán vào role. Mã permission tùy chỉnh chỉ có tác dụng với endpoint đã khai báo hoặc policy siết thêm; DB không biến route public thành private hoặc thay code nghiệp vụ bằng SpEL người dùng nhập.
+
 ## Phân tích cây chức năng và quyền hành động — ACCESS02
 
 Thiết kế ban đầu ở [Issue #46](https://github.com/hieuv526034/vietroute-web/issues/46)/PR #47 đã được triển khai theo hợp đồng ACCESS03 phía trên. Trạng thái và bằng chứng nghiệm thu luôn xem tiến độ/PR, không coi bản phân tích cũ là kết quả chạy thật.

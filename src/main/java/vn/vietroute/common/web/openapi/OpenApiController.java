@@ -12,7 +12,6 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.media.IntegerSchema;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
@@ -23,7 +22,6 @@ import io.swagger.v3.oas.models.servers.Server;
 import jakarta.servlet.http.HttpServletRequest;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +37,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.ValueConstants;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.common.base.PageRequest;
@@ -131,6 +130,8 @@ public class OpenApiController {
                     );
                     // var giữ đúng kiểu reflection Parameter, tránh trùng tên với model Parameter của Swagger.
                     for (var parameter : method.getParameters()) {
+                        var input = OpenApiInputs.description(parameter);
+                        if (input.hidden()) continue;
                         if (
                             parameter.isAnnotationPresent(ModelAttribute.class) &&
                             mapping
@@ -150,55 +151,70 @@ public class OpenApiController {
                             parameter.isAnnotationPresent(PathVariable.class) ||
                             parameter.isAnnotationPresent(RequestParam.class)
                         ) {
-                            PathVariable pv = parameter.getAnnotation(PathVariable.class);
-                            RequestParam rp = parameter.getAnnotation(RequestParam.class);
-                            String name = pv != null ? pv.value() : rp.value();
+                            PathVariable pv = AnnotatedElementUtils.getMergedAnnotation(parameter, PathVariable.class);
+                            RequestParam rp = AnnotatedElementUtils.getMergedAnnotation(parameter, RequestParam.class);
+                            String name = pv != null ? pv.name() : rp.name();
                             if (name.isBlank()) {
                                 name = parameter.getName();
                             }
-                            operation.addParametersItem(
-                                new Parameter()
-                                    .name(name)
-                                    .in(pv != null ? "path" : "query")
-                                    .required(pv != null || rp.required())
-                                    .schema(schema(parameter.getParameterizedType(), api))
-                            );
+                            var parameterSchema = schema(parameter.getParameterizedType(), api);
+                            OpenApiInputs.constraints(parameter, parameterSchema);
+                            var documented = new Parameter()
+                                .name(name)
+                                .in(pv != null ? "path" : "query")
+                                .description(input.text())
+                                .required(
+                                    pv != null ||
+                                        (rp.required() && ValueConstants.DEFAULT_NONE.equals(rp.defaultValue()))
+                                )
+                                .deprecated(input.deprecated())
+                                .schema(parameterSchema);
+                            if (!input.example().isBlank()) documented.example(input.example());
+                            operation.addParametersItem(documented);
                         } else if (parameter.isAnnotationPresent(RequestHeader.class)) {
                             // Header bắt buộc như Idempotency-Key phải có ô nhập trên Swagger Try it out.
-                            RequestHeader header = parameter.getAnnotation(RequestHeader.class);
-                            String name = header.value().isBlank() ? parameter.getName() : header.value();
+                            RequestHeader header = AnnotatedElementUtils.getMergedAnnotation(
+                                parameter,
+                                RequestHeader.class
+                            );
+                            String name = header.name().isBlank() ? parameter.getName() : header.name();
                             operation.addParametersItem(
                                 new Parameter()
                                     .name(name)
                                     .in("header")
-                                    .required(header.required())
+                                    .description(input.text())
+                                    .example(input.example().isBlank() ? null : input.example())
+                                    .required(
+                                        header.required() && ValueConstants.DEFAULT_NONE.equals(header.defaultValue())
+                                    )
                                     .schema(schema(parameter.getParameterizedType(), api))
                             );
-                        } else if (parameter.getType() == PageRequest.class) {
-                            operation.addParametersItem(
-                                new Parameter()
-                                    .name("page")
-                                    .in("query")
-                                    .description("Trang bắt đầu từ 0")
-                                    .schema(
-                                        new IntegerSchema()
-                                            ._default(0)
-                                            .minimum(BigDecimal.ZERO)
-                                            .maximum(BigDecimal.valueOf(1000000))
-                                    )
-                            );
-                            operation.addParametersItem(
-                                new Parameter()
-                                    .name("size")
-                                    .in("query")
-                                    .description("Số mục/trang")
-                                    .schema(
-                                        new IntegerSchema()
-                                            ._default(20)
-                                            .minimum(BigDecimal.ONE)
-                                            .maximum(BigDecimal.valueOf(100))
-                                    )
-                            );
+                        } else if (
+                            parameter.isAnnotationPresent(ModelAttribute.class) ||
+                            PageRequest.class.isAssignableFrom(parameter.getType())
+                        ) {
+                            // Query DTO không phải JSON body: trải phẳng toàn bộ property, gồm page/size kế thừa.
+                            var querySchema = OpenApiInputs.resolve(schema(parameter.getParameterizedType(), api), api);
+                            if (querySchema != null && querySchema.getProperties() != null) {
+                                querySchema.getProperties().forEach((name, field) -> {
+                                    if (Boolean.TRUE.equals(field.getReadOnly())) return;
+                                    operation.addParametersItem(
+                                        new Parameter()
+                                            .name(name)
+                                            .in("query")
+                                            .description(field.getDescription())
+                                            .required(
+                                                OpenApiInputs.requiredQuery(
+                                                    parameter.getType(),
+                                                    name,
+                                                    querySchema.getRequired()
+                                                )
+                                            )
+                                            .example(field.getExample())
+                                            .schema(field)
+                                    );
+                                });
+                            }
                         }
                     }
                     boolean publicRoute = WebRoutePolicy.publicApi(path, verb.name());

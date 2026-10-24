@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import vn.vietroute.auth.dto.request.AccessResourceSearchRequest;
 import vn.vietroute.auth.dto.response.AccessPolicyResponse;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
 import vn.vietroute.auth.dto.response.PermissionResponse;
@@ -46,7 +47,7 @@ public class AccessTestConfig {
     public AccessResourceRepository isolatedAccessResources() {
         return new AccessResourceRepository(null) {
             @Override
-            public PageResponse<AccessResourceResponse> page(PageRequest page) {
+            public PageResponse<AccessResourceResponse> page(AccessResourceSearchRequest page) {
                 return PageResponse.of(
                     List.of(
                         new AccessResourceResponse(

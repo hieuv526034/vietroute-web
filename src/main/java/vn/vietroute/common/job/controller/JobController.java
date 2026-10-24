@@ -59,7 +59,13 @@ public class JobController extends BaseController {
 
     @GetMapping(Routes.BY_ID)
     @Operation(summary = "Xem trạng thái job", description = "Yêu cầu JOB_READ")
-    public ApiResult<JobResponse> find(@PathVariable UUID id, HttpServletRequest request) {
+    public ApiResult<JobResponse> find(
+        @Parameter(
+            description = "UUID bản ghi do hệ thống cấp",
+            example = "caeae4ef-f5a4-4b16-9a34-06e50d6be073"
+        ) @PathVariable UUID id,
+        HttpServletRequest request
+    ) {
         return execute(SuccessCode.OK, request, () -> jobs.find(id));
     }
 
@@ -67,7 +73,10 @@ public class JobController extends BaseController {
     @PostMapping(Routes.JOB_RETRY_ACTION)
     @Operation(summary = "Chạy lại job DEAD", description = "Yêu cầu JOB_RETRY và version hiện hành")
     public ApiResult<JobResponse> retry(
-        @PathVariable UUID id,
+        @Parameter(
+            description = "UUID bản ghi do hệ thống cấp",
+            example = "caeae4ef-f5a4-4b16-9a34-06e50d6be073"
+        ) @PathVariable UUID id,
         @Valid @RequestBody RetryJobRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request

@@ -1,6 +1,7 @@
 package vn.vietroute.common.monitoring.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -59,7 +60,13 @@ public class ApiJournalController extends BaseController {
         summary = "Xem request/response đã lọc",
         description = "ADMIN + SYSTEM_READ. UUID là ID bản ghi dùng chung giữa các node; hết retention/đã dọn trả 404, DB lỗi trả 503. Projection bỏ auth/file/PII và chuỗi tự do."
     )
-    public ApiResult<ApiJournalDetail> detail(@PathVariable UUID id, HttpServletRequest request) {
+    public ApiResult<ApiJournalDetail> detail(
+        @Parameter(
+            description = "UUID bản ghi do hệ thống cấp",
+            example = "caeae4ef-f5a4-4b16-9a34-06e50d6be073"
+        ) @PathVariable UUID id,
+        HttpServletRequest request
+    ) {
         return execute(SuccessCode.OK, request, () -> journal.find(id));
     }
 }

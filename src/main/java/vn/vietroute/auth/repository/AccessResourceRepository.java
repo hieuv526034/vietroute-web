@@ -7,8 +7,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Repository;
+import vn.vietroute.auth.dto.request.AccessResourceSearchRequest;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
-import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.jdbc.BaseRepository;
@@ -59,25 +59,35 @@ public class AccessResourceRepository extends BaseRepository {
     }
 
     /** Phân trang trong DB; không tải toàn bộ danh bạ route vào RAM hoặc chấp nhận tên cột SQL từ client. */
-    public PageResponse<AccessResourceResponse> page(PageRequest page) {
+    public PageResponse<AccessResourceResponse> page(AccessResourceSearchRequest page) {
         return read(connection -> {
+            String predicate =
+                " WHERE (? = '' OR kind = ?) AND (? = '' OR strpos(lower(concat_ws(' ',target,handler,description,resource_group,function_code,declared_permissions)),lower(?)) > 0)";
+            String keyword = page.getQuery().strip();
             long total;
             try (
-                PreparedStatement count = connection.prepareStatement("SELECT COUNT(*) FROM auth_access_resources");
-                ResultSet rows = count.executeQuery()
+                PreparedStatement count = connection.prepareStatement(
+                    "SELECT COUNT(*) FROM auth_access_resources" + predicate
+                )
             ) {
-                rows.next();
-                total = rows.getLong(1);
+                bindFilters(count, page.getKind(), keyword);
+                try (ResultSet rows = count.executeQuery()) {
+                    rows.next();
+                    total = rows.getLong(1);
+                }
             }
             List<AccessResourceResponse> result = new ArrayList<>();
             try (
                 PreparedStatement query = connection.prepareStatement(
                     "SELECT kind,target,handler,description,public_route,configurable,first_seen_at,last_seen_at,resource_group,declared_permissions,function_code,permission_match,admin_only " +
-                        "FROM auth_access_resources ORDER BY kind,target LIMIT ? OFFSET ?"
+                        "FROM auth_access_resources" +
+                        predicate +
+                        " ORDER BY kind,target LIMIT ? OFFSET ?"
                 )
             ) {
-                query.setInt(1, page.getSize());
-                query.setLong(2, page.offset());
+                bindFilters(query, page.getKind(), keyword);
+                query.setInt(5, page.getSize());
+                query.setLong(6, page.offset());
                 try (ResultSet rows = query.executeQuery()) {
                     while (rows.next()) {
                         result.add(
@@ -102,5 +112,13 @@ public class AccessResourceRepository extends BaseRepository {
             }
             return PageResponse.of(result, page, total);
         });
+    }
+
+    /** Count và SELECT dùng đúng một predicate để tổng số bản ghi khớp kết quả đang lọc. */
+    private static void bindFilters(PreparedStatement query, String kind, String keyword) throws SQLException {
+        query.setString(1, kind);
+        query.setString(2, kind);
+        query.setString(3, keyword);
+        query.setString(4, keyword);
     }
 }

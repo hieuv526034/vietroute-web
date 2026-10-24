@@ -1,5 +1,11 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
+## ACCESS04 — Hoàn tất trên nhánh, chờ CI/merge
+
+[Issue #52](https://github.com/hieuv526034/vietroute-web/issues/52), hieuv526034, nhánh `hieuv526034/access04-resources-swagger`, base `87a831a`. Bổ sung lọc kind/query ở PostgreSQL trước paging; UI tìm/giữ bộ lọc; spinner icon giữ 32×32; Swagger mô tả path/query/header, DTO kế thừa và payload/response. Mẫu chọn bộ quyền hệ thống lưu mapping cụ thể, giữ ADMIN theo lựa chọn chủ dự án; nền Permission nhận thêm LIST/DETAIL để nghiệp vụ mới tách danh sách/chi tiết. Không đổi quyền đã gán, lookup công khai, schema/migration hoặc ghi Neon.
+
+Local đã đạt 120 Java/24 Node; npm ci/format/format:check/rules/docs, actionlint/bash syntax/diff check đạt. OpenAPI đối chiếu mọi mapping API và field/query/payload/response, giữ đúng header alias; kiểm hai context từ chối input lọc sai. UI fixture vi/en đã kiểm filter+paging/trang đầu, mẫu gán 14 quyền không gom CRUD/ADMIN-only, loading nút Sửa 32×32 và mở modal/focus; iframe 390px không tràn filter, không thay thiết bị thật. Bằng chứng ảnh ở [quy ước UI](../03-giao-dien/QUY_UOC_UI.md#lọc-resource-và-loading-icon--access04). Chưa có CI/merge; bước tiếp: PR và PostgreSQL CI đúng head, xử lý lỗi nếu có rồi merge. CI đã bổ sung lọc/count/paging/từ khóa literal và validation trên PostgreSQL cô lập. Quyết định/hợp đồng tại [phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#bộ-quyền-hệ-thống-và-quyền-db--access04) và [API](../02-phat-trien/API_BASE.md#resource-và-swagger--access04). Chưa nghiệm thu provider/Render/tải production, không bắt đầu nghiệp vụ.
+
 ## ACCESS03 — Đã có trên main
 
 [PR #50](https://github.com/hieuv526034/vietroute-web/pull/50), merge `4f116e9`, head đã kiểm `a29a942`, [Issue #49](https://github.com/hieuv526034/vietroute-web/issues/49), hieuv526034, nhánh `hieuv526034/access-tree-authorization`, base `c929705`. V013 VIEW/backfill/version; Java validate/sync function/action/endpoint/ADMIN; guard HTTP + AccessRules service; capabilities/menu động, cây gán và nguồn quyền. Quản trị ACCESS_* được ủy quyền trong tập quyền hiện có, chặn actor giả/overgrant/tự kích hoạt role-permission mạnh đã tắt. CONFIGURATION_READ tách khỏi SYSTEM_READ; role tắt được chuẩn bị mapping, danh sách role dùng một query; metadata bất biến theo context, quyền user đọc DB mỗi request.

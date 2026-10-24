@@ -1,6 +1,7 @@
 package vn.vietroute.auth.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import vn.vietroute.auth.dto.request.AccessPolicyRequest;
 import vn.vietroute.auth.dto.request.AccessRegistryRequest;
+import vn.vietroute.auth.dto.request.AccessResourceSearchRequest;
 import vn.vietroute.auth.dto.response.AccessPolicyResponse;
 import vn.vietroute.auth.dto.response.AccessRegistryResponse;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
@@ -34,7 +36,6 @@ import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.auth.service.AccessManagementService;
 import vn.vietroute.auth.service.AccessResourceService;
 import vn.vietroute.common.base.BaseController;
-import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.AccessConstants.Groups;
@@ -77,7 +78,10 @@ public class AccessManagementController extends BaseController {
     @GetMapping(Routes.ACCESS_REGISTRY)
     @Operation(summary = "Danh sách registry roles/permissions", description = "ACCESS_READ, giới hạn 512 mã mỗi loại")
     @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_READ })
-    public ApiResult<List<AccessRegistryResponse>> registry(@PathVariable String kind, HttpServletRequest request) {
+    public ApiResult<List<AccessRegistryResponse>> registry(
+        @Parameter(description = "Loại registry: roles hoặc permissions", example = "roles") @PathVariable String kind,
+        HttpServletRequest request
+    ) {
         return execute(SuccessCode.OK, request, () -> access.registry(kind));
     }
 
@@ -89,8 +93,11 @@ public class AccessManagementController extends BaseController {
     )
     @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_CREATE })
     public ApiResult<List<AccessRegistryResponse>> create(
-        @PathVariable String kind,
-        @PathVariable String code,
+        @Parameter(description = "Loại registry: roles hoặc permissions", example = "roles") @PathVariable String kind,
+        @Parameter(
+            description = "Mã registry bất biến; quyền dùng RESOURCE_ACTION",
+            example = "CATALOG_READ"
+        ) @PathVariable String code,
         @Valid @RequestBody AccessRegistryRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
@@ -107,8 +114,11 @@ public class AccessManagementController extends BaseController {
     )
     @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_UPDATE })
     public ApiResult<List<AccessRegistryResponse>> update(
-        @PathVariable String kind,
-        @PathVariable String code,
+        @Parameter(description = "Loại registry: roles hoặc permissions", example = "roles") @PathVariable String kind,
+        @Parameter(
+            description = "Mã registry bất biến; quyền dùng RESOURCE_ACTION",
+            example = "CATALOG_READ"
+        ) @PathVariable String code,
         @Valid @RequestBody AccessRegistryRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
@@ -132,8 +142,14 @@ public class AccessManagementController extends BaseController {
     @Operation(summary = "Xóa role chưa sử dụng", description = "ACCESS_DELETE; version bắt buộc, liên quan trả 409")
     @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_DELETE })
     public ApiResult<List<AccessRegistryResponse>> deleteRole(
-        @PathVariable String code,
-        @RequestParam long version,
+        @Parameter(
+            description = "Mã role bất biến cần xóa, không phải mã quyền",
+            example = "OPERATOR"
+        ) @PathVariable String code,
+        @Parameter(
+            description = "Version hiện hành lấy từ response; version cũ trả 409",
+            example = "0"
+        ) @RequestParam long version,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
@@ -144,11 +160,11 @@ public class AccessManagementController extends BaseController {
     @GetMapping(Routes.ACCESS_RESOURCES)
     @Operation(
         summary = "Danh bạ tài nguyên UI/API đã đồng bộ",
-        description = "ACCESS_READ; công khai và cứu hộ chỉ đọc, không tự cấp quyền"
+        description = "ACCESS_READ; lọc kind=MENU/ENDPOINT và query nguyên văn trước phân trang; công khai/cứu hộ chỉ đọc, không tự cấp quyền"
     )
     @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_READ })
     public ApiResult<PageResponse<AccessResourceResponse>> resources(
-        @Valid @ModelAttribute PageRequest page,
+        @Valid @ModelAttribute AccessResourceSearchRequest page,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> resources.page(page));
@@ -185,7 +201,7 @@ public class AccessManagementController extends BaseController {
     )
     @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_UPDATE })
     public ApiResult<List<AccessPolicyResponse>> updatePolicy(
-        @PathVariable long id,
+        @Parameter(description = "ID bản ghi cần thao tác", example = "1") @PathVariable long id,
         @Valid @RequestBody AccessPolicyRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
@@ -202,8 +218,11 @@ public class AccessManagementController extends BaseController {
     )
     @AccessFunction(group = Groups.ACCESS, permissions = { Permissions.ACCESS_DELETE })
     public ApiResult<List<AccessPolicyResponse>> deletePolicy(
-        @PathVariable long id,
-        @RequestParam long version,
+        @Parameter(description = "ID bản ghi cần thao tác", example = "1") @PathVariable long id,
+        @Parameter(
+            description = "Version hiện hành lấy từ response; version cũ trả 409",
+            example = "0"
+        ) @RequestParam long version,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> access.deletePolicy(id, version));

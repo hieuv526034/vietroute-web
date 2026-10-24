@@ -11,7 +11,7 @@ import vn.vietroute.common.constant.ApplicationConstants.Regex;
 /** Tra prefix username, giới hạn ký tự để UI không nhận wildcard tìm kiếm tùy ý. */
 @Getter
 @Setter
-@Schema(description = "Tra cứu tài khoản để gán role; chỉ ADMIN và ACCESS_READ")
+@Schema(description = "Tra cứu tài khoản để gán role; yêu cầu ACCESS_READ")
 public class AccessUserSearchRequest extends PageRequest {
 
     @NotNull(message = "{validation.required}")

@@ -42,6 +42,19 @@
         if (className) item.className = className;
         return item;
     };
+    // Bộ quyền là mẫu chọn nhiều mapping cụ thể; không thêm authority toàn cục hoặc quyền vượt ADMIN.
+    const systemSelection = (features) =>
+        features
+            .filter((feature) => feature.systemBundle)
+            .flatMap((feature) =>
+                feature.actions
+                    .filter(
+                        (action) =>
+                            !action.permission.endsWith('_WRITE') &&
+                            action.endpoints.some((endpoint) => !endpoint.adminOnly),
+                    )
+                    .map((action) => ({ code: action.permission, feature: feature.code })),
+            );
     const render = (host, features, registry, initial, options) => {
         const labels = document.getElementById('access-tree-labels').dataset;
         const state = model(initial, features);
@@ -70,6 +83,12 @@
         const collapse = element('button', labels.collapse, 'button button-outline');
         collapse.type = 'button';
         toolbar.append(search, expand, collapse);
+        const preset = element('button', labels.systemBundle, 'button button-outline');
+        preset.type = 'button';
+        const systemItems = systemSelection(features);
+        preset.disabled = !systemItems.length || systemItems.some((item) => !permitted(item.code));
+        preset.title = labels.systemBundleNote;
+        toolbar.append(preset);
         const content = element('div', null, 'access-tree-content');
         const preview = element('div', null, 'access-tree-preview');
         preview.setAttribute('role', 'status');
@@ -234,6 +253,11 @@
             for (const item of visibleActions) state.toggle(item.code, all.checked, item.feature);
             update();
         });
+        preset.addEventListener('click', () => {
+            if (preset.disabled) return;
+            for (const item of systemItems) state.toggle(item.code, true, item.feature);
+            update();
+        });
         search.addEventListener('input', paint);
         expand.addEventListener('click', () =>
             content.querySelectorAll('.access-tree-node').forEach((item) => {
@@ -276,5 +300,5 @@
         section.append(button, output);
         host.append(section);
     };
-    window.VietRouteAccessTree = { model, render, sources };
+    window.VietRouteAccessTree = { model, render, sources, systemSelection };
 })();
