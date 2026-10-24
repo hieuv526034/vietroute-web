@@ -2,6 +2,47 @@
 
 Cập nhật 22/10/2026, phụ trách hieuv526034. Quy ước này thay phần schema cố định và quyền WRITE gộp trong tài liệu nền tảng trước đó.
 
+## Bản đồ bảng và ranh giới cấu hình phân quyền
+
+Hệ thống có **11 bảng chuyên trách phân quyền và bảng tài khoản `auth_users`**, tổng cộng 12 bảng liên quan trực tiếp. Đây là cấu trúc từ migration/source; không phải kết quả đếm dữ liệu hoặc kiểm schema trực tiếp trên Neon. Bảng nằm trong schema do `VIETROUTE_DB_SCHEMA` chọn, không viết prefix schema cố định vào DAO.
+
+| Bảng | Khóa chính | Trách nhiệm và nguồn ghi |
+|---|---|---|
+| `auth_users` | `id` | Danh tính, trạng thái active/pending, xác minh email, mật khẩu tạm, token_version. Auth quản lý; không có danh sách quyền riêng trong cột user |
+| `auth_roles` | `code` | Registry vai trò/nhóm quyền, tên vi/en, active/deleted, version registry và version mapping. Quản trị sửa role thường; ADMIN được bảo vệ |
+| `auth_permissions` | `code` | Registry mã RESOURCE_ACTION, tên vi/en, active/version. Startup đăng ký mã source; API quản trị tạo mã tùy chỉnh |
+| `auth_user_roles` | `(user_id, role_code)` | Gán một hoặc nhiều role toàn cục cho tài khoản; mutation giữ version/thu hồi phiên/lịch sử |
+| `auth_role_permissions` | `(role_code, permission_code)` | Gán quyền cho role; nguồn authority chức năng hiện hành sau khi lọc trạng thái DB |
+| `auth_access_functions` | `code` | Danh bạ cây chức năng: parent, nhãn, đường menu, VIEW, thứ tự. Đồng bộ từ AccessFeatures khi bật sync; không phải menu tùy ý được tạo qua DB |
+| `auth_access_resources` | `(kind, target)` | Danh bạ MENU/ENDPOINT, handler, function, quyền khai báo, ANY/ALL, public/configurable/admin_only và thời điểm startup thấy route. Đồng bộ từ mapping/annotation thật |
+| `auth_access_policies` | `id`, unique `(kind,target)` | Điều kiện bổ sung cho menu/endpoint: enabled, required_permissions và allowed_roles. Quản trị cấu hình; chỉ siết guard nền, không biến route private thành public |
+| `auth_access_changes` | `id` | Lịch sử thao tác quản trị với actor/trace/before/after tường minh; ghi cùng transaction mutation, có retention/capacity |
+| `auth_data_scopes` | `id`, unique `code` | Phạm vi dữ liệu bảo mật và trạng thái/version; chưa phải hồ sơ nhà xe |
+| `auth_scope_memberships` | `(scope_id,user_id)` | Thành viên của scope, active/version/audit; không dùng cho khách public tra cứu chuyến |
+| `auth_scope_roles` | `(scope_id,user_id,role_code)` | Role áp dụng trong scope. FK đến membership và mapping role toàn cục của đúng user; scoped role phải là tập con global roles |
+
+Nguồn tạo bảng: V001 (user/role/mapping user), V003 (permission/mapping role), V007 (policy), V010 (resource), V013 (function và metadata binding), V014 (history), V015 (scope/membership/scoped role). V006/V007/V011/V012/V013 còn bổ sung audit/trạng thái/index cho các bảng cũ; luôn đọc schema cuối sau toàn bộ migration, không chỉ CREATE TABLE đầu tiên.
+
+Luồng cấp chức năng là `auth_users → auth_user_roles → auth_roles → auth_role_permissions → auth_permissions`. Với dữ liệu nhà xe, `auth_scope_memberships → auth_scope_roles` lọc đúng role của user trong scope trước khi lấy permission. Policy là điều kiện bổ sung ở HTTP; service vẫn kiểm chức năng và DAO kiểm bản ghi/phạm vi. Không có bảng `auth_user_permissions`, tầng nhóm quyền thứ hai hoặc bảng action/endpoint-permission riêng: action là enum, quyền endpoint đang lưu trong `declared_permissions` của resource.
+
+Hai bảng bảo mật liên quan là `auth_password_history` và `auth_account_challenges` (V011); chúng phục vụ mật khẩu/mã xác minh, không cấp permission. `api_request_journal`, bảng activity và `vietroute_schema_history` phục vụ vận hành/migration, không phải nguồn cấp quyền.
+
+| Phần cấu hình | Có thay đổi qua DB/UI không? | Ranh giới hiện tại |
+|---|---|---|
+| Role thường, tên/trạng thái và mapping user/role/permission | Có, qua API/UI có quyền/version | Role/Permission là value object chuỗi; `values()` chỉ liệt kê mã bootstrap, không giới hạn registry hoặc suy authority của user |
+| Mã permission mới | Có | Phải đúng RESOURCE_ACTION; chỉ tạo bản ghi không tự tạo nút/API hoặc thêm guard vào hàm chưa được lập trình |
+| Policy bổ sung | Có | Ngữ nghĩa hiện cố định: đủ mọi required permission và ít nhất một allowed role nếu danh sách role không rỗng. enabled=false chặn người thường tại target, không phải bỏ áp dụng policy. ADMIN được miễn policy bổ sung, vẫn qua guard bắt buộc |
+| Scope/membership/scoped role | Có | Chưa tự nối vào bảng nghiệp vụ; không có cơ chế tự thêm WHERE scope_id vào SQL |
+| Cây chức năng, menu path/parent/nhãn/thứ tự, bộ chọn quyền hệ thống | Trong source AccessFeatures | Đổi cần sửa/triển khai code; bảng function/resource là danh bạ đồng bộ, không phải công cụ tự xây chức năng từ DB |
+| Action, guard service, binding HTTP ANY/ALL/adminOnly, public/self-service | Trong enum/annotation/WebRoutePolicy | Phải giữ ở server; không nhận biểu thức bảo mật, route public hay tên method từ DB/client |
+| Bảo vệ ADMIN/system/bootstrap, không tự đổi role, giới hạn ủy quyền | Trong code và một số CHECK/FK DB | Là rào bảo mật có chủ đích. Bootstrap username/email lấy từ cấu hình môi trường, không cố định một username trong Java |
+| Quy tắc tài khoản và điều hướng ban đầu | Một phần trong code | Đăng ký public chỉ cấp CUSTOMER; ADMIN vào workspace quản trị, tài khoản khác vào account. DRIVER không tự có membership/hồ sơ/chuyến được giao |
+| Quota/retention | Env được validate trong AccessSettings | Registry mặc định 512, policy 256, scope 512; có trần code. Hợp đồng payload còn cố định 32 role/user, 512 permission/role, 32 membership/user và 32 role/membership |
+
+Không có cấp trực tiếp permission cho từng user, kế thừa role, explicit DENY hoặc ngày hết hạn cho từng mapping. User nhận hợp quyền từ các role active; bỏ một role chưa chắc mất permission nếu role khác vẫn cấp. Nếu nghiệp vụ yêu cầu các cơ chế này phải thiết kế/test riêng, không dùng policy hoặc tên role để giả lập rồi kỳ vọng mọi guard hiểu cùng nghĩa.
+
+Tập quyền tự đồng bộ và bảo vệ ADMIN khác với quyền role thường: startup sync/init có thể đăng ký/bật lại permission khai báo trong source và sửa mapping ADMIN; không tự ghi mapping mới cho role thường. `CATALOG_WRITE`/`ACCESS_WRITE` còn là alias tương thích phạm vi hẹp. Thêm module dùng resource/action chuẩn, không thêm alias WRITE mới. Phát hiện/việc còn dở của từng đợt rà soát luôn ở [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md), không coi tài liệu này là chứng minh mọi ca đã kiểm.
+
 ## Đổi schema ở một nơi cấu hình
 
 Biến `VIETROUTE_DB_SCHEMA` là nơi cấu hình schema của ứng dụng. Mặc định là `vietroute`, database Neon vẫn là `neondb`. Ví dụ khi tạo một môi trường/DB mới:
