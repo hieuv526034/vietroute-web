@@ -143,14 +143,12 @@ class AccessProfileSecurityTest {
             assertTrue(home.contains("https://res.cloudinary.com/demo/image/upload/avatar.png"));
             assertFalse(home.contains("href=\"/login?lang=vi\""));
             assertFalse(home.contains("id=\"registry-dialog\""));
-            assertEquals(
-                "/account?lang=vi",
-                mvc
-                    .perform(get("/account-access").param("lang", "vi").with(authentication(allowed)))
-                    .andReturn()
-                    .getResponse()
-                    .getRedirectedUrl()
-            );
+            var lifecycle = mvc
+                .perform(get("/account-access").param("lang", "vi").with(authentication(allowed)))
+                .andReturn()
+                .getResponse();
+            assertEquals(200, lifecycle.getStatus());
+            assertTrue(lifecycle.getContentAsString().contains("data-authenticated=\"true\""));
             assertEquals(
                 401,
                 mvc
@@ -222,6 +220,7 @@ class AccessProfileSecurityTest {
             .username("editor")
             .displayName("Người quản lý")
             .active(true)
+            .emailVerifiedAt(Instant.EPOCH)
             .roles(Set.of(Role.valueOf("CATALOG_EDITOR")))
             .permissions(Set.of(Permission.CATALOG_READ))
             .createdAt(Instant.EPOCH)

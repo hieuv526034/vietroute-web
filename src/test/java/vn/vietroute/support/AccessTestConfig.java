@@ -170,6 +170,7 @@ public class AccessTestConfig {
                 true,
                 false,
                 false,
+                true,
                 user.tokenVersion(),
                 user.roles(),
                 codes

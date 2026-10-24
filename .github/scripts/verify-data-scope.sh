@@ -45,6 +45,16 @@ CI_OLD="$admin_password" CI_NEW="$next_password" python3 -c 'import json,os,sys;
 call 200 POST /api/v1/auth/change-password "$work/scope-password.json" bearer
 scope_user_token=$(field data.accessToken)
 token="$scope_user_token"
+call 403 GET /api/v1/auth/scopes '' bearer
+assert_code AUTH012
+CI_PASSWORD="$next_password" python3 -c 'import json,os,sys;json.dump({"email":"scopeduserci@example.invalid","currentPassword":os.environ["CI_PASSWORD"]},sys.stdout)' > "$work/scope-email.json"
+call 202 POST /api/v1/auth/email "$work/scope-email.json" bearer
+scope_saved_account_id="$account_id"
+account_id="$scope_user"
+account_code
+account_id="$scope_saved_account_id"
+python3 -c 'import json,sys;json.dump({"email":"scopeduserci@example.invalid","token":open(sys.argv[1]).read()},sys.stdout)' "$work/account-code.txt" > "$work/scope-activate.json"
+call 200 POST /api/v1/auth/activate "$work/scope-activate.json" cookie
 call 200 GET /api/v1/auth/scopes '' bearer
 python3 -c 'import json,sys;v=json.load(open(sys.argv[1]))["data"];assert {x["code"] for x in v}=={"SCOPE_A_CI","SCOPE_B_CI"}' "$result"
 call 200 GET "/api/v1/auth/scopes/$scope_a/permissions" '' bearer

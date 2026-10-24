@@ -78,6 +78,16 @@ CI_OLD="$admin_password" CI_NEW="$next_password" python3 -c 'import json,os,sys;
 call 200 POST /api/v1/auth/change-password "$work/history-password.json" bearer
 token=$(field data.accessToken)
 call 403 GET /api/v1/admin/access/history '' bearer
+assert_code AUTH012
+CI_PASSWORD="$next_password" python3 -c 'import json,os,sys;json.dump({"email":"historyreader@example.invalid","currentPassword":os.environ["CI_PASSWORD"]},sys.stdout)' > "$work/history-email.json"
+call 202 POST /api/v1/auth/email "$work/history-email.json" bearer
+history_saved_account_id="$account_id"
+account_id=$(sql "SELECT id FROM auth_users WHERE username='historyreader'")
+account_code
+account_id="$history_saved_account_id"
+python3 -c 'import json,sys;json.dump({"email":"historyreader@example.invalid","token":open(sys.argv[1]).read()},sys.stdout)' "$work/account-code.txt" > "$work/history-activate.json"
+call 200 POST /api/v1/auth/activate "$work/history-activate.json" cookie
+call 403 GET /api/v1/admin/access/history '' bearer
 assert_code AUTH003
 token="$tree_admin_token"
 

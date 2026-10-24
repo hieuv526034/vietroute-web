@@ -173,7 +173,11 @@ public class ManagedAccountService {
             null,
             authorities
         );
-        boolean usable = user.isActive() && !user.isActivationPending() && !user.isMustChangePassword();
+        boolean usable =
+            user.isActive() &&
+            !user.isActivationPending() &&
+            !user.isMustChangePassword() &&
+            user.getEmailVerifiedAt() != null;
         return new ManagedAccountAccessResponse(
             ManagedAccountResponse.from(user, accounts.assignedRoles(id)),
             AccessCapabilities.compute(inventory, usable ? auth : null, policies.requestPolicies(auth))

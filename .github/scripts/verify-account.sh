@@ -12,6 +12,10 @@ done
 token=''
 call 200 GET /api/v1/auth/options '' none
 [[ "$(field data.emailFlowsEnabled)" == True ]]
+# Giữ email gốc khi bản ghi bootstrap bị mất; phản hồi public vẫn chung 202.
+CI_PASSWORD="$admin_password" python3 -c 'import json,os,sys;json.dump({"username":"bootstrapclaimci","displayName":"Reserved CI","email":"bootstrap-ci@example.invalid","password":os.environ["CI_PASSWORD"]},sys.stdout)' > "$work/reserved-email.json"
+call 202 POST /api/v1/auth/register "$work/reserved-email.json" cookie
+[[ "$(sql "SELECT count(*) FROM auth_users WHERE username='bootstrapclaimci'")" == 0 ]]
 
 account_password="$admin_password"
 CI_PASSWORD="$account_password" python3 -c 'import json,os,sys; json.dump({"username":"accountci","displayName":"CI account","email":"accountci@example.invalid","password":os.environ["CI_PASSWORD"]},sys.stdout)' > "$work/register.json"
@@ -105,6 +109,9 @@ done
 login_body admin "$next_password"
 call 200 POST /api/v1/auth/login "$work/login.json" cookie
 token=$(field data.accessToken)
+CI_PASSWORD="$next_password" python3 -c 'import json,os,sys;json.dump({"email":"replacement-ci@example.invalid","currentPassword":os.environ["CI_PASSWORD"]},sys.stdout)' > "$work/bootstrap-email.json"
+call 403 POST /api/v1/auth/email "$work/bootstrap-email.json" bearer
+assert_code AUTH003
 call 200 GET "/api/v1/admin/system/api-journal?traceId=$account_trace&userId=$account_id" '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]["records"]; assert d["totalElements"]==1; e=d["content"][0]; assert e["username"]=="accountci" and e["userId"]==int(sys.argv[2]); assert "email" not in e' "$result" "$account_id"
 call 200 GET "/api/v1/admin/system/api-journal?traceId=$account_trace&userId=1" '' bearer

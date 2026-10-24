@@ -22,6 +22,20 @@ import vn.vietroute.common.jdbc.JdbcSchema;
 class ConfigurationTest {
 
     @Test
+    void bootstrapEmailComesFromConfigurationAndRejectsInvalidValues() {
+        assertEquals("hieuv526034@gmail.com", new AppSettings(Map.<String, String>of()::get).getBootstrapEmail());
+        assertEquals(
+            "owner@example.com",
+            new AppSettings(Map.of("VIETROUTE_BOOTSTRAP_ADMIN_EMAIL", "OWNER@example.com")::get).getBootstrapEmail()
+        );
+        for (String invalid : new String[] { "", "invalid", "a@b\nInjected" }) {
+            assertThrows(IllegalStateException.class, () ->
+                new AppSettings(Map.of("VIETROUTE_BOOTSTRAP_ADMIN_EMAIL", invalid)::get)
+            );
+        }
+    }
+
+    @Test
     void rejectsUnknownEnvironmentAndProductionPlaceholder() {
         assertThrows(IllegalStateException.class, () -> new AppSettings(Map.of("VIETROUTE_ENV", "prodution")::get));
         assertThrows(IllegalStateException.class, () ->

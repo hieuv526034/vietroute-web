@@ -29,6 +29,7 @@ public final class ApplicationConstants {
         COOKIE_SECURE("VIETROUTE_COOKIE_SECURE"),
         JWT_SECRET("VIETROUTE_JWT_SECRET"),
         BOOTSTRAP_ADMIN_USERNAME("VIETROUTE_BOOTSTRAP_ADMIN_USERNAME"),
+        BOOTSTRAP_ADMIN_EMAIL("VIETROUTE_BOOTSTRAP_ADMIN_EMAIL"),
         BOOTSTRAP_ADMIN_PASSWORD("VIETROUTE_BOOTSTRAP_ADMIN_PASSWORD"),
 
         // Database và pool kết nối.
@@ -399,6 +400,16 @@ public final class ApplicationConstants {
     }
 
     /** Key của file classpath không chứa secrets; giữ tách biệt với tên biến môi trường. */
+    public static final class BootstrapProperties {
+
+        public static final String RESOURCE = "/bootstrap.properties";
+
+        public static final String EMAIL = "bootstrap.admin.email";
+
+        private BootstrapProperties() {}
+    }
+
+    /** Key JDBC trong classpath, không chứa mật khẩu kết nối. */
     public static final class DatabaseProperties {
 
         public static final String RESOURCE = "/database.properties";

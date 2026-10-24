@@ -36,6 +36,7 @@ start_app() {
     -e VIETROUTE_DB_URL="jdbc:postgresql://vietroute-db-ci:5432/$database?currentSchema=public" \
     -e VIETROUTE_DB_USER=vietroute_ci -e VIETROUTE_DB_PASSWORD="$db_password" \
     -e VIETROUTE_JWT_SECRET="$jwt_secret" -e VIETROUTE_BOOTSTRAP_ADMIN_USERNAME=admin \
+    -e VIETROUTE_BOOTSTRAP_ADMIN_EMAIL=bootstrap-ci@example.invalid \
     -e VIETROUTE_BOOTSTRAP_ADMIN_PASSWORD="$admin_password" vietroute-web:ci >/dev/null
 }
 # Hai instance khởi động cùng lúc để kiểm tra khóa migration/seed và chống tạo trùng admin.
@@ -108,16 +109,13 @@ initial_token="$token"
 login_trace=$(field traceId)
 grep -qi 'HttpOnly' "$work/headers"
 grep -qi 'SameSite=Lax' "$work/headers"
-[[ "$(field data.user.mustChangePassword)" == True ]]
-call 403 GET /api/v1/admin/system/runtime '' bearer
-assert_code AUTH011
-call 302 GET /admin '' cookie
-grep -qi '^Location: .*/account' "$work/headers"
+[[ "$(field data.user.mustChangePassword)" == False ]]
+[[ "$(field data.user.emailVerificationRequired)" == False ]]
+[[ "$(field data.user.email)" == bootstrap-ci@example.invalid ]]
+call 200 GET /api/v1/admin/system/runtime '' bearer
+call 200 GET /admin '' cookie
 call 200 GET '/account?lang=en' '' cookie
-if grep -Fq 'href="/admin?lang=en"' "$result"; then
-  printf 'Temporary-password session must not expose the catalog menu\n' >&2
-  exit 1
-fi
+grep -Fq 'href="/admin?lang=en"' "$result"
 CI_OLD="$admin_password" CI_NEW="$next_password" python3 -c 'import json,os,sys; json.dump({"currentPassword":os.environ["CI_OLD"],"newPassword":os.environ["CI_NEW"]},sys.stdout)' > "$work/password.json"
 printf 'Auth stage: password change and token revocation\n'
 call 200 POST /api/v1/auth/change-password "$work/password.json" cookie
@@ -276,7 +274,7 @@ call 200 GET "/api/v1/admin/system/api-journal?traceId=$journal_retained_trace" 
 [[ "$(field data.records.totalElements)" == 1 ]]
 call 200 POST /api/v1/auth/logout '' cookie
 # Tạo user CUSTOMER trong DB test riêng để kiểm tra quyền, khóa user và bộ đếm sai phải được commit.
-sql "INSERT INTO auth_users(username,password_hash,display_name,must_change_password) SELECT 'customer',password_hash,'CI customer',false FROM auth_users WHERE username='admin'" >/dev/null
+sql "INSERT INTO auth_users(username,password_hash,display_name,email_verified_at,must_change_password) SELECT 'customer',password_hash,'CI customer',CURRENT_TIMESTAMP,false FROM auth_users WHERE username='admin'" >/dev/null
 printf 'Auth stage: role checks and account lock\n'
 sql "INSERT INTO auth_user_roles(user_id,role_code) SELECT id,'CUSTOMER' FROM auth_users WHERE username='customer'" >/dev/null
 login_body customer "$next_password"

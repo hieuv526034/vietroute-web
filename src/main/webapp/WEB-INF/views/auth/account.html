@@ -81,6 +81,12 @@
                         th:attr="data-password-changed=#{success.passwordChanged}"
                         hidden
                     ></div>
+                    <p
+                        class="initial-password"
+                        id="initial-email"
+                        hidden
+                        th:text="#{ui.initialEmail}"
+                    ></p>
                     <div class="toolbar-actions account-actions">
                         <button
                             id="profile-open"
@@ -90,6 +96,7 @@
                         ></button>
                         <button
                             id="email-open"
+                            th:hidden="${adminRecoveryVisible == true}"
                             class="button button-outline"
                             type="button"
                             th:text="#{ui.accountFlow.bind}"

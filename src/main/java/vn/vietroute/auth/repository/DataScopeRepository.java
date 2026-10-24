@@ -243,7 +243,7 @@ public class DataScopeRepository extends BaseRepository {
             List<DataScopeResponse> values = new ArrayList<>();
             try (
                 var query = connection.prepareStatement(
-                    "SELECT s.id,s.code,s.name_vi,s.name_en,s.active,s.version,s.updated_at,s.updated_by FROM auth_data_scopes s JOIN auth_scope_memberships m ON m.scope_id=s.id AND m.active JOIN auth_users u ON u.id=m.user_id WHERE m.user_id=? AND s.active AND u.active AND NOT u.activation_pending AND NOT u.must_change_password AND EXISTS (SELECT 1 FROM auth_scope_roles sr JOIN auth_roles r ON r.code=sr.role_code AND r.active AND NOT r.deleted WHERE sr.scope_id=m.scope_id AND sr.user_id=m.user_id) ORDER BY s.code LIMIT 32"
+                    "SELECT s.id,s.code,s.name_vi,s.name_en,s.active,s.version,s.updated_at,s.updated_by FROM auth_data_scopes s JOIN auth_scope_memberships m ON m.scope_id=s.id AND m.active JOIN auth_users u ON u.id=m.user_id WHERE m.user_id=? AND s.active AND u.active AND NOT u.activation_pending AND NOT u.must_change_password AND u.email_verified_at IS NOT NULL AND EXISTS (SELECT 1 FROM auth_scope_roles sr JOIN auth_roles r ON r.code=sr.role_code AND r.active AND NOT r.deleted WHERE sr.scope_id=m.scope_id AND sr.user_id=m.user_id) ORDER BY s.code LIMIT 32"
                 )
             ) {
                 query.setLong(1, user);
@@ -272,7 +272,7 @@ public class DataScopeRepository extends BaseRepository {
                         )) ORDER BY p.code
                     ) AS permission_codes
                     FROM auth_users u JOIN auth_data_scopes s ON s.id=? AND s.active
-                    WHERE u.id=? AND u.token_version=? AND u.active AND NOT u.activation_pending AND NOT u.must_change_password
+                    WHERE u.id=? AND u.token_version=? AND u.active AND NOT u.activation_pending AND NOT u.must_change_password AND u.email_verified_at IS NOT NULL
                       AND (EXISTS (SELECT 1 FROM auth_user_roles ur JOIN auth_roles r ON r.code=ur.role_code AND r.active AND NOT r.deleted WHERE ur.user_id=u.id AND r.code='ADMIN')
                            OR EXISTS (SELECT 1 FROM auth_scope_memberships m JOIN auth_scope_roles sr ON sr.scope_id=m.scope_id AND sr.user_id=m.user_id JOIN auth_roles r ON r.code=sr.role_code AND r.active AND NOT r.deleted WHERE m.scope_id=s.id AND m.user_id=u.id AND m.active))
                     """

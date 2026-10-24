@@ -109,6 +109,20 @@ class DatabaseAccessGuardTest {
     }
 
     @Test
+    void unverifiedAdminCanCompleteSelfServiceButHasNoPrivateAuthority() {
+        db.strict = true;
+        var auth = actor("ROLE_ADMIN", "CATALOG_READ");
+        db.states.put(
+            8L,
+            new AuthorizationState(8, true, false, false, false, 0, Set.of(Role.ADMIN), Set.of("CATALOG_READ"))
+        );
+        assertTrue(guard.authenticated(auth));
+        assertFalse(guard.has(auth, "CATALOG_READ"));
+        assertFalse(guard.admin(auth));
+        assertTrue(guard.refresh(auth).getAuthorities().isEmpty());
+    }
+
+    @Test
     void rootAndServletExpressionsQueryDbAndFailClosedOnOutage() throws Exception {
         try (
             var root = new AnnotationConfigWebApplicationContext();
@@ -130,6 +144,12 @@ class DatabaseAccessGuardTest {
             SecurityContextHolder.getContext().setAuthentication(auth);
             assertTrue(probe.read());
             assertThrows(AccessDeniedException.class, probe::delete);
+            // Gán ADMIN nhưng chưa xác minh email: service trực tiếp cũng bị chặn, không chỉ filter HTTP.
+            fixture.states.put(
+                8L,
+                new AuthorizationState(8, true, false, false, false, 0, Set.of(Role.ADMIN), Set.of("CATALOG_READ"))
+            );
+            assertThrows(AccessDeniedException.class, probe::read);
             fixture.states.put(8L, state(true, false, false, 0, Set.of(Role.DRIVER), Set.of()));
             assertThrows(AccessDeniedException.class, probe::read);
             // Tài nguyên mới không có AccessRules/Permission constant: action sinh mã và vẫn đối chiếu DB.
@@ -148,6 +168,19 @@ class DatabaseAccessGuardTest {
             SecurityContextHolder.clearContext();
             fixture.states.put(8L, state(true, false, false, 0, Set.of(Role.DRIVER), Set.of("CATALOG_READ")));
             var mvc = MockMvcBuilders.webAppContextSetup(servlet).apply(springSecurity()).build();
+            fixture.states.put(
+                8L,
+                new AuthorizationState(8, true, false, false, false, 0, Set.of(Role.ADMIN), Set.of("CATALOG_READ"))
+            );
+            assertEquals(
+                403,
+                mvc
+                    .perform(get("/api/v1/guard-probe").with(authentication(auth)))
+                    .andReturn()
+                    .getResponse()
+                    .getStatus()
+            );
+            fixture.states.put(8L, state(true, false, false, 0, Set.of(Role.DRIVER), Set.of("CATALOG_READ")));
             assertEquals(
                 200,
                 mvc
@@ -189,7 +222,7 @@ class DatabaseAccessGuardTest {
         Set<Role> roles,
         Set<String> permissions
     ) {
-        return new AuthorizationState(8, active, pending, temporary, version, roles, permissions);
+        return new AuthorizationState(8, active, pending, temporary, true, version, roles, permissions);
     }
 
     private static UsernamePasswordAuthenticationToken actor(String... codes) {

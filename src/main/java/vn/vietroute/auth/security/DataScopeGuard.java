@@ -36,7 +36,7 @@ public class DataScopeGuard {
                 """
                 SELECT EXISTS (
                     SELECT 1 FROM auth_users u JOIN auth_data_scopes s ON s.id=? AND s.active
-                    WHERE u.id=? AND u.token_version=? AND u.active AND NOT u.activation_pending AND NOT u.must_change_password
+                    WHERE u.id=? AND u.token_version=? AND u.active AND NOT u.activation_pending AND NOT u.must_change_password AND u.email_verified_at IS NOT NULL
                       AND (
                         EXISTS (SELECT 1 FROM auth_user_roles ur JOIN auth_roles r ON r.code=ur.role_code
                                 WHERE ur.user_id=u.id AND r.code='ADMIN' AND r.active AND NOT r.deleted)

@@ -1,14 +1,19 @@
 package vn.vietroute.common.config.application;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.Locale;
+import java.util.Properties;
 import java.util.function.Function;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import lombok.Getter;
+import vn.vietroute.common.config.integration.MailSettings;
+import vn.vietroute.common.constant.ApplicationConstants.BootstrapProperties;
 import vn.vietroute.common.constant.ApplicationConstants.Env;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
@@ -30,11 +35,14 @@ public final class AppSettings {
     /** Cookie chỉ gửi qua HTTPS khi true; local HTTP dùng false. */
     private final boolean cookieSecure;
 
-    /** Tên admin chỉ dùng khi seed tài khoản mới, không đổi tên tài khoản đã có. */
+    /** Danh tính quản trị gốc dùng khi init/sync/khôi phục; không đồng nhất với mọi user có role ADMIN. */
     private final String bootstrapUsername;
 
     /** Mật khẩu seed từ môi trường; không reset hash cũ hoặc ghi ra log. */
     private final String bootstrapPassword;
+
+    /** Email được chủ hệ thống cấp sẵn, chỉ dùng cho danh tính bootstrap cấu hình. */
+    private final String bootstrapEmail;
 
     /** Khóa HMAC dùng ký/xác minh JWT, các node phải dùng cùng secret. */
     private final SecretKey jwtKey;
@@ -60,6 +68,10 @@ public final class AppSettings {
         cookieSecure = values.flag(Env.COOKIE_SECURE, production);
         bootstrapUsername = values.text(Env.BOOTSTRAP_ADMIN_USERNAME, "admin");
         bootstrapPassword = values.text(Env.BOOTSTRAP_ADMIN_PASSWORD, "");
+        bootstrapEmail = values.text(Env.BOOTSTRAP_ADMIN_EMAIL, bootstrapEmailDefault()).toLowerCase(Locale.ROOT);
+        if (!MailSettings.validAddress(bootstrapEmail)) {
+            throw new IllegalStateException(Env.BOOTSTRAP_ADMIN_EMAIL.key() + " is invalid");
+        }
         if (!bootstrapUsername.matches(Regex.USERNAME) || bootstrapUsername.equalsIgnoreCase(SystemActor.USERNAME)) {
             throw new IllegalStateException(Env.BOOTSTRAP_ADMIN_USERNAME.key() + " is invalid");
         }
@@ -85,5 +97,16 @@ public final class AppSettings {
             );
         }
         jwtKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+    }
+
+    /** Chỉ đọc email không bí mật từ classpath; không tự đọc .env hoặc credentials SMTP. */
+    private static String bootstrapEmailDefault() {
+        Properties defaults = new Properties();
+        try (InputStream input = AppSettings.class.getResourceAsStream(BootstrapProperties.RESOURCE)) {
+            if (input != null) defaults.load(input);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Cannot read bootstrap configuration", exception);
+        }
+        return defaults.getProperty(BootstrapProperties.EMAIL, "");
     }
 }

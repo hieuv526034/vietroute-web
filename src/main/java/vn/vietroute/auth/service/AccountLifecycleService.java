@@ -83,6 +83,7 @@ public class AccountLifecycleService {
         // Trả cùng phản hồi chung, không cho đăng ký chiếm username bootstrap nếu dữ liệu quản trị đang bị mất.
         if (bootstrap.username().equals(body.getUsername().toLowerCase(Locale.ROOT))) return;
         String email = email(body.getEmail());
+        if (bootstrap.email().equals(email)) return;
         String hash = passwords.encode(body.getPassword());
         transactions.execute(connection -> {
             // Cùng khóa với gán/xóa role: kiểm tham chiếu và tạo CUSTOMER không được chạy lọt nhau giữa các node.
@@ -160,6 +161,8 @@ public class AccountLifecycleService {
             // Thứ tự khóa registration trước user thống nhất với đăng ký để tránh deadlock.
             accounts.lockRegistration(connection);
             UserAccount user = BusinessRules.requireFound(users.findById(connection, principal.id(), true));
+            // Email tài khoản gốc do cấu hình vận hành quản lý; ADMIN được gán cho user khác không có ngoại lệ này.
+            BusinessRules.require(!user.getUsername().equalsIgnoreCase(bootstrap.username()), ErrorCode.ACCESS_DENIED);
             BusinessRules.require(
                 user.isActive() && user.getTokenVersion() == principal.tokenVersion(),
                 ErrorCode.TOKEN_INVALID
@@ -170,6 +173,7 @@ public class AccountLifecycleService {
                 ErrorCode.PASSWORD_INCORRECT
             );
             String address = email(body.getEmail());
+            BusinessRules.require(!bootstrap.email().equals(address), ErrorCode.CONFLICT);
             Long owner = accounts.findByEmail(connection, address);
             BusinessRules.require(owner == null || owner.equals(user.getId()), ErrorCode.CONFLICT);
             if (address.equals(user.getEmail()) && user.getEmailVerifiedAt() != null) return null;

@@ -30,14 +30,9 @@ public class AuthPageController {
 
     /** Trang public không chứa token trên URL; mọi xác minh gửi POST JSON có CSRF. */
     @GetMapping(Routes.AUTH_LIFECYCLE_PAGE)
-    public String lifecycle(@AuthenticationPrincipal UserPrincipal principal, Locale locale) {
-        if (principal != null) return (
-            "redirect:" +
-            UriComponentsBuilder.fromPath(Routes.ACCOUNT)
-                .queryParam(Http.LANGUAGE_PARAMETER, locale.getLanguage())
-                .build()
-                .toUriString()
-        );
+    public String lifecycle(@AuthenticationPrincipal UserPrincipal principal, Model model) {
+        // Phiên đang gắn email phải mở được form nhập mã; chuyển về account ở đây sẽ tạo vòng lặp xác minh.
+        model.addAttribute("accountFlowAuthenticated", principal != null);
         return "auth/lifecycle";
     }
 

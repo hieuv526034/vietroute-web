@@ -8,6 +8,7 @@ public record AuthorizationState(
     boolean active,
     boolean activationPending,
     boolean mustChangePassword,
+    boolean emailVerified,
     long tokenVersion,
     Set<Role> roles,
     Set<String> permissions
@@ -15,5 +16,10 @@ public record AuthorizationState(
     public AuthorizationState {
         roles = Set.copyOf(roles);
         permissions = Set.copyOf(permissions);
+    }
+
+    /** Cùng điều kiện cho mọi role: tài khoản gốc được lifecycle cấp sẵn trạng thái này trong DB. */
+    public boolean ready() {
+        return !mustChangePassword && emailVerified;
     }
 }

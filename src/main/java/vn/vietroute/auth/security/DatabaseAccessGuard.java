@@ -38,12 +38,10 @@ public class DatabaseAccessGuard {
         }
         var current = state(authentication);
         if (current == null) return false;
-        if (
-            operation.adminOnly() && (current.mustChangePassword() || !current.roles().contains(Role.ADMIN))
-        ) return false;
+        if (operation.adminOnly() && (!current.ready() || !current.roles().contains(Role.ADMIN))) return false;
         boolean allowed =
             operation.authenticated() ||
-            (!current.mustChangePassword() &&
+            (current.ready() &&
                 current.permissions().containsAll(operation.required()) &&
                 operation.any().stream().anyMatch(current.permissions()::contains));
         // Gọi bean trực tiếp không qua HTTP interceptor: thân service cũng phải kiểm ủy quyền bằng đúng snapshot mới.
@@ -75,7 +73,7 @@ public class DatabaseAccessGuard {
     /** Đường cứu hộ cố định vẫn phải là ADMIN active trong DB, không tin ROLE_ADMIN do caller tự thêm. */
     public boolean admin(Authentication authentication) {
         var state = state(authentication);
-        return state != null && !state.mustChangePassword() && state.roles().contains(Role.ADMIN);
+        return state != null && state.ready() && state.roles().contains(Role.ADMIN);
     }
 
     /** ADMIN cùng toàn bộ quyền hành động, không có cơ chế ADMIN tự bỏ guard bắt buộc. */
@@ -91,9 +89,7 @@ public class DatabaseAccessGuard {
             return false;
         }
         var current = state(authentication);
-        if (
-            current == null || current.mustChangePassword() || (admin && !current.roles().contains(Role.ADMIN))
-        ) return false;
+        if (current == null || !current.ready() || (admin && !current.roles().contains(Role.ADMIN))) return false;
         return all
             ? current.permissions().containsAll(List.of(permissions))
             : Arrays.stream(permissions).anyMatch(current.permissions()::contains);
@@ -109,7 +105,7 @@ public class DatabaseAccessGuard {
     /** Tạo Authentication từ snapshot vừa kiểm, không đọc DB lần hai hoặc cache quyền qua request/node. */
     private Authentication snapshot(Authentication authentication, AuthorizationState current) {
         var principal = (UserPrincipal) authentication.getPrincipal();
-        var granted = current.mustChangePassword()
+        var granted = !current.ready()
             ? List.<SimpleGrantedAuthority>of()
             : Stream.concat(
                   current
