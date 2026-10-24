@@ -79,7 +79,7 @@ public class AccessManagementService {
         }
         if (
             ("roles".equals(kind) && "ADMIN".equals(code)) ||
-            (AccessRegistryRepository.builtIn(kind, code) && (!body.active() || create))
+            (registry.builtIn(kind, code) && (!body.active() || create))
         ) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }

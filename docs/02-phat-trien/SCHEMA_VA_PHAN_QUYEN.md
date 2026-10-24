@@ -43,6 +43,10 @@ Không có cấp trực tiếp permission cho từng user, kế thừa role, exp
 
 Tập quyền tự đồng bộ và bảo vệ ADMIN khác với quyền role thường: startup sync/init có thể đăng ký/bật lại permission khai báo trong source và sửa mapping ADMIN; không tự ghi mapping mới cho role thường. `CATALOG_WRITE`/`ACCESS_WRITE` còn là alias tương thích phạm vi hẹp. Thêm module dùng resource/action chuẩn, không thêm alias WRITE mới. Phát hiện/việc còn dở của từng đợt rà soát luôn ở [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md), không coi tài liệu này là chứng minh mọi ca đã kiểm.
 
+ACCESS23 thống nhất tập mã này bằng `AccessPermissionDefinitions`: gồm bootstrap/tương thích, VIEW của cây chức năng, toàn bộ quyền HTTP (kể cả extra/alias) và service-only. Collector servlet công bố metadata cả khi tắt ghi sync. API/UI đánh dấu `builtIn` từ cùng tập source; không cho tạo trùng hoặc tắt mã mà startup sẽ bật lại, vẫn cho sửa tên và gán/thu hồi mapping role thường. Quyền tự tạo ngoài source vẫn đổi trạng thái được. Snapshot này chỉ chứa định nghĩa của node; guard tiếp tục đọc trạng thái account/tokenVersion/mapping DB hiện hành.
+
+Module mới khai báo resource/action và bổ sung `permission.<CODE>` trong cả hai bundle vi/en; không phải thêm từng mã vào `Permission.values()`. Sync dùng đúng key của mã mới, thiếu bản dịch thì hiện chính mã thay nhãn chung `permission.custom`; khi bản ghi đã có, sync giữ tên quản trị đã sửa. API/modal nguồn quyền trả đủ hợp quyền nhiều role tới trần an toàn `Limits.REGISTRY_MAX` (2048), không phụ thuộc quota tạo thủ công thấp hơn; đọc thêm một dòng để báo COM016 nếu dữ liệu ngoài API vượt trần, không trả danh sách thiếu. Giới hạn 512 permission/role và 32 role/user vẫn áp dụng.
+
 ## Đổi schema ở một nơi cấu hình
 
 Biến `VIETROUTE_DB_SCHEMA` là nơi cấu hình schema của ứng dụng. Mặc định là `vietroute`, database Neon vẫn là `neondb`. Ví dụ khi tạo một môi trường/DB mới:

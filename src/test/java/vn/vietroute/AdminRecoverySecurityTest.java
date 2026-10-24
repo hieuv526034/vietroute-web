@@ -32,6 +32,7 @@ import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.auth.repository.AdminRecoveryRepository;
 import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.security.AccessPermissionDefinitions;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.AccessResourceService;
 import vn.vietroute.common.config.RootConfig;
@@ -304,8 +305,8 @@ class AdminRecoverySecurityTest {
 
         @Bean
         @Primary
-        AccessResourceService resources(State state) {
-            return new AccessResourceService(null, null, null, null, null) {
+        AccessResourceService resources(State state, AccessPermissionDefinitions definitions) {
+            return new AccessResourceService(null, null, null, null, null, definitions) {
                 @Override
                 public void restore(Connection connection, long actor) {
                     state.restores++;

@@ -12,6 +12,7 @@ import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.repository.AccessFeatureRepository;
 import vn.vietroute.auth.repository.AccessResourceRepository;
 import vn.vietroute.auth.repository.AdminRecoveryRepository;
+import vn.vietroute.auth.security.AccessPermissionDefinitions;
 import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.AccessConstants.Groups;
@@ -33,10 +34,13 @@ public class AccessResourceService {
 
     private final AdminRecoveryRepository recovery;
 
+    private final AccessPermissionDefinitions permissions;
+
     private volatile Definition definition;
 
     /** Chỉ collector servlet công bố metadata server đã validate, kể cả khi tắt ghi startup. Không chứa quyền user. */
     public void remember(List<AccessResourceResponse> inventory, Set<String> serviceCodes) {
+        permissions.remember(inventory, serviceCodes);
         definition = new Definition(List.copyOf(inventory), Set.copyOf(serviceCodes));
     }
 

@@ -4,7 +4,6 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -15,6 +14,8 @@ import vn.vietroute.auth.dto.response.AccessResourceResponse;
 import vn.vietroute.auth.dto.response.EffectiveAccessResponse;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.security.AccessFeatures;
+import vn.vietroute.auth.security.AccessPermissionDefinitions;
+import vn.vietroute.common.constant.AccessConstants.Limits;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.BaseRepository;
@@ -34,14 +35,7 @@ public class AccessFeatureRepository extends BaseRepository {
         try (var lock = connection.prepareStatement("SELECT pg_advisory_xact_lock(781205611)")) {
             lock.execute();
         }
-        Set<String> codes = new LinkedHashSet<>();
-        codes.addAll(serviceCodes);
-        inventory.forEach(item -> codes.addAll(item.declaredPermissions()));
-        AccessFeatures.definitions()
-            .stream()
-            .map(AccessFeatures.Feature::viewPermission)
-            .filter(code -> code != null)
-            .forEach(codes::add);
+        Set<String> codes = AccessPermissionDefinitions.collect(inventory, serviceCodes);
         var vi = ResourceBundle.getBundle("i18n.messages", Locale.forLanguageTag("vi"));
         var en = ResourceBundle.getBundle("i18n.messages", Locale.ENGLISH);
         try (
@@ -55,8 +49,8 @@ public class AccessFeatureRepository extends BaseRepository {
             for (String code : codes) {
                 Permission permission = Permission.valueOf(code);
                 insert.setString(1, code);
-                insert.setString(2, vi.getString(permission.messageKey()));
-                insert.setString(3, en.getString(permission.messageKey()));
+                insert.setString(2, AccessPermissionDefinitions.localizedName(permission, vi));
+                insert.setString(3, AccessPermissionDefinitions.localizedName(permission, en));
                 insert.addBatch();
                 admin.setString(1, code);
                 admin.addBatch();
@@ -105,7 +99,8 @@ public class AccessFeatureRepository extends BaseRepository {
             Map<String, Set<String>> sources = new LinkedHashMap<>();
             try (
                 var query = connection.prepareStatement(
-                    "SELECT p.code,string_agg(DISTINCT r.code,',' ORDER BY r.code) FROM auth_user_roles ur JOIN auth_roles r ON r.code=ur.role_code AND r.active AND NOT r.deleted JOIN auth_role_permissions rp ON rp.role_code=r.code JOIN auth_permissions p ON p.code=rp.permission_code AND p.active WHERE ur.user_id=? GROUP BY p.code ORDER BY p.code LIMIT 512"
+                    "SELECT p.code,string_agg(DISTINCT r.code,',' ORDER BY r.code) FROM auth_user_roles ur JOIN auth_roles r ON r.code=ur.role_code AND r.active AND NOT r.deleted JOIN auth_role_permissions rp ON rp.role_code=r.code JOIN auth_permissions p ON p.code=rp.permission_code AND p.active WHERE ur.user_id=? GROUP BY p.code ORDER BY p.code LIMIT " +
+                        (Limits.REGISTRY_MAX + 1)
                 )
             ) {
                 query.setLong(1, id);
@@ -113,6 +108,10 @@ public class AccessFeatureRepository extends BaseRepository {
                     while (rows.next()) sources.put(rows.getString(1), Set.of(rows.getString(2).split(",")));
                 }
             }
+            if (sources.size() > Limits.REGISTRY_MAX) throw new BusinessException(
+                ErrorCode.ACCESS_CAPACITY_REACHED,
+                Limits.REGISTRY_MAX
+            );
             // Mapping vẫn còn để quản trị sửa, nhưng không được mô tả là quyền hiệu lực khi user chưa sẵn sàng.
             return new EffectiveAccessResponse(id, username, active, usable ? sources : Map.of());
         });

@@ -38,6 +38,7 @@ import vn.vietroute.auth.repository.AccessRepository;
 import vn.vietroute.auth.repository.AccessResourceRepository;
 import vn.vietroute.auth.repository.AuthorizationRepository;
 import vn.vietroute.auth.repository.DataScopeRepository;
+import vn.vietroute.auth.security.AccessPermissionDefinitions;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
@@ -227,8 +228,8 @@ public class AccessTestConfig {
 
     @Bean
     @Primary
-    public PolicyFixture isolatedAccessRegistry() {
-        return new PolicyFixture();
+    public PolicyFixture isolatedAccessRegistry(AccessPermissionDefinitions definitions) {
+        return new PolicyFixture(definitions);
     }
 
     @Bean
@@ -256,8 +257,8 @@ public class AccessTestConfig {
 
         public List<AccessPolicyResponse> rules = List.of();
 
-        public PolicyFixture() {
-            super(null, new AccessSettings(key -> null));
+        public PolicyFixture(AccessPermissionDefinitions definitions) {
+            super(null, new AccessSettings(key -> null), definitions);
         }
 
         @Override

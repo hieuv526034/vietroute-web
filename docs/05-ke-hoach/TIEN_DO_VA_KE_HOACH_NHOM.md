@@ -1,10 +1,18 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
+## ACCESS23 — Hoàn thiện quyền trước khi triển khai nghiệp vụ
+
+Đang chốt trên nhánh `hieuv526034/access23-hoan-thien-quyen-module`, hieuv526034, [Issue #98](https://github.com/hieuv526034/vietroute-web/issues/98), base main `ce690a2` sau PR #97 ngày 24/10/2026. Xử lý ba phát hiện source của ACCESS22: nguồn quyền nhiều role không bị cắt ở 512 (đủ tới 2048, vượt trần COM016); bảo vệ registry/UI và sync dùng chung tập permission source gồm HTTP/service-only/VIEW/alias kể cả khi tắt ghi startup; key nhãn module mới theo `permission.<CODE>`, thiếu key hiện mã và sync giữ tên đã sửa. Không thêm quyền bypass hoặc tự cấp cho role thường. Hợp đồng ở [chuyên đề phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#bản-đồ-bảng-và-ranh-giới-cấu-hình-phân-quyền).
+
+Regression mới dựng root/servlet như WAR, module không có Permission constant vẫn bị chặn khi nhập URL tắt quyền; unit kiểm metadata HTTP/extra/service và nhãn vi/en. Local Maven verify 149 Java/44 Node đạt; formatter/check/rules/docs, biên dịch helper PostgreSQL và bash syntax/diff đạt. Helper PostgreSQL CI kiểm sync/ADMIN/tên và 513/2048/2049 quyền từ nhiều role; chỉ chạy DB container cách ly, không đọc .env hoặc ghi Neon. Máy local không có Docker, đang chờ CI container trước merge; chưa đánh dấu có trên main.
+
+Bước tiếp sau khi kiểm/merge đạt: nhóm bắt đầu nghiệp vụ theo [phân công](PHAN_CONG.md), không còn ba lỗi nguồn quyền/metadata/nhãn này cản mở rộng. CARRIER01/AUTH03 và các DAO nghiệp vụ vẫn phải tích hợp scope/ID/quan hệ/owner/driver, có ca truy cập chéo trước nghiệm thu; chưa coi nền phân quyền đã tạo CRUD nghiệp vụ. Provider/Render và tải môi trường thật được nghiệm thu riêng. Thành viên commit bằng identity của chính mình theo bảng phân công; đợt nền này vẫn thuộc hieuv526034.
+
 ## ACCESS22 — Rà soát cấu hình cố định và tổng hợp bảng phân quyền
 
 hieuv526034, nhánh `hieuv526034/access22-tong-hop-cau-hinh-quyen`, [PR #97](https://github.com/hieuv526034/vietroute-web/pull/97), commit tổng hợp `f8d1a47`, đối chiếu main `bfccc95` sau PR #96 ngày 24/10/2026. Phạm vi là review/tổng hợp, không đổi hành vi quyền hoặc schema. [Bản đồ bảng và ranh giới cấu hình](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#bản-đồ-bảng-và-ranh-giới-cấu-hình-phân-quyền) tổng hợp 11 bảng chuyên trách + auth_users, hai bảng bảo mật liên quan, khóa/quan hệ và phần DB/UI so với phần source/annotation/env. Authority user lấy mapping DB, không bị giới hạn ở Role/Permission.values(); cây chức năng/action, public/adminOnly, ADMIN/system/bootstrap và giới hạn payload vẫn là hợp đồng server cố định.
 
-Phát hiện cần xử lý tiếp, không đánh dấu đã sửa:
+Phát hiện tại thời điểm review ACCESS22 (ba lỗi source đầu được xử lý tiếp tại ACCESS23 phía trên; các phạm vi nghiệp vụ/vận hành vẫn theo phụ thuộc):
 
 - **Nguồn quyền bị cắt khi mở rộng:** AccessFeatureRepository.effective có ORDER BY p.code LIMIT 512, trong khi registry có thể nâng đến 2048 và user có nhiều role (mỗi role tối đa 512 permission). Một tài khoản có hơn 512 quyền có thể bị thiếu dòng ở API/modal nguồn quyền; projection authority/DatabaseAccessGuard dùng truy vấn khác không có LIMIT này. Đây là lệch hợp đồng hiển thị xác định từ source, chưa chạy fixture >512 trên PostgreSQL trong phiên này. Cần bỏ cắt âm thầm, trả đủ trong trần phù hợp hoặc phân trang/báo vượt trần và thêm regression 513+ quyền từ nhiều role.
 - **Bảo vệ permission source khi thêm module:** AccessRegistryRepository.builtIn chỉ nhận Permission.values(), còn AccessFeatureRepository.synchronize bật lại mọi permission được annotation/source khai báo. Mã action mới ngoài hằng bootstrap có thể được UI/API tắt nhưng sync lần sau bật lại. 31 mã lõi hiện tại thuộc bộ hằng đã bảo vệ; đây là điểm cần thống nhất trước mở rộng: cùng một tập source-declared cho bảo vệ registry/nhãn UI, hoặc hợp đồng bật lại phải được thông báo rõ. Chưa thêm ca regression restart cho module mới trong phiên này.
