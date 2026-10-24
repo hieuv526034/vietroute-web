@@ -211,6 +211,20 @@ public final class ApplicationConstants {
 
         public static final String ADMIN_CATALOG_BY_ID = ADMIN_CATALOGS + BY_ID;
 
+        public static final String PROVINCES = API + "/provinces";
+
+        public static final String LOCATIONS = API + "/locations";
+
+        public static final String ADMIN_PROVINCES = ADMIN_API + "/provinces";
+
+        public static final String ADMIN_PROVINCES_BY_ID = ADMIN_PROVINCES + BY_ID;
+
+        public static final String ADMIN_LOCATIONS = ADMIN_API + "/locations";
+
+        public static final String ADMIN_LOCATIONS_BY_ID = ADMIN_LOCATIONS + BY_ID;
+
+        public static final String LOCATION_PAGE = "/operations/locations";
+
         public static final String ACCOUNTS = ADMIN_API + "/accounts";
         public static final String ACCOUNT_STATE = BY_ID + "/state";
         public static final String ACCOUNT_ACCESS = BY_ID + "/access";

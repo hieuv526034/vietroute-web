@@ -24,6 +24,7 @@ import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.security.AccessMethodExpressionHandler;
 import vn.vietroute.auth.security.AuthCookies;
@@ -127,7 +128,10 @@ public class SecurityConfig {
                     )
                     .permitAll()
                     .requestMatchers(
-                        PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, Routes.CATALOG_MATCHER)
+                        WebRoutePolicy.publicLookupMatchers()
+                            .stream()
+                            .map(path -> PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, path))
+                            .toArray(RequestMatcher[]::new)
                     )
                     .permitAll()
                     // Trang danh mục và API kiểm quyền hành động tại method/service; custom role từ DB cũng dùng được.

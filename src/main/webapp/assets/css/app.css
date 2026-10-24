@@ -2686,3 +2686,7 @@ fieldset:disabled .button[type='submit']::before,
     max-height: 22rem;
     overflow-y: auto;
 }
+/* LOCATION01: địa chỉ chiếm cả dòng, tọa độ dùng grid modal chung và tự xếp một cột trên mobile. */
+#location-form .location-address {
+    grid-column: 1 / -1;
+}

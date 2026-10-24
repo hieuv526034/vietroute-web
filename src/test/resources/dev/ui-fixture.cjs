@@ -17,6 +17,7 @@ const pages = {
     '/docs': 'docs',
     '/operations/access': 'access',
     '/operations/accounts': 'accounts',
+    '/operations/locations': 'locations',
     '/operations/jobs': 'jobs',
     '/operations/configuration': 'configuration',
     '/operations/api-journal': 'api-journal',
@@ -47,6 +48,37 @@ const dataScopes = [
     },
 ];
 const scopeMembers = [];
+
+// Dữ liệu địa lý chỉ phục vụ browser fixture, không đại diện đơn vị hành chính hoặc tọa độ đã xác minh.
+const locationProvinces = [
+    {
+        id: 901,
+        code: 'DEMO01',
+        nameVi: 'Tỉnh demo (fixture)',
+        nameEn: 'Demo province (fixture)',
+        active: true,
+        sortOrder: 0,
+        version: 0,
+    },
+];
+const locationPlaces = [
+    {
+        id: 902,
+        provinceId: 901,
+        provinceNameVi: 'Tỉnh demo (fixture)',
+        provinceNameEn: 'Demo province (fixture)',
+        provinceActive: true,
+        code: 'PLACE01',
+        nameVi: 'Điểm đón demo (fixture)',
+        nameEn: 'Demo pickup (fixture)',
+        address: 'Địa chỉ minh họa, không dùng đặt chuyến',
+        latitude: 10,
+        longitude: 106,
+        active: true,
+        sortOrder: 0,
+        version: 0,
+    },
+];
 
 const now = () => new Date().toISOString();
 const state = (permissions = [], extra = {}) => ({
@@ -284,6 +316,60 @@ const page = (values, query) => {
                 return respond({ token: 'fixture-csrf', headerName: 'X-XSRF-TOKEN' });
             }
             if (route === '/api/v1/auth/capabilities') return respond((await parse('capabilities.json')).data);
+            const locationMatch = route.match(/^\/api\/v1\/(admin\/)?(provinces|locations)(?:\/(\d+))?$/);
+            if (locationMatch) {
+                const admin = Boolean(locationMatch[1]);
+                const resource = locationMatch[2];
+                const id = Number(locationMatch[3] || 0);
+                const items = resource === 'provinces' ? locationProvinces : locationPlaces;
+                const localized = (item) => ({
+                    ...item,
+                    name:
+                        (url.searchParams.get('lang') || req.headers['x-locale']) === 'en' ? item.nameEn : item.nameVi,
+                });
+                if (req.method === 'GET') {
+                    if (id) return respond(localized(items.find((item) => item.id === id)));
+                    const query = (url.searchParams.get('query') || '').toLocaleLowerCase();
+                    const active = url.searchParams.get('active');
+                    return respond(
+                        page(
+                            items
+                                .filter(
+                                    (item) =>
+                                        (admin || item.active) &&
+                                        (!active || item.active === (active === 'true')) &&
+                                        JSON.stringify(item).toLocaleLowerCase().includes(query),
+                                )
+                                .map(localized),
+                            url.searchParams,
+                        ),
+                    );
+                }
+                const value = await body(req);
+                if (conflict) {
+                    conflict = false;
+                    return respond(null, 409);
+                }
+                const existing = items.find((item) => item.id === id);
+                const saved = {
+                    ...(existing || {}),
+                    ...value,
+                    id: id || Math.max(...items.map((item) => item.id), 902) + 1,
+                    version: (existing?.version ?? -1) + 1,
+                };
+                if (resource === 'locations') {
+                    const province = locationProvinces.find((item) => item.id === saved.provinceId);
+                    Object.assign(saved, {
+                        provinceNameVi: province?.nameVi,
+                        provinceNameEn: province?.nameEn,
+                        provinceActive: province?.active,
+                    });
+                }
+                if (existing) Object.assign(existing, saved);
+                else items.push(saved);
+                mutations.push({ method: req.method, path: route });
+                return respond(localized(saved), existing ? 200 : 201);
+            }
             if (route === '/api/v1/admin/access/tree')
                 return respond(url.searchParams.get('lang') === 'en' ? enTree : viTree);
             if (route === '/api/v1/admin/access/history')
