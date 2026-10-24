@@ -49,7 +49,7 @@ public class ManagedAccountRepository extends BaseRepository {
             var content = new ArrayList<ManagedAccountResponse>();
             try (
                 var query = connection.prepareStatement(
-                    "SELECT u.id,u.username,u.display_name,u.active,u.activation_pending,u.must_change_password,u.locked_until,u.version,u.created_at,u.updated_at,COALESCE((SELECT string_agg(role_code,',' ORDER BY role_code) FROM auth_user_roles WHERE user_id=u.id),'') AS roles" +
+                    "SELECT u.id,u.username,u.display_name,u.active,u.activation_pending,u.must_change_password,(u.email_verified_at IS NULL) AS email_verification_required,u.locked_until,u.version,u.created_at,u.updated_at,COALESCE((SELECT string_agg(role_code,',' ORDER BY role_code) FROM auth_user_roles WHERE user_id=u.id),'') AS roles" +
                         where +
                         " ORDER BY u.username,u.id LIMIT ? OFFSET ?"
                 )
@@ -73,6 +73,7 @@ public class ManagedAccountRepository extends BaseRepository {
                                 rows.getBoolean("active"),
                                 rows.getBoolean("activation_pending"),
                                 rows.getBoolean("must_change_password"),
+                                rows.getBoolean("email_verification_required"),
                                 instant(rows, "locked_until"),
                                 assigned,
                                 rows.getLong("version"),

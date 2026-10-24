@@ -79,6 +79,13 @@ printf '%s\n' '{"permissions":[],"version":1}' > "$work/tree-revoke.json"
 call 200 PUT /api/v1/admin/access/roles/ENTRY_CI/permissions "$work/tree-revoke.json" bearer
 call 200 GET "/api/v1/admin/access/users/$tree_user/effective" '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["sources"]["CATALOG_CREATE"]==["ALT_CI"] and d["active"]' "$result"
+# Nguồn quyền phải rỗng khi account chưa hoàn tất thiết lập, dù mapping vẫn nguyên vẹn.
+for tree_not_ready in 'email_verified_at=NULL' 'must_change_password=true' 'activation_pending=true' 'active=false'; do
+  sql "UPDATE auth_users SET $tree_not_ready WHERE id=$tree_user" >/dev/null
+  call 200 GET "/api/v1/admin/access/users/$tree_user/effective" '' bearer
+  python3 -c 'import json,sys;assert json.load(open(sys.argv[1]))["data"]["sources"]=={}' "$result"
+  sql "UPDATE auth_users SET email_verified_at=CURRENT_TIMESTAMP,must_change_password=false,activation_pending=false,active=true WHERE id=$tree_user" >/dev/null
+done
 login_body treeentry "$next_password"
 call 200 POST /api/v1/auth/login "$work/login.json" cookie
 tree_user_token=$(field data.accessToken)

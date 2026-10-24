@@ -16,9 +16,13 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -42,6 +46,7 @@ import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.monitoring.filter.HttpMetricsFilter;
 import vn.vietroute.common.monitoring.repository.MonitoringRepository;
 import vn.vietroute.common.monitoring.repository.MonitoringRepository.QueueSample;
+import vn.vietroute.common.monitoring.service.ApiJournalState;
 import vn.vietroute.common.monitoring.service.ApplicationMetrics;
 import vn.vietroute.common.monitoring.service.DatabaseProbe;
 import vn.vietroute.support.AccessTestConfig;
@@ -209,6 +214,42 @@ class MonitoringFoundationTest {
             assertEquals(1, registry.get("vietroute.http.errors").functionCounter().count());
             assertEquals(2, registry.find("vietroute.http.responses").counters().size());
             assertFalse(registry.scrape().contains("unknown-"));
+        }
+    }
+
+    @Test
+    void failedRequestLogKeepsSanitizedSqlStateEvenWithoutJournalDatabase() throws Exception {
+        var lines = new ArrayList<String>();
+        var logger = Logger.getLogger(HttpMetricsFilter.class.getName());
+        var handler = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                lines.add(record.getMessage());
+            }
+
+            @Override
+            public void flush() {}
+
+            @Override
+            public void close() {}
+        };
+        logger.addHandler(handler);
+        try (var context = context(true)) {
+            var filter = new HttpMetricsFilter(context.getBean(ApplicationMetrics.class));
+            var request = new MockHttpServletRequest("GET", Routes.ACCESS + "/tree");
+            var response = new MockHttpServletResponse();
+            filter.doFilter(request, response, (input, output) -> {
+                ApiJournalState.start(request);
+                ApiJournalState.failure(request, new SQLException("password/private-sql-never-log", "42P01"));
+                response.setStatus(503);
+            });
+            assertEquals(1, lines.size());
+            assertTrue(lines.get(0).contains("diagnostic=DB_SCHEMA_OR_QUERY sqlState=42P01"));
+            assertTrue(lines.get(0).contains("traceId="));
+            assertFalse(lines.get(0).contains("private-sql"));
+            assertFalse(lines.get(0).contains("/tree"));
+        } finally {
+            logger.removeHandler(handler);
         }
     }
 

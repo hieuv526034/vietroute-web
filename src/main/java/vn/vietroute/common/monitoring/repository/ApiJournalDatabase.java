@@ -24,7 +24,9 @@ public final class ApiJournalDatabase implements AutoCloseable {
         pool.setMaximumPoolSize(1);
         pool.setMinimumIdle(0);
         pool.setConnectionTimeout(250);
-        pool.setValidationTimeout(250);
+        // 250ms chỉ giới hạn chờ slot của request; xác minh connection tới DB khác vùng cần ngân sách riêng.
+        // Dùng 1s như pool nghiệp vụ để tránh loại mọi connection khi RTT mạng vượt 250ms.
+        pool.setValidationTimeout(1000);
         pool.setIdleTimeout(60000);
         pool.setMaxLifetime(600000);
         pool.setKeepaliveTime(0);

@@ -109,6 +109,7 @@
             const state = document.createElement('td');
             state.append(text('span', status(user), `account-badge ${user.active ? 'is-active' : 'is-inactive'}`));
             if (user.mustChangePassword) state.append(text('small', labels.passwordPending, 'd-block muted'));
+            if (user.emailVerificationRequired) state.append(text('small', labels.emailPending, 'd-block muted'));
             if (user.lockedUntil && Date.parse(user.lockedUntil) > Date.now())
                 state.append(text('small', `${labels.locked} ${time(user.lockedUntil)}`, 'd-block muted'));
             const actions = text('td', '', 'table-actions'),
@@ -208,7 +209,12 @@
             `${selected.displayName} · @${selected.username} · v${selected.version}`;
         const summary = node('account-detail-summary');
         summary.replaceChildren(chips(selected.roles), text('p', status(selected)));
-        if (!selected.active || selected.activationPending || selected.mustChangePassword)
+        if (
+            !selected.active ||
+            selected.activationPending ||
+            selected.mustChangePassword ||
+            selected.emailVerificationRequired
+        )
             summary.append(text('p', labels.blocked, 'account-scope-note'));
         const table = text('table', '', 'table align-middle access-effective-table'),
             head = document.createElement('thead'),

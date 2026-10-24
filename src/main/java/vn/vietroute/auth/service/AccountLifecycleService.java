@@ -24,6 +24,7 @@ import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.auth.repository.AccessRepository;
 import vn.vietroute.auth.repository.AccountRepository;
 import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.AccountSecrets;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessOperation;
@@ -156,6 +157,7 @@ public class AccountLifecycleService {
     /** Admin cũ/tài khoản đăng nhập được có thể gắn email; cần JWT còn hạn và mật khẩu hiện tại, email mới phải xác minh. */
     @AccessOperation(authenticated = true)
     public void bindEmail(UserPrincipal principal, BindEmailRequest body, Locale locale) {
+        AccessActors.requireCurrent(principal);
         requireAvailable();
         transactions.execute(connection -> {
             // Thứ tự khóa registration trước user thống nhất với đăng ký để tránh deadlock.

@@ -322,3 +322,11 @@ Initializer dùng khóa gán quyền rồi khóa dòng account, tạo lại nế
 Mọi tài khoản còn lại, kể cả hieuboy được gán ADMIN, phải đổi mật khẩu tạm nếu có và xác minh email. Filter HTTP bỏ authority/redirect account hoặc trả AUTH012; service guard và scope SQL cũng kiểm email_verified_at trực tiếp trong DB. Không chỉ ẩn menu. Phiên chưa hoàn tất vẫn đọc hồ sơ, đổi mật khẩu, gắn email, kích hoạt và đăng xuất được; không có quyền chức năng riêng tư. Preview user đích cũng áp dụng điều kiện này. Việc gắn email mới lập tức làm mất quyền cho đến xác minh; email/challenge/outbox giữ cơ chế một lần và mã hóa cũ.
 
 Triển khai: drain/nâng tất cả node cùng phiên bản và cùng cấu hình bootstrap. Account cũ chưa xác minh (ngoài bootstrap) cũng bị chặn quyền riêng tư sau nâng; cần bật AUTH_SELF_SERVICE cùng mail/worker/provider hợp lệ để họ hoàn tất. Không được coi SMTP loopback CI hoặc email cấp sẵn là mail đã hoạt động ngoài app. Tái sử dụng V011, không đổi V001–V015, không cần migration mới.
+
+## Rà soát user và quyền hiệu lực — AUTH18
+
+Nguồn quyền GET access/users/{id}/effective xét cùng điều kiện sẵn sàng như preview quản trị: active, không pending, không mật khẩu tạm và email đã xác minh. Mapping chưa bị xóa nhưng nguồn hiệu lực rỗng khi tài khoản bị hạn chế; active vẫn phản ánh cờ DB, không đổi nghĩa thành ready. ManagedAccountResponse chỉ thêm boolean emailVerificationRequired, không công bố email; danh sách và chi tiết UI nêu lý do thiếu chức năng.
+
+Các service tự phục vụ me, đổi mật khẩu, đăng xuất có principal, hồ sơ và gắn email đối chiếu actor với SecurityContext vừa được guard refresh trước khi đọc/ghi. HTTP vẫn lấy principal server; kiểm này bảo vệ cả caller nội bộ truyền nhầm principal người khác. Token/role thu hồi ở DB không fallback authority cũ; recovery/ADMIN/system và scope vẫn giữ giới hạn trước đó.
+
+Rà soát chưa phát hiện đường bỏ kiểm quyền DB trong các ca hiện có: nhiều role, hành động riêng theo tài nguyên, VIEW độc lập, policy chỉ siết, không tự cấp quyền cho role thường, thu hồi liên node ở lần kiểm tiếp theo, bảo vệ ADMIN/system/bootstrap và rollback lịch sử. Không coi đây là kiểm thử xâm nhập toàn diện hoặc chứng minh phạm vi business đã hoàn thành. Nguồn quyền là mapping quyền chung; menu/thao tác cuối cùng vẫn dùng capabilities kết hợp policy/guard, scope còn phải gắn vào DAO nghiệp vụ.

@@ -88,14 +88,18 @@ public class AccessFeatureRepository extends BaseRepository {
         return read(connection -> {
             String username;
             boolean active;
+            boolean usable;
             try (
-                var user = connection.prepareStatement("SELECT username,active FROM auth_users WHERE id=? AND id<>0")
+                var user = connection.prepareStatement(
+                    "SELECT username,active,(active AND NOT activation_pending AND NOT must_change_password AND email_verified_at IS NOT NULL) AS usable FROM auth_users WHERE id=? AND id<>0"
+                )
             ) {
                 user.setLong(1, id);
                 try (var rows = user.executeQuery()) {
                     if (!rows.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
                     username = rows.getString(1);
                     active = rows.getBoolean(2);
+                    usable = rows.getBoolean(3);
                 }
             }
             Map<String, Set<String>> sources = new LinkedHashMap<>();
@@ -109,7 +113,8 @@ public class AccessFeatureRepository extends BaseRepository {
                     while (rows.next()) sources.put(rows.getString(1), Set.of(rows.getString(2).split(",")));
                 }
             }
-            return new EffectiveAccessResponse(id, username, active, active ? sources : Map.of());
+            // Mapping vẫn còn để quản trị sửa, nhưng không được mô tả là quyền hiệu lực khi user chưa sẵn sàng.
+            return new EffectiveAccessResponse(id, username, active, usable ? sources : Map.of());
         });
     }
 }

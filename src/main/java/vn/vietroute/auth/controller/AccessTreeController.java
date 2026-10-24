@@ -57,7 +57,7 @@ public class AccessTreeController extends BaseController {
     @GetMapping(Routes.ACCESS + Routes.ACCESS_EFFECTIVE)
     @Operation(
         summary = "Xem nguồn cấp quyền của user",
-        description = "ACCESS_READ; hợp các role active, tài khoản tắt không có quyền hiệu lực"
+        description = "ACCESS_READ; hợp các role active, không có quyền hiệu lực nếu tài khoản tắt, pending, mật khẩu tạm hoặc chưa xác minh email"
     )
     public ApiResult<EffectiveAccessResponse> effective(
         @Parameter(description = "ID bản ghi cần thao tác", example = "1") @PathVariable long id,

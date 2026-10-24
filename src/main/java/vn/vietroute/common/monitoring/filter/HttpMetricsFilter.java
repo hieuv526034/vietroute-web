@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 import org.springframework.web.filter.OncePerRequestFilter;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
+import vn.vietroute.common.monitoring.service.ApiJournalState;
 import vn.vietroute.common.monitoring.service.ApplicationMetrics;
 import vn.vietroute.common.web.filter.RequestTraceFilter;
 import vn.vietroute.common.web.routing.WebRoutePolicy;
@@ -58,6 +59,9 @@ public final class HttpMetricsFilter extends OncePerRequestFilter {
                 (last == 0 || now - last >= 1_000_000_000L) &&
                 lastLogNanos.compareAndSet(last, now)
             ) {
+                // Nhật ký DB có thể mất lượt ghi khi DB/slot lỗi: log mẫu vẫn giữ nhóm lỗi/SQLState đã lọc.
+                // Không thêm SQL, message driver, request body hoặc dữ liệu tài khoản vào log vận hành.
+                var journal = ApiJournalState.get(request);
                 LOG.info(
                     "event=http_completed route=" +
                         route +
@@ -68,7 +72,11 @@ public final class HttpMetricsFilter extends OncePerRequestFilter {
                         " durationMs=" +
                         elapsed / 1_000_000 +
                         " traceId=" +
-                        trace
+                        trace +
+                        " diagnostic=" +
+                        (journal == null ? "UNAVAILABLE" : journal.diagnostic) +
+                        " sqlState=" +
+                        (journal == null ? "" : journal.sqlState)
                 );
             }
         }
