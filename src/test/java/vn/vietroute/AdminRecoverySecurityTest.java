@@ -27,6 +27,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import vn.vietroute.auth.dto.response.AccessChangeStateResponse;
+import vn.vietroute.auth.dto.response.AccessPolicyResponse;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.auth.repository.AdminRecoveryRepository;
@@ -61,6 +62,22 @@ class AdminRecoverySecurityTest {
             child.refresh();
             var mvc = MockMvcBuilders.webAppContextSetup(child).apply(springSecurity()).build();
             var state = root.getBean(State.class);
+            // Policy cũ từ DB không được khóa trang cá nhân/cứu hộ khi admin mất mọi role.
+            root.getBean(AccessTestConfig.PolicyFixture.class).rules = List.of(
+                new AccessPolicyResponse(
+                    98,
+                    "MENU",
+                    "GET /account",
+                    "Chặn account cũ",
+                    "Legacy account deny",
+                    false,
+                    Set.of(),
+                    Set.of(),
+                    0,
+                    Instant.EPOCH,
+                    0
+                )
+            );
             var owner = auth(1, "admin", Set.of());
             String ownPage = mvc
                 .perform(get("/account").with(authentication(owner)))
@@ -68,6 +85,14 @@ class AdminRecoverySecurityTest {
                 .getResponse()
                 .getContentAsString(StandardCharsets.UTF_8);
             assertTrue(ownPage.contains("id=\"admin-recovery-open\""));
+            // Axios đã ghép baseURL theo context; endpoint không được lặp /demo ở cả base lẫn data attribute.
+            String nestedPage = mvc
+                .perform(get("/demo/account").contextPath("/demo").with(authentication(owner)))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+            assertTrue(nestedPage.contains("data-endpoint=\"/api/v1/auth/admin-recovery\""));
+            assertFalse(nestedPage.contains("data-endpoint=\"/demo/api/"));
             String otherPage = mvc
                 .perform(get("/account").with(authentication(auth(2, "otheradmin", Set.of(Role.ADMIN)))))
                 .andReturn()
@@ -76,6 +101,15 @@ class AdminRecoverySecurityTest {
             assertFalse(otherPage.contains("id=\"admin-recovery-open\""));
             String path = "/api/v1/auth/admin-recovery";
             String body = "{\"currentPassword\":\"" + PASSWORD + "\"}";
+            // Không có JWT/principal thì không được dùng đường cứu hộ, kể cả đã lấy được CSRF.
+            assertEquals(
+                401,
+                mvc
+                    .perform(post(path).with(csrf()).contentType("application/json").content(body))
+                    .andReturn()
+                    .getResponse()
+                    .getStatus()
+            );
             assertEquals(
                 403,
                 mvc

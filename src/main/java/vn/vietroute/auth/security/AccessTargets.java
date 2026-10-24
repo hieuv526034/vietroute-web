@@ -23,12 +23,13 @@ public final class AccessTargets {
 
     private AccessTargets() {}
 
-    /** Auth/quản trị quyền/metrics là đường cứu hộ; UI và API còn lại chỉ được siết thêm quyền. */
+    /** Auth/trang cá nhân/quản trị quyền/metrics là đường cứu hộ; UI và API còn lại chỉ được siết thêm quyền. */
     public static boolean configurable(String method, String path) {
         return (
             !path.startsWith(Routes.ACCESS) &&
             !path.startsWith(Routes.AUTH) &&
             !path.equals(Routes.ACCESS_PAGE) &&
+            !path.equals(Routes.ACCOUNT) &&
             !path.equals(Routes.METRICS) &&
             !publicRoute(method, path) &&
             (method.equals("GET") || path.startsWith(Routes.API))

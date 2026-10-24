@@ -6,7 +6,6 @@ login_body admin "$next_password"
 call 200 POST /api/v1/auth/login "$work/login.json" cookie
 token=$(field data.accessToken)
 recovery_original_hash=$(sql "SELECT md5(password_hash) FROM auth_users WHERE id=1")
-recovery_ordinary=$(sql "SELECT md5(COALESCE(string_agg(role_code||':'||permission_code,',' ORDER BY role_code,permission_code),'')) FROM auth_role_permissions WHERE role_code<>'ADMIN'")
 CI_PASSWORD="$next_password" python3 -c 'import json,os,sys;json.dump({"currentPassword":os.environ["CI_PASSWORD"]},sys.stdout)' > "$work/recovery.json"
 
 # ADMIN khác không được thấy nút hoặc gọi đường cứu hộ, và không được gỡ ADMIN khỏi bootstrap.
@@ -36,6 +35,7 @@ token=$(field data.accessToken)
 docker stop vietroute-auth-ci2 >/dev/null
 sql "DELETE FROM auth_user_roles WHERE role_code='ADMIN'; DELETE FROM auth_role_permissions WHERE role_code='ADMIN'; DELETE FROM auth_roles WHERE code='ADMIN'; DELETE FROM auth_role_permissions WHERE permission_code='CATALOG_DELETE'; DELETE FROM auth_permissions WHERE code='CATALOG_DELETE'; UPDATE auth_permissions SET active=false WHERE code='CATALOG_UPDATE'" >/dev/null
 recovery_damaged_ordinary=$(sql "SELECT md5(COALESCE(string_agg(role_code||':'||permission_code,',' ORDER BY role_code,permission_code),'')) FROM auth_role_permissions WHERE role_code<>'ADMIN'")
+sql "INSERT INTO auth_access_policies(kind,target,name_vi,name_en,enabled,required_permissions,allowed_roles) VALUES ('MENU','GET /account','Chặn account cũ','Legacy account deny',false,'','')" >/dev/null
 call 403 GET /api/v1/admin/access/tree '' bearer
 call 200 GET /account '' bearer
 grep -q 'id="admin-recovery-open"' "$result"
