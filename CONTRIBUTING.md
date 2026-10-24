@@ -25,6 +25,29 @@ git config --get user.email
 
 Ba thành viên còn lại dùng tên hiển thị và email của chính mình theo bảng phân công. `user.name` là tên tác giả hiển thị, không bắt buộc trùng username GitHub. Không đổi lần lượt cấu hình trên một máy để tạo đóng góp giả cho người khác.
 
+### Kiểm định danh trước khi commit và trước khi merge
+
+Trên clone của chính người đang thực hiện, nên bật `git config --local user.useConfigOnly true` để Git không tự suy tên/email khi thiếu cấu hình. Mỗi phiên kiểm định danh hiệu lực, kể cả trường hợp env hoặc cấu hình khác ghi đè `user.email`:
+
+```powershell
+git branch --show-current
+git var GIT_AUTHOR_IDENT
+git var GIT_COMMITTER_IDENT
+# Sau khi commit, kiểm metadata thực sự đã lưu trước khi push.
+git log -1 --format=fuller
+```
+
+Đối chiếu email với bảng thành viên và tiền tố nhánh với người thực hiện. Git lưu tác giả, còn tài khoản push/PR là thông tin xác thực riêng; đổi tên nhánh hoặc người bấm merge không sửa tác giả. Thành viên phải tự xác minh email trên GitHub và dùng quyền truy cập của mình. Các lệnh này không xác minh chủ sở hữu tài khoản hoặc thay thế chữ ký commit; lượt rà soát trên máy Hieu không chứng minh máy các thành viên đã được cấu hình.
+
+Reviewer xem commit của PR, không chỉ tên người mở PR. Sau khi fetch, có thể kiểm chính xác các commit mới so với nền đã lấy:
+
+```powershell
+git fetch origin
+git log origin/main..HEAD --format="%h | %an <%ae> | %cn <%ce> | %s"
+```
+
+Nếu phát hiện email sai, xác minh cùng người thực hiện trước khi merge; không gán lại code nền tảng cho thành viên theo kế hoạch. AI hỗ trợ không làm thay đổi người thực sự phụ trách/kiểm nghiệm; chỉ ghi đồng tác giả khi có đóng góp thật theo mục 6.
+
 ## 3. Quy trình cho từng chức năng
 
 Ví dụ thành viên phụ trách tracking làm màn hình theo dõi:
@@ -89,6 +112,8 @@ Squash/rebase có thể dùng khi cả nhóm hiểu rõ ảnh hưởng, nhưng k
 Commit trên nhánh chức năng đã có tác giả, nhưng để được tính vào một số thống kê Contributors/contribution graph, commit thường cần có mặt trên nhánh mặc định `main` và đáp ứng điều kiện email/tài khoản của GitHub. Dữ liệu thống kê có thể cập nhật chậm. Thành viên được mời vào repo mà chưa thực hiện công việc sẽ chưa tự có commit.
 
 ## 5. Ghi nhận theo phân công
+
+Mỗi PR nghiệp vụ ghi người thực hiện thực tế, mã việc và phần phối hợp, giữ commit gốc qua merge commit. Khi bàn giao, người phụ trách bổ sung ngay trong PR: luồng UI → controller → service/transaction → SQL, quyền và phạm vi dữ liệu, các ca thành công/từ chối/rollback đã kiểm, quyết định và phần còn thiếu. Dẫn đến file/method/migration liên quan để sau này tự ôn và trình bày phần mình; không tạo bản sao toàn bộ source hoặc tài liệu cá nhân ngoài nguồn chung. Người review có thể yêu cầu giải thích một ca sai quyền hoặc một transaction của phần đó. Số commit/dòng code không thay thế mức hiểu và đầu ra đã nghiệm thu.
 
 Mỗi nhiệm vụ có một GitHub Issue với mã module, người thực hiện thực tế, điều kiện nghiệm thu và PR liên quan. Dùng tiền tố `common`, `auth`, `catalog`, `carrier`, `network`, `booking`, `tracking` trong Issue/nhánh/commit để truy vết, không dùng tiền tố để giả định tác giả. Đọc quy ước base và phân công mới trong `docs/` trước khi code.
 
