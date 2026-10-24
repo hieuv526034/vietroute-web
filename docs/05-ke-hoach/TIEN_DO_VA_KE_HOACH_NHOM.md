@@ -2,7 +2,7 @@
 
 ## ACCESS22 — Rà soát cấu hình cố định và tổng hợp bảng phân quyền
 
-hieuv526034, nhánh `hieuv526034/access22-tong-hop-cau-hinh-quyen`, đối chiếu main `bfccc95` sau PR #96 ngày 24/10/2026. Phạm vi là review/tổng hợp, không đổi hành vi quyền hoặc schema. [Bản đồ bảng và ranh giới cấu hình](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#bản-đồ-bảng-và-ranh-giới-cấu-hình-phân-quyền) tổng hợp 11 bảng chuyên trách + auth_users, hai bảng bảo mật liên quan, khóa/quan hệ và phần DB/UI so với phần source/annotation/env. Authority user lấy mapping DB, không bị giới hạn ở Role/Permission.values(); cây chức năng/action, public/adminOnly, ADMIN/system/bootstrap và giới hạn payload vẫn là hợp đồng server cố định.
+hieuv526034, nhánh `hieuv526034/access22-tong-hop-cau-hinh-quyen`, [PR #97](https://github.com/hieuv526034/vietroute-web/pull/97), commit tổng hợp `f8d1a47`, đối chiếu main `bfccc95` sau PR #96 ngày 24/10/2026. Phạm vi là review/tổng hợp, không đổi hành vi quyền hoặc schema. [Bản đồ bảng và ranh giới cấu hình](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#bản-đồ-bảng-và-ranh-giới-cấu-hình-phân-quyền) tổng hợp 11 bảng chuyên trách + auth_users, hai bảng bảo mật liên quan, khóa/quan hệ và phần DB/UI so với phần source/annotation/env. Authority user lấy mapping DB, không bị giới hạn ở Role/Permission.values(); cây chức năng/action, public/adminOnly, ADMIN/system/bootstrap và giới hạn payload vẫn là hợp đồng server cố định.
 
 Phát hiện cần xử lý tiếp, không đánh dấu đã sửa:
 
