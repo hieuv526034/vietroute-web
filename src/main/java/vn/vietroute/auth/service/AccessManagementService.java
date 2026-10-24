@@ -142,7 +142,7 @@ public class AccessManagementService {
                 .stream()
                 .filter(item -> item.code().equals(code))
                 .findFirst()
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.STALE_VERSION));
             var permissions = access
                 .role(connection, Role.valueOf(code))
                 .permissions()
@@ -228,7 +228,7 @@ public class AccessManagementService {
                 .stream()
                 .filter(item -> item.id() == id)
                 .findFirst()
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.STALE_VERSION));
             registry.deletePolicy(connection, id, version);
             changes.record(
                 connection,
