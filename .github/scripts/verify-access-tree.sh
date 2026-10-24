@@ -34,7 +34,9 @@ call 403 PUT "/api/v1/admin/catalogs/$tree_catalog" "$work/tree-catalog.json" be
 call 403 DELETE "/api/v1/admin/catalogs/$tree_catalog" "$work/tree-catalog.json" bearer
 assert_code AUTH003
 token="$tree_admin_token"
-printf '%s\n' '{"roles":["ENTRY_CI","ALT_CI"],"version":1}' > "$work/tree-roles.json"
+# Đăng nhập cập nhật audit/bộ đếm và version user; đọc version hiện hành thay vì suy từ số lần gán role.
+tree_user_version=$(sql "SELECT version FROM auth_users WHERE id=$tree_user")
+printf '{"roles":["ENTRY_CI","ALT_CI"],"version":%s}\n' "$tree_user_version" > "$work/tree-roles.json"
 call 200 PUT "/api/v1/admin/access/users/$tree_user/roles" "$work/tree-roles.json" bearer
 printf '%s\n' '{"permissions":[],"version":1}' > "$work/tree-revoke.json"
 call 200 PUT /api/v1/admin/access/roles/ENTRY_CI/permissions "$work/tree-revoke.json" bearer
@@ -115,7 +117,8 @@ call 403 PUT "/api/v1/admin/access/users/$tree_user/roles" "$work/tree-roles.jso
 call 403 PUT "/api/v1/admin/access/users/$tree_manager/roles" "$work/tree-roles.json" bearer
 call 403 PUT /api/v1/admin/access/users/1/roles "$work/tree-roles.json" bearer
 call 403 PUT /api/v1/admin/access/users/0/roles "$work/tree-roles.json" bearer
-printf '%s\n' '{"roles":["TARGET_CI"],"version":2}' > "$work/tree-roles.json"
+tree_user_version=$(sql "SELECT version FROM auth_users WHERE id=$tree_user")
+printf '{"roles":["TARGET_CI"],"version":%s}\n' "$tree_user_version" > "$work/tree-roles.json"
 call 200 PUT "/api/v1/admin/access/users/$tree_user/roles" "$work/tree-roles.json" bearer
 [[ "$(field data.updatedBy)" == "$tree_manager" ]]
 [[ "$(sql "SELECT count(*) FROM auth_role_permissions WHERE role_code='TARGET_CI' AND permission_code IN ('CATALOG_VIEW','CATALOG_CREATE')")" == 2 ]]
