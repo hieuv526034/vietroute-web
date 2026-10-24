@@ -2,6 +2,28 @@
 
 Cập nhật 24/10/2026, đối chiếu main tại `7c53bf6` sau [PR #92](https://github.com/hieuv526034/vietroute-web/pull/92). Phạm vi là source nền tảng và UI quản trị trên Spring MVC/JDBC hiện tại. Đọc cùng [quản trị hệ thống](../04-van-hanh/QUAN_TRI_HE_THONG.md), [tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) và [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md). Kết quả trên nhánh chức năng chỉ trở thành bản bàn giao main sau khi PR qua CI và merge. Các mục bằng chứng phía dưới giữ mốc lịch sử; hợp đồng bootstrap hiện tại theo AUTH17, schema theo AUTH19 trong [chuyên đề phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md).
 
+## Đánh giá mức sẵn sàng cho nghiệp vụ — 24/10/2026
+
+Đối chiếu source `0a93075` sau PR #93: nền phân quyền đủ để bắt đầu triển khai nghiệp vụ theo phụ thuộc. Thiết kế phù hợp dự án nhiều nhà xe: RBAC nhiều role kết hợp quyền hành động và kiểm quan hệ/phạm vi dữ liệu. Chưa có căn cứ cam kết mọi nghiệp vụ an toàn hoặc hạ tầng chịu tải cao khi các DAO nghiệp vụ chưa được viết. Tiêu chí đối chiếu là quyền tối thiểu, mặc định từ chối, kiểm trên server mỗi lần và kiểm quyền trên bản ghi theo [OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html); đây không phải chứng nhận tuân thủ hay kiểm thử xâm nhập đầy đủ.
+
+| Khía cạnh | Bằng chứng trong source | Đánh giá và giới hạn |
+|---|---|---|
+| Quyền chức năng | `DatabaseAccessGuard`, `AccessOperation`, `AccessPolicyInterceptor`, method security ở cả root/servlet | Kiểm DB hiện hành, không tin role JWT cũ; DB lỗi không dùng lại quyền cũ. Thu hồi áp dụng ở lần kiểm kế tiếp, không hủy giao dịch đang chạy |
+| Mở rộng module | `AccessResource`/`AccessOperation`, HTTP `AccessFunction`, inventory/sync và nhãn vi/en | Thêm resource/action mà không viết thêm biểu thức bảo mật riêng; vẫn phải khai báo menu/route và chủ động gán role thường. Không suy quyền tự động từ tên method |
+| Dữ liệu nhiều nhà xe | `DataScopeGuard`, V015, FK scoped role thuộc global role | Nền đã có; guard không tự thêm điều kiện SQL. Business phải kiểm ID + scope, cha/con, owner và tài xế được giao trên cùng connection/transaction |
+| Quản trị và truy vết | Giới hạn tập quyền ủy quyền, version, bảo vệ ADMIN/bootstrap, `AccessChangeService` | Lịch sử mutation cùng transaction, có retention; không phải nhật ký bất biến và không ghi mọi SQL trực tiếp |
+| Trải nghiệm quản trị | Cây chức năng, preview user đích, picker, tab/modal, trạng thái loading/lỗi | Đủ dùng và có cấu trúc; picker/scope còn cần nghiệm thu trực quan. Trang tải nhiều dữ liệu, chưa có số đo staging đủ để cam kết nhanh ở quy mô lớn |
+
+Các điểm cần xử lý theo thứ tự:
+
+1. **Trước khi nhóm merge nghiệp vụ:** GitHub API ngày 24/10 trả `main.protected=false`, danh sách ruleset rỗng. Cần cấu hình bảo vệ `main`, yêu cầu PR/review và check phù hợp, chặn force push/xóa nhánh. Workflow có trong repo chưa cưỡng chế quy trình. Khi chọn required checks, xử lý các workflow lọc theo path để PR chỉ sửa docs/test không bị chờ một check không chạy. Lượt rà soát chỉ đọc cấu hình, chưa thay quyền/quy tắc GitHub.
+2. **Trước nghiệm thu CARRIER01/AUTH03:** chốt FK nhà xe → scope duy nhất, quan hệ tài khoản/hồ sơ/membership và hợp đồng OPERATOR cấp DRIVER. Role DRIVER không chứng minh thuộc nhà xe hoặc được giao chuyến. Module đầu tiên phải kiểm hai nhà xe, đổi ID, sai cha/con, scope/membership tắt, quyền vừa thu hồi và rollback trên PostgreSQL cách ly.
+3. **Trước dùng tài khoản thường:** nghiệm thu Gmail/inbox thật, self-service/mail/worker và luồng xác minh/đổi mật khẩu bằng môi trường riêng. Không nới guard để vượt provider chưa cấu hình.
+4. **Trước cam kết vận hành:** đo tải staging với mạng/DB gần môi trường dùng thật; tối ưu tải theo tab và truy vấn có số đo. Giữ kiểm DB/thu hồi đúng; không dùng cache authority cũ để làm trang nhanh hơn. Quota role/permission/scope hiện hữu là giới hạn có chủ đích, cần đo dung lượng trước khi nâng.
+5. **Theo rủi ro triển khai sau này:** đánh giá MFA cho quản trị, thời hạn lưu/xuất lịch sử, cảnh báo và khôi phục backup. Đây là phần nâng cấp/vận hành cần thiết kế khi có yêu cầu; không phải lý do viết lại RBAC hoặc đưa thêm framework lúc này.
+
+Điểm bắt đầu cụ thể của từng thành viên nằm tại [thứ tự triển khai](TIEN_DO_VA_KE_HOACH_NHOM.md#6-thứ-tự-bắt-đầu-và-điểm-bàn-giao). Anh có thể nghiệm thu catalog và chuẩn bị CARRIER01 cùng Hieu; Hien có thể làm LOCATION01 sau chốt schema/quyền; Bang chuẩn bị hợp đồng trạng thái/snapshot/lịch chồng trước TRIP01/BOOKING01; Hieu chốt scope/AUTH03 và hợp đồng khóa/chỗ. Chưa mở đồng thời toàn bộ CRUD khi phụ thuộc chưa có.
+
 ## Các màn và chức năng đã có trong source
 
 | Phần | Đầu ra dùng được | Giới hạn còn lại |

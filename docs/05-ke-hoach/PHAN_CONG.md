@@ -79,5 +79,6 @@ Yêu cầu ngày 23/10: ưu tiên hoàn thiện nền tảng trước nghiệp v
 - Tên module: `business/<module>/{controller,dto/request,dto/response,entity,repository,service}`; auth và common là hai phần riêng.
 - Mỗi task có PR nhỏ, API/Swagger, hướng dẫn UI, migration mới nếu cần, ca thành công và lỗi thực tế. Comment/Javadoc tiếng Việt giải thích luồng và transaction.
 - Phần nền tảng hiện tại ghi dưới định danh hieuv526034 đã cấu hình. Khi thành viên tự triển khai, họ commit bằng tài khoản/email của mình; bảng phân công không phải căn cứ tạo đóng góp giả.
+- Trước commit/push và khi review PR, kiểm định danh hiệu lực và author thực tế theo [quy trình Git](../../CONTRIBUTING.md#kiểm-định-danh-trước-khi-commit-và-trước-khi-merge). PR nghiệp vụ phải dẫn luồng code/SQL, quyền/scope và ca lỗi do người phụ trách kiểm để họ tự ôn, giải thích và bảo trì phần mình.
 - Hieu review transaction/schema/security/Maps; Bang review các hợp đồng booking/chuyến; Anh và Hien review UI/validation giao tiếp trực tiếp.
 - Báo cáo/slide: mỗi người cung cấp ảnh, luồng, SQL và ca kiểm thử của phần mình; Hieu tổng hợp nội dung tích hợp, không ghi mọi nghiệp vụ thành đóng góp cá nhân của người tổng hợp.
