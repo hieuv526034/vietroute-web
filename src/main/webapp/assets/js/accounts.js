@@ -8,6 +8,7 @@
         forms = window.VietRouteForms;
     const node = (id) => document.getElementById(id);
     const labels = node('accounts-labels').dataset;
+    const time = (value) => new Date(value).toLocaleString(document.documentElement.lang === 'en' ? 'en-GB' : 'vi-VN');
     const base = '/api/v1/admin/accounts',
         access = '/api/v1/admin/access';
     const get = async (path, params) => (await app.api.get(path, { params, timeout: 10000 })).data.data;
@@ -86,7 +87,14 @@
     };
     const status = (user) => (user.activationPending ? labels.pending : user.active ? labels.active : labels.inactive);
     const load = async (query = pager.query) => {
-        const page = await tables.readPage((params) => get(base, { ...applied, ...params }), query);
+        const page = await tables.readPage(
+            (params) =>
+                get(base, {
+                    ...Object.fromEntries(Object.entries(applied).filter(([, value]) => value !== '')),
+                    ...params,
+                }),
+            query,
+        );
         const body = node('accounts-body');
         body.replaceChildren();
         for (const user of page.content) {
@@ -102,9 +110,7 @@
             state.append(text('span', status(user), `account-badge ${user.active ? 'is-active' : 'is-inactive'}`));
             if (user.mustChangePassword) state.append(text('small', labels.passwordPending, 'd-block muted'));
             if (user.lockedUntil && Date.parse(user.lockedUntil) > Date.now())
-                state.append(
-                    text('small', `${labels.locked} ${new Date(user.lockedUntil).toLocaleString()}`, 'd-block muted'),
-                );
+                state.append(text('small', `${labels.locked} ${time(user.lockedUntil)}`, 'd-block muted'));
             const actions = text('td', '', 'table-actions'),
                 buttons = text('div', '', 'row-actions');
             buttons.append(
@@ -120,7 +126,7 @@
                     tables.actionButton(`${labels.assign}: ${user.username}`, 'assign', () => openEditor(user), false),
                 );
             actions.append(buttons);
-            row.append(identity, role, state, text('td', new Date(user.updatedAt).toLocaleString()), actions);
+            row.append(identity, role, state, text('td', time(user.updatedAt)), actions);
             body.append(row);
         }
         if (!page.content.length) {

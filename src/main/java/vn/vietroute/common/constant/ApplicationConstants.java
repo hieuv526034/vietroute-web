@@ -271,6 +271,8 @@ public final class ApplicationConstants {
         public static final String ENV_KEY = "[A-Z][A-Z0-9_]*";
 
         public static final String ROLE_CODE = "[A-Z][A-Z0-9_]{1,23}";
+
+        public static final String ROLE_SEARCH = "(?:" + ROLE_CODE + ")?";
         public static final String PERMISSION_CODE = "[A-Z][A-Z0-9_]{1,38}_[A-Z]+";
 
         public static final String BUSINESS_CODE = "^[A-Z][A-Z0-9]{2,39}$";

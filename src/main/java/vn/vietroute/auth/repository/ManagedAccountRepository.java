@@ -35,7 +35,7 @@ public class ManagedAccountRepository extends BaseRepository {
     public PageResponse<ManagedAccountResponse> page(ManagedAccountSearchRequest page) {
         return read(connection -> {
             String where = " FROM auth_users u WHERE u.id<>? AND lower(u.username) LIKE ?";
-            if (page.getRole() != null) where +=
+            if (page.getRole() != null && !page.getRole().isBlank()) where +=
                 " AND EXISTS(SELECT 1 FROM auth_user_roles ur WHERE ur.user_id=u.id AND ur.role_code=?)";
             if (page.getActive() != null) where += " AND u.active=?";
             long total;
@@ -91,7 +91,7 @@ public class ManagedAccountRepository extends BaseRepository {
         query.setLong(1, SystemActor.ID);
         query.setString(2, page.getUsername().toLowerCase(Locale.ROOT) + "%");
         int index = 3;
-        if (page.getRole() != null) query.setString(index++, page.getRole().name());
+        if (page.getRole() != null && !page.getRole().isBlank()) query.setString(index++, page.getRole());
         if (page.getActive() != null) query.setBoolean(index++, page.getActive());
         return index;
     }

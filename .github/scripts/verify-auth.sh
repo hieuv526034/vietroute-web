@@ -726,7 +726,7 @@ docker stop vietroute-auth-ci2 >/dev/null
 scrape
 if curl --fail --silent --max-time 3 -H "Authorization: Bearer $metrics_token" http://127.0.0.1:18081/internal/metrics >/dev/null 2>&1; then exit 1; fi
 source "$(dirname "${BASH_SOURCE[0]}")/verify-account.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/verify-managed-accounts.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-foundation.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-access-tree.sh"
-source "$(dirname "${BASH_SOURCE[0]}")/verify-managed-accounts.sh"
 printf 'Function permissions, durable workers, per-node quota, metrics isolation and DB/node recovery checks passed.\n'

@@ -1,10 +1,10 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
-## ACCESS05 — Đang kiểm trước PR
+## ACCESS05 — Đang kiểm PR #56
 
-hieuv526034, nhánh `hieuv526034/access05-tai-khoan-va-cay-quyen`, nền main `3b5b933`. Đã bổ sung khu tài khoản admin cấp DRIVER/CUSTOMER/nhiều role, khóa/mở + revoke JWT/challenge, preview capabilities theo policy user đích; ma trận menu/hành động và lối tạo role trực tiếp. Mật khẩu tạm bắt đổi trước chức năng, kể cả bootstrap còn flag. Không migration mới; không ghi Neon, không giả membership nhà xe. Chi tiết tại [thiết kế](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#quản-trị-tài-khoản-và-ma-trận-menu--access05).
+[PR #56](https://github.com/hieuv526034/vietroute-web/pull/56), [Issue #55](https://github.com/hieuv526034/vietroute-web/issues/55), hieuv526034, nhánh `hieuv526034/access05-tai-khoan-va-cay-quyen`, nền main `3b5b933`. Đã bổ sung khu tài khoản admin cấp DRIVER/CUSTOMER/nhiều role, khóa/mở + revoke JWT/challenge, preview capabilities theo policy user đích; ma trận menu/hành động và lối tạo role trực tiếp. Mật khẩu tạm bắt đổi trước chức năng, kể cả bootstrap còn flag. Không migration mới; không ghi Neon, không giả membership nhà xe. Chi tiết tại [thiết kế](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#quản-trị-tài-khoản-và-ma-trận-menu--access05).
 
-Đạt 124 Java/24 Node, npm ci/format/format:check/rules/docs (269 link, 34 tài liệu), actionlint/bash syntax/diff. UI fixture HTML thật kiểm desktop/390px: dấu bắt buộc, nhiều role, loading chặn Escape, 409 giữ draft, lọc nhóm ma trận/gợi VIEW và console sạch; ảnh ở chuyên đề UI. Còn Docker/PostgreSQL CI đúng head rồi PR/merge; chưa ghi Đã có trên main. SCOPE01/AUTH03 hồ sơ/membership theo nhà xe vẫn còn, không coi DRIVER là scope.
+Đạt 125 Java/24 Node, npm ci/format/format:check/rules/docs (272 link, 34 tài liệu), actionlint/bash syntax/diff. UI fixture HTML thật kiểm desktop/390px: dấu bắt buộc, nhiều role, loading chặn Escape, 409 giữ draft, lọc nhóm ma trận/gợi VIEW và console sạch; ảnh ở chuyên đề UI. CI head đầu Docker build đạt và toàn bộ bộ kiểm nền/cây đạt, riêng tạo DRIVER bị từ chối đúng vì fixture Foundation đã xóa role này. Đã tách bộ kiểm tài khoản chạy trước tombstone, tự tạo role kiểm riêng và gỡ liên kết DRIVER qua API để không làm yếu guard/tombstone. Còn Docker/PostgreSQL CI đúng head mới rồi merge; chưa ghi Đã có trên main. SCOPE01/AUTH03 hồ sơ/membership theo nhà xe vẫn còn, không coi DRIVER là scope.
 
 ## ACCESS04 — Đã có trên main
 

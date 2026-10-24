@@ -23,6 +23,8 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.traffic.TrafficSettings;
+import vn.vietroute.common.constant.ApplicationConstants.Env;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.monitoring.service.ApiJournalProjection;
 import vn.vietroute.common.traffic.ClientAddressResolver;
 import vn.vietroute.common.traffic.MemoryRateLimitStore;
@@ -97,6 +99,28 @@ class TrafficGuardTest {
         request.removeHeader("X-Forwarded-For");
         request.addHeader("X-Forwarded-For", "198.51.100.1, 192.0.2.8");
         assertEquals("192.0.2.8", new ClientAddressResolver("10.0.0.0/8").resolve(request));
+    }
+
+    /** Duyệt/tìm trang không chiếm quota BCrypt; POST tạo tài khoản vẫn bị chặn khi vượt ngân sách credential. */
+    @Test
+    void accountReadsDoNotSpendCredentialQuotaButCreatesDo() throws Exception {
+        var guard = filter(
+            Map.of(Env.RATE_LOGINS.key(), "1", Env.RATE_REQUESTS.key(), "100"),
+            new MemoryRateLimitStore(Clock.systemUTC(), 100)
+        );
+        for (int index = 0; index < 3; index++) {
+            var response = new MockHttpServletResponse();
+            guard.doFilter(new MockHttpServletRequest("GET", Routes.ACCOUNTS), response, (req, res) -> {});
+            assertEquals(200, response.getStatus());
+        }
+        for (int index = 0; index < 2; index++) {
+            var response = new MockHttpServletResponse();
+            guard.doFilter(new MockHttpServletRequest("POST", Routes.ACCOUNTS), response, (req, res) -> {});
+            assertEquals(index == 0 ? 200 : 429, response.getStatus());
+        }
+        var readAfterCreate = new MockHttpServletResponse();
+        guard.doFilter(new MockHttpServletRequest("GET", Routes.ACCOUNTS), readAfterCreate, (req, res) -> {});
+        assertEquals(200, readAfterCreate.getStatus());
     }
 
     @Test

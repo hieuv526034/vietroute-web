@@ -31,6 +31,7 @@ import vn.vietroute.auth.dto.request.ManagedAccountCreateRequest;
 import vn.vietroute.auth.dto.request.ManagedAccountSearchRequest;
 import vn.vietroute.auth.dto.response.AccessPolicyResponse;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
+import vn.vietroute.auth.dto.response.ManagedAccountResponse;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
@@ -40,6 +41,7 @@ import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.AccessManagementService;
 import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.auth.service.ManagedAccountService;
+import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
@@ -57,7 +59,7 @@ class ManagedAccountSecurityTest {
         ) {
             var web = new MockServletContext("src/main/webapp", new FileSystemResourceLoader());
             root.setServletContext(web);
-            root.register(RootConfig.class, AccessTestConfig.class, JournalTestConfig.class);
+            root.register(RootConfig.class, AccessTestConfig.class, JournalTestConfig.class, AccountPages.class);
             root.refresh();
             child.setServletContext(web);
             child.setParent(root);
@@ -114,6 +116,26 @@ class ManagedAccountSecurityTest {
                 root.getBean(ManagedAccountService.class).page(new ManagedAccountSearchRequest())
             );
             SecurityContextHolder.clearContext();
+            var adminRead = actor("ROLE_ADMIN", "ACCOUNT_READ");
+            for (String role : List.of("", "DRIVER"))
+                assertEquals(
+                    200,
+                    mvc
+                        .perform(
+                            get(Routes.ACCOUNTS).param("role", role).param("active", "").with(authentication(adminRead))
+                        )
+                        .andReturn()
+                        .getResponse()
+                        .getStatus()
+                );
+            assertEquals(
+                400,
+                mvc
+                    .perform(get(Routes.ACCOUNTS).param("role", "bad!").with(authentication(adminRead)))
+                    .andReturn()
+                    .getResponse()
+                    .getStatus()
+            );
             var adminView = actor("ROLE_ADMIN", "ACCOUNT_VIEW");
             var html = mvc
                 .perform(get(Routes.ACCOUNTS_PAGE).with(authentication(adminView)))
@@ -347,6 +369,22 @@ class ManagedAccountSecurityTest {
             .createdBy(0L)
             .updatedBy(0L)
             .build();
+    }
+
+    /** Chỉ thay DAO trang, giữ binding và toàn bộ guard thật cho bộ lọc rỗng/không hợp lệ. */
+    @Configuration
+    static class AccountPages {
+
+        @Bean
+        @Primary
+        ManagedAccountRepository accountPages() {
+            return new ManagedAccountRepository(null) {
+                @Override
+                public PageResponse<ManagedAccountResponse> page(ManagedAccountSearchRequest page) {
+                    return PageResponse.of(List.of(), page, 0);
+                }
+            };
+        }
     }
 
     @Configuration

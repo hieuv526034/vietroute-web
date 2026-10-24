@@ -179,6 +179,6 @@ Permission là value object JSON string từ registry; constants/values() chỉ 
 | GET `/api/v1/admin/accounts/{id}/access` | ADMIN + ACCOUNT_READ | metadata và capabilities đã xét policy user đích; không token/credential |
 | PUT `/api/v1/admin/access/users/{id}/roles` | ACCESS_ASSIGN hoặc ACCESS_WRITE | Cơ chế gán hiện có: scope ủy quyền, version, chống tự sửa/nâng quyền; JWT cũ bị thu hồi |
 
-Mọi payload/tham số/projection được mô tả OpenAPI. ACCOUNT_* khai báo tập trung tại AccessConstants và Permission; sync enabled bổ sung registry/ADMIN khi startup. Không cần thay migration hiện hữu. POST cấp tài khoản và đổi mật khẩu đi qua quota/semaphore credential để giới hạn BCrypt đồng thời.
+Mọi payload/tham số/projection được mô tả OpenAPI. ACCOUNT_* khai báo tập trung tại AccessConstants và Permission; sync enabled bổ sung registry/ADMIN khi startup. Không cần thay migration hiện hữu. POST cấp tài khoản và đổi mật khẩu đi qua quota/semaphore credential để giới hạn BCrypt đồng thời; GET tìm tài khoản chỉ dùng quota request thông thường, không làm cạn quota đăng nhập.
 
 AUTH011 (403) yêu cầu đổi mật khẩu tạm. Filter xác minh token/DB rồi bỏ toàn bộ authority trong phiên hạn chế; chỉ mở GET hồ sơ/me, capabilities rỗng, đổi mật khẩu/logout, trang account và dữ liệu công khai. Quy tắc bắt đổi áp dụng cả bootstrap đang mang must_change_password=true; đổi xong mới dùng chức năng. Đừng hiểu accessToken nhận từ login mật khẩu tạm là đã có quyền quản trị. Nhật ký mặc định bỏ payload/response các DTO quản trị mới, không thêm password/PII vào projection.
