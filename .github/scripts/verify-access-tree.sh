@@ -47,7 +47,8 @@ call 200 POST /api/v1/auth/login "$work/login.json" cookie
 tree_user_token=$(field data.accessToken)
 token="$tree_user_token"
 call 200 GET /admin '' bearer
-docker start vietroute-auth-ci2 >/dev/null
+# Bộ kiểm account trước đó đã xóa node thứ hai; tạo lại node cùng bản trên DB CI để kiểm thu hồi quyền chéo node.
+start_app vietroute-auth-ci2 18081
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors --retry-connrefused --max-time 5 http://127.0.0.1:18081/health >/dev/null
 tree_base="$base"; base=http://127.0.0.1:18081
 call 200 GET /api/v1/auth/capabilities '' bearer
