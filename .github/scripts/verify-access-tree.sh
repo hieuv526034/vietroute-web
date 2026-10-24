@@ -60,6 +60,18 @@ python3 -c 'import json,sys; assert not next(x for x in json.load(open(sys.argv[
 base="$tree_base"; token="$tree_admin_token"
 docker stop vietroute-auth-ci2 >/dev/null
 
+# Quyền giám sát của role mới không mở thêm API cấu hình; quyền hiệu lực thay ngay khi JWT còn hạn.
+printf '%s\n' '{"permissions":["SYSTEM_VIEW","SYSTEM_READ"],"version":2}' > "$work/tree-monitor.json"
+call 200 PUT /api/v1/admin/access/roles/ALT_CI/permissions "$work/tree-monitor.json" bearer
+token="$tree_user_token"
+call 200 GET /api/v1/admin/system/runtime '' bearer
+call 403 GET /api/v1/admin/system/configuration '' bearer
+call 200 GET /api/v1/auth/capabilities '' bearer
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert next(x for x in d if x["function"]=="MONITORING")["view"]; assert not next(x for x in d if x["function"]=="CONFIGURATION")["actions"]' "$result"
+token="$tree_admin_token"
+printf '%s\n' '{"permissions":[],"version":3}' > "$work/tree-monitor-revoke.json"
+call 200 PUT /api/v1/admin/access/roles/ALT_CI/permissions "$work/tree-monitor-revoke.json" bearer
+
 # Quyền/role sau này bị tắt không được dùng làm đường tự kích hoạt nâng quyền.
 call 201 POST /api/v1/admin/access/registry/permissions/EXTRA_READ "$work/tree-registry.json" bearer
 printf '%s\n' '{"permissions":["SYSTEM_READ"],"version":0}' > "$work/tree-power.json"
@@ -73,6 +85,13 @@ call 200 PUT "/api/v1/admin/access/users/$tree_manager/roles" "$work/tree-roles.
 printf '%s\n' '{"nameVi":"Tạm tắt","nameEn":"Disabled","active":false,"version":0}' > "$work/tree-disable.json"
 call 200 PUT /api/v1/admin/access/registry/roles/POWER_CI "$work/tree-disable.json" bearer
 call 200 PUT /api/v1/admin/access/registry/permissions/EXTRA_READ "$work/tree-disable.json" bearer
+# Chuẩn bị mapping khi role tắt, không cần bật quyền cũ trong một cửa sổ trước khi sửa.
+printf '%s\n' '{"permissions":["SYSTEM_READ"],"version":1}' > "$work/tree-power-edit.json"
+call 200 PUT /api/v1/admin/access/roles/POWER_CI/permissions "$work/tree-power-edit.json" bearer
+[[ "$(field data.active)" == False ]]
+[[ "$(field data.version)" == 2 ]]
+call 200 GET /api/v1/admin/access/roles '' bearer
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; p=next(x for x in d if x["role"]=="POWER_CI"); assert not p["active"] and p["assignedUsers"]==1 and p["version"]==2; a=next(x for x in d if x["role"]=="ADMIN"); assert "CONFIGURATION_READ" in a["permissions"]' "$result"
 login_body treemanager "$next_password"
 call 200 POST /api/v1/auth/login "$work/login.json" cookie
 token=$(field data.accessToken)
