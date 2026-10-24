@@ -11,7 +11,6 @@ import java.time.Instant;
 import java.util.Locale;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.MessageSource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import vn.vietroute.auth.config.AccountSettings;
@@ -68,7 +67,7 @@ public class AccountLifecycleService {
 
     private final ObjectMapper json;
 
-    private final MessageSource messages;
+    private final AccountMailComposer mailComposer;
 
     private final Clock clock;
 
@@ -214,12 +213,7 @@ public class AccountLifecycleService {
         if (
             !accounts.challenge(connection, user.getId(), purpose, secrets.hash(token), user.getTokenVersion(), expires)
         ) return;
-        String key = purpose.equals("RESET") ? "mail.account.reset" : "mail.account.activate";
-        MailPayload payload = new MailPayload(
-            user.getEmail(),
-            messages.getMessage(key + ".subject", null, locale),
-            messages.getMessage(key + ".text", new Object[] { token }, locale)
-        );
+        MailPayload payload = mailComposer.compose(user.getEmail(), purpose, token, locale);
         try {
             AccountMailPayload protectedPayload = new AccountMailPayload(
                 secrets.encrypt(json.writeValueAsString(payload)),

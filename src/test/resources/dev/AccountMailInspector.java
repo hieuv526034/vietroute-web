@@ -21,6 +21,9 @@ public final class AccountMailInspector {
         var found = Pattern.compile("(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])").matcher(payload.text());
         if (!found.find()) throw new IllegalStateException("CI mail thiếu mã xác minh");
         String token = found.group();
+        if (payload.html() == null || !payload.html().contains(token) || !payload.html().contains("VietRoute")) {
+            throw new IllegalStateException("CI mail thiếu template HTML hoặc mã không khớp bản chữ thuần");
+        }
         if (encoded.contains(token) || encoded.contains(payload.to())) {
             throw new IllegalStateException("CI outbox chưa mã hóa");
         }

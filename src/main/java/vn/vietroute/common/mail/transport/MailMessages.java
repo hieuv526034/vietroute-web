@@ -4,7 +4,9 @@ import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
 import jakarta.mail.Session;
 import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeBodyPart;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeMultipart;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import vn.vietroute.common.mail.model.MailPayload;
@@ -20,7 +22,19 @@ public final class MailMessages {
         message.setFrom(new InternetAddress(from, true));
         message.setRecipient(Message.RecipientType.TO, new InternetAddress(payload.to(), true));
         message.setSubject(payload.subject(), StandardCharsets.UTF_8.name());
-        message.setText(payload.text(), StandardCharsets.UTF_8.name());
+        if (payload.html() == null || payload.html().isBlank()) {
+            message.setText(payload.text(), StandardCharsets.UTF_8.name());
+        } else {
+            // Plain text đứng trước HTML theo multipart/alternative; cả Gmail API và SMTP dùng cùng MIME.
+            MimeBodyPart plain = new MimeBodyPart();
+            plain.setText(payload.text(), StandardCharsets.UTF_8.name());
+            MimeBodyPart html = new MimeBodyPart();
+            html.setText(payload.html(), StandardCharsets.UTF_8.name(), "html");
+            MimeMultipart alternatives = new MimeMultipart("alternative");
+            alternatives.addBodyPart(plain);
+            alternatives.addBodyPart(html);
+            message.setContent(alternatives);
+        }
         message.saveChanges();
         return message;
     }

@@ -3,8 +3,8 @@
   "private": true,
   "description": "Cong cu format code khi phat trien, khong tham gia build WAR/Docker.",
   "scripts": {
-    "format": "prettier --write \"src/**/*.java\" \"src/main/webapp/**/*.{html,css,js}\" \"scripts/development/**/*.cjs\" \".run/*.xml\" \".idea/codeStyles/*.xml\" pom.xml package.json .prettierrc.json",
-    "format:check": "prettier --check \"src/**/*.java\" \"src/main/webapp/**/*.{html,css,js}\" \"scripts/development/**/*.cjs\" \".run/*.xml\" \".idea/codeStyles/*.xml\" pom.xml package.json .prettierrc.json",
+    "format": "prettier --write \"src/**/*.java\" \"src/main/webapp/**/*.{html,css,js}\" \"src/main/resources/mail/**/*.html\" \"scripts/development/**/*.cjs\" \".run/*.xml\" \".idea/codeStyles/*.xml\" pom.xml package.json .prettierrc.json",
+    "format:check": "prettier --check \"src/**/*.java\" \"src/main/webapp/**/*.{html,css,js}\" \"src/main/resources/mail/**/*.html\" \"scripts/development/**/*.cjs\" \".run/*.xml\" \".idea/codeStyles/*.xml\" pom.xml package.json .prettierrc.json",
     "check:rules": "node scripts/development/check-repository.cjs --rules",
     "check:docs": "node scripts/development/check-repository.cjs --docs"
   },
