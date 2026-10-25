@@ -138,8 +138,25 @@ public class TrackingRepository {
         boolean enabled,
         Instant now
     ) throws SQLException {
-        String driverEligible =
-            "EXISTS(SELECT 1 FROM carrier_drivers cd JOIN auth_users du ON du.id=cd.user_id AND du.active AND NOT du.activation_pending AND NOT du.must_change_password AND du.email_verified_at IS NOT NULL JOIN auth_user_roles ur ON ur.user_id=du.id AND ur.role_code='DRIVER' JOIN auth_roles rr ON rr.code=ur.role_code AND rr.active AND NOT rr.deleted JOIN auth_scope_memberships sm ON sm.scope_id=t.scope_id AND sm.user_id=du.id AND sm.active JOIN auth_scope_roles sr ON sr.scope_id=sm.scope_id AND sr.user_id=sm.user_id AND sr.role_code=rr.code JOIN auth_role_permissions rp ON rp.role_code=rr.code AND rp.permission_code='DRIVER_TRIP_UPDATE' JOIN auth_permissions p ON p.code=rp.permission_code AND p.active WHERE cd.id=t.driver_id AND cd.carrier_id=t.carrier_id AND cd.scope_id=t.scope_id AND cd.active AND cd.user_id=t.driver_user_id)";
+        String driverEligible = """
+        EXISTS(SELECT 1 FROM carrier_drivers cd
+            JOIN auth_users du ON du.id=cd.user_id AND du.active AND NOT du.activation_pending
+                AND NOT du.must_change_password AND du.email_verified_at IS NOT NULL
+            JOIN auth_user_roles ur ON ur.user_id=du.id AND ur.role_code='DRIVER'
+            JOIN auth_roles rr ON rr.code=ur.role_code AND rr.active AND NOT rr.deleted
+            JOIN auth_scope_memberships sm ON sm.scope_id=t.scope_id AND sm.user_id=du.id AND sm.active
+            JOIN auth_scope_roles sr ON sr.scope_id=sm.scope_id AND sr.user_id=sm.user_id AND sr.role_code=rr.code
+            WHERE cd.id=t.driver_id AND cd.carrier_id=t.carrier_id AND cd.scope_id=t.scope_id
+                AND cd.active AND cd.user_id=t.driver_user_id
+                AND (EXISTS(SELECT 1 FROM auth_user_roles au JOIN auth_roles ar ON ar.code=au.role_code
+                    WHERE au.user_id=du.id AND ar.code='ADMIN' AND ar.active AND NOT ar.deleted)
+                OR EXISTS(SELECT 1 FROM auth_scope_roles sx
+                    JOIN auth_user_roles ux ON ux.user_id=sx.user_id AND ux.role_code=sx.role_code
+                    JOIN auth_roles rx ON rx.code=sx.role_code AND rx.active AND NOT rx.deleted
+                    JOIN auth_role_permissions rp ON rp.role_code=rx.code
+                    JOIN auth_permissions p ON p.code=rp.permission_code AND p.active
+                    WHERE sx.scope_id=sm.scope_id AND sx.user_id=sm.user_id AND p.code='DRIVER_TRIP_UPDATE')))
+        """;
         String sql =
             "SELECT t.status,t.driver_user_id AS assigned_user," +
             (bookingId == null

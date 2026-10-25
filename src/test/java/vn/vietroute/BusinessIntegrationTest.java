@@ -272,6 +272,36 @@ class BusinessIntegrationTest {
         assertEquals("LIVE", shown.path("status").asText());
         sql("DELETE FROM auth_role_permissions WHERE role_code='DRIVER' AND permission_code='DRIVER_TRIP_UPDATE'");
         assertEquals("OFF", call(200, "GET", view, null, buyer).path("status").asText());
+        long driverUser = ((UserPrincipal) driver.getPrincipal()).id();
+        sql(
+            "INSERT INTO auth_roles(code,name_vi,name_en) VALUES('TRACKWRITER','Bổ sung','Extra'); INSERT INTO auth_user_roles(user_id,role_code) VALUES(" +
+                driverUser +
+                ",'TRACKWRITER'); INSERT INTO auth_role_permissions(role_code,permission_code) VALUES('TRACKWRITER','DRIVER_TRIP_UPDATE'); INSERT INTO auth_scope_roles(scope_id,user_id,role_code) VALUES(" +
+                fixture.scope() +
+                "," +
+                driverUser +
+                ",'TRACKWRITER')"
+        );
+        assertEquals("LIVE", call(200, "GET", view, null, buyer).path("status").asText());
+        sql(
+            "DELETE FROM auth_scope_roles WHERE scope_id=" +
+                fixture.scope() +
+                " AND user_id=" +
+                driverUser +
+                " AND role_code='TRACKWRITER'"
+        );
+        sql(
+            "INSERT INTO auth_scope_memberships(scope_id,user_id) VALUES(" +
+                other.scope() +
+                "," +
+                driverUser +
+                "); INSERT INTO auth_scope_roles(scope_id,user_id,role_code) VALUES(" +
+                other.scope() +
+                "," +
+                driverUser +
+                ",'TRACKWRITER')"
+        );
+        assertEquals("OFF", call(200, "GET", view, null, buyer).path("status").asText());
         sql("INSERT INTO auth_role_permissions(role_code,permission_code) VALUES('DRIVER','DRIVER_TRIP_UPDATE')");
         assertEquals("UNCONFIGURED", shown.path("mapStatus").asText());
         assertEquals(10.123456, shown.path("latest").path("latitude").asDouble());
