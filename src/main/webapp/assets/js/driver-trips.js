@@ -19,6 +19,10 @@
     const modal = window.VietRouteUI.modal('driver-trip-dialog', { busy: () => busy }),
         tabs = window.VietRouteUI.tabs(node('driver-trip-tabs'));
     const pager = tables.pager('driver-trip', { busy: () => busy, onChange: (query) => perform(() => load(query)) });
+    const passengers = tables.pager('driver-passenger', {
+        busy: () => busy,
+        onChange: (query) => perform(() => loadPassengers(query)),
+    });
     const text = (tag, value) => {
         const item = document.createElement(tag);
         item.textContent = String(value ?? '');
@@ -181,12 +185,46 @@
         selected = (await api.get(`${path}/${item.id}`, { timeout: 10000 })).data.data;
         form.reset();
         detail();
+        await loadPassengers({ ...passengers.query, page: 0 });
         feedback('', false, 'driver-trip-form-feedback');
         modal.open(trigger);
         requestAnimationFrame(() => {
             tabs.select('driver-trip-info');
             node('driver-trip-dialog-title').focus();
         });
+    };
+    const loadPassengers = async (query = passengers.query) => {
+        node('driver-passenger-body').replaceChildren();
+        if (!selected || !can('GET', '/{id}/passengers')) return;
+        const page = await tables.readPage(
+            async (paging) =>
+                (await api.get(`${path}/${selected.id}/passengers`, { params: paging, timeout: 10000 })).data.data,
+            query,
+        );
+        for (const item of page.content) {
+            const row = text('tr', '');
+            for (const value of [
+                item.bookingCode,
+                `${english ? item.pickupNameEn : item.pickupNameVi} → ${english ? item.dropoffNameEn : item.dropoffNameVi}`,
+                item.seats,
+                item.contactName,
+            ])
+                row.append(text('td', value));
+            const phone = text('a', item.contactPhone),
+                contact = text('td', '');
+            phone.href = `tel:${item.contactPhone}`;
+            contact.append(phone);
+            row.append(contact, text('td', item.status === 'CONFIRMED' ? labels.confirmed : labels.completed));
+            node('driver-passenger-body').append(row);
+        }
+        if (!page.content.length) {
+            const row = text('tr', ''),
+                cell = text('td', labels.empty);
+            cell.colSpan = 6;
+            row.append(cell);
+            node('driver-passenger-body').append(row);
+        }
+        passengers.update(page);
     };
     form.addEventListener('submit', (event) => {
         event.preventDefault();
@@ -204,6 +242,7 @@
             form.reset();
             feedback(response.data.message, true, 'driver-trip-form-feedback');
             await load();
+            await loadPassengers();
         });
     });
     node('driver-trip-refresh').addEventListener('click', () =>

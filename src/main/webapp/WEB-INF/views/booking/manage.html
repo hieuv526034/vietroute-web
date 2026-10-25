@@ -1,0 +1,497 @@
+<!doctype html>
+<html
+    xmlns:th="http://www.thymeleaf.org"
+    th:lang="${currentLocale}"
+>
+    <head
+        th:replace="~{fragments/layout :: head(${customerBookings} ? #{ui.booking.mine} : #{ui.booking.title})}"
+    ></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main
+            id="booking-workspace"
+            class="container-xl workspace-page"
+            th:attr="data-customer=${customerBookings},data-title=${customerBookings} ? #{ui.booking.mine} : #{ui.booking.title},data-loading=#{ui.loading},data-empty=#{ui.empty},data-no-read=#{ui.accessTree.noRead},data-view=#{ui.route.view},data-choose=#{ui.trip.choose},data-pending=#{ui.booking.PENDING},data-confirmed=#{ui.booking.CONFIRMED},data-rejected=#{ui.booking.REJECTED},data-cancelled=#{ui.booking.CANCELLED},data-completed=#{ui.booking.COMPLETED},data-created=#{ui.booking.CREATED},data-payment=#{ui.booking.PAYMENT},data-refund=#{ui.booking.REFUND},data-price=#{ui.booking.price},data-available=#{ui.booking.available},data-not-accepting=#{ui.booking.notAccepting},data-refund-due=#{ui.booking.refundDue},data-reason-required=#{ui.booking.reasonRequired},data-source=#{ui.booking.source},data-seats=#{ui.booking.seats},data-contact=#{ui.booking.contact},data-total=#{ui.booking.total},data-paid=#{ui.booking.paid},data-refunded=#{ui.booking.refunded},data-trip=#{ui.trip.title}"
+        >
+            <div class="page-heading">
+                <p
+                    class="eyebrow"
+                    th:text="#{ui.fleet.eyebrow}"
+                ></p>
+                <h1 th:text="${customerBookings} ? #{ui.booking.mine} : #{ui.booking.title}"></h1>
+                <p
+                    class="muted"
+                    th:text="#{ui.booking.description}"
+                ></p>
+            </div>
+            <p
+                id="booking-status"
+                class="catalog-status"
+                role="status"
+                aria-live="polite"
+            ></p>
+            <div
+                id="booking-feedback"
+                class="feedback"
+                role="alert"
+                hidden
+            ></div>
+            <fieldset
+                id="booking-controls"
+                class="border-0 p-0 m-0 w-100"
+            >
+                <section class="panel">
+                    <div class="panel-heading">
+                        <h2 th:text="${customerBookings} ? #{ui.booking.mine} : #{ui.booking.title}"></h2>
+                        <div class="toolbar-actions">
+                            <a
+                                th:if="${customerBookings}"
+                                class="button"
+                                th:href="@{/journeys(lang=${currentLocale})}"
+                                th:text="#{ui.booking.findTrip}"
+                            ></a>
+                            <button
+                                th:unless="${customerBookings}"
+                                id="booking-create"
+                                type="button"
+                                class="button"
+                                disabled
+                                th:text="#{ui.booking.phoneCreate}"
+                            ></button>
+                            <button
+                                id="booking-refresh"
+                                type="button"
+                                class="button button-outline"
+                                th:text="#{ui.ops.refresh}"
+                            ></button>
+                        </div>
+                    </div>
+                    <form
+                        id="booking-search"
+                        class="table-filter record-search"
+                    >
+                        <label
+                            for="booking-query"
+                            th:text="#{ui.fleet.search}"
+                        ></label>
+                        <input
+                            id="booking-query"
+                            name="query"
+                            maxlength="160"
+                            class="form-control"
+                        />
+                        <select
+                            name="status"
+                            class="form-select"
+                            th:attr="aria-label=#{ui.location.state}"
+                        >
+                            <option
+                                value=""
+                                th:text="#{ui.fleet.allStates}"
+                            ></option>
+                            <option
+                                th:each="state:${T(vn.vietroute.business.booking.entity.BookingStatus).values()}"
+                                th:value="${state}"
+                                th:text="#{'ui.booking.'+${state}}"
+                            ></option>
+                        </select>
+                        <button
+                            class="button button-outline"
+                            th:text="#{ui.search}"
+                        ></button>
+                    </form>
+                    <div
+                        class="table-responsive"
+                        tabindex="0"
+                        role="region"
+                        th:attr="aria-label=#{ui.table.scroll}"
+                    >
+                        <table class="table records-table">
+                            <thead>
+                                <tr>
+                                    <th th:text="#{ui.code}"></th>
+                                    <th th:text="#{ui.booking.trip}"></th>
+                                    <th th:text="#{ui.booking.leg}"></th>
+                                    <th th:text="#{ui.booking.pickupAt}"></th>
+                                    <th th:text="#{ui.booking.seats}"></th>
+                                    <th th:text="#{ui.booking.total}"></th>
+                                    <th th:text="#{ui.location.state}"></th>
+                                    <th
+                                        class="table-actions"
+                                        th:text="#{ui.ops.actions}"
+                                    ></th>
+                                </tr>
+                            </thead>
+                            <tbody id="booking-body"></tbody>
+                        </table>
+                    </div>
+                    <div th:replace="~{fragments/pagination :: pager('booking', 10)}"></div>
+                </section>
+            </fieldset>
+            <dialog
+                id="booking-create-dialog"
+                class="workspace-dialog route-dialog"
+                aria-labelledby="booking-create-title"
+            >
+                <div class="dialog-heading">
+                    <h2
+                        id="booking-create-title"
+                        tabindex="-1"
+                        th:text="#{ui.booking.request}"
+                    ></h2>
+                    <button
+                        type="button"
+                        class="button button-outline"
+                        data-dialog-close
+                        th:text="#{ui.ops.close}"
+                    ></button>
+                </div>
+                <div
+                    id="booking-create-feedback"
+                    class="feedback"
+                    role="alert"
+                    hidden
+                ></div>
+                <form
+                    id="booking-create-form"
+                    novalidate
+                >
+                    <fieldset
+                        id="booking-create-controls"
+                        class="border-0 p-0 m-0 w-100"
+                    >
+                        <div
+                            th:unless="${customerBookings}"
+                            id="booking-trip-picker"
+                        >
+                            <label
+                                for="booking-trip-query"
+                                th:text="#{ui.booking.trip}"
+                            ></label>
+                            <div class="record-search">
+                                <input
+                                    id="booking-trip-query"
+                                    maxlength="160"
+                                    class="form-control"
+                                />
+                                <button
+                                    id="booking-trip-search"
+                                    type="button"
+                                    class="button button-outline"
+                                    th:text="#{ui.search}"
+                                ></button>
+                            </div>
+                            <div class="trip-picker-paging">
+                                <button
+                                    id="booking-trip-prev"
+                                    type="button"
+                                    class="button button-outline"
+                                    th:text="#{ui.mediaPrevious}"
+                                ></button>
+                                <span
+                                    id="booking-trip-count"
+                                    aria-live="polite"
+                                ></span>
+                                <button
+                                    id="booking-trip-next"
+                                    type="button"
+                                    class="button button-outline"
+                                    th:text="#{ui.mediaNext}"
+                                ></button>
+                            </div>
+                        </div>
+                        <div class="dialog-form-grid">
+                            <label class="grid-span">
+                                <span th:text="#{ui.booking.trip}"></span>
+                                <select
+                                    name="tripId"
+                                    required
+                                    class="form-select"
+                                ></select>
+                            </label>
+                            <label>
+                                <span th:text="#{ui.booking.pickup}"></span>
+                                <select
+                                    name="pickupStopId"
+                                    required
+                                    class="form-select"
+                                ></select>
+                            </label>
+                            <label>
+                                <span th:text="#{ui.booking.dropoff}"></span>
+                                <select
+                                    name="dropoffStopId"
+                                    required
+                                    class="form-select"
+                                ></select>
+                            </label>
+                            <label>
+                                <span th:text="#{ui.booking.seats}"></span>
+                                <input
+                                    name="seats"
+                                    type="number"
+                                    min="1"
+                                    max="200"
+                                    step="1"
+                                    required
+                                    class="form-control"
+                                    value="1"
+                                />
+                            </label>
+                            <label>
+                                <span th:text="#{ui.booking.contactName}"></span>
+                                <input
+                                    name="contactName"
+                                    maxlength="120"
+                                    required
+                                    class="form-control"
+                                />
+                            </label>
+                            <label>
+                                <span th:text="#{ui.booking.contactPhone}"></span>
+                                <input
+                                    name="contactPhone"
+                                    maxlength="30"
+                                    pattern="[+0-9(). -]{6,30}"
+                                    required
+                                    class="form-control"
+                                    inputmode="tel"
+                                />
+                            </label>
+                        </div>
+                        <p
+                            id="booking-quote"
+                            class="form-help"
+                            aria-live="polite"
+                        ></p>
+                        <button
+                            id="booking-quote-refresh"
+                            type="button"
+                            class="button button-outline"
+                            th:text="#{ui.booking.quoteRefresh}"
+                        ></button>
+                        <p
+                            class="form-help"
+                            th:text="#{ui.booking.pendingHelp}"
+                        ></p>
+                        <div class="dialog-actions">
+                            <button
+                                type="button"
+                                class="button button-outline"
+                                data-dialog-close
+                                th:text="#{ui.ops.close}"
+                            ></button>
+                            <button
+                                id="booking-submit"
+                                class="button"
+                                type="submit"
+                                th:text="#{ui.booking.submit}"
+                            ></button>
+                        </div>
+                    </fieldset>
+                </form>
+            </dialog>
+            <dialog
+                id="booking-detail-dialog"
+                class="workspace-dialog route-dialog"
+                aria-labelledby="booking-detail-title"
+            >
+                <div class="dialog-heading">
+                    <h2
+                        id="booking-detail-title"
+                        tabindex="-1"
+                        th:text="#{ui.booking.detail}"
+                    ></h2>
+                    <button
+                        type="button"
+                        class="button button-outline"
+                        data-dialog-close
+                        th:text="#{ui.ops.close}"
+                    ></button>
+                </div>
+                <div
+                    id="booking-detail-feedback"
+                    class="feedback"
+                    role="alert"
+                    hidden
+                ></div>
+                <p
+                    id="booking-conflict"
+                    class="form-help"
+                    hidden
+                    th:text="#{ui.fleet.conflict}"
+                ></p>
+                <fieldset
+                    id="booking-detail-controls"
+                    class="border-0 p-0 m-0 w-100"
+                >
+                    <div
+                        id="booking-tabs"
+                        data-tabs
+                    >
+                        <div
+                            class="workspace-tabs"
+                            role="tablist"
+                            th:attr="aria-label=#{ui.booking.detail}"
+                        >
+                            <button
+                                id="booking-info-tab"
+                                type="button"
+                                data-tab-target="booking-info"
+                                aria-selected="true"
+                                th:text="#{ui.booking.detail}"
+                            ></button>
+                            <button
+                                id="booking-history-tab"
+                                type="button"
+                                data-tab-target="booking-history"
+                                th:text="#{ui.booking.history}"
+                            ></button>
+                            <button
+                                th:unless="${customerBookings}"
+                                id="booking-money-tab"
+                                type="button"
+                                data-tab-target="booking-money"
+                                th:text="#{ui.booking.money}"
+                            ></button>
+                        </div>
+                        <section
+                            id="booking-info"
+                            data-tab-panel="booking-info-tab"
+                        >
+                            <div
+                                id="booking-summary"
+                                class="route-stop-list"
+                            ></div>
+                            <a
+                                id="booking-journey-link"
+                                class="button button-outline"
+                                th:text="#{ui.booking.progress}"
+                            ></a>
+                            <form
+                                id="booking-state-form"
+                                novalidate
+                            >
+                                <label>
+                                    <span th:text="#{ui.trip.note}"></span>
+                                    <textarea
+                                        name="note"
+                                        maxlength="2000"
+                                        rows="2"
+                                        class="form-control"
+                                    ></textarea>
+                                </label>
+                                <div class="dialog-actions">
+                                    <button
+                                        id="booking-reject"
+                                        type="button"
+                                        class="button button-outline"
+                                        hidden
+                                        th:text="#{ui.booking.reject}"
+                                    ></button>
+                                    <button
+                                        id="booking-cancel"
+                                        type="button"
+                                        class="button button-danger"
+                                        hidden
+                                        th:text="#{ui.booking.cancel}"
+                                    ></button>
+                                    <button
+                                        id="booking-confirm"
+                                        type="button"
+                                        class="button"
+                                        hidden
+                                        th:text="#{ui.booking.confirm}"
+                                    ></button>
+                                </div>
+                            </form>
+                        </section>
+                        <section
+                            id="booking-history"
+                            data-tab-panel="booking-history-tab"
+                            hidden
+                        >
+                            <div
+                                id="booking-event-list"
+                                class="route-stop-list"
+                            ></div>
+                        </section>
+                        <section
+                            th:unless="${customerBookings}"
+                            id="booking-money"
+                            data-tab-panel="booking-money-tab"
+                            hidden
+                        >
+                            <p
+                                class="form-help"
+                                th:text="#{ui.booking.moneyHelp}"
+                            ></p>
+                            <form
+                                id="booking-money-form"
+                                novalidate
+                            >
+                                <label>
+                                    <span th:text="#{ui.booking.moneyKind}"></span>
+                                    <select
+                                        name="kind"
+                                        class="form-select"
+                                        required
+                                    >
+                                        <option
+                                            value="PAYMENT"
+                                            th:text="#{ui.booking.PAYMENT}"
+                                        ></option>
+                                        <option
+                                            value="REFUND"
+                                            th:text="#{ui.booking.REFUND}"
+                                        ></option>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span th:text="#{ui.booking.amount}"></span>
+                                    <input
+                                        name="amount"
+                                        type="number"
+                                        min="0.01"
+                                        step="0.01"
+                                        required
+                                        class="form-control"
+                                    />
+                                </label>
+                                <label>
+                                    <span th:text="#{ui.trip.note}"></span>
+                                    <textarea
+                                        name="note"
+                                        maxlength="2000"
+                                        rows="2"
+                                        class="form-control"
+                                        required
+                                    ></textarea>
+                                </label>
+                                <div class="dialog-actions">
+                                    <button
+                                        id="booking-money-save"
+                                        class="button"
+                                        type="submit"
+                                        th:text="#{ui.booking.recordMoney}"
+                                    ></button>
+                                </div>
+                            </form>
+                        </section>
+                    </div>
+                    <div class="dialog-actions">
+                        <button
+                            type="button"
+                            class="button button-outline"
+                            data-dialog-close
+                            th:text="#{ui.ops.close}"
+                        ></button>
+                    </div>
+                </fieldset>
+            </dialog>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/bookings.js}"></script>
+    </body>
+</html>

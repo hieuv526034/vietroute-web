@@ -28,6 +28,8 @@ import vn.vietroute.auth.entity.ScopeMembership;
 import vn.vietroute.auth.entity.ScopeRole;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.auth.service.BootstrapAdminInitializer;
+import vn.vietroute.business.booking.entity.Booking;
+import vn.vietroute.business.booking.entity.BookingEvent;
 import vn.vietroute.business.carrier.entity.Carrier;
 import vn.vietroute.business.carrier.entity.Driver;
 import vn.vietroute.business.carrier.entity.Vehicle;
@@ -103,6 +105,7 @@ public class DatabaseInitializer implements InitializingBean {
         migrate(connection, "V017__carriers_and_fleet.sql");
         migrate(connection, "V018__routes_and_stops.sql");
         migrate(connection, "V019__trips_and_capacity.sql");
+        migrate(connection, "V020__bookings_and_events.sql");
         JdbcSchemaValidator.verify(
             connection,
             UserAccount.class,
@@ -120,6 +123,8 @@ public class DatabaseInitializer implements InitializingBean {
             TripStop.class,
             TripSegment.class,
             TripEvent.class,
+            Booking.class,
+            BookingEvent.class,
             MediaAsset.class,
             Job.class,
             Role.class,
