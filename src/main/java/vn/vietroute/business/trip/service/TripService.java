@@ -12,6 +12,7 @@ import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.auth.security.annotation.AccessResource;
 import vn.vietroute.business.booking.repository.BookingLifecycleRepository;
 import vn.vietroute.business.carrier.repository.CarrierRepository;
+import vn.vietroute.business.tracking.repository.TrackingRepository;
 import vn.vietroute.business.trip.dto.request.TripAssignmentRequest;
 import vn.vietroute.business.trip.dto.request.TripChoiceRequest;
 import vn.vietroute.business.trip.dto.request.TripCreateRequest;
@@ -35,6 +36,8 @@ import vn.vietroute.common.validation.BusinessRules;
 @RequiredArgsConstructor
 @AccessResource(Groups.TRIP)
 public class TripService {
+
+    private final TrackingRepository tracking;
 
     private final TripRepository trips;
     private final TripTemplateRepository templates;
@@ -156,6 +159,7 @@ public class TripService {
                 actor.id()
             );
             trips.state(connection, trip, body.status(), body.note().strip(), actor.id());
+            if (body.status() == TripStatus.CANCELLED) tracking.stop(connection, id, actor.id());
             trips.event(
                 connection,
                 id,
@@ -207,6 +211,7 @@ public class TripService {
             );
             if (trip.status() == TripStatus.OPEN) templates.requireAvailable(connection, id, assets, start, end, false);
             trips.assignment(connection, trip, assets, body.capacity(), start, end, actor.id());
+            tracking.stop(connection, id, actor.id());
             trips.event(
                 connection,
                 id,

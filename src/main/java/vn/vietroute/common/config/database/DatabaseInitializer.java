@@ -38,6 +38,8 @@ import vn.vietroute.business.location.entity.Location;
 import vn.vietroute.business.location.entity.Province;
 import vn.vietroute.business.route.entity.Route;
 import vn.vietroute.business.route.entity.RouteStop;
+import vn.vietroute.business.tracking.entity.TripLocation;
+import vn.vietroute.business.tracking.entity.TripTracking;
 import vn.vietroute.business.trip.entity.Trip;
 import vn.vietroute.business.trip.entity.TripEvent;
 import vn.vietroute.business.trip.entity.TripSegment;
@@ -106,6 +108,7 @@ public class DatabaseInitializer implements InitializingBean {
         migrate(connection, "V018__routes_and_stops.sql");
         migrate(connection, "V019__trips_and_capacity.sql");
         migrate(connection, "V020__bookings_and_events.sql");
+        migrate(connection, "V021__trip_location_sharing.sql");
         JdbcSchemaValidator.verify(
             connection,
             UserAccount.class,
@@ -125,6 +128,8 @@ public class DatabaseInitializer implements InitializingBean {
             TripEvent.class,
             Booking.class,
             BookingEvent.class,
+            TripTracking.class,
+            TripLocation.class,
             MediaAsset.class,
             Job.class,
             Role.class,

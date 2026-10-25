@@ -46,6 +46,8 @@ import vn.vietroute.business.carrier.service.VehicleService;
 import vn.vietroute.business.catalog.service.BookingSourceCatalogService;
 import vn.vietroute.business.report.dto.request.ReportSearchRequest;
 import vn.vietroute.business.report.service.ReportService;
+import vn.vietroute.business.tracking.dto.request.TrackingStartRequest;
+import vn.vietroute.business.tracking.service.DriverTrackingService;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.application.ConfigurationEnvironment;
 import vn.vietroute.common.config.web.WebConfig;
@@ -217,6 +219,306 @@ class BusinessIntegrationTest {
                 "')"
         );
         return actor(user, username, role);
+    }
+
+    @Test
+    void trackingRequiresAssignedDriverAndConfirmedOwnerWithoutPublicCoordinates() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        var other = tripFixture(true);
+        long trip = openBookingTrip(fixture, "TRACKPRIVATE", Instant.now().plus(5, ChronoUnit.MINUTES));
+        long foreign = openBookingTrip(other, "TRACKOTHER", Instant.now().plus(5, ChronoUnit.MINUTES));
+        var driver = tripDriver(fixture);
+        var otherDriver = tripDriver(other);
+        var buyer = customer("trackbuyer");
+        var stranger = customer("trackstranger");
+        long booking = call(201, "POST", "/api/v1/my-bookings", bookingBody(trip, 1, 3, 1, UUID.randomUUID()), buyer)
+            .path("id")
+            .asLong();
+        String view = "/api/v1/my-bookings/" + booking + "/tracking";
+        assertEquals("UNAVAILABLE", call(200, "GET", view, null, buyer).path("status").asText());
+        call(404, "GET", view, null, stranger);
+        call(403, "GET", view, null, admin);
+        call(404, "POST", "/api/v1/driver/trips/" + trip + "/tracking/start", "{\"tripVersion\":1}", otherDriver);
+        call(404, "POST", "/api/v1/driver/trips/" + trip + "/tracking/start", "{\"tripVersion\":1}", admin);
+        var nonce = call(200, "POST", "/api/v1/driver/trips/" + trip + "/tracking/start", "{\"tripVersion\":1}", driver)
+            .path("sessionKey")
+            .asText();
+        assertEquals(
+            "WAITING",
+            call(200, "GET", "/api/v1/driver/trips/" + trip + "/tracking", null, driver)
+                .path("status")
+                .asText()
+        );
+        call(
+            200,
+            "POST",
+            "/api/v1/driver/trips/" + trip + "/tracking/samples",
+            trackingBody(nonce, Instant.now().truncatedTo(ChronoUnit.MILLIS), "10.123456"),
+            driver
+        );
+        assertTrue(call(200, "GET", view, null, buyer).path("latest").isNull());
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/bookings/" + booking + "/state",
+            "{\"status\":\"CONFIRMED\",\"version\":0,\"note\":\"\"}",
+            admin
+        );
+        var shown = call(200, "GET", view, null, buyer);
+        assertEquals("LIVE", shown.path("status").asText());
+        assertEquals("UNCONFIGURED", shown.path("mapStatus").asText());
+        assertEquals(10.123456, shown.path("latest").path("latitude").asDouble());
+        assertFalse(shown.has("sessionKey"));
+        assertFalse(shown.has("driverUserId"));
+        var staff = member(fixture.scope(), "TRACKREADER", "'TRIP_READ'", "trackreader");
+        assertEquals(
+            "LIVE",
+            call(200, "GET", "/api/v1/admin/trips/" + trip + "/tracking", null, staff)
+                .path("status")
+                .asText()
+        );
+        call(404, "GET", "/api/v1/admin/trips/" + foreign + "/tracking", null, staff);
+        assertEquals(
+            401,
+            mvc
+                .perform(request(HttpMethod.GET, "/api/v1/admin/trips/" + trip + "/tracking"))
+                .andReturn()
+                .getResponse()
+                .getStatus()
+        );
+        assertEquals(
+            404,
+            mvc
+                .perform(request(HttpMethod.GET, "/api/v1/trips/" + trip + "/tracking"))
+                .andReturn()
+                .getResponse()
+                .getStatus()
+        );
+        call(
+            200,
+            "PUT",
+            "/api/v1/my-bookings/" + booking + "/state",
+            "{\"status\":\"CANCELLED\",\"version\":1,\"note\":\"Hủy TEST\"}",
+            buyer
+        );
+        assertEquals("UNAVAILABLE", call(200, "GET", view, null, buyer).path("status").asText());
+    }
+
+    private String trackingBody(String nonce, Instant measured, String latitude) {
+        return (
+            "{\"sessionKey\":\"" +
+            nonce +
+            "\",\"latitude\":" +
+            latitude +
+            ",\"longitude\":106.123456,\"accuracy\":12.5,\"measuredAt\":\"" +
+            measured +
+            "\"}"
+        );
+    }
+
+    @Test
+    void trackingRejectsOldFutureOutOfOrderAndFastSamplesAndReplayDoesNotRenewLease() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        long trip = openBookingTrip(fixture, "TRACKSAMPLES", Instant.now().plus(5, ChronoUnit.MINUTES));
+        var driver = tripDriver(fixture);
+        String path = "/api/v1/driver/trips/" + trip + "/tracking";
+        call(409, "POST", path + "/start", "{\"tripVersion\":0}", driver);
+        String nonce = call(200, "POST", path + "/start", "{\"tripVersion\":1}", driver)
+            .path("sessionKey")
+            .asText();
+        Instant measured = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+        String sample = trackingBody(nonce, measured, "10.123456");
+        var first = call(200, "POST", path + "/samples", sample, driver);
+        var replay = call(200, "POST", path + "/samples", sample, driver);
+        assertEquals(first.path("receivedAt"), replay.path("receivedAt"));
+        assertEquals("1", sql("SELECT count(*) FROM trip_locations WHERE trip_id=" + trip));
+        call(400, "POST", path + "/samples", trackingBody(nonce, measured.minusSeconds(200), "10.123456"), driver);
+        call(400, "POST", path + "/samples", trackingBody(nonce, measured.plusSeconds(60), "10.123456"), driver);
+        call(400, "POST", path + "/samples", trackingBody(nonce, measured.minusMillis(1), "10.123456"), driver);
+        call(400, "POST", path + "/samples", trackingBody(nonce, measured, "10.654321"), driver);
+        call(400, "POST", path + "/samples", trackingBody(nonce, measured, "91"), driver);
+        call(400, "POST", path + "/samples", trackingBody(nonce, measured, "10.1234567"), driver);
+        call(429, "POST", path + "/samples", trackingBody(nonce, measured.plusMillis(1), "10.123456"), driver);
+        sql("UPDATE trip_tracking SET received_at=CURRENT_TIMESTAMP-INTERVAL '11 seconds' WHERE trip_id=" + trip);
+        call(200, "POST", path + "/samples", trackingBody(nonce, measured.plusMillis(2), "10.123456"), driver);
+        assertEquals("2", sql("SELECT count(*) FROM trip_locations WHERE trip_id=" + trip));
+        assertEquals("OPEN", sql("SELECT status FROM carrier_trips WHERE id=" + trip));
+        assertEquals(
+            "0",
+            sql("SELECT count(*) FROM trip_stops WHERE trip_id=" + trip + " AND actual_departure_at IS NOT NULL")
+        );
+        sql("UPDATE trip_tracking SET received_at=CURRENT_TIMESTAMP-INTERVAL '121 seconds' WHERE trip_id=" + trip);
+        var stale = call(200, "GET", path, null, driver);
+        assertEquals("STALE", stale.path("status").asText());
+        assertTrue(stale.path("latest").isNull());
+        assertEquals(0, stale.path("trail").size());
+        call(
+            409,
+            "POST",
+            path + "/samples",
+            trackingBody(nonce, Instant.now().truncatedTo(ChronoUnit.MILLIS), "10.123456"),
+            driver
+        );
+        var fresh = call(200, "POST", path + "/start", "{\"tripVersion\":1}", driver)
+            .path("sessionKey")
+            .asText();
+        assertFalse(fresh.equals(nonce));
+        call(409, "POST", path + "/stop", "{\"sessionKey\":\"" + nonce + "\"}", driver);
+        call(
+            409,
+            "POST",
+            path + "/samples",
+            trackingBody(nonce, Instant.now().truncatedTo(ChronoUnit.MILLIS), "10.123456"),
+            driver
+        );
+        for (int retry = 0; retry < 2; retry++) assertEquals(
+            "OFF",
+            call(200, "POST", path + "/stop", "{\"sessionKey\":\"" + fresh + "\"}", driver)
+                .path("status")
+                .asText()
+        );
+        assertEquals("true", sql("SELECT (latitude IS NULL)::text FROM trip_tracking WHERE trip_id=" + trip));
+        sql("DELETE FROM auth_role_permissions WHERE role_code='DRIVER' AND permission_code='DRIVER_TRIP_UPDATE'");
+        call(403, "POST", path + "/start", "{\"tripVersion\":1}", driver);
+        SecurityContextHolder.getContext().setAuthentication(driver);
+        assertThrows(AccessDeniedException.class, () ->
+            root
+                .getBean(DriverTrackingService.class)
+                .start(trip, new TrackingStartRequest(1L), (UserPrincipal) driver.getPrincipal())
+        );
+    }
+
+    @Test
+    void trackingHistoryFailureRollsBackSnapshotAndRetentionIsBounded() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        long trip = openBookingTrip(fixture, "TRACKROLLBACK", Instant.now().plus(5, ChronoUnit.MINUTES));
+        var driver = tripDriver(fixture);
+        String path = "/api/v1/driver/trips/" + trip + "/tracking";
+        String nonce = call(200, "POST", path + "/start", "{\"tripVersion\":1}", driver)
+            .path("sessionKey")
+            .asText();
+        sql(
+            "CREATE FUNCTION fail_tracking_sample() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'sample fixture'; END $$; CREATE TRIGGER fail_tracking_sample BEFORE INSERT ON trip_locations FOR EACH ROW EXECUTE FUNCTION fail_tracking_sample()"
+        );
+        call(
+            503,
+            "POST",
+            path + "/samples",
+            trackingBody(nonce, Instant.now().truncatedTo(ChronoUnit.MILLIS), "10.123456"),
+            driver
+        );
+        assertEquals("true", sql("SELECT (latitude IS NULL)::text FROM trip_tracking WHERE trip_id=" + trip));
+        sql(
+            "DROP TRIGGER fail_tracking_sample ON trip_locations; DROP FUNCTION fail_tracking_sample(); INSERT INTO trip_locations(trip_id,carrier_id,scope_id,driver_user_id,session_key,source,latitude,longitude,accuracy,measured_at,received_at) SELECT " +
+                trip +
+                "," +
+                fixture.carrier() +
+                "," +
+                fixture.scope() +
+                ",(SELECT driver_user_id FROM carrier_trips WHERE id=" +
+                trip +
+                "),'" +
+                nonce +
+                "','BROWSER',10,106,10,CURRENT_TIMESTAMP-INTERVAL '8 days',CURRENT_TIMESTAMP-INTERVAL '8 days' FROM generate_series(1,2100)"
+        );
+        call(
+            200,
+            "POST",
+            path + "/samples",
+            trackingBody(nonce, Instant.now().truncatedTo(ChronoUnit.MILLIS), "10.123456"),
+            driver
+        );
+        assertTrue(Long.parseLong(sql("SELECT count(*) FROM trip_locations WHERE trip_id=" + trip)) <= 2000);
+        assertEquals(1, call(200, "GET", path, null, driver).path("trail").size());
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/trips/" + trip + "/state",
+            "{\"status\":\"CANCELLED\",\"version\":1,\"note\":\"Hủy TEST\"}",
+            admin
+        );
+        assertEquals(
+            "false:true",
+            sql("SELECT sharing||':'||(latitude IS NULL) FROM trip_tracking WHERE trip_id=" + trip)
+        );
+        assertEquals("CLOSED", call(200, "GET", path, null, driver).path("status").asText());
+        call(
+            409,
+            "POST",
+            path + "/samples",
+            trackingBody(nonce, Instant.now().truncatedTo(ChronoUnit.MILLIS), "10.123456"),
+            driver
+        );
+    }
+
+    @Test
+    void trackingSameSampleConcurrentIsSingleAndCompletionRevokesConsent() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        long trip = openBookingTrip(fixture, "TRACKCOMPLETE", Instant.now().plus(5, ChronoUnit.MINUTES));
+        var driver = tripDriver(fixture);
+        String path = "/api/v1/driver/trips/" + trip + "/tracking";
+        String nonce = call(200, "POST", path + "/start", "{\"tripVersion\":1}", driver)
+            .path("sessionKey")
+            .asText();
+        String body = trackingBody(nonce, Instant.now().truncatedTo(ChronoUnit.MILLIS), "10.123456");
+        var pool = Executors.newFixedThreadPool(2);
+        var ready = new CountDownLatch(2);
+        var release = new CountDownLatch(1);
+        try {
+            var first = pool.submit(() -> {
+                ready.countDown();
+                assertTrue(release.await(10, TimeUnit.SECONDS));
+                return call(200, "POST", path + "/samples", body, driver);
+            });
+            var second = pool.submit(() -> {
+                ready.countDown();
+                assertTrue(release.await(10, TimeUnit.SECONDS));
+                return call(200, "POST", path + "/samples", body, driver);
+            });
+            assertTrue(ready.await(10, TimeUnit.SECONDS));
+            release.countDown();
+            assertEquals(
+                first.get(20, TimeUnit.SECONDS).path("receivedAt"),
+                second.get(20, TimeUnit.SECONDS).path("receivedAt")
+            );
+        } finally {
+            release.countDown();
+            pool.shutdownNow();
+        }
+        assertEquals("1", sql("SELECT count(*) FROM trip_locations WHERE trip_id=" + trip));
+        long version = 1;
+        for (String step : new String[] { "START:1", "ARRIVE:2", "DEPART:2", "ARRIVE:3", "COMPLETE:3" }) {
+            var parts = step.split(":");
+            call(
+                200,
+                "PUT",
+                "/api/v1/driver/trips/" + trip + "/progress",
+                "{\"action\":\"" +
+                    parts[0] +
+                    "\",\"stopOrder\":" +
+                    parts[1] +
+                    ",\"version\":" +
+                    version++ +
+                    ",\"note\":\"TEST\"}",
+                driver
+            );
+        }
+        assertEquals(
+            "false:true",
+            sql("SELECT sharing||':'||(latitude IS NULL) FROM trip_tracking WHERE trip_id=" + trip)
+        );
+        assertEquals("CLOSED", call(200, "GET", path, null, driver).path("status").asText());
+        call(
+            409,
+            "POST",
+            path + "/samples",
+            trackingBody(nonce, Instant.now().truncatedTo(ChronoUnit.MILLIS), "10.123456"),
+            driver
+        );
     }
 
     @Test
