@@ -147,6 +147,7 @@ public class AccessManagementService {
                 .stream()
                 .map(Permission::name)
                 .collect(Collectors.toSet());
+            var targets = resourceGrants.targets(connection, Role.valueOf(code));
             registry.deleteRole(connection, code, version, actor.id());
             changes.record(
                 connection,
@@ -154,7 +155,7 @@ public class AccessManagementService {
                 Target.ROLE,
                 code,
                 actor.id(),
-                AccessChangeStateResponse.registry(before, permissions),
+                AccessChangeStateResponse.registry(before, permissions, targets),
                 AccessChangeStateResponse.deleted(before)
             );
             return List.of();

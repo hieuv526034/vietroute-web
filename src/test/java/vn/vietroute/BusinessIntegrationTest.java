@@ -1460,6 +1460,45 @@ class BusinessIntegrationTest {
     }
 
     @Test
+    void compatibilityAssignmentsAndRoleDeletionRetainExactResourceHistory() throws Exception {
+        call(
+            201,
+            "POST",
+            "/api/v1/admin/access/registry/roles/RESOURCEHISTORY",
+            "{\"nameVi\":\"Lịch sử\",\"nameEn\":\"History\",\"active\":true,\"version\":0}",
+            admin
+        );
+        grantResources("RESOURCEHISTORY", 0, Set.of("GET /api/v1/admin/vehicles"), admin, 200);
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/access/roles/RESOURCEHISTORY/permissions",
+            "{\"permissions\":[\"VEHICLE_READ\"],\"version\":1}",
+            admin
+        );
+        assertEquals(
+            "2",
+            sql(
+                "SELECT count(*) FROM auth_access_changes WHERE event_type='ROLE_RESOURCES' AND target_key='RESOURCEHISTORY'"
+            )
+        );
+        assertEquals(
+            "true",
+            sql(
+                "SELECT (after_state->'resources' @> '[\"GET /api/v1/admin/vehicles/{id}\"]'::jsonb)::text FROM auth_access_changes WHERE event_type='ROLE_RESOURCES' AND target_key='RESOURCEHISTORY' ORDER BY id DESC LIMIT 1"
+            )
+        );
+        call(200, "DELETE", "/api/v1/admin/access/registry/roles/RESOURCEHISTORY?version=0", null, admin);
+        assertEquals(
+            "true",
+            sql(
+                "SELECT (before_state->'resources' @> '[\"GET /api/v1/admin/vehicles/{id}\"]'::jsonb AND after_state->'resources'='[]'::jsonb)::text FROM auth_access_changes WHERE event_type='ROLE_DELETED' AND target_key='RESOURCEHISTORY'"
+            )
+        );
+        assertEquals("0", sql("SELECT count(*) FROM auth_role_resource_sets WHERE role_code='RESOURCEHISTORY'"));
+    }
+
+    @Test
     void nativeDelegationAndHistoryFailureCannotEscalateOrPartiallyCommit() throws Exception {
         seed();
         long scope = Long.parseLong(sql("SELECT min(scope_id) FROM carriers"));

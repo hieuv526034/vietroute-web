@@ -197,7 +197,7 @@
     });
     node('grants-form').addEventListener('submit', (event) => {
         event.preventDefault();
-        if (busy || !state || grantRole.builtIn) return;
+        if (busy || !state || grantRole.builtIn || !can('PUT', '/roles/{role}/resources')) return;
         const body = { targets: state.values(), version };
         void perform(async () => {
             await app.mutate(`${base}/roles/${encodeURIComponent(grantRole.code)}/resources`, body, 'put');

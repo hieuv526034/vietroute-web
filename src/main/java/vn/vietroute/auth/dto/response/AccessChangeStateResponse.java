@@ -110,12 +110,21 @@ public record AccessChangeStateResponse(
 
     /** Trước khi xóa role phải giữ cả mapping sắp bị dọn, không chỉ trạng thái registry. */
     public static AccessChangeStateResponse registry(AccessRegistryResponse value, Set<String> permissions) {
+        return registry(value, permissions, Set.of());
+    }
+
+    /** Xóa role còn phải ghi chính xác target bị dọn, không chỉ projection nội bộ. */
+    public static AccessChangeStateResponse registry(
+        AccessRegistryResponse value,
+        Set<String> permissions,
+        Set<String> resources
+    ) {
         return value == null
             ? empty()
             : new AccessChangeStateResponse(
                   Set.of(),
                   permissions,
-                  permissions.size(),
+                  permissions.size() + resources.size(),
                   false,
                   value.active(),
                   false,
@@ -124,7 +133,8 @@ public record AccessChangeStateResponse(
                   value.nameEn(),
                   null,
                   null,
-                  value.version()
+                  value.version(),
+                  resources
               );
     }
 

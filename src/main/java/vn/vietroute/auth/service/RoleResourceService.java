@@ -136,7 +136,8 @@ public class RoleResourceService {
         return selected;
     }
 
-    private Set<String> targets(Connection connection, Role role) throws SQLException {
+    /** Snapshot trong transaction quản trị của caller, kể cả target cũ cần thu hồi/lưu lịch sử. */
+    public Set<String> targets(Connection connection, Role role) throws SQLException {
         if (resources.initialized(connection, role)) return resources.targets(connection, role);
         Set<String> codes = roles
             .role(connection, role)

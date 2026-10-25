@@ -191,6 +191,15 @@ public class AdminRecoveryRepository {
     public AccessChangeStateResponse state(Connection connection, long id) throws SQLException {
         Set<String> roles = new LinkedHashSet<>();
         Set<String> permissions = new LinkedHashSet<>();
+        Set<String> resources = new LinkedHashSet<>();
+        try (
+            var query = connection.prepareStatement(
+                "SELECT target FROM auth_role_resources WHERE role_code='ADMIN' ORDER BY target"
+            );
+            var rows = query.executeQuery()
+        ) {
+            while (rows.next()) resources.add(rows.getString(1));
+        }
         try (
             var query = connection.prepareStatement(
                 "SELECT role_code FROM auth_user_roles WHERE user_id=? ORDER BY role_code"
@@ -227,7 +236,7 @@ public class AdminRecoveryRepository {
         return new AccessChangeStateResponse(
             roles,
             permissions,
-            roles.size() + permissions.size(),
+            roles.size() + permissions.size() + resources.size(),
             false,
             active,
             deleted,
@@ -236,7 +245,8 @@ public class AdminRecoveryRepository {
             null,
             null,
             null,
-            version
+            version,
+            resources
         );
     }
 }

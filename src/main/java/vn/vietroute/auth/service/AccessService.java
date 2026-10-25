@@ -114,11 +114,26 @@ public class AccessService {
                 ) throw new BusinessException(ErrorCode.ACCESS_DENIED);
             }
             access.requireExistingRole(connection, role);
+            var beforeTargets = resourceGrants.targets(connection, role);
             access.validateMappings(connection, Set.of(), request.getPermissions());
             resourceGrants.requireDelegable(connection, role, actor);
             access.replacePermissions(connection, role, request.getPermissions(), request.getVersion(), actor.id());
             resourceGrants.fromPermissions(connection, role, request.getPermissions(), actor);
             var after = access.role(connection, role);
+            var afterTargets = resourceGrants.targets(connection, role);
+            if (!beforeTargets.equals(afterTargets)) changes.resources(
+                connection,
+                Event.ROLE_RESOURCES,
+                Target.ROLE,
+                role.name(),
+                actor.id(),
+                beforeTargets,
+                afterTargets,
+                before.version(),
+                after.version(),
+                before.permissions().stream().map(Permission::name).collect(Collectors.toSet()),
+                after.permissions().stream().map(Permission::name).collect(Collectors.toSet())
+            );
             changes.mappings(
                 connection,
                 Event.ROLE_PERMISSIONS,

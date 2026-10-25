@@ -125,7 +125,9 @@
             parent.append(details);
         };
         for (const feature of features.filter((item) => !item.parent)) branch(feature, host);
-        const knownTargets = new Set(inventory.map((item) => item.target));
+        const knownTargets = new Set(
+            inventory.filter((item) => !item.publicRoute && item.declaredPermissions.length).map((item) => item.target),
+        );
         for (const target of state.values().filter((item) => !knownTargets.has(item))) {
             const row = element('label', null, 'resource-grant-leaf');
             const input = element('input');
