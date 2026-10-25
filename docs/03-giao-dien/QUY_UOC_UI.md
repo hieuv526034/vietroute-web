@@ -66,7 +66,7 @@ Gọi `VietRouteForms.validate(form)` và lấy FormData **trước khi disable 
 - Server xác nhận thành công mới đóng và tải lại danh sách; caller được đóng trong luồng thành công dù busy chưa hạ, người dùng vẫn bị khóa đóng tới khi request kết thúc.
 - Lưu quyền trong modal có đối tượng/version không thêm confirm trình duyệt; xóa mềm/retry job giữ xác nhận hiện hành.
 
-Home “Vào hệ thống” và trang login chọn đích từ principal: khách → login, ADMIN → admin, role khác → account; giữ locale/context WAR. Đây là điều hướng, kiểm quyền trực tiếp ở backend vẫn bắt buộc.
+Home “Vào hệ thống” và trang login chọn đích từ principal: chưa đăng nhập → login; đã đăng nhập → `/dashboard`, giữ locale/context WAR. Phiên cần đổi mật khẩu hoặc xác minh email vẫn về `/account` để thiết lập trước nghiệp vụ. Đây là điều hướng, kiểm quyền trực tiếp ở backend vẫn bắt buộc.
 
 Sau POST đổi mật khẩu thành công, client xóa input và tải document `/account` bằng cookie mới, giữ context/locale để server dựng lại toàn bộ menu từ quyền DB. Chỉ gọi lại `/me` sẽ để header mắc ở menu của phiên mật khẩu tạm. Query `passwordChanged=true` chỉ giữ thông báo thành công qua điều hướng; UI chỉ hiện sau `/me` xác nhận tài khoản hết cờ mật khẩu tạm, không dùng query để mở quyền hoặc bỏ AUTH011. Lỗi 401/409/503 vẫn giữ modal/bản nháp và không điều hướng, không tự gửi lại. Chủ tài khoản tự nhập/lưu mật khẩu mới; kiểm thử dùng dữ liệu cách ly, không tự tắt cờ hoặc sửa mật khẩu trên Neon để kiểm UI.
 
@@ -232,3 +232,13 @@ Fragment tracking dùng chung, nút màu xanh/outline theo chuẩn. Hiển thị
 watchPosition chỉ chạy sau nút chủ động, không lưu nonce/tọa độ/token vào storage. Đóng modal/ẩn trang/offline/pagehide clearWatch ngay, thử stop và không tự bật lại. Stop không tới server vẫn chịu lease; lỗi HTTP giữ modal, 401 có link đăng nhập, không tự gửi lại mẫu hoặc làm mới timestamp của mẫu cũ. Geo API từ chối/timeout/không hỗ trợ có thông báo và lộ trình văn bản. Tám test Node dùng adapter thiết bị giả kiểm các nhánh này, không là bằng chứng đã lấy GPS vật lý.
 
 Browser app/PostgreSQL preview cô lập: [staff thấy Maps chưa cấu hình và chia sẻ OFF](../images/track01-staff-unconfigured.png), [tài xế/consent và khóa bật trước giờ](../images/track01-driver-consent.png), [390px](../images/track01-mobile.png) page390/modal352/scroll335 không tràn. Khách đơn hủy thấy UNAVAILABLE và không có nút phát vị trí; console không lỗi. Không bấm xin quyền vị trí thật trong browser QA, không coi Node adapter/SQL fixture là GPS vật lý đã nghiệm thu.
+
+## Breadcrumb và khoảng cách khối — BUSINESS05
+
+Các trang dùng fragment breadcrumb chung, dữ liệu từ cây menu đã lọc VIEW/policy tại server. Trang chủ, nhóm và trang hiện tại là link giữ context WAR/locale; nhóm không có trang riêng trỏ tới trang con đầu tiên được phép mở. Không suy URL từ query, không hiện đường tới trang bị ẩn quyền. Nhãn hiện tại có aria-current=page; danh sách wrap trên điện thoại. URL địa lý cũ dẫn về mục danh mục tương ứng.
+
+Các panel cùng cấp cách nhau 24px, grid dùng gap thay vì ép card sát nhau. Không thêm margin vào panel đang hidden hoặc làm hiện nhiều tab; kiểm desktop và 390px bằng dữ liệu thật/fixture riêng. Không thay guard hoặc mutation khi sửa layout.
+
+Dashboard `/dashboard` dùng các API nghiệp vụ hiện hành, không có API tổng hợp/quyền/schema mới. Tài khoản CUSTOMER thấy tổng đơn riêng, chờ/xác nhận và 5 đơn gần đây; DRIVER thấy chuyến đang chạy, khởi hành hôm nay và mở bán được giao. ADMIN/nhân sự có REPORT_READ thấy báo cáo từ đầu tháng hiện tại tới hết tháng kế tiếp theo lịch Việt Nam; BOOKING_READ thấy số đơn chờ xử lý toàn phạm vi. Khoảng ngày chỉ áp dụng số liệu báo cáo; tiền thực thu tách khỏi giá chốt. Mỗi khối cần đúng endpoint GET trong capabilities, link cần VIEW; điều kiện role CUSTOMER/DRIVER bổ sung theo rào owner/phân công hiện hành, ADMIN không tự thành khách/tài xế.
+
+Đọc tuần tự, giới hạn danh sách 5 dòng và lấy tổng từ totalElements; không polling hoặc mutation. Lỗi một khối báo tại khối đó và giữ các khối khác; nút Làm mới khóa khi tải. Không dựng số liệu ngẫu nhiên hoặc phát vị trí. Menu chung ẩn màn owner/phân công khi thiếu đúng role nghiệp vụ; backend vẫn kiểm DB/scope/owner ở mỗi request. Ảnh nghiệm thu và CI tại [tiến độ BUSINESS05](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md#business05--luồngdữ-liệu-chuẩn-breadcrumb-khoảng-cách-card-và-dashboard).

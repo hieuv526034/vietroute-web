@@ -69,7 +69,7 @@
         });
 
     // Các màn hình mở rộng dùng cùng HTTP client và cơ chế CSRF/lỗi, không sao chép luồng xác thực.
-    window.VietRoute = Object.freeze({ api, mutate, failure, feedback });
+    window.VietRoute = Object.freeze({ api, mutate, failure, feedback, route });
 
     const bindForm = (id, action, feedbackId = 'form-feedback') => {
         const form = document.getElementById(id);
@@ -129,13 +129,7 @@
         button.setAttribute('data-request-loading', 'true');
         feedback(form.dataset.redirecting, true);
         window.location.assign(
-            route(
-                user.mustChangePassword || user.emailVerificationRequired
-                    ? '/account'
-                    : user.roles.includes('ADMIN')
-                      ? '/admin'
-                      : '/account',
-            ),
+            route(user.mustChangePassword || user.emailVerificationRequired ? '/account' : '/dashboard'),
         );
     });
 

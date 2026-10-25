@@ -47,7 +47,7 @@ function fixture({ navigationFails = false } = {}) {
         window, document, axios: { create: () => api }, URLSearchParams, Event: class {},
         FormData: class { constructor(source) { this.source = source; } *[Symbol.iterator]() { yield* Object.entries(this.source.fields); } },
     });
-    return { state, form, button, feedback, submit: () => form.handlers.submit({ preventDefault() {} }) };
+    return { state, form, button, feedback, route: window.VietRoute.route, submit: () => form.handlers.submit({ preventDefault() {} }) };
 }
 const settle = () => new Promise((resolve) => setImmediate(resolve));
 const response = (extra = {}) => ({ data: { data: { user: { roles: ['ADMIN'], mustChangePassword: false, emailVerificationRequired: false, ...extra } } } });
@@ -62,7 +62,8 @@ test('Login chậm giữ trạng thái gửi, CSRF và chặn submit lặp; thà
     assert.equal(ui.state.requests[0].headers['X-CSRF'], 'fixture-only');
     ui.state.resolve(response());
     await pending;
-    assert.deepEqual(ui.state.navigation, ['/demo/admin?lang=en']);
+    assert.deepEqual(ui.state.navigation, ['/demo/dashboard?lang=en']);
+    assert.equal(ui.route('/my-bookings'), '/demo/my-bookings?lang=en');
     assert.equal(ui.button.disabled, true);
     assert.equal(ui.button.textContent, 'Opening workspace');
     assert.equal(ui.form.dataset.submitting, 'true');
@@ -73,11 +74,11 @@ test('Login chậm giữ trạng thái gửi, CSRF và chặn submit lặp; thà
     assert.equal(ui.state.requests.length, 1);
 });
 
-test('Điểm đến giữ rào xác minh email/mật khẩu tạm và đường tài khoản CUSTOMER', async () => {
-    for (const user of [{ mustChangePassword: true }, { emailVerificationRequired: true }, { roles: ['CUSTOMER'] }]) {
+test('Điểm đến giữ rào thiết lập; các role sẵn sàng đều vào dashboard có locale/context', async () => {
+    for (const user of [{ mustChangePassword: true }, { emailVerificationRequired: true }, { roles: ['CUSTOMER'] }, { roles: ['DRIVER'] }, { roles: ['OPERATOR'] }]) {
         const ui = fixture(), pending = ui.submit();
         await settle(); ui.state.resolve(response(user)); await pending;
-        assert.deepEqual(ui.state.navigation, ['/demo/account?lang=en']);
+        assert.deepEqual(ui.state.navigation, [user.mustChangePassword || user.emailVerificationRequired ? '/demo/account?lang=en' : '/demo/dashboard?lang=en']);
     }
 });
 

@@ -176,6 +176,8 @@ public final class ApplicationConstants {
 
         public static final String ACCOUNT = "/account";
 
+        public static final String DASHBOARD = "/dashboard";
+
         public static final String ADMIN = "/admin";
 
         public static final String DOCS = "/docs";

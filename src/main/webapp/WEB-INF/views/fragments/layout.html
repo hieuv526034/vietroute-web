@@ -117,6 +117,12 @@
                         th:href="@{/journeys(lang=${currentLocale})}"
                         th:text="#{ui.journey.search}"
                     ></a>
+                    <a
+                        th:if="${currentUser != null}"
+                        th:href="@{/dashboard(lang=${currentLocale})}"
+                        th:attr="aria-current=${currentPath == basePath + '/dashboard'} ? 'page' : null"
+                        th:text="#{ui.dashboard.title}"
+                    ></a>
                     <details
                         class="operations-menu"
                         th:each="item : ${functionNavigation}"
@@ -257,6 +263,22 @@
                 </div>
             </nav>
         </header>
+        <nav
+            th:fragment="breadcrumbs"
+            th:if="${breadcrumbs != null and !breadcrumbs.isEmpty()}"
+            class="page-breadcrumbs container-xl"
+            th:attr="aria-label=#{ui.breadcrumb}"
+        >
+            <ol>
+                <li th:each="crumb : ${breadcrumbs}">
+                    <a
+                        th:href="${basePath + crumb.path + '?lang=' + currentLocale}"
+                        th:attr="aria-current=${crumb.active} ? 'page' : null"
+                        th:text="${crumb.name}"
+                    ></a>
+                </li>
+            </ol>
+        </nav>
         <footer
             th:fragment="footer"
             class="site-footer container-xl"

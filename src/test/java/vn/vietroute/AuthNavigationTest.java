@@ -72,8 +72,7 @@ class AuthNavigationTest {
                             null,
                             List.of(new SimpleGrantedAuthority("ROLE_" + role.name()))
                         );
-                        String destination =
-                            contextPath + (role == Role.ADMIN ? "/admin" : "/account") + "?lang=" + locale;
+                        String destination = contextPath + "/dashboard?lang=" + locale;
                         var authenticatedHome = mvc
                             .perform(
                                 get(contextPath + "/")
@@ -96,6 +95,24 @@ class AuthNavigationTest {
                             .getResponse();
                         assertEquals(302, login.getStatus());
                         assertEquals(destination, login.getRedirectedUrl());
+                        var dashboard = mvc
+                            .perform(
+                                get(contextPath + "/dashboard")
+                                    .contextPath(contextPath)
+                                    .param("lang", locale)
+                                    .with(authentication(actor))
+                            )
+                            .andReturn()
+                            .getResponse();
+                        assertEquals(200, dashboard.getStatus());
+                        assertTrue(
+                            dashboard.getContentAsString(StandardCharsets.UTF_8).contains("id=\"business-dashboard\"")
+                        );
+                        assertTrue(
+                            dashboard
+                                .getContentAsString(StandardCharsets.UTF_8)
+                                .contains(contextPath + "/dashboard?lang=" + locale)
+                        );
                         // Trang sau đổi mật khẩu phải render được thông báo vi/en dưới cả ROOT và context WAR.
                         var account = mvc
                             .perform(

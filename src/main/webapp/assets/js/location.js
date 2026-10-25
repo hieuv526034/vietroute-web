@@ -10,7 +10,7 @@
     const form = node('location-form');
     const kinds = ['locations', 'provinces'];
     const visibleKinds = root.dataset.section ? [root.dataset.section] : kinds;
-    const tabs = window.VietRouteUI.tabs('location-tabs');
+    const tabs = window.VietRouteUI.tabs(node('location-tabs'));
     if (root.dataset.section) {
         tabs.show('location-places-panel', root.dataset.section === 'locations');
         tabs.show('location-provinces-panel', root.dataset.section === 'provinces');

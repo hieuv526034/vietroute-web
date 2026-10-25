@@ -1,0 +1,108 @@
+<!doctype html>
+<html
+    xmlns:th="http://www.thymeleaf.org"
+    th:lang="${currentLocale}"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.dashboard.title})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <nav th:replace="~{fragments/layout :: breadcrumbs}"></nav>
+        <main
+            id="business-dashboard"
+            class="container-xl workspace-page"
+            th:attr="data-loading=#{ui.loading},data-open=#{ui.dashboard.open},data-empty=#{ui.dashboard.empty},data-range=#{ui.dashboard.range},data-cohort=#{ui.dashboard.cohort},data-scope=#{ui.dashboard.scope},data-owner=#{ui.dashboard.owner},data-assigned=#{ui.dashboard.assigned},data-actual-money=#{ui.dashboard.actualMoney},data-trips=#{ui.dashboard.trips},data-orders=#{ui.dashboard.orders},data-collected=#{ui.dashboard.collected},data-refund-due=#{ui.dashboard.refundDue},data-pending=#{ui.booking.PENDING},data-confirmed=#{ui.booking.CONFIRMED},data-running=#{ui.dashboard.running},data-today=#{ui.dashboard.today},data-upcoming=#{ui.dashboard.openTrips},data-recent=#{ui.dashboard.recent},data-my-orders=#{ui.dashboard.myOrders},data-to-process=#{ui.dashboard.toProcess},data-partial=#{ui.dashboard.partial},data-no-data=#{ui.dashboard.noData},data-updated=#{ui.dashboard.updated},data-open-status=#{ui.trip.OPEN},data-in-progress=#{ui.trip.IN_PROGRESS},data-completed=#{ui.booking.COMPLETED},data-cancelled=#{ui.booking.CANCELLED},data-rejected=#{ui.booking.REJECTED}"
+        >
+            <div class="page-heading dashboard-heading">
+                <div>
+                    <p
+                        class="eyebrow"
+                        th:text="#{ui.dashboard.title}"
+                    ></p>
+                    <h1>
+                        <span th:text="#{ui.dashboard.welcome}"></span>
+                        <span th:text="${currentUser.displayName}"></span>
+                    </h1>
+                    <p
+                        class="muted"
+                        th:text="#{ui.dashboard.intro}"
+                    ></p>
+                    <div class="dashboard-roles">
+                        <span
+                            class="status-chip"
+                            th:each="role : ${currentUser.roles}"
+                            th:text="${role}"
+                        ></span>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    id="dashboard-refresh"
+                    class="button button-outline"
+                    th:text="#{ui.ops.refresh}"
+                ></button>
+            </div>
+            <p
+                id="dashboard-range"
+                class="muted"
+            ></p>
+            <p
+                id="dashboard-status"
+                role="status"
+                aria-live="polite"
+            ></p>
+            <div
+                id="dashboard-feedback"
+                class="feedback"
+                role="alert"
+                hidden
+            ></div>
+            <div
+                id="dashboard-metrics"
+                class="dashboard-metrics"
+            ></div>
+            <div
+                id="dashboard-tasks"
+                class="dashboard-tasks"
+            ></div>
+            <p
+                id="dashboard-updated"
+                class="muted dashboard-updated"
+            ></p>
+            <section class="panel dashboard-shortcuts">
+                <h2 th:text="#{ui.dashboard.shortcuts}"></h2>
+                <div class="dashboard-links dashboard-public-links">
+                    <a
+                        th:href="@{/journeys(lang=${currentLocale})}"
+                        th:text="#{ui.journey.search}"
+                    ></a>
+                    <a
+                        th:href="@{/carriers(lang=${currentLocale})}"
+                        th:text="#{ui.publicCarrier.title}"
+                    ></a>
+                    <a
+                        th:href="@{/account(lang=${currentLocale})}"
+                        th:text="#{ui.account}"
+                    ></a>
+                </div>
+                <div class="summary-grid dashboard-module-links">
+                    <section th:each="group : ${functionNavigation}">
+                        <h3 th:text="${group.name}"></h3>
+                        <div class="dashboard-links">
+                            <a
+                                th:if="${group.path != null}"
+                                th:href="${basePath + group.path + '?lang=' + currentLocale}"
+                                th:text="${group.name}"
+                            ></a>
+                            <th:block
+                                th:insert="~{fragments/layout :: functionMenuItems(${group.children})}"
+                            ></th:block>
+                        </div>
+                    </section>
+                </div>
+            </section>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/dashboard.js}"></script>
+    </body>
+</html>
