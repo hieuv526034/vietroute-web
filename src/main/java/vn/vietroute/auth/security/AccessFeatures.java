@@ -86,6 +86,13 @@ public final class AccessFeatures {
             Groups.TRIP + "_VIEW"
         ),
         new Feature(
+            Functions.DRIVER_TRIP,
+            Functions.BUSINESS,
+            "access.function.DRIVER_TRIP",
+            Routes.DRIVER_TRIPS_PAGE,
+            Groups.DRIVER_TRIP + "_VIEW"
+        ),
+        new Feature(
             Functions.MEDIA,
             Functions.SYSTEM,
             "access.function.MEDIA",

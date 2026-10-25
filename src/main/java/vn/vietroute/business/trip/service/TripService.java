@@ -14,6 +14,7 @@ import vn.vietroute.business.carrier.repository.CarrierRepository;
 import vn.vietroute.business.trip.dto.request.TripAssignmentRequest;
 import vn.vietroute.business.trip.dto.request.TripChoiceRequest;
 import vn.vietroute.business.trip.dto.request.TripCreateRequest;
+import vn.vietroute.business.trip.dto.request.TripNoticeRequest;
 import vn.vietroute.business.trip.dto.request.TripSearchRequest;
 import vn.vietroute.business.trip.dto.request.TripStateRequest;
 import vn.vietroute.business.trip.dto.response.TripChoiceResponse;
@@ -204,6 +205,33 @@ public class TripService {
                 trip.carrierId(),
                 trip.scopeId(),
                 "ASSIGNED",
+                null,
+                body.note().strip(),
+                actor.id()
+            );
+            return trips.find(connection, id, PermissionAction.UPDATE, false, true);
+        });
+    }
+
+    /** Giữ trạng thái OPEN/IN_PROGRESS, chỉ thay thông báo và ghi NOTICE cùng transaction. */
+    @AccessOperation(action = PermissionAction.UPDATE)
+    public TripResponse notice(long id, TripNoticeRequest body, UserPrincipal actor) {
+        AccessActors.requireCurrent(actor);
+        BusinessRules.require(body.note() != null && !body.note().isBlank(), ErrorCode.INVALID_REQUEST);
+        return transactions.execute(connection -> {
+            var trip = trips.find(connection, id, PermissionAction.UPDATE, true, true);
+            version(trip, body.version());
+            BusinessRules.require(
+                trip.status() == TripStatus.OPEN || trip.status() == TripStatus.IN_PROGRESS,
+                ErrorCode.TRIP_STATE_CONFLICT
+            );
+            trips.state(connection, trip, trip.status(), body.note().strip(), actor.id());
+            trips.event(
+                connection,
+                id,
+                trip.carrierId(),
+                trip.scopeId(),
+                "NOTICE",
                 null,
                 body.note().strip(),
                 actor.id()

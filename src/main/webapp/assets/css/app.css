@@ -2845,3 +2845,6 @@ fieldset:disabled .button[type='submit']::before,
         grid-template-columns: minmax(0, 1fr);
     }
 }
+#driver-trip-workspace .records-table {
+    min-width: 900px;
+}

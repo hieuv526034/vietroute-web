@@ -19,4 +19,11 @@ public class TripPageController {
     public String page() {
         return "trip/manage";
     }
+
+    @GetMapping(Routes.DRIVER_TRIPS_PAGE)
+    @AccessFunction(group = Groups.DRIVER_TRIP, function = Functions.DRIVER_TRIP, actions = { PermissionAction.VIEW })
+    @AccessOperation(resource = Groups.DRIVER_TRIP, action = PermissionAction.VIEW)
+    public String driverPage() {
+        return "trip/driver";
+    }
 }

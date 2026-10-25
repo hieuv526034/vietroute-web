@@ -56,6 +56,8 @@
         node('trip-body').replaceChildren(row);
     };
     const editable = () => !readOnly && (!selected || ['DRAFT', 'OPEN'].includes(selected.status));
+    const noticeAllowed = () =>
+        !readOnly && selected && ['OPEN', 'IN_PROGRESS'].includes(selected.status) && can('PUT', '/{id}/notice');
     const sync = () => {
         node('trip-create').hidden = !can('POST');
         node('trip-create').disabled = busy || !can('POST');
@@ -75,6 +77,8 @@
             picker.element.querySelector('[data-picker-next]').disabled = busy || !picker.hasNext;
         }
         node('trip-save').hidden = !editable();
+        form.elements.note.disabled = busy || (!editable() && !noticeAllowed());
+        node('trip-notice').hidden = !noticeAllowed();
         node('trip-open').hidden = !editable() || selected?.status !== 'DRAFT' || !can('PUT', '/{id}/state');
         node('trip-cancel').hidden = !editable() || !selected || !can('PUT', '/{id}/state');
     };
@@ -307,6 +311,24 @@
     };
     node('trip-open').addEventListener('click', () => transition('OPEN'));
     node('trip-cancel').addEventListener('click', () => transition('CANCELLED'));
+    node('trip-notice').addEventListener('click', () => {
+        if (busy || !noticeAllowed()) return;
+        tabs.select('trip-info');
+        if (!form.elements.note.value.trim()) {
+            feedback(labels.noteRequired, false, 'trip-form-feedback');
+            form.elements.note.focus();
+            return;
+        }
+        void perform(async () =>
+            saved(
+                await mutate(
+                    `${path}/${selected.id}/notice`,
+                    { note: form.elements.note.value.trim(), version: selected.version },
+                    'put',
+                ),
+            ),
+        );
+    });
     for (const picker of pickers) {
         picker.element
             .querySelector('[data-picker-search]')

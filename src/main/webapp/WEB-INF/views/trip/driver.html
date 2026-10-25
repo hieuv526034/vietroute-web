@@ -1,0 +1,267 @@
+<!doctype html>
+<html
+    xmlns:th="http://www.thymeleaf.org"
+    th:lang="${currentLocale}"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.driverTrip.title})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main
+            id="driver-trip-workspace"
+            class="container-xl workspace-page"
+            th:attr="data-loading=#{ui.loading},data-empty=#{ui.empty},data-no-read=#{ui.accessTree.noRead},data-view=#{ui.route.view},data-start=#{ui.driverTrip.start},data-arrive=#{ui.driverTrip.arrive},data-depart=#{ui.driverTrip.depart},data-complete=#{ui.driverTrip.complete},data-planned=#{ui.driverTrip.planned},data-actual=#{ui.driverTrip.actual},data-pickup=#{ui.route.pickup},data-dropoff=#{ui.route.dropoff},data-pending=#{ui.driverTrip.pending},data-open=#{ui.trip.OPEN},data-in-progress=#{ui.trip.IN_PROGRESS},data-completed=#{ui.trip.COMPLETED},data-cancelled=#{ui.trip.CANCELLED},data-created=#{ui.trip.CREATED},data-opened=#{ui.trip.OPENED},data-assigned=#{ui.trip.ASSIGNED},data-started=#{ui.trip.STARTED},data-arrived=#{ui.trip.ARRIVED},data-departed=#{ui.trip.DEPARTED},data-notice=#{ui.trip.NOTICE}"
+        >
+            <div class="page-heading">
+                <p
+                    class="eyebrow"
+                    th:text="#{ui.fleet.eyebrow}"
+                ></p>
+                <h1 th:text="#{ui.driverTrip.title}"></h1>
+                <p
+                    class="muted"
+                    th:text="#{ui.driverTrip.description}"
+                ></p>
+            </div>
+            <p
+                id="driver-trip-status"
+                class="catalog-status"
+                role="status"
+                aria-live="polite"
+            ></p>
+            <div
+                id="driver-trip-feedback"
+                class="feedback"
+                role="alert"
+                hidden
+            ></div>
+            <fieldset
+                id="driver-trip-controls"
+                class="border-0 p-0 m-0 w-100"
+            >
+                <section class="panel">
+                    <div class="panel-heading">
+                        <h2 th:text="#{ui.driverTrip.title}"></h2>
+                        <button
+                            id="driver-trip-refresh"
+                            type="button"
+                            class="button button-outline"
+                            th:text="#{ui.ops.refresh}"
+                        ></button>
+                    </div>
+                    <form
+                        id="driver-trip-search"
+                        class="table-filter trip-filters"
+                    >
+                        <label>
+                            <span th:text="#{ui.fleet.search}"></span>
+                            <input
+                                name="query"
+                                maxlength="160"
+                                class="form-control"
+                            />
+                        </label>
+                        <label>
+                            <span th:text="#{ui.location.state}"></span>
+                            <select
+                                name="status"
+                                class="form-select"
+                            >
+                                <option
+                                    value=""
+                                    th:text="#{ui.fleet.allStates}"
+                                ></option>
+                                <option
+                                    value="OPEN"
+                                    th:text="#{ui.trip.OPEN}"
+                                ></option>
+                                <option
+                                    value="IN_PROGRESS"
+                                    th:text="#{ui.trip.IN_PROGRESS}"
+                                ></option>
+                                <option
+                                    value="COMPLETED"
+                                    th:text="#{ui.trip.COMPLETED}"
+                                ></option>
+                                <option
+                                    value="CANCELLED"
+                                    th:text="#{ui.trip.CANCELLED}"
+                                ></option>
+                            </select>
+                        </label>
+                        <label>
+                            <span th:text="#{ui.trip.date}"></span>
+                            <input
+                                name="date"
+                                type="date"
+                                class="form-control"
+                            />
+                        </label>
+                        <button
+                            class="button button-outline"
+                            th:text="#{ui.search}"
+                        ></button>
+                    </form>
+                    <div
+                        class="table-responsive"
+                        tabindex="0"
+                        role="region"
+                        th:attr="aria-label=#{ui.table.scroll}"
+                    >
+                        <table class="table records-table">
+                            <thead>
+                                <tr>
+                                    <th th:text="#{ui.code}"></th>
+                                    <th th:text="#{ui.route.name}"></th>
+                                    <th th:text="#{ui.fleet.carrier}"></th>
+                                    <th th:text="#{ui.trip.departure}"></th>
+                                    <th th:text="#{ui.fleet.plate}"></th>
+                                    <th th:text="#{ui.location.state}"></th>
+                                    <th
+                                        class="table-actions"
+                                        th:text="#{ui.ops.actions}"
+                                    ></th>
+                                </tr>
+                            </thead>
+                            <tbody id="driver-trip-body"></tbody>
+                        </table>
+                    </div>
+                    <div th:replace="~{fragments/pagination :: pager('driver-trip', 10)}"></div>
+                </section>
+            </fieldset>
+            <dialog
+                id="driver-trip-dialog"
+                class="workspace-dialog route-dialog"
+                aria-labelledby="driver-trip-dialog-title"
+            >
+                <div class="dialog-heading">
+                    <h2
+                        id="driver-trip-dialog-title"
+                        tabindex="-1"
+                        th:text="#{ui.driverTrip.title}"
+                    ></h2>
+                    <button
+                        type="button"
+                        class="button button-outline"
+                        data-dialog-close
+                        th:text="#{ui.ops.close}"
+                    ></button>
+                </div>
+                <div
+                    id="driver-trip-form-feedback"
+                    class="feedback"
+                    role="alert"
+                    hidden
+                ></div>
+                <p
+                    id="driver-trip-conflict"
+                    class="form-help"
+                    hidden
+                    th:text="#{ui.fleet.conflict}"
+                ></p>
+                <fieldset
+                    id="driver-trip-dialog-controls"
+                    class="border-0 p-0 m-0 w-100"
+                >
+                    <div
+                        id="driver-trip-tabs"
+                        data-tabs
+                    >
+                        <div
+                            class="workspace-tabs"
+                            role="tablist"
+                            th:attr="aria-label=#{ui.driverTrip.title}"
+                        >
+                            <button
+                                id="driver-trip-info-tab"
+                                type="button"
+                                data-tab-target="driver-trip-info"
+                                aria-selected="true"
+                                th:text="#{ui.trip.info}"
+                            ></button>
+                            <button
+                                id="driver-trip-stops-tab"
+                                type="button"
+                                data-tab-target="driver-trip-stops"
+                                th:text="#{ui.route.stops}"
+                            ></button>
+                            <button
+                                id="driver-trip-events-tab"
+                                type="button"
+                                data-tab-target="driver-trip-events"
+                                th:text="#{ui.trip.history}"
+                            ></button>
+                        </div>
+                        <section
+                            id="driver-trip-info"
+                            data-tab-panel="driver-trip-info-tab"
+                        >
+                            <div
+                                id="driver-trip-summary"
+                                class="route-stop-list"
+                            ></div>
+                            <p
+                                class="form-help"
+                                th:text="#{ui.driverTrip.startHelp}"
+                            ></p>
+                        </section>
+                        <section
+                            id="driver-trip-stops"
+                            data-tab-panel="driver-trip-stops-tab"
+                            hidden
+                        >
+                            <p
+                                class="form-help"
+                                th:text="#{ui.driverTrip.progressHelp}"
+                            ></p>
+                            <div
+                                id="driver-trip-stop-list"
+                                class="route-stop-list"
+                            ></div>
+                        </section>
+                        <section
+                            id="driver-trip-events"
+                            data-tab-panel="driver-trip-events-tab"
+                            hidden
+                        >
+                            <div
+                                id="driver-trip-event-list"
+                                class="route-stop-list"
+                            ></div>
+                        </section>
+                    </div>
+                    <form
+                        id="driver-trip-form"
+                        novalidate
+                    >
+                        <label>
+                            <span th:text="#{ui.trip.note}"></span>
+                            <textarea
+                                name="note"
+                                maxlength="2000"
+                                rows="2"
+                                class="form-control"
+                            ></textarea>
+                        </label>
+                        <div class="dialog-actions">
+                            <button
+                                type="button"
+                                class="button button-outline"
+                                data-dialog-close
+                                th:text="#{ui.ops.close}"
+                            ></button>
+                            <button
+                                id="driver-trip-progress"
+                                type="submit"
+                                class="button"
+                                hidden
+                            ></button>
+                        </div>
+                    </form>
+                </fieldset>
+            </dialog>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/driver-trips.js}"></script>
+    </body>
+</html>

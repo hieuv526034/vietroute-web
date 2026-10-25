@@ -3,7 +3,7 @@
 printf 'Access tree stage: bootstrap, actions, multiple roles, delegated assignment and two nodes\n'
 tree_admin_token="$foundation_admin_token"
 token="$tree_admin_token"
-[[ "$(sql 'SELECT count(*) FROM auth_access_functions')" == 22 ]]
+[[ "$(sql 'SELECT count(*) FROM auth_access_functions')" == 23 ]]
 [[ "$(sql "SELECT count(*) FROM auth_access_resources WHERE target='POST /api/v1/admin/catalogs' AND function_code='CATALOG' AND permission_match='ANY' AND declared_permissions LIKE '%CATALOG_CREATE%'")" == 1 ]]
 call 200 GET /api/v1/admin/access/tree '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; f=next(x for x in d if x["code"]=="CATALOG"); assert f["parent"] is None and f["viewPermission"]=="CATALOG_VIEW"; a=next(x for x in f["actions"] if x["permission"]=="CATALOG_CREATE"); assert any(x["target"]=="POST /api/v1/admin/catalogs" and x["match"]=="ANY" for x in a["endpoints"])' "$result"
