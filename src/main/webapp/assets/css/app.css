@@ -2861,3 +2861,25 @@ fieldset:disabled .button[type='submit']::before,
     white-space: pre-line;
     overflow-wrap: anywhere;
 }
+#booking-workspace .records-table {
+    min-width: 1050px;
+}
+#booking-create-form .grid-span {
+    grid-column: 1 / -1;
+}
+#journey-workspace .records-table {
+    min-width: 1100px;
+}
+.journey-picker {
+    min-width: 0;
+}
+.journey-picker h2 {
+    margin-top: 16px;
+    font-size: 1.1rem;
+}
+.journey-picker .trip-picker-search {
+    flex-wrap: wrap;
+}
+.driver-passenger-table {
+    min-width: 780px;
+}

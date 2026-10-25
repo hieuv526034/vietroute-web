@@ -16,6 +16,7 @@ public final class WebRoutePolicy {
         return List.of(
             Routes.HOME,
             Routes.PUBLIC_CARRIERS_PAGE,
+            Routes.JOURNEYS_PAGE,
             Routes.HEALTH,
             Routes.LOGIN,
             Routes.AUTH_LIFECYCLE_PAGE,
@@ -70,6 +71,7 @@ public final class WebRoutePolicy {
         return (
             path.equals(Routes.HOME) ||
             path.equals(Routes.PUBLIC_CARRIERS_PAGE) ||
+            path.equals(Routes.JOURNEYS_PAGE) ||
             path.equals(Routes.LOGIN) ||
             path.equals(Routes.DOCS) ||
             path.equals(Routes.AUTH_LIFECYCLE_PAGE) ||
@@ -86,7 +88,9 @@ public final class WebRoutePolicy {
             Routes.PROVINCES,
             Routes.LOCATIONS,
             Routes.PUBLIC_CARRIERS,
-            Routes.PUBLIC_CARRIERS_MATCHER
+            Routes.PUBLIC_CARRIERS_MATCHER,
+            Routes.PUBLIC_TRIPS,
+            Routes.PUBLIC_TRIPS_MATCHER
         );
     }
 
@@ -97,7 +101,9 @@ public final class WebRoutePolicy {
                 path.equals(Routes.PROVINCES) ||
                 path.equals(Routes.LOCATIONS) ||
                 path.equals(Routes.PUBLIC_CARRIERS) ||
-                path.startsWith(Routes.PUBLIC_CARRIERS + "/"))
+                path.startsWith(Routes.PUBLIC_CARRIERS + "/") ||
+                path.equals(Routes.PUBLIC_TRIPS) ||
+                path.startsWith(Routes.PUBLIC_TRIPS + "/"))
         );
     }
 

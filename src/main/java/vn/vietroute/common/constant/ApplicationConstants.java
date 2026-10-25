@@ -266,6 +266,18 @@ public final class ApplicationConstants {
 
         public static final String TRIP_PROGRESS = BY_ID + "/progress";
         public static final String TRIP_NOTICE = BY_ID + "/notice";
+        public static final String TRIP_PASSENGERS = BY_ID + "/passengers";
+        public static final String BOOKINGS_PAGE = "/operations/bookings";
+        public static final String ADMIN_BOOKINGS = ADMIN_API + "/bookings";
+        public static final String MY_BOOKINGS_PAGE = "/my-bookings";
+        public static final String MY_BOOKINGS = API + MY_BOOKINGS_PAGE;
+        public static final String BOOKING_STATE = BY_ID + "/state";
+        public static final String BOOKING_PAYMENT = BY_ID + "/payment";
+        public static final String BOOKING_TRIPS = "/trips";
+        public static final String PUBLIC_TRIPS = API + "/trips";
+        public static final String PUBLIC_TRIPS_MATCHER = PUBLIC_TRIPS + "/**";
+        public static final String JOURNEYS_PAGE = "/journeys";
+        public static final String JOURNEY_QUOTE = BY_ID + "/quote";
 
         public static final String CARRIER_CHOICES = "/carriers";
 

@@ -300,4 +300,26 @@ Progress JSON gồm action START/ARRIVE/DEPART/COMPLETE, stopOrder, version, not
 
 PUT `/api/v1/admin/trips/{id}/notice` dùng TRIP_UPDATE trong scope, JSON note không rỗng + version. Chỉ OPEN/IN_PROGRESS; tăng version, giữ trạng thái và lưu thông báo + NOTICE nguyên tử. Không cho hủy IN_PROGRESS hoặc tự hoàn tiền/chuyển khách. UI staff cho ghi chú/thông báo trong modal ngay cả khi chuyến đang chạy; không mở lại form phân công.
 
-Bản bước này chưa có hành khách/booking để tự đóng PENDING tại điểm rời hoặc hoàn thành CONFIRMED tại điểm trả; các hooks được bổ sung trong transaction ở BOOKING01 tiếp theo. Không coi progress tách rời là đã hoàn tất toàn bộ đặc tả đặt vé.
+BOOKING01 bổ sung hooks cùng connection ở mục dưới: đóng PENDING tại điểm rời, hoàn thành CONFIRMED tại điểm trả và cascade hủy chuyến. Tiến độ xác nhận vẫn tách khỏi GPS.
+
+## Đặt chỗ theo chặng và tìm công khai — BOOKING01/SEARCH01
+
+V020 thêm `bookings`/`booking_events`, giữ V001–V019. Đơn gắn FK composite trip/carrier/scope và hai điểm snapshot. WEB phải có customer; PHONE không cần tài khoản khách. Giá chốt bằng giá cộng dồn của snapshot tại lúc gửi, không nhận owner/source/giá/audit từ client. Partial unique chỉ một WEB PENDING/CONFIRMED mỗi customer; khi tạo WEB khóa user sau trip để tuần tự hóa cả hai chuyến khác nhau. PENDING không giữ chỗ.
+
+| API | Quyền và dữ liệu |
+|---|---|
+| GET `/api/v1/trips` | Công khai; fromLocationId hoặc fromProvinceId, toLocationId hoặc toProvinceId, date ngày pickup Việt Nam, seats 1–200, carrierId/vehicleTypeId tùy chọn, page/size. SQL lọc hướng/điểm chưa rời/nhà xe và scope active/MIN chỗ trên từng range; count/trang cùng predicate. Chỉ chuyến từng OPEN, đang IN_PROGRESS hoặc OPEN chưa quá giờ đầu. |
+| GET `/api/v1/trips/{id}` và `/{id}/quote` | Công khai, projection tường minh không customer/account/driver PII; chi tiết snapshot/tiến độ/thông báo vẫn đọc được sau hủy/hoàn thành, DRAFT 404. Quote nhận pickupStopId/dropoffStopId/seats và tính tại server; chỉ báo khả năng nhận hiện tại, không giữ chỗ. |
+| GET `/api/v1/my-bookings` và `/{id}` | MY_BOOKING_READ + CUSTOMER ready hiện hành, chỉ owner; query/tripId/status/page/size lọc tại DB. ID người khác 404. |
+| POST `/api/v1/my-bookings` | MY_BOOKING_CREATE + CUSTOMER ready; tripId/pickupStopId/dropoffStopId/seats/contactName/contactPhone/requestKey UUID. Actor/source/giá lấy tại server. |
+| PUT `/api/v1/my-bookings/{id}/state` | MY_BOOKING_UPDATE, owner; chỉ CANCELLED trước actual departure pickup, version/note bắt buộc. |
+| GET `/api/v1/admin/bookings` và `/{id}` | BOOKING_READ + scope trong SQL count/page/ID; không dùng CUSTOMER owner để mở dữ liệu nhà xe khác. |
+| GET `/api/v1/admin/bookings/trips` | BOOKING_CREATE trong scope, picker PHONE query/page/size độc lập TRIP_READ. |
+| POST `/api/v1/admin/bookings` | BOOKING_CREATE + scope; cùng payload đặt nhưng server cố định PHONE và customer NULL. Dùng chung thuật toán chỗ/giá. |
+| PUT `/api/v1/admin/bookings/{id}/state` | BOOKING_UPDATE + scope; PENDING→CONFIRMED/REJECTED/CANCELLED, CONFIRMED→CANCELLED trước pickup đã rời. Version, lý do từ chối/hủy. |
+| PUT `/api/v1/admin/bookings/{id}/payment` | BOOKING_UPDATE + scope; kind PAYMENT/REFUND, amount, note, version, requestKey. Ghi nhận thủ công đã diễn ra ngoài hệ thống: chỉ thu CONFIRMED/COMPLETED, hoàn CANCELLED; tổng thu ≤ giá đơn, tổng hoàn ≤ đã thu. Không gọi provider. |
+| GET `/api/v1/driver/trips/{id}/passengers` | DRIVER_TRIP_READ, guard đúng assigned/global+scoped DRIVER/link hiện hành trong cùng connection; phân trang CONFIRMED/COMPLETED theo đón/trả. Chỉ mã/chặng/số chỗ/tên/điện thoại cần phục vụ; không email/user ID/giá/audit. |
+
+Mutation khóa trip → user (chỉ tạo WEB) → booking → segments tăng dần. `TripCapacityRepository` là một thuật toán dùng chung; confirm tăng đúng [pickup,dropoff), hủy CONFIRMED giảm đúng một lần, kiểm liên tục và đủ mọi chặng. CAS và booking_events cùng transaction; history lỗi rollback. UUID tạo/tiền replay cùng actor và nội dung trả kết quả cũ, khác nội dung bị chặn; không tự retry mutation. Hủy trip cascade PENDING/CONFIRMED và giải phóng chỗ trong transaction trip. START/DEPART đóng PENDING tại điểm đã rời; ARRIVE hoàn thành CONFIRMED ở điểm trả, giữ reserved lịch sử. Hoàn thành/hủy kết thúc ràng buộc một WEB active.
+
+BOOKING001 dữ liệu sai/400, BOOKING002 thiếu chỗ/409, BOOKING003 trạng thái/409, BOOKING004 đã có WEB active/409, BOOKING005 UUID khác nội dung/409, BOOKING006 thu/hoàn vượt giới hạn/400; version cũ COM008/409. Tiền hủy chưa hoàn có refundDue, không tự ghi đã hoàn. Trang `/journeys` công khai, `/my-bookings` MY_BOOKING_VIEW và `/operations/bookings` BOOKING_VIEW độc lập READ. Startup sync registry/ADMIN khi bật; CUSTOMER/OPERATOR vẫn cần mapping DB tường minh. Maps/GPS, tra cứu nhà xe và báo cáo tiếp tục riêng; không suy từ chi tiết text là đã có GPS thật.

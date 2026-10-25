@@ -113,6 +113,10 @@
                         th:href="@{/carriers(lang=${currentLocale})}"
                         th:text="#{ui.publicCarrier.title}"
                     ></a>
+                    <a
+                        th:href="@{/journeys(lang=${currentLocale})}"
+                        th:text="#{ui.journey.search}"
+                    ></a>
                     <details
                         class="operations-menu"
                         th:each="item : ${functionNavigation}"

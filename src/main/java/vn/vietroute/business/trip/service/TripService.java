@@ -10,6 +10,7 @@ import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.auth.security.annotation.AccessResource;
+import vn.vietroute.business.booking.repository.BookingLifecycleRepository;
 import vn.vietroute.business.carrier.repository.CarrierRepository;
 import vn.vietroute.business.trip.dto.request.TripAssignmentRequest;
 import vn.vietroute.business.trip.dto.request.TripChoiceRequest;
@@ -39,6 +40,7 @@ public class TripService {
     private final TripTemplateRepository templates;
     private final CarrierRepository carriers;
     private final JdbcTransactions transactions;
+    private final BookingLifecycleRepository bookings;
 
     /** Danh sách staff lọc tại DB trước count/phân trang. */
     @AccessOperation(action = PermissionAction.READ)
@@ -147,6 +149,12 @@ public class TripService {
                     ErrorCode.TRIP_STATE_CONFLICT
                 );
             }
+            if (body.status() == TripStatus.CANCELLED) bookings.cancelTrip(
+                connection,
+                id,
+                body.note().strip(),
+                actor.id()
+            );
             trips.state(connection, trip, body.status(), body.note().strip(), actor.id());
             trips.event(
                 connection,

@@ -9,7 +9,7 @@
         <main
             id="driver-trip-workspace"
             class="container-xl workspace-page"
-            th:attr="data-loading=#{ui.loading},data-empty=#{ui.empty},data-no-read=#{ui.accessTree.noRead},data-view=#{ui.route.view},data-start=#{ui.driverTrip.start},data-arrive=#{ui.driverTrip.arrive},data-depart=#{ui.driverTrip.depart},data-complete=#{ui.driverTrip.complete},data-planned=#{ui.driverTrip.planned},data-actual=#{ui.driverTrip.actual},data-pickup=#{ui.route.pickup},data-dropoff=#{ui.route.dropoff},data-pending=#{ui.driverTrip.pending},data-open=#{ui.trip.OPEN},data-in-progress=#{ui.trip.IN_PROGRESS},data-completed=#{ui.trip.COMPLETED},data-cancelled=#{ui.trip.CANCELLED},data-created=#{ui.trip.CREATED},data-opened=#{ui.trip.OPENED},data-assigned=#{ui.trip.ASSIGNED},data-started=#{ui.trip.STARTED},data-arrived=#{ui.trip.ARRIVED},data-departed=#{ui.trip.DEPARTED},data-notice=#{ui.trip.NOTICE}"
+            th:attr="data-loading=#{ui.loading},data-empty=#{ui.empty},data-no-read=#{ui.accessTree.noRead},data-view=#{ui.route.view},data-start=#{ui.driverTrip.start},data-arrive=#{ui.driverTrip.arrive},data-depart=#{ui.driverTrip.depart},data-complete=#{ui.driverTrip.complete},data-planned=#{ui.driverTrip.planned},data-actual=#{ui.driverTrip.actual},data-pickup=#{ui.route.pickup},data-dropoff=#{ui.route.dropoff},data-pending=#{ui.driverTrip.pending},data-confirmed=#{ui.booking.CONFIRMED},data-open=#{ui.trip.OPEN},data-in-progress=#{ui.trip.IN_PROGRESS},data-completed=#{ui.trip.COMPLETED},data-cancelled=#{ui.trip.CANCELLED},data-created=#{ui.trip.CREATED},data-opened=#{ui.trip.OPENED},data-assigned=#{ui.trip.ASSIGNED},data-started=#{ui.trip.STARTED},data-arrived=#{ui.trip.ARRIVED},data-departed=#{ui.trip.DEPARTED},data-notice=#{ui.trip.NOTICE}"
         >
             <div class="page-heading">
                 <p
@@ -190,6 +190,12 @@
                                 data-tab-target="driver-trip-events"
                                 th:text="#{ui.trip.history}"
                             ></button>
+                            <button
+                                id="driver-trip-passengers-tab"
+                                type="button"
+                                data-tab-target="driver-trip-passengers"
+                                th:text="#{ui.booking.passengers}"
+                            ></button>
                         </div>
                         <section
                             id="driver-trip-info"
@@ -227,6 +233,33 @@
                                 id="driver-trip-event-list"
                                 class="route-stop-list"
                             ></div>
+                        </section>
+                        <section
+                            id="driver-trip-passengers"
+                            data-tab-panel="driver-trip-passengers-tab"
+                            hidden
+                        >
+                            <div
+                                class="table-responsive"
+                                tabindex="0"
+                                role="region"
+                                th:attr="aria-label=#{ui.table.scroll}"
+                            >
+                                <table class="table driver-passenger-table">
+                                    <thead>
+                                        <tr>
+                                            <th th:text="#{ui.code}"></th>
+                                            <th th:text="#{ui.booking.leg}"></th>
+                                            <th th:text="#{ui.booking.seats}"></th>
+                                            <th th:text="#{ui.booking.contactName}"></th>
+                                            <th th:text="#{ui.booking.contactPhone}"></th>
+                                            <th th:text="#{ui.location.state}"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="driver-passenger-body"></tbody>
+                                </table>
+                            </div>
+                            <div th:replace="~{fragments/pagination :: pager('driver-passenger', 10)}"></div>
                         </section>
                     </div>
                     <form
