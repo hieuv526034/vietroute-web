@@ -134,6 +134,25 @@ Các bước cấu hình Gmail một lần:
 
 Provider `smtp` là tùy chọn cho local/hạ tầng cho SMTP, STARTTLS bắt buộc, TLS 1.2/1.3, kiểm hostname và timeout mạng. Gmail dùng smtp.gmail.com:587, tài khoản và App Password khi chính sách Google cho phép; không dùng mật khẩu đăng nhập thường. **Không dùng SMTP này trên Render Free**. Không ghi password/token vào Properties debug hoặc log. Khi cần số lượng email lớn, Gmail/Workspace còn có quota; thay adapter MailTransport sang dịch vụ email phù hợp sau khi chọn nhà cung cấp, không tăng thread để vượt quota.
 
+### SMTP tài khoản và mật khẩu — MAIL03
+
+Ngày 25/10/2026 chủ dự án chọn tạm hoãn OAuth và dùng SMTP. Adapter SmtpTransport đã có, dùng cùng MailMessages/template MAIL02; chỉ cần chọn provider trong môi trường phù hợp, không viết bộ gửi mail mới hoặc đổi mặc định Render Free. Cấu hình local trong `.env` bị ignore:
+
+```dotenv
+VIETROUTE_MAIL_PROVIDER=smtp
+VIETROUTE_MAIL_FROM=hieuv526034@gmail.com
+VIETROUTE_SMTP_HOST=smtp.gmail.com
+VIETROUTE_SMTP_PORT=587
+VIETROUTE_SMTP_USER=hieuv526034@gmail.com
+VIETROUTE_SMTP_PASSWORD=<Gmail_App_Password>
+```
+
+Chủ mailbox bật Xác minh 2 bước, mở [Mật khẩu ứng dụng Google](https://myaccount.google.com/apppasswords), tạo mật khẩu cho VietRoute rồi nhập trực tiếp vào SMTP_PASSWORD ở môi trường riêng. Đây là mật khẩu ứng dụng 16 ký tự, không phải mật khẩu đăng nhập Gmail; xem [hướng dẫn Google](https://support.google.com/mail/answer/185833?hl=vi). Không điền giá trị thật vào `.env.example`, `.run`, source, PR hoặc ảnh/log.
+
+Giữ MAIL_ENABLED=false khi chưa xác thực thành công. Khi có credential hợp lệ và hạ tầng cho phép kết nối SMTP, bật MAIL_ENABLED/WORKER_ENABLED; bật thêm AUTH_SELF_SERVICE_ENABLED nếu muốn mở đăng ký/xác minh/quên mật khẩu, đồng bộ cờ OS/IDE đang ưu tiên hơn `.env`. Nghiệm thu riêng thư thử tới chính mailbox được phép và đối chiếu inbox. Render Free vẫn chặn SMTP 25/465/587 kể cả có App Password; thay cấu hình Java không gỡ được giới hạn mạng này.
+
+Kết quả chẩn đoán và phần còn thiếu ghi tại [tiến độ MAIL03](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md#mail03--chuyển-smtp-local-đang-chờ-mật-khẩu-ứng-dụng). Một lỗi xác thực không được coi là provider hoạt động, không tự retry credential bị từ chối hoặc bật worker để thử tiếp.
+
 ### Template email tài khoản — MAIL02
 
 `AccountMailComposer` dựng nội dung bằng template cố định `src/main/resources/mail/account-code.html` và message bundle vi/en. Kích hoạt/gắn email dùng ACTIVATE (24 giờ), đặt lại mật khẩu dùng RESET (15 phút). Giữ token 256 bit và chính sách dùng một lần; không đổi thành OTP ngắn chỉ để hiển thị đẹp. Bảng 600px tối đa, inline CSS, mã tự xuống dòng ở màn hình hẹp, không ảnh/font ngoài hoặc link chứa mã. Mọi biến dùng th:text để escape; không th:utext hoặc template do client chọn. Request mail quản trị tiếp tục chỉ nhận to/subject/text, không nhận HTML.

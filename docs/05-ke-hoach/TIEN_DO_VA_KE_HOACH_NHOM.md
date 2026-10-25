@@ -1,5 +1,13 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
+## MAIL03 — Chuyển SMTP local, đang chờ mật khẩu ứng dụng
+
+Ngày 25/10/2026 theo yêu cầu chủ dự án tạm hoãn OAuth. hieuv526034 thực hiện cấu hình local; nhánh tài liệu `hieuv526034/mail03-cau-hinh-smtp`, base main `dbf2202`, tiếp tục [Issue #104](https://github.com/hieuv526034/vietroute-web/issues/104). Source SMTP/HTML đã có tại MAIL02, không sửa Java/schema/default Render hoặc tạo adapter mới. Hướng dẫn dùng lại ở [nền mail](../02-phat-trien/NEN_TANG_MO_RONG.md#smtp-tài-khoản-và-mật-khẩu--mail03).
+
+Đã chuyển `.env` local bị ignore sang smtp.gmail.com:587 STARTTLS, provider smtp, sender/user đúng mailbox chủ dự án. Thử đúng một lần bằng SmtpTransport hiện có, đọc đường dẫn env tường minh trong chẩn đoán riêng; chỉ cho gửi thư thử về chính sender nếu đăng nhập được, không khởi tạo app/DB hoặc đọc/ghi Neon. Kết quả đã lọc: SMTP_AUTHENTICATION_REJECTED (exit 2), chưa gửi thư. Không lưu raw lỗi provider hoặc credential vào tài liệu/log. Mật khẩu vừa thử đã bỏ khỏi `.env`, SMTP_PASSWORD để trống chờ App Password; MAIL_ENABLED/WORKER_ENABLED/AUTH_SELF_SERVICE_ENABLED local vẫn false.
+
+Còn dở: chủ mailbox tạo Gmail App Password theo chính sách Google rồi nhập trực tiếp vào môi trường riêng; sau đó kiểm gửi/inbox/template thực trước bật worker/luồng tài khoản. SMTP vẫn không chạy trên Render Free vì cổng outbound bị chặn; cấu hình/deploy Render không thay trong phiên này, OAuth tạm hoãn chứ không xóa adapter. Java/template, bảo mật và lịch sử kiểm 159 Java/44 Node tại MAIL02 giữ nguyên; không chạy lại Maven vì chỉ sửa tài liệu/cấu hình bị ignore. Bản chẩn đoán trong target không phải artifact bàn giao; khi tiếp tục dùng source/settings và hướng dẫn chính, không dựa file tạm. Kiểm rules/docs/diff cho bàn giao này đạt; PR của nhánh tài liệu giữ commit và CI đối chiếu.
+
 ## MAIL02 — Template email tài khoản và sender Gmail
 
 Đã có source trên main qua [PR #105](https://github.com/hieuv526034/vietroute-web/pull/105), merge `76f5615`, head đã kiểm `de6632a`, nhánh `hieuv526034/mail02-template-email`, base main `ad49425`, người thực hiện thực tế hieuv526034, ngày 24/10/2026. Phạm vi theo yêu cầu chủ dự án: báo đúng phần nghiệp vụ đã có và làm email đẹp từ mailbox được chỉ định. [Issue #104](https://github.com/hieuv526034/vietroute-web/issues/104) giữ mở cho cấu hình/nghiệm thu provider; source template hoàn thành không có nghĩa Gmail đã gửi thật.
