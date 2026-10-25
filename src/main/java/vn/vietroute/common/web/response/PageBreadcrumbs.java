@@ -25,6 +25,7 @@ public final class PageBreadcrumbs {
         String canonical = Routes.LOCATION_PAGE.equals(path) ? Routes.CATALOG_LOCATIONS_PAGE : path;
         if (append(menu, canonical, result)) return List.copyOf(result);
         String key = switch (path) {
+            case Routes.DASHBOARD -> "ui.dashboard.title";
             case Routes.ACCOUNT -> "ui.account";
             case Routes.LOGIN -> "ui.login";
             case Routes.AUTH_LIFECYCLE_PAGE -> "ui.accountFlow.title";

@@ -1,6 +1,5 @@
 package vn.vietroute.auth.security;
 
-import vn.vietroute.auth.entity.Role;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 
 /** Chọn trang vào hệ thống từ principal đã xác thực; đường dẫn này không thay kiểm quyền backend. */
@@ -13,6 +12,6 @@ public final class AuthNavigation {
         if (user == null) {
             return Routes.LOGIN;
         }
-        return user.roles().contains(Role.ADMIN) ? Routes.ADMIN : Routes.ACCOUNT;
+        return Routes.DASHBOARD;
     }
 }

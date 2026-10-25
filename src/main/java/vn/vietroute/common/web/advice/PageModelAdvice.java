@@ -64,6 +64,9 @@ public class PageModelAdvice {
         Map<String, Boolean> pages = capabilities
             .stream()
             .collect(Collectors.toMap(AccessCapabilityResponse::function, AccessCapabilityResponse::view));
+        // Màn owner/phân công còn đòi role nghiệp vụ: ADMIN đủ permission không tự thành khách hoặc tài xế.
+        if (user == null || !user.roles().contains(Role.CUSTOMER)) pages.put(Functions.MY_BOOKING, false);
+        if (user == null || !user.roles().contains(Role.DRIVER)) pages.put(Functions.DRIVER_TRIP, false);
         String current = request.getRequestURI().substring(request.getContextPath().length());
         var locale = new SupportedLocaleResolver().resolveLocale(request);
         var menu = AccessNavigation.build(pages, current, locale, messages);

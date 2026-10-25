@@ -1,6 +1,6 @@
 # Tổng quan VietRoute cho thành viên mới
 
-Cập nhật 25/10/2026 sau BUSINESS04/PR #114–#121: đã có tuyến, chuyến, đặt chỗ theo chặng, màn khách/tài xế/điều hành, báo cáo và tracking riêng tư. Dữ liệu DEMO Neon, ba tài khoản dùng ngay, trạng thái triển khai và bằng chứng kiểm ở tiến độ. Đọc tài liệu này trước, sau đó mở chuyên đề; Maps/Gmail hiện chưa cấu hình theo lựa chọn chủ dự án.
+Cập nhật 25/10/2026: đã có tuyến, chuyến, đặt chỗ theo chặng, màn khách/tài xế/điều hành, báo cáo và tracking riêng tư. BUSINESS05 chuẩn hóa dữ liệu Neon, thêm breadcrumb và dashboard theo quyền sau khi rà luồng nghiệp vụ; trạng thái triển khai và bằng chứng kiểm ở tiến độ. Ba tài khoản đã cấp sẵn dùng ngay. Đọc tài liệu này trước, sau đó mở chuyên đề; Maps/Gmail hiện chưa cấu hình theo lựa chọn chủ dự án.
 
 Để biết ai làm gì tiếp theo và phần nào đã/chưa hoàn thành, xem [Tiến độ và kế hoạch nhóm](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md). Bảng tách trạng thái source/API/UI và cấu hình dịch vụ ngoài app, kèm PR và phụ thuộc để bàn giao.
 
@@ -54,6 +54,7 @@ Phần đã có source: nền tảng locale/error/validation/audit/paging, auth/
 | `business/trip` | V019: phân xe/tài xế, snapshot điểm/chặng, lịch chồng, tiến độ actual và lịch sử; tài xế chỉ chuyến được giao hiện hành |
 | `business/booking`, `business/journey` | V020: đơn WEB/PHONE, khóa tồn chỗ theo chặng, thu-hoàn thủ công, tra cứu public và lịch sử owner; kiểm trạng thái/idempotence/rollback |
 | `business/report` | Báo cáo scoped theo nhóm ngày khởi hành, trạng thái đơn và số tiền thực thu/hoàn tách riêng |
+| `business/dashboard` | Trang tổng quan sau đăng nhập, đọc API owner/phân công/scoped hiện hành theo capabilities; không thêm cơ chế quyền hoặc dữ liệu tổng hợp riêng |
 | `business/tracking` | V021: consent/lease, snapshot/trace PostgreSQL, API vị trí private và fallback Maps chưa cấu hình |
 | `business/demo` | Seed bộ DEMO có nhãn qua thao tác ADMIN chủ động; không chạy trong build/startup, không tự cấp account/role |
 | `common/media` | Lõi thư viện ảnh/upload dùng chung, controller public gọi service lõi |

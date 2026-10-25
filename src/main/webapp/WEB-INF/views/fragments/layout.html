@@ -117,6 +117,12 @@
                         th:href="@{/journeys(lang=${currentLocale})}"
                         th:text="#{ui.journey.search}"
                     ></a>
+                    <a
+                        th:if="${currentUser != null}"
+                        th:href="@{/dashboard(lang=${currentLocale})}"
+                        th:attr="aria-current=${currentPath == basePath + '/dashboard'} ? 'page' : null"
+                        th:text="#{ui.dashboard.title}"
+                    ></a>
                     <details
                         class="operations-menu"
                         th:each="item : ${functionNavigation}"
