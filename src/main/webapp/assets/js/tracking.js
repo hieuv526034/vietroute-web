@@ -131,6 +131,7 @@
             timer = null,
             reading = false,
             pending = false,
+            readError = false,
             epoch = 0,
             disabled = false;
         const text = (tag, value) => {
@@ -151,14 +152,14 @@
                 stopButton.hidden = !context?.canWrite;
                 stopButton.disabled = pending || !sender.isActive();
             }
-            refreshButton.disabled = reading || !context;
+            refreshButton.disabled = reading || pending || !context;
         };
         const wipe = () => {
             summary.replaceChildren();
             trail.replaceChildren();
         };
         const read = async () => {
-            if (reading || !context || !dialog.open || document.hidden) return;
+            if (reading || pending || !context || !dialog.open || document.hidden) return;
             const active = context,
                 current = epoch;
             reading = true;
@@ -166,6 +167,10 @@
             try {
                 const value = (await api.get(active.path, { timeout: 10000, uiSilent: true })).data.data;
                 if (current !== epoch || !dialog.open) return;
+                if (readError) {
+                    feedback('', false, feedbackNode.id);
+                    readError = false;
+                }
                 disabled = value.status === 'DISABLED';
                 status.textContent = labels[value.status.toLowerCase()] || value.status;
                 wipe();
@@ -196,7 +201,9 @@
                 if (current === epoch) {
                     wipe();
                     await sender.halt();
+                    if (current !== epoch || !dialog.open) return;
                     status.textContent = labels.offline;
+                    readError = true;
                     failure(error, feedbackNode.id);
                 }
             } finally {
@@ -225,11 +232,15 @@
                 sync();
             },
             onError: (error) => {
+                readError = false;
                 if (dialog.open) failure(error, feedbackNode.id);
             },
         });
         startButton?.addEventListener('click', async () => {
             if (!context?.canWrite || pending || !dialog.open) return;
+            // GET cũ không được thu hồi consent vừa bật sau khi request đó bắt đầu.
+            epoch++;
+            readError = false;
             feedback('', false, feedbackNode.id);
             if (!window.isSecureContext || !navigator.geolocation) {
                 status.textContent = labels.unsupported;
@@ -242,12 +253,22 @@
             } finally {
                 pending = false;
                 sync();
+                void read();
             }
         });
         stopButton?.addEventListener('click', async () => {
-            await sender.halt();
+            if (pending) return;
+            epoch++;
+            pending = true;
+            const stopped = sender.halt();
             wipe();
             sync();
+            try {
+                await stopped;
+            } finally {
+                pending = false;
+                sync();
+            }
         });
         refreshButton.addEventListener('click', () => void read());
         const close = () => {
@@ -256,11 +277,13 @@
             timer = null;
             void sender.halt();
             context = null;
+            readError = false;
             wipe();
             root.hidden = true;
         };
         dialog.addEventListener('close', close);
         const pause = () => {
+            epoch++;
             void sender.halt();
             wipe();
             if (dialog.open) status.textContent = labels.paused;

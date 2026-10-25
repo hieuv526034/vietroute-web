@@ -122,3 +122,140 @@ test('Dừng xóa watch ngay cả khi backend dừng bị lỗi, không giữ t�
     assert.equal(f.sent.length, 0);
     assert.equal(f.errors.length, 1);
 });
+const { readFileSync } = require('node:fs');
+const vm = require('node:vm');
+const trackingSource = readFileSync(require.resolve('../../../main/webapp/assets/js/tracking.js'), 'utf8');
+const settle = () => new Promise(setImmediate);
+const deferred = () => {
+    let resolve, reject;
+    const promise = new Promise((ok, error) => { resolve = ok; reject = error; });
+    return { promise, resolve, reject };
+};
+const panelFixture = (overrides = {}) => {
+    const node = () => ({
+        disabled: false, hidden: false, textContent: '', children: [], handlers: {},
+        addEventListener(name, handler) { this.handlers[name] = handler; },
+        replaceChildren() { this.children = []; },
+        append(...children) { this.children.push(...children); },
+        async click() { if (!this.disabled) await this.handlers.click?.(); },
+    });
+    const nodes = Object.fromEntries(['status', 'summary', 'trail', 'start', 'stop', 'refresh', 'feedback'].map(key => [key, node()]));
+    nodes.feedback.id = 'tracking-feedback';
+    const dialog = { ...node(), open: true };
+    const reads = [], mutations = [], watches = [], cleared = [];
+    let poll;
+    const feedback = { value: '' };
+    const root = {
+        dataset: { loading: 'Đang tải…', off: 'OFF', waiting: 'WAITING', stopped: 'STOPPED', offline: 'OFFLINE' },
+        hidden: false,
+        querySelector(selector) { return nodes[selector.slice('[data-tracking-'.length, -1)]; },
+        closest() { return dialog; },
+    };
+    const window = {
+        isSecureContext: true, addEventListener() {},
+        VietRoute: {
+            api: { get(path) { const result = deferred(); reads.push({ ...result, path }); return result.promise; } },
+            async mutate(path, body) {
+                mutations.push({ path, body });
+                if (path.endsWith('/start')) {
+                    if (overrides.start) return overrides.start();
+                    return { data: { data: { sessionKey: 'fixture-consent', minSampleSeconds: 10 } } };
+                }
+                if (overrides.stop) return overrides.stop();
+                return {};
+            },
+            feedback(message) { feedback.value = message; },
+            failure(error) { feedback.value = error.message; },
+        },
+    };
+    const document = { hidden: false, documentElement: { lang: 'vi' }, addEventListener() {}, createElement: node };
+    const navigator = { geolocation: {
+        watchPosition(success, failure) { watches.push({ success, failure }); return watches.length; },
+        clearWatch(id) { cleared.push(id); },
+    } };
+    const sandbox = { module: { exports: {} }, window, document, navigator,
+        setInterval(callback) { poll = callback; return 1; }, clearInterval() {} };
+    vm.runInNewContext(trackingSource, sandbox);
+    const panel = sandbox.module.exports.attach(root, { driver: true });
+    const context = { path: '/driver/trip-a/tracking', version: 1, canWrite: true, canStart: true };
+    const reply = (index, status = 'OFF', extra = {}) => reads[index].resolve({ data: { data: { status, latest: null, trail: [], ...extra } } });
+    return { panel, context, nodes, reads, mutations, watches, cleared, feedback, reply, poll: () => poll() };
+};
+
+test('Panel dùng loading khi mở và GET cũ OFF không thu hồi consent vừa bật', async () => {
+    const f = panelFixture();
+    f.panel.open(f.context);
+    assert.equal(f.nodes.status.textContent, 'Đang tải…');
+    await f.nodes.start.click();
+    assert.equal(f.watches.length, 1);
+    f.reply(0, 'OFF');
+    await settle();
+    assert.equal(f.nodes.status.textContent, 'WAITING');
+    assert.equal(f.cleared.length, 0);
+    assert.equal(f.mutations.filter(row => row.path.endsWith('/stop')).length, 0);
+});
+
+test('Poll không đọc snapshot cũ trong khi POST bật còn chờ', async () => {
+    const start = deferred();
+    const f = panelFixture({ start: () => start.promise });
+    f.panel.open(f.context); f.reply(0); await settle();
+    const beginning = f.nodes.start.click();
+    f.poll();
+    assert.equal(f.reads.length, 1);
+    assert.equal(f.nodes.refresh.disabled, true);
+    start.resolve({ data: { data: { sessionKey: 'fixture-consent', minSampleSeconds: 10 } } });
+    await beginning;
+    assert.equal(f.reads.length, 2);
+    f.reply(1, 'WAITING'); await settle();
+    assert.equal(f.watches.length, 1);
+});
+
+test('Dừng xóa watch và tọa độ ngay; GET LIVE cũ không khôi phục panel', async () => {
+    const stop = deferred();
+    const f = panelFixture({ stop: () => stop.promise });
+    f.panel.open(f.context); f.reply(0); await settle();
+    await f.nodes.start.click();
+    const stopping = f.nodes.stop.click();
+    assert.deepEqual(f.cleared, [1]);
+    assert.equal(f.nodes.start.disabled, true);
+    f.reply(1, 'LIVE', { latest: { latitude: 10, longitude: 106, accuracy: 10, measuredAt: '2026-10-25T00:00:00Z' } });
+    await settle();
+    assert.equal(f.nodes.summary.children.length, 0);
+    assert.equal(f.nodes.status.textContent, 'STOPPED');
+    stop.resolve({}); await stopping;
+    assert.equal(f.nodes.start.disabled, false);
+});
+
+test('GET phục hồi xóa lỗi đọc cũ mà không gửi mutation', async () => {
+    const f = panelFixture();
+    f.panel.open(f.context); f.reads[0].reject(new Error('COM013')); await settle();
+    assert.equal(f.feedback.value, 'COM013');
+    const refreshing = f.nodes.refresh.click();
+    f.reply(1); await refreshing; await settle();
+    assert.equal(f.feedback.value, '');
+    assert.equal(f.nodes.status.textContent, 'OFF');
+    assert.equal(f.mutations.length, 0);
+});
+
+test('GET thành công không xóa lỗi POST bật phát sinh sau lỗi đọc', async () => {
+    const f = panelFixture({ start: async () => { throw new Error('START_FAILED'); } });
+    f.panel.open(f.context); f.reads[0].reject(new Error('COM013')); await settle();
+    await f.nodes.start.click();
+    f.reply(1); await settle();
+    assert.equal(f.feedback.value, 'START_FAILED');
+    assert.equal(f.watches.length, 0);
+});
+
+test('Lỗi GET cũ đang thu hồi consent không ghi vào chuyến vừa mở', async () => {
+    const stop = deferred();
+    const f = panelFixture({ stop: () => stop.promise });
+    f.panel.open(f.context); f.reply(0); await settle();
+    await f.nodes.start.click();
+    f.reads[1].reject(new Error('OLD_READ_FAILED')); await settle();
+    f.panel.open({ ...f.context, path: '/driver/trip-b/tracking' });
+    stop.resolve({}); await settle();
+    assert.equal(f.feedback.value, '');
+    assert.equal(f.nodes.status.textContent, 'Đang tải…');
+    f.poll();
+    assert.equal(f.reads.at(-1).path, '/driver/trip-b/tracking');
+});
