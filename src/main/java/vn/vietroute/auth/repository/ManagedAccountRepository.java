@@ -120,16 +120,29 @@ public class ManagedAccountRepository extends BaseRepository {
     /** ON CONFLICT tránh làm hỏng transaction; chỉ trả lỗi trùng cho admin đã được xác thực. */
     public long create(Connection connection, String username, String displayName, String hash, long actor)
         throws SQLException {
+        return create(connection, username, displayName, hash, null, actor);
+    }
+
+    /** Email lúc cấp mới chưa xác minh; audit vẫn là người vận hành, không giả thao tác self-service. */
+    public long create(
+        Connection connection,
+        String username,
+        String displayName,
+        String hash,
+        String email,
+        long actor
+    ) throws SQLException {
         try (
             var query = connection.prepareStatement(
-                "INSERT INTO auth_users(username,display_name,password_hash,active,must_change_password,created_by,updated_by) VALUES (?,?,?,true,true,?,?) ON CONFLICT DO NOTHING RETURNING id"
+                "INSERT INTO auth_users(username,display_name,password_hash,email,active,must_change_password,created_by,updated_by) VALUES (?,?,?,?,true,true,?,?) ON CONFLICT DO NOTHING RETURNING id"
             )
         ) {
             query.setString(1, username);
             query.setString(2, displayName);
             query.setString(3, hash);
-            query.setLong(4, actor);
+            query.setString(4, email);
             query.setLong(5, actor);
+            query.setLong(6, actor);
             try (var row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.CONFLICT);
                 return row.getLong(1);

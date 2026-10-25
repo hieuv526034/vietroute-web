@@ -114,7 +114,20 @@ public class CarrierRepository extends BaseRepository {
 
     /** Cờ UI chỉ là giao của quyền scoped UPDATE; capabilities/policy chung vẫn bắt buộc trên trình duyệt/API. */
     private static String columns(Kind kind) {
-        return kind.columns + ",(" + DataScopeGuard.visibleSql() + ") AS can_update";
+        return (
+            kind.columns +
+            ",(" +
+            DataScopeGuard.visibleSql() +
+            ") AS can_update" +
+            (kind == Kind.DRIVER ? ",(" + DataScopeGuard.visibleSql() + ") AS can_assign" : "")
+        );
+    }
+
+    private static int bindColumns(PreparedStatement query, Kind kind, String resource) throws SQLException {
+        int next = DataScopeGuard.bindVisible(query, 1, resource, PermissionAction.UPDATE);
+        return kind == Kind.DRIVER
+            ? DataScopeGuard.bindVisible(query, next, Groups.DRIVER, PermissionAction.ASSIGN)
+            : next;
     }
 
     private <T> T find(
@@ -137,7 +150,7 @@ public class CarrierRepository extends BaseRepository {
             DataScopeGuard.visibleSql() +
             (lock ? " FOR UPDATE OF " + kind.alias : "");
         try (var query = connection.prepareStatement(sql)) {
-            int index = DataScopeGuard.bindVisible(query, 1, resource, PermissionAction.UPDATE);
+            int index = bindColumns(query, kind, resource);
             query.setLong(index++, id);
             DataScopeGuard.bindVisible(query, index, resource, action);
             try (var row = query.executeQuery()) {
@@ -189,7 +202,7 @@ public class CarrierRepository extends BaseRepository {
                 "SELECT " + columns(kind) + filter + " ORDER BY " + kind.alias + ".id DESC LIMIT ? OFFSET ?"
             )
         ) {
-            int index = DataScopeGuard.bindVisible(query, 1, resource, PermissionAction.UPDATE);
+            int index = bindColumns(query, kind, resource);
             index = bindSearch(query, index, page, resource, action);
             query.setInt(index++, page.getSize());
             query.setLong(index, page.offset());
@@ -296,6 +309,38 @@ public class CarrierRepository extends BaseRepository {
             try (var row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.INVALID_REQUEST);
             }
+        }
+    }
+
+    /** Caller giữ khóa cha trước hồ sơ như luồng tạo/phân công chuyến, tránh thay identity khi đã có nhiệm vụ. */
+    public void requireDriverUnassigned(Connection connection, long id) throws SQLException {
+        try (
+            var query = connection.prepareStatement(
+                "SELECT 1 FROM carrier_trips WHERE driver_id=? AND status IN('DRAFT','OPEN','IN_PROGRESS') LIMIT 1"
+            )
+        ) {
+            query.setLong(1, id);
+            try (var row = query.executeQuery()) {
+                if (row.next()) throw new BusinessException(ErrorCode.RESOURCE_IN_USE);
+            }
+        }
+    }
+
+    /** Hồ sơ cấp account mới tạm ngừng để hoàn tất đổi mật khẩu/email; không thay quy tắc account ready. */
+    public void linkProvisionedDriver(Connection connection, Driver current, long user, long actor)
+        throws SQLException {
+        try (
+            var query = connection.prepareStatement(
+                "UPDATE carrier_drivers SET user_id=?,active=false,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=? AND carrier_id=? AND scope_id=? AND user_id IS NULL AND version=?"
+            )
+        ) {
+            query.setLong(1, user);
+            query.setLong(2, actor);
+            query.setLong(3, current.getId());
+            query.setLong(4, current.getCarrierId());
+            query.setLong(5, current.getScopeId());
+            query.setLong(6, current.getVersion());
+            updated(query);
         }
     }
 
@@ -441,6 +486,7 @@ public class CarrierRepository extends BaseRepository {
             Driver.builder()
                 .scopeId(row.getLong("scope_id"))
                 .canUpdate(row.getBoolean("can_update"))
+                .canAssign(row.getBoolean("can_assign"))
                 .carrierId(row.getLong("carrier_id"))
                 .carrierName(row.getString("carrier_name"))
                 .code(row.getString("code"))

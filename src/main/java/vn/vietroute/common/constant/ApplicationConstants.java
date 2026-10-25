@@ -276,6 +276,8 @@ public final class ApplicationConstants {
         public static final String REPORTS_PAGE = "/operations/reports";
         public static final String ADMIN_REPORTS = ADMIN_API + "/reports";
         public static final String ADMIN_REPORT_CARRIERS = ADMIN_REPORTS + "/carriers";
+
+        public static final String DRIVER_ACCOUNT = BY_ID + "/account";
         public static final String ADMIN_BOOKINGS = ADMIN_API + "/bookings";
         public static final String MY_BOOKINGS_PAGE = "/my-bookings";
         public static final String MY_BOOKINGS = API + MY_BOOKINGS_PAGE;

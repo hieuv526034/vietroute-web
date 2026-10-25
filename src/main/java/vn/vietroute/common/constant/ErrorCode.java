@@ -31,6 +31,8 @@ public enum ErrorCode {
     ACCESS_CAPACITY_REACHED("COM016", "error.accessCapacity", HttpStatus.CONFLICT),
     LOCATION_PROVINCE_INACTIVE("LOC001", "location.provinceInactive", HttpStatus.CONFLICT),
     ROUTE_INVALID("ROUTE001", "route.invalid", HttpStatus.BAD_REQUEST),
+    DRIVER_ACCOUNT_ROLE("DRIVER001", "driver.accountRole", HttpStatus.CONFLICT),
+
     TRACKING_SAMPLE_INVALID("TRACK001", "tracking.invalid", HttpStatus.BAD_REQUEST),
     TRACKING_SESSION("TRACK002", "tracking.session", HttpStatus.CONFLICT),
     TRACKING_THROTTLED("TRACK003", "tracking.throttled", HttpStatus.TOO_MANY_REQUESTS),

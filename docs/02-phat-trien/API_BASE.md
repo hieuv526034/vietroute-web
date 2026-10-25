@@ -340,6 +340,16 @@ GET `/api/v1/trips` thêm minPrice/maxPrice nullable: giá một chỗ VND trên
 
 Tiền là số hiện tại của đơn thuộc nhóm chuyến khởi hành trong khoảng, kể cả đơn hủy; không phải dòng tiền theo ngày ghi nhận payment. PENDING không là chỗ đã bán hoặc doanh thu; confirmedValue không là paidAmount. Mỗi chỗ của một đơn là một lượt, không phải ghế vật lý duy nhất. Không migration, không tự cấp REPORT cho role thường; vận hành gán mapping bằng API quản trị sau triển khai. Không phát sinh thanh toán hoặc hoàn tiền khi đọc báo cáo.
 
+## Cấp tài khoản tài xế theo nhà xe — AUTH03
+
+`POST /api/v1/admin/drivers/{id}/account` dùng DRIVER_ASSIGN toàn cục và trong scope của hồ sơ đã đọc từ DB; không yêu cầu hoặc cấp ACCOUNT_*/ACCESS_ASSIGN cho OPERATOR. Request chỉ username/email/password/version hồ sơ. Không nhận role, scope, trạng thái xác minh hoặc hash. Username chuẩn hóa chữ thường, BCrypt trước transaction; chặn tên bootstrap và xung đột username/email, không sửa tài khoản có sẵn.
+
+Khóa nhà xe → hồ sơ, kiểm version/chưa liên kết/cha active và không có trip DRAFT/OPEN/IN_PROGRESS. Auth callback kiểm lại actor/scope, khóa gán role, tạo duy nhất DRIVER toàn cục + membership DRIVER đúng scope. Ghi ACCOUNT_CREATED và SCOPE_MEMBERSHIP cùng connection/history nguyên tử; lỗi lịch sử trả 503 và rollback cả credential/mapping/link. Hai request đồng thời chỉ một account được commit. Không migration hoặc auto-grant role thường.
+
+Luồng cấp nhân sự chỉ chấp nhận registry DRIVER có quyền thuộc DRIVER_TRIP_VIEW/READ/UPDATE hiện đã khai báo, kể cả kiểm mapping quyền đang tắt; cấu hình mạnh hơn trả DRIVER001/409 để ADMIN rà soát. Đây là hợp đồng nghiệp vụ cấp tài xế, không quyền ủy quyền role bất kỳ hoặc bypass guard. Account mới active, must_change_password=true, email chưa xác minh; không tạo challenge/outbox hoặc cấp ngoại lệ AUTH011/AUTH17. Hồ sơ được liên kết nhưng active=false; tài xế hoàn tất đổi mật khẩu/email qua auth rồi nhà xe bật lại hồ sơ mới phân chuyến. Gmail tạm hoãn nghĩa là bước xác minh thư chưa dùng được; ba account cấp sẵn trước không bị đổi.
+
+Response chỉ userId/username/driverId/driverVersion và trạng thái cần thiết lập, không email/hash/password. UI giao endpoint capabilities với canAssign scoped từ SQL. Đổi userId qua CRUD hồ sơ thông thường cũng bị chặn khi còn chuyến DRAFT/OPEN/IN_PROGRESS; khóa cha cùng thứ tự tạo/phân chuyến. Chuyến cũ giữ driver_user_id snapshot, tài khoản mới không kế thừa danh sách/chặng khách của tài xế cũ.
+
 ## Chia sẻ vị trí riêng tư — TRACK01 (đang triển khai)
 
 V021 thêm trip_tracking (consent/snapshot) và trip_locations (mẫu thiết bị) có FK trip/carrier/scope/actor, audit Instant/TIMESTAMPTZ, giữ V001–V020 nguyên vẹn. API riêng tư dưới `/api/v1/driver/trips/{id}/tracking` (GET READ, POST start/stop/samples UPDATE), `/api/v1/admin/trips/{id}/tracking` (TRIP_READ scoped) và `/api/v1/my-bookings/{id}/tracking` (MY_BOOKING_READ, CUSTOMER ready, owner). Không đặt GPS dưới matcher public trips; chỉ đơn CONFIRMED hiện hành được nhận vị trí, hủy/hoàn tất/chờ trả UNAVAILABLE. ADMIN không phát mẫu thay tài xế; assigned driver/profile/membership vẫn kiểm hiện hành.
