@@ -280,7 +280,7 @@
                 root.hidden = !value;
                 if (!value) return;
                 feedback('', false, feedbackNode.id);
-                status.textContent = labels.waiting;
+                status.textContent = labels.loading;
                 sync();
                 timer = setInterval(() => void read(), 20000);
                 void read();

@@ -31,6 +31,9 @@ ACCEPT01 đối chiếu ngày 25/10/2026, nhánh `hieuv526034/business12-nghiem-
 
 Phạm vi hiện có sẵn sàng chạy thử, nghiệm thu từng role và để thành viên phát triển tiếp trên main. Gmail/Maps được chủ dự án hoãn; Cloudinary/inbox/GPS thiết bị thật/khóa màn hình, backup-restore, alerts và tải production chưa nghiệm thu. Không tuyên bố go-live thương mại. Render Free đã gặp cold start và một lần502, sau đó API và browser phục hồi; source không có sửa riêng để biến cold start thành cam kết không gián đoạn. Cấp account mới vẫn cần email, không thừa hưởng ngoại lệ ba account. Không còn source dở trong phạm vi nghiệp vụ cốt lõi đã triển khai; việc ngoài app được giữ rõ giới hạn và không tự mua gói/provider.
 
+
+TRACK01 UI bổ sung trên `hieuv526034/business13-nhan-tai-vi-tri`, từ main `8f0be73`: mở tab vị trí trước đây dùng nhãn WAITING “đã bật” trong lúc GET chưa trả về, có thể gây hiểu nhầm consent. Đổi riêng nhãn mở sang `ui.loading` có sẵn vi/en; WAITING chỉ dùng khi server/luồng chia sẻ thực trả trạng thái đó. Không thay API, quyền, schema hoặc hành vi GPS. Format/check, rules/docs/diff và 52/52 Node đạt; browser preview restart cô lập xác nhận data-loading “Đang tải…”/“Loading…” và đơn hủy vẫn UNAVAILABLE, không nút phát. Chờ PR/CI/Render bổ sung; không chạy lại test hoặc seed trên Neon.
+
 ## BUSINESS03 — Đã cấp sẵn ba tài khoản theo xác nhận vận hành
 
 Ngày 25/10/2026, hieuv526034 thực hiện theo yêu cầu chủ dự án trên Neon hiện tại qua API quản trị của [website Render](https://vietroute-web.onrender.com), tiếp tục source main `553c36b` của BUSINESS02. [Issue #110](https://github.com/hieuv526034/vietroute-web/issues/110), nhánh bàn giao `hieuv526034/business02-ban-giao`. Không tạo credential trong source/seed, không đặt lại mật khẩu tài khoản có sẵn; mật khẩu được nhận riêng từ chủ dự án và chỉ truyền vào API trong bộ nhớ.
