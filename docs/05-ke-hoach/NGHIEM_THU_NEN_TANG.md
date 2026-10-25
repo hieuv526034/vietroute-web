@@ -1,8 +1,10 @@
-# Nghiệm thu nền tảng trước nghiệp vụ
+# Nghiệm thu nền tảng và nghiệp vụ
 
 Cập nhật 24/10/2026, đối chiếu main tại `7c53bf6` sau [PR #92](https://github.com/hieuv526034/vietroute-web/pull/92). Phạm vi là source nền tảng và UI quản trị trên Spring MVC/JDBC hiện tại. Đọc cùng [quản trị hệ thống](../04-van-hanh/QUAN_TRI_HE_THONG.md), [tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) và [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md). Kết quả trên nhánh chức năng chỉ trở thành bản bàn giao main sau khi PR qua CI và merge. Các mục bằng chứng phía dưới giữ mốc lịch sử; hợp đồng bootstrap hiện tại theo AUTH17, schema theo AUTH19 trong [chuyên đề phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md).
 
-## Các màn và chức năng đã có trong source
+Phần nền tảng bên dưới giữ phạm vi/mốc lịch sử trước BUSINESS04. Đối chiếu nghiệp vụ hiện hành ngày 25/10 ở [ACCEPT01](#đối-chiếu-ca-nghiệp-vụ--accept01); bảng quyền và trạng thái ba account/Render xem tiến độ. Không dùng câu “chưa triển khai nghiệp vụ” tại mốc cũ để suy trạng thái source hiện tại.
+
+## Các màn và chức năng tại mốc nền tảng
 
 | Phần | Đầu ra dùng được | Giới hạn còn lại |
 |---|---|---|
