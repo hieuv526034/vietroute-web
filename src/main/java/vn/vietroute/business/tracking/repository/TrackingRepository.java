@@ -138,17 +138,22 @@ public class TrackingRepository {
         boolean enabled,
         Instant now
     ) throws SQLException {
+        String driverEligible =
+            "EXISTS(SELECT 1 FROM carrier_drivers cd JOIN auth_users du ON du.id=cd.user_id AND du.active AND NOT du.activation_pending AND NOT du.must_change_password AND du.email_verified_at IS NOT NULL JOIN auth_user_roles ur ON ur.user_id=du.id AND ur.role_code='DRIVER' JOIN auth_roles rr ON rr.code=ur.role_code AND rr.active AND NOT rr.deleted JOIN auth_scope_memberships sm ON sm.scope_id=t.scope_id AND sm.user_id=du.id AND sm.active JOIN auth_scope_roles sr ON sr.scope_id=sm.scope_id AND sr.user_id=sm.user_id AND sr.role_code=rr.code JOIN auth_role_permissions rp ON rp.role_code=rr.code AND rp.permission_code='DRIVER_TRIP_UPDATE' JOIN auth_permissions p ON p.code=rp.permission_code AND p.active WHERE cd.id=t.driver_id AND cd.carrier_id=t.carrier_id AND cd.scope_id=t.scope_id AND cd.active AND cd.user_id=t.driver_user_id)";
         String sql =
             "SELECT t.status,t.driver_user_id AS assigned_user," +
             (bookingId == null
                 ? "true"
                 : "EXISTS(SELECT 1 FROM bookings b WHERE b.id=? AND b.trip_id=t.id AND b.customer_id=? AND b.status='CONFIRMED')") +
-            " AS eligible FROM carrier_trips t JOIN carriers owner ON owner.id=t.carrier_id AND owner.scope_id=t.scope_id JOIN auth_data_scopes ds ON ds.id=t.scope_id AND ds.active WHERE t.id=?" +
+            " AS eligible," +
+            driverEligible +
+            " AS driver_eligible FROM carrier_trips t JOIN carriers owner ON owner.id=t.carrier_id AND owner.scope_id=t.scope_id JOIN auth_data_scopes ds ON ds.id=t.scope_id AND ds.active WHERE t.id=?" +
             (resource == null ? "" : " AND " + DataScopeGuard.visibleSql()) +
             " FOR SHARE OF t";
         String status;
         long assigned;
         boolean eligible;
+        boolean driverReady;
         try (var query = connection.prepareStatement(sql)) {
             int at = 1;
             if (bookingId != null) {
@@ -162,6 +167,7 @@ public class TrackingRepository {
                 status = row.getString("status");
                 assigned = row.getLong("assigned_user");
                 eligible = row.getBoolean("eligible");
+                driverReady = row.getBoolean("driver_eligible");
             }
         }
         if (!enabled) return empty("DISABLED", now, null);
@@ -171,6 +177,7 @@ public class TrackingRepository {
             null
         );
         if (!eligible) return empty("UNAVAILABLE", now, null);
+        if (!driverReady) return empty("OFF", now, null);
         var state = state(connection, tripId);
         if (state == null || !state.sharing() || state.driverUserId() != assigned) return empty("OFF", now, null);
         Instant latest = state.latest() == null ? state.startedAt() : state.latest().receivedAt();

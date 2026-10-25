@@ -270,6 +270,9 @@ class BusinessIntegrationTest {
         );
         var shown = call(200, "GET", view, null, buyer);
         assertEquals("LIVE", shown.path("status").asText());
+        sql("DELETE FROM auth_role_permissions WHERE role_code='DRIVER' AND permission_code='DRIVER_TRIP_UPDATE'");
+        assertEquals("OFF", call(200, "GET", view, null, buyer).path("status").asText());
+        sql("INSERT INTO auth_role_permissions(role_code,permission_code) VALUES('DRIVER','DRIVER_TRIP_UPDATE')");
         assertEquals("UNCONFIGURED", shown.path("mapStatus").asText());
         assertEquals(10.123456, shown.path("latest").path("latitude").asDouble());
         assertFalse(shown.has("sessionKey"));
