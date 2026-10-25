@@ -19,7 +19,8 @@ public enum ValidationCode {
     USERNAME_SEARCH("VAL011", "validation.usernameSearch"),
     LATITUDE("VAL012", "validation.location.latitude"),
     LONGITUDE("VAL013", "validation.location.longitude"),
-    COORDINATE_PRECISION("VAL014", "validation.location.coordinatePrecision");
+    COORDINATE_PRECISION("VAL014", "validation.location.coordinatePrecision"),
+    REPORT_DATE_RANGE("VAL016", "validation.reportDateRange");
 
     private final String code;
 

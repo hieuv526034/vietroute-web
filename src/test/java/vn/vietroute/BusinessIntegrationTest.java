@@ -44,6 +44,8 @@ import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.carrier.dto.request.CarrierSearchRequest;
 import vn.vietroute.business.carrier.service.VehicleService;
 import vn.vietroute.business.catalog.service.BookingSourceCatalogService;
+import vn.vietroute.business.report.dto.request.ReportSearchRequest;
+import vn.vietroute.business.report.service.ReportService;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.application.ConfigurationEnvironment;
 import vn.vietroute.common.config.web.WebConfig;
@@ -215,6 +217,205 @@ class BusinessIntegrationTest {
                 "')"
         );
         return actor(user, username, role);
+    }
+
+    @Test
+    void reportUsesDepartureCohortCountsOnceAndKeepsCancelledMoneyVisible() throws Exception {
+        seed();
+        var own = tripFixture(false);
+        var other = tripFixture(true);
+        var day = Instant.now().atZone(ZoneId.of(Business.TIME_ZONE)).toLocalDate().plusDays(2);
+        long trip = openBookingTrip(own, "REPORTA", day.atStartOfDay(ZoneId.of(Business.TIME_ZONE)).toInstant());
+        long foreign = openBookingTrip(
+            other,
+            "REPORTB",
+            day.atTime(23, 59).atZone(ZoneId.of(Business.TIME_ZONE)).toInstant()
+        );
+        call(
+            201,
+            "POST",
+            "/api/v1/admin/trips",
+            tripBody(own, "REPORTOUTSIDE", day.plusDays(7).atStartOfDay(ZoneId.of(Business.TIME_ZONE)).toInstant()),
+            admin
+        );
+        call(201, "POST", "/api/v1/admin/bookings", bookingBody(trip, 1, 3, 3, UUID.randomUUID()), admin);
+        for (long tripId : new long[] { trip, foreign }) {
+            long booking = call(
+                201,
+                "POST",
+                "/api/v1/admin/bookings",
+                bookingBody(tripId, 1, 3, tripId == trip ? 2 : 3, UUID.randomUUID()),
+                admin
+            )
+                .path("id")
+                .asLong();
+            call(
+                200,
+                "PUT",
+                "/api/v1/admin/bookings/" + booking + "/state",
+                "{\"status\":\"CONFIRMED\",\"version\":0,\"note\":\"\"}",
+                admin
+            );
+        }
+        long cancelled = call(
+            201,
+            "POST",
+            "/api/v1/admin/bookings",
+            bookingBody(trip, 1, 2, 1, UUID.randomUUID()),
+            admin
+        )
+            .path("id")
+            .asLong();
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/bookings/" + cancelled + "/state",
+            "{\"status\":\"CONFIRMED\",\"version\":0,\"note\":\"\"}",
+            admin
+        );
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/bookings/" + cancelled + "/payment",
+            "{\"kind\":\"PAYMENT\",\"amount\":100000,\"note\":\"Thu TEST\",\"version\":1,\"requestKey\":\"" +
+                UUID.randomUUID() +
+                "\"}",
+            admin
+        );
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/bookings/" + cancelled + "/state",
+            "{\"status\":\"CANCELLED\",\"version\":2,\"note\":\"Hủy TEST\"}",
+            admin
+        );
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/bookings/" + cancelled + "/payment",
+            "{\"kind\":\"REFUND\",\"amount\":40000,\"note\":\"Hoàn TEST\",\"version\":3,\"requestKey\":\"" +
+                UUID.randomUUID() +
+                "\"}",
+            admin
+        );
+        String path = "/api/v1/admin/reports?fromDate=" + day + "&toDate=" + day;
+        var global = call(200, "GET", path, null, admin);
+        assertEquals(2, global.path("tripCount").asInt());
+        assertEquals(4, global.path("bookingCount").asInt());
+        assertEquals(5, global.path("confirmedSeats").asInt());
+        assertEquals(1250000, global.path("confirmedValue").asInt());
+        assertEquals(100000, global.path("paidAmount").asInt());
+        assertEquals(40000, global.path("refundedAmount").asInt());
+        assertEquals(60000, global.path("netAmount").asInt());
+        assertEquals(60000, global.path("refundOutstanding").asInt());
+        assertEquals(5, global.path("trips").size());
+        assertEquals(5, global.path("bookings").size());
+        assertFalse(global.has("contactName"));
+        var scoped = call(200, "GET", path + "&carrierId=" + own.carrier(), null, admin);
+        assertEquals(1, scoped.path("tripCount").asInt());
+        assertEquals(3, scoped.path("bookingCount").asInt());
+        assertEquals(2, scoped.path("confirmedSeats").asInt());
+        assertEquals(500000, scoped.path("confirmedValue").asInt());
+        var empty = call(
+            200,
+            "GET",
+            "/api/v1/admin/reports?fromDate=" + day.minusDays(1) + "&toDate=" + day.minusDays(1),
+            null,
+            admin
+        );
+        assertEquals(0, empty.path("tripCount").asInt());
+        assertEquals(0, empty.path("netAmount").asInt());
+        sql("UPDATE carriers SET active=false WHERE id=" + own.carrier());
+        assertEquals(
+            3,
+            call(200, "GET", path + "&carrierId=" + own.carrier(), null, admin)
+                .path("bookingCount")
+                .asInt()
+        );
+    }
+
+    @Test
+    void reportReadAndViewAreIndependentAndScopedRightsCannotBeUnionedOrReusedAfterRevocation() throws Exception {
+        seed();
+        var own = tripFixture(false);
+        var other = tripFixture(true);
+        openBookingTrip(own, "REPORTSCOPEA", Instant.now().plus(1, ChronoUnit.DAYS));
+        openBookingTrip(other, "REPORTSCOPEB", Instant.now().plus(1, ChronoUnit.DAYS));
+        var reporter = member(own.scope(), "REPORTER", "'REPORT_READ'", "reporter");
+        long user = ((UserPrincipal) reporter.getPrincipal()).id();
+        sql(
+            "INSERT INTO auth_roles(code,name_vi,name_en) VALUES('REPORTEMPTY','Rỗng','Empty'); INSERT INTO auth_user_roles(user_id,role_code) VALUES(" +
+                user +
+                ",'REPORTEMPTY'); INSERT INTO auth_scope_memberships(scope_id,user_id) VALUES(" +
+                other.scope() +
+                "," +
+                user +
+                "); INSERT INTO auth_scope_roles(scope_id,user_id,role_code) VALUES(" +
+                other.scope() +
+                "," +
+                user +
+                ",'REPORTEMPTY')"
+        );
+        var from = Instant.now().atZone(ZoneId.of(Business.TIME_ZONE)).toLocalDate();
+        String path = "/api/v1/admin/reports?fromDate=" + from + "&toDate=" + from.plusDays(5);
+        assertEquals(1, call(200, "GET", path, null, reporter).path("tripCount").asInt());
+        var choices = call(200, "GET", "/api/v1/admin/reports/carriers?size=1", null, reporter);
+        assertEquals(1, choices.path("totalElements").asInt());
+        assertEquals(own.carrier(), choices.path("content").get(0).path("id").asLong());
+        assertFalse(choices.path("content").get(0).has("scopeId"));
+        call(404, "GET", path + "&carrierId=" + other.carrier(), null, reporter);
+        call(403, "GET", "/operations/reports", null, reporter);
+        call(403, "GET", path, null, customer("reportbuyer"));
+        sql("INSERT INTO auth_role_permissions(role_code,permission_code) VALUES('REPORTER','REPORT_VIEW')");
+        call(200, "GET", "/operations/reports?lang=vi", null, reporter);
+        call(200, "GET", "/operations/reports?lang=en", null, reporter);
+        sql("UPDATE auth_scope_memberships SET active=false WHERE scope_id=" + own.scope() + " AND user_id=" + user);
+        assertEquals(0, call(200, "GET", path, null, reporter).path("tripCount").asInt());
+        call(404, "GET", path + "&carrierId=" + own.carrier(), null, reporter);
+        sql("DELETE FROM auth_role_permissions WHERE role_code='REPORTER' AND permission_code='REPORT_READ'");
+        call(403, "GET", path, null, reporter);
+        SecurityContextHolder.getContext().setAuthentication(reporter);
+        assertThrows(AccessDeniedException.class, () ->
+            root.getBean(ReportService.class).summary(new ReportSearchRequest())
+        );
+        call(200, "GET", "/operations/reports", null, reporter);
+    }
+
+    @Test
+    void reportRejectsUnboundedOrReversedDatesAndDocumentsEveryQueryInput() throws Exception {
+        for (String query : new String[] {
+            "fromDate=2026-10-25&toDate=2026-10-24",
+            "fromDate=2025-01-01&toDate=2026-01-02",
+            "fromDate=&toDate=2026-10-25",
+            "fromDate=wrong",
+            "carrierId=0",
+        }) {
+            call(400, "GET", "/api/v1/admin/reports?" + query, null, admin);
+        }
+        var response = mvc
+            .perform(
+                request(HttpMethod.GET, "/api/v1/admin/reports?fromDate=2026-10-25&toDate=2026-10-24").with(
+                    authentication(admin)
+                )
+            )
+            .andReturn()
+            .getResponse();
+        assertTrue(response.getContentAsString().contains("VAL016"));
+        call(200, "GET", "/api/v1/admin/reports?fromDate=2024-01-01&toDate=2024-12-31", null, admin);
+        // OpenAPI không dùng wrapper ApiResponse; đọc response gốc để đối chiếu tham số thật.
+        var raw = mvc
+            .perform(request(HttpMethod.GET, "/v3/api-docs").with(authentication(admin)))
+            .andReturn()
+            .getResponse();
+        var contract = json.readTree(raw.getContentAsString());
+        var parameters = contract.path("paths").path("/api/v1/admin/reports").path("get").path("parameters");
+        assertEquals(5, parameters.size());
+        for (String name : new String[] { "fromDate", "toDate", "carrierId" })
+            assertTrue(parameters.toString().contains("\"" + name + "\""));
+        var picker = contract.path("paths").path("/api/v1/admin/reports/carriers").path("get").path("parameters");
+        assertTrue(picker.toString().contains("\"page\""));
+        assertTrue(picker.toString().contains("\"size\""));
+        assertTrue(picker.toString().contains("\"query\""));
     }
 
     @Test

@@ -1,0 +1,258 @@
+<!doctype html>
+<html
+    xmlns:th="http://www.thymeleaf.org"
+    th:lang="${currentLocale}"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.report.title})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main
+            id="report-workspace"
+            class="container-xl workspace-page"
+            th:attr="data-loading=#{ui.loading},data-no-read=#{ui.accessTree.noRead},data-all=#{ui.report.all},data-inactive=#{ui.location.inactive},data-draft=#{ui.trip.DRAFT},data-open=#{ui.trip.OPEN},data-in-progress=#{ui.trip.IN_PROGRESS},data-completed=#{ui.trip.COMPLETED},data-cancelled=#{ui.trip.CANCELLED},data-pending=#{ui.booking.PENDING},data-confirmed=#{ui.booking.CONFIRMED},data-rejected=#{ui.booking.REJECTED},data-as-of=#{ui.report.asOf}"
+        >
+            <div class="page-heading">
+                <p
+                    class="eyebrow"
+                    th:text="#{ui.fleet.eyebrow}"
+                ></p>
+                <h1 th:text="#{ui.report.title}"></h1>
+                <p
+                    class="muted"
+                    th:text="#{ui.report.description}"
+                ></p>
+            </div>
+            <p
+                id="report-status"
+                role="status"
+                aria-live="polite"
+                class="catalog-status"
+            ></p>
+            <div
+                id="report-feedback"
+                role="alert"
+                class="feedback"
+                hidden
+            ></div>
+            <section class="panel">
+                <fieldset
+                    id="report-controls"
+                    class="border-0 p-0 m-0 w-100"
+                >
+                    <form
+                        id="report-form"
+                        class="form-grid"
+                    >
+                        <label>
+                            <span th:text="#{ui.report.from}"></span>
+                            <input
+                                type="date"
+                                name="fromDate"
+                                class="form-control"
+                                required
+                                th:value="${reportFrom}"
+                            />
+                        </label>
+                        <label>
+                            <span th:text="#{ui.report.to}"></span>
+                            <input
+                                type="date"
+                                name="toDate"
+                                class="form-control"
+                                required
+                                data-validation-key="dateRangeValid"
+                                th:value="${reportTo}"
+                            />
+                        </label>
+                        <label>
+                            <span th:text="#{ui.report.carrier}"></span>
+                            <select
+                                id="report-carrier"
+                                name="carrierId"
+                                class="form-select"
+                            >
+                                <option
+                                    value=""
+                                    th:text="#{ui.report.all}"
+                                ></option>
+                            </select>
+                        </label>
+                        <div class="picker-toolbar">
+                            <label
+                                for="report-query"
+                                th:text="#{ui.fleet.search}"
+                            ></label>
+                            <input
+                                id="report-query"
+                                class="form-control"
+                                maxlength="160"
+                            />
+                            <button
+                                id="report-pick-search"
+                                type="button"
+                                class="button button-outline"
+                                th:text="#{ui.search}"
+                            ></button>
+                            <button
+                                id="report-pick-prev"
+                                type="button"
+                                class="button button-outline"
+                                th:text="#{ui.mediaPrevious}"
+                            ></button>
+                            <span
+                                id="report-pick-count"
+                                aria-live="polite"
+                            ></span>
+                            <button
+                                id="report-pick-next"
+                                type="button"
+                                class="button button-outline"
+                                th:text="#{ui.mediaNext}"
+                            ></button>
+                        </div>
+                        <div class="toolbar-actions">
+                            <button
+                                type="submit"
+                                class="button"
+                                th:text="#{ui.report.apply}"
+                            ></button>
+                        </div>
+                    </form>
+                </fieldset>
+            </section>
+            <p
+                id="report-snapshot"
+                class="form-help"
+                aria-live="polite"
+            ></p>
+            <div
+                id="report-results"
+                data-tabs
+                hidden
+            >
+                <div
+                    role="tablist"
+                    class="workspace-tabs"
+                    th:attr="aria-label=#{ui.report.title}"
+                >
+                    <button
+                        id="report-operations-tab"
+                        type="button"
+                        data-tab-target="report-operations"
+                        th:text="#{ui.report.operations}"
+                    ></button>
+                    <button
+                        id="report-money-tab"
+                        type="button"
+                        data-tab-target="report-money"
+                        th:text="#{ui.report.money}"
+                    ></button>
+                </div>
+                <section
+                    id="report-operations"
+                    data-tab-panel="report-operations-tab"
+                    class="panel"
+                >
+                    <dl class="report-metrics">
+                        <div>
+                            <dt th:text="#{ui.report.trips}"></dt>
+                            <dd data-metric="tripCount"></dd>
+                        </div>
+                        <div>
+                            <dt th:text="#{ui.report.bookings}"></dt>
+                            <dd data-metric="bookingCount"></dd>
+                        </div>
+                        <div>
+                            <dt th:text="#{ui.report.seats}"></dt>
+                            <dd data-metric="confirmedSeats"></dd>
+                        </div>
+                    </dl>
+                    <p
+                        class="form-help"
+                        th:text="#{ui.report.seatsHelp}"
+                    ></p>
+                    <div class="report-status-grid">
+                        <div>
+                            <h2 th:text="#{ui.report.trips}"></h2>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th th:text="#{ui.location.state}"></th>
+                                            <th th:text="#{ui.report.count}"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="report-trips"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div>
+                            <h2 th:text="#{ui.report.bookings}"></h2>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th th:text="#{ui.location.state}"></th>
+                                            <th th:text="#{ui.report.count}"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="report-bookings"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <section
+                    id="report-money"
+                    data-tab-panel="report-money-tab"
+                    class="panel"
+                >
+                    <p
+                        class="form-help"
+                        th:text="#{ui.report.moneyHelp}"
+                    ></p>
+                    <dl class="report-metrics">
+                        <div>
+                            <dt th:text="#{ui.report.value}"></dt>
+                            <dd
+                                data-metric="confirmedValue"
+                                data-money
+                            ></dd>
+                        </div>
+                        <div>
+                            <dt th:text="#{ui.report.paid}"></dt>
+                            <dd
+                                data-metric="paidAmount"
+                                data-money
+                            ></dd>
+                        </div>
+                        <div>
+                            <dt th:text="#{ui.report.refunded}"></dt>
+                            <dd
+                                data-metric="refundedAmount"
+                                data-money
+                            ></dd>
+                        </div>
+                        <div>
+                            <dt th:text="#{ui.report.net}"></dt>
+                            <dd
+                                data-metric="netAmount"
+                                data-money
+                            ></dd>
+                        </div>
+                        <div>
+                            <dt th:text="#{ui.report.outstanding}"></dt>
+                            <dd
+                                data-metric="refundOutstanding"
+                                data-money
+                            ></dd>
+                        </div>
+                    </dl>
+                </section>
+            </div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/reports.js}"></script>
+    </body>
+</html>

@@ -50,6 +50,13 @@ public final class AccessFeatures {
         ),
         new Feature(Functions.BUSINESS, null, "access.function.BUSINESS", null, null),
         new Feature(
+            Functions.REPORT,
+            Functions.BUSINESS,
+            "access.function.REPORT",
+            Routes.REPORTS_PAGE,
+            Groups.REPORT + "_VIEW"
+        ),
+        new Feature(
             Functions.CARRIER,
             Functions.BUSINESS,
             "access.function.CARRIER",
