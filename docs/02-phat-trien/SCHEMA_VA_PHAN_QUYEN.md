@@ -32,7 +32,7 @@ Hai bảng bảo mật liên quan là `auth_password_history` và `auth_account_
 | Role thường, tên/trạng thái và mapping user/role/permission | Có, qua API/UI có quyền/version | Role/Permission là value object chuỗi; `values()` chỉ liệt kê mã bootstrap, không giới hạn registry hoặc suy authority của user |
 | Mã permission mới | Có | Phải đúng RESOURCE_ACTION; chỉ tạo bản ghi không tự tạo nút/API hoặc thêm guard vào hàm chưa được lập trình |
 | Policy bổ sung | Có | Ngữ nghĩa hiện cố định: đủ mọi required permission và ít nhất một allowed role nếu danh sách role không rỗng. enabled=false chặn người thường tại target, không phải bỏ áp dụng policy. ADMIN được miễn policy bổ sung, vẫn qua guard bắt buộc |
-| Scope/membership/scoped role | Có | Chưa tự nối vào bảng nghiệp vụ; không có cơ chế tự thêm WHERE scope_id vào SQL |
+| Scope/membership/scoped role | Có | Đã tích hợp nhà xe/fleet/tuyến/chuyến/đơn/báo cáo và cấp tài xế qua DAO. Mỗi module vẫn tự bind ID + scope/owner/assigned; không có cơ chế tự chèn WHERE |
 | Cây chức năng, menu path/parent/nhãn/thứ tự, bộ chọn quyền hệ thống | Trong source AccessFeatures | Đổi cần sửa/triển khai code; bảng function/resource là danh bạ đồng bộ, không phải công cụ tự xây chức năng từ DB |
 | Action, guard service, binding HTTP ANY/ALL/adminOnly, public/self-service | Trong enum/annotation/WebRoutePolicy | Phải giữ ở server; không nhận biểu thức bảo mật, route public hay tên method từ DB/client |
 | Bảo vệ ADMIN/system/bootstrap, không tự đổi role, giới hạn ủy quyền | Trong code và một số CHECK/FK DB | Là rào bảo mật có chủ đích. Bootstrap username/email lấy từ cấu hình môi trường, không cố định một username trong Java |
