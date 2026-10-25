@@ -36,12 +36,15 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
+import vn.vietroute.auth.dto.request.DriverAccountCreateRequest;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.carrier.dto.request.CarrierSearchRequest;
+import vn.vietroute.business.carrier.service.DriverService;
 import vn.vietroute.business.carrier.service.VehicleService;
 import vn.vietroute.business.catalog.service.BookingSourceCatalogService;
 import vn.vietroute.common.config.RootConfig;
@@ -215,6 +218,228 @@ class BusinessIntegrationTest {
                 "')"
         );
         return actor(user, username, role);
+    }
+
+    @Test
+    void driverProvisioningCreatesOnlyPendingDriverScopeLinkAndAtomicHistory() throws Exception {
+        seed();
+        long carrier = id("carriers", "DEMOMIENNAM"),
+            driver = id("carrier_drivers", "DEMODRIVER02");
+        long scope = Long.parseLong(sql("SELECT scope_id FROM carriers WHERE id=" + carrier));
+        var staff = member(scope, "PROVISIONER", "'DRIVER_VIEW','DRIVER_READ','DRIVER_ASSIGN'", "provisioner");
+        String body =
+            "{\"username\":\"NewDriver\",\"email\":\"NEWDRIVER@example.invalid\",\"password\":\"TestOnly!2026Aa\",\"version\":0}";
+        var result = call(201, "POST", "/api/v1/admin/drivers/" + driver + "/account", body, staff);
+        long user = result.path("userId").asLong();
+        assertEquals("newdriver", result.path("username").asText());
+        assertTrue(result.path("mustChangePassword").asBoolean());
+        assertTrue(result.path("emailVerificationRequired").asBoolean());
+        assertFalse(result.path("driverActive").asBoolean());
+        assertFalse(result.has("password"));
+        assertFalse(result.has("email"));
+        assertTrue(
+            root
+                .getBean(PasswordEncoder.class)
+                .matches("TestOnly!2026Aa", sql("SELECT password_hash FROM auth_users WHERE id=" + user))
+        );
+        assertEquals(
+            "true:true:false:true",
+            sql(
+                "SELECT active||':'||must_change_password||':'||activation_pending||':'||(email_verified_at IS NULL) FROM auth_users WHERE id=" +
+                    user
+            )
+        );
+        assertEquals("newdriver@example.invalid", sql("SELECT email FROM auth_users WHERE id=" + user));
+        assertEquals("DRIVER", sql("SELECT string_agg(role_code,',') FROM auth_user_roles WHERE user_id=" + user));
+        assertEquals(
+            "1",
+            sql(
+                "SELECT count(*) FROM auth_scope_roles WHERE scope_id=" +
+                    scope +
+                    " AND user_id=" +
+                    user +
+                    " AND role_code='DRIVER'"
+            )
+        );
+        assertEquals(
+            user + ":false:1",
+            sql("SELECT user_id||':'||active||':'||version FROM carrier_drivers WHERE id=" + driver)
+        );
+        assertEquals(
+            "2",
+            sql(
+                "SELECT count(*) FROM auth_access_changes WHERE actor_id=" +
+                    ((UserPrincipal) staff.getPrincipal()).id() +
+                    " AND target_key IN('" +
+                    user +
+                    "','" +
+                    scope +
+                    ":" +
+                    user +
+                    "')"
+            )
+        );
+        assertEquals("0", sql("SELECT count(*) FROM auth_account_challenges"));
+        var pending = UsernamePasswordAuthenticationToken.authenticated(
+            new UserPrincipal(user, "newdriver", Set.of(Role.DRIVER), 1),
+            null,
+            Set.of()
+        );
+        call(403, "GET", "/api/v1/driver/trips", null, pending);
+        call(403, "GET", "/api/v1/admin/accounts", null, staff);
+        call(409, "POST", "/api/v1/admin/drivers/" + driver + "/account", body, staff);
+        assertEquals("1", sql("SELECT count(*) FROM auth_users WHERE username='newdriver'"));
+        call(
+            400,
+            "PUT",
+            "/api/v1/admin/drivers/" + driver,
+            "{\"name\":\"Tài xế mới\",\"phone\":\"0000000000\",\"active\":true,\"userId\":" + user + ",\"version\":1}",
+            admin
+        );
+    }
+
+    @Test
+    void driverProvisioningCannotCrossScopeEscalateRoleOrUseRevokedAssignment() throws Exception {
+        seed();
+        long scope = Long.parseLong(sql("SELECT scope_id FROM carriers WHERE code='DEMOMIENNAM'"));
+        long driver = id("carrier_drivers", "DEMODRIVER02"),
+            foreign = id("carrier_drivers", "DEMODRIVER03");
+        var staff = member(scope, "SCOPEDPROVISION", "'DRIVER_READ','DRIVER_ASSIGN'", "scopedprovision");
+        String body =
+            "{\"username\":\"scopeaccount\",\"email\":\"scopeaccount@example.invalid\",\"password\":\"TestOnly!2026Aa\",\"version\":0}";
+        assertTrue(
+            call(200, "GET", "/api/v1/admin/drivers/" + driver, null, staff)
+                .path("canAssign")
+                .asBoolean()
+        );
+        call(404, "POST", "/api/v1/admin/drivers/" + foreign + "/account", body, staff);
+        call(
+            409,
+            "POST",
+            "/api/v1/admin/drivers/" + driver + "/account",
+            body.replace("scopeaccount\"", "testadmin\""),
+            staff
+        );
+        call(
+            400,
+            "POST",
+            "/api/v1/admin/drivers/" + driver + "/account",
+            body.replace("TestOnly!2026Aa", "weak"),
+            staff
+        );
+        call(
+            409,
+            "POST",
+            "/api/v1/admin/drivers/" + driver + "/account",
+            body.replace("version\":0", "version\":9"),
+            staff
+        );
+        sql("INSERT INTO auth_role_permissions(role_code,permission_code) VALUES('DRIVER','ACCOUNT_READ')");
+        call(409, "POST", "/api/v1/admin/drivers/" + driver + "/account", body, staff);
+        assertEquals("0", sql("SELECT count(*) FROM auth_users WHERE username='scopeaccount'"));
+        sql(
+            "DELETE FROM auth_role_permissions WHERE role_code='DRIVER' AND permission_code='ACCOUNT_READ'; DELETE FROM auth_role_permissions WHERE role_code='SCOPEDPROVISION' AND permission_code='DRIVER_ASSIGN'"
+        );
+        assertFalse(
+            call(200, "GET", "/api/v1/admin/drivers/" + driver, null, staff)
+                .path("canAssign")
+                .asBoolean()
+        );
+        call(403, "POST", "/api/v1/admin/drivers/" + driver + "/account", body, staff);
+        SecurityContextHolder.getContext().setAuthentication(staff);
+        assertThrows(AccessDeniedException.class, () ->
+            root
+                .getBean(DriverService.class)
+                .provision(driver, new DriverAccountCreateRequest(), (UserPrincipal) staff.getPrincipal())
+        );
+    }
+
+    @Test
+    void driverProvisioningHistoryFailureRollsBackCredentialMembershipAndProfile() throws Exception {
+        seed();
+        long driver = id("carrier_drivers", "DEMODRIVER02");
+        String users = sql("SELECT count(*) FROM auth_users"),
+            memberships = sql("SELECT count(*) FROM auth_scope_memberships");
+        sql(
+            "CREATE FUNCTION fail_driver_history() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'history fixture'; END $$; CREATE TRIGGER fail_driver_history BEFORE INSERT ON auth_access_changes FOR EACH ROW EXECUTE FUNCTION fail_driver_history()"
+        );
+        call(
+            503,
+            "POST",
+            "/api/v1/admin/drivers/" + driver + "/account",
+            "{\"username\":\"rollbackdriver\",\"email\":\"rollbackdriver@example.invalid\",\"password\":\"TestOnly!2026Aa\",\"version\":0}",
+            admin
+        );
+        assertEquals(users, sql("SELECT count(*) FROM auth_users"));
+        assertEquals(memberships, sql("SELECT count(*) FROM auth_scope_memberships"));
+        assertEquals(
+            "true:true:0",
+            sql("SELECT (user_id IS NULL)||':'||active||':'||version FROM carrier_drivers WHERE id=" + driver)
+        );
+    }
+
+    @Test
+    void concurrentDriverProvisioningHasOneAccountAndAssignedTripBlocksIdentityReplacement() throws Exception {
+        seed();
+        long driver = id("carrier_drivers", "DEMODRIVER02");
+        String originalCount = sql("SELECT count(*) FROM auth_users");
+        var ready = new CountDownLatch(2);
+        var release = new CountDownLatch(1);
+        var pool = Executors.newFixedThreadPool(2);
+        try {
+            var first = pool.submit(() -> {
+                ready.countDown();
+                assertTrue(release.await(10, TimeUnit.SECONDS));
+                return mvc
+                    .perform(
+                        request(HttpMethod.POST, "/api/v1/admin/drivers/" + driver + "/account")
+                            .with(authentication(admin))
+                            .with(csrf())
+                            .contentType("application/json")
+                            .content(
+                                "{\"username\":\"racedrivera\",\"email\":\"racedrivera@example.invalid\",\"password\":\"TestOnly!2026Aa\",\"version\":0}"
+                            )
+                    )
+                    .andReturn()
+                    .getResponse()
+                    .getStatus();
+            });
+            var second = pool.submit(() -> {
+                ready.countDown();
+                assertTrue(release.await(10, TimeUnit.SECONDS));
+                return mvc
+                    .perform(
+                        request(HttpMethod.POST, "/api/v1/admin/drivers/" + driver + "/account")
+                            .with(authentication(admin))
+                            .with(csrf())
+                            .contentType("application/json")
+                            .content(
+                                "{\"username\":\"racedriverb\",\"email\":\"racedriverb@example.invalid\",\"password\":\"TestOnly!2026Aa\",\"version\":0}"
+                            )
+                    )
+                    .andReturn()
+                    .getResponse()
+                    .getStatus();
+            });
+            assertTrue(ready.await(10, TimeUnit.SECONDS));
+            release.countDown();
+            assertEquals(Set.of(201, 409), Set.of(first.get(20, TimeUnit.SECONDS), second.get(20, TimeUnit.SECONDS)));
+        } finally {
+            release.countDown();
+            pool.shutdownNow();
+        }
+        assertEquals(Long.parseLong(originalCount) + 1, Long.parseLong(sql("SELECT count(*) FROM auth_users")));
+        assertEquals("1", sql("SELECT count(*) FROM auth_users WHERE username IN('racedrivera','racedriverb')"));
+        var fixture = tripFixture(false);
+        openBookingTrip(fixture, "BLOCKDRIVERLINK", Instant.now().plus(2, ChronoUnit.DAYS));
+        call(
+            409,
+            "PUT",
+            "/api/v1/admin/drivers/" + fixture.driver(),
+            "{\"name\":\"Không đổi account\",\"phone\":\"0000000000\",\"active\":true,\"userId\":null,\"version\":0}",
+            admin
+        );
+        assertFalse(sql("SELECT user_id FROM carrier_drivers WHERE id=" + fixture.driver()).isEmpty());
     }
 
     @Test

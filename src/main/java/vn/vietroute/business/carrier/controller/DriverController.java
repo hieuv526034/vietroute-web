@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import vn.vietroute.auth.dto.request.DriverAccountCreateRequest;
+import vn.vietroute.auth.dto.response.DriverAccountResponse;
 import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessFunction;
@@ -52,6 +54,24 @@ public class DriverController extends BaseController {
     }
 
     private final DriverService service;
+
+    @PostMapping(Routes.ADMIN_DRIVERS + Routes.DRIVER_ACCOUNT)
+    @AccessFunction(group = Groups.DRIVER, actions = { PermissionAction.ASSIGN })
+    @Operation(
+        summary = "Cấp tài khoản DRIVER cho hồ sơ chưa liên kết",
+        description = "DRIVER_ASSIGN scoped, version bắt buộc. Tạo account/membership/link/history nguyên tử; hồ sơ tạm ngừng, account phải đổi mật khẩu và xác minh email. Không nhận role/scope hoặc sửa account có sẵn."
+    )
+    public ApiResult<DriverAccountResponse> provision(
+        @Parameter(description = "ID hồ sơ dương") @PathVariable @Min(
+            value = 1,
+            message = "{validation.invalid}"
+        ) long id,
+        @Valid @RequestBody DriverAccountCreateRequest body,
+        @AuthenticationPrincipal UserPrincipal actor,
+        HttpServletRequest request
+    ) {
+        return execute(HttpStatus.CREATED, SuccessCode.CREATED, request, () -> service.provision(id, body, actor));
+    }
 
     public DriverController(DriverService service, ApiResponses responses, ApiExceptionMapper exceptions) {
         super(responses, exceptions);

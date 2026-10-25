@@ -32,6 +32,7 @@ public class Driver extends BaseEntity {
 
     /** Projection từ SELECT guard, không phải cột DB hoặc quyền được client gửi. */
     private boolean canUpdate;
+    private boolean canAssign;
     private String carrierName;
     private String code;
     private String name;
