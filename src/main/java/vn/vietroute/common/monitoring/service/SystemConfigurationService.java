@@ -11,6 +11,7 @@ import vn.vietroute.common.config.database.DatabaseSettings;
 import vn.vietroute.common.config.integration.JobSettings;
 import vn.vietroute.common.config.integration.MailSettings;
 import vn.vietroute.common.config.integration.MediaSettings;
+import vn.vietroute.common.config.integration.TrackingSettings;
 import vn.vietroute.common.config.monitoring.ActivitySettings;
 import vn.vietroute.common.config.monitoring.MonitoringSettings;
 import vn.vietroute.common.config.traffic.TrafficSettings;
@@ -39,6 +40,8 @@ public class SystemConfigurationService {
     private final MailSettings mail;
 
     private final MediaSettings media;
+
+    private final TrackingSettings tracking;
 
     private final MonitoringSettings monitoring;
 
@@ -81,7 +84,14 @@ public class SystemConfigurationService {
                 worker.getLeaseSeconds(),
                 worker.getRetentionDays()
             ),
-            new Features(mail.isEnabled(), mail.getProvider(), media.isEnabled(), MediaSettings.MAX_FILE_BYTES),
+            new Features(
+                mail.isEnabled(),
+                mail.getProvider(),
+                media.isEnabled(),
+                MediaSettings.MAX_FILE_BYTES,
+                tracking.isEnabled(),
+                "UNCONFIGURED"
+            ),
             new Monitoring(
                 monitoring.isScrapeEnabled(),
                 monitoring.isDatabaseEnabled(),

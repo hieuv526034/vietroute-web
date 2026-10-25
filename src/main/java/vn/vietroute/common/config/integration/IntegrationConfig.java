@@ -17,6 +17,12 @@ import vn.vietroute.common.media.storage.MediaStorage;
 @Configuration
 public class IntegrationConfig {
 
+    /** Bật khả năng chia sẻ không tự xin quyền thiết bị hoặc tạo dữ liệu vị trí. */
+    @Bean
+    public TrackingSettings trackingSettings(ConfigurationEnvironment environment) {
+        return new TrackingSettings(environment);
+    }
+
     /** Validate cấu hình Cloudinary một lần; provider tắt không yêu cầu credential. */
     @Bean
     public MediaSettings mediaSettings(ConfigurationEnvironment environment) {

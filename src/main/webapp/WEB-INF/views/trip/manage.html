@@ -193,6 +193,12 @@
                                     data-tab-target="trip-events"
                                     th:text="#{ui.trip.history}"
                                 ></button>
+                                <button
+                                    id="trip-location-tab"
+                                    type="button"
+                                    data-tab-target="trip-location"
+                                    th:text="#{ui.tracking.title}"
+                                ></button>
                             </div>
                             <section
                                 id="trip-info"
@@ -455,6 +461,13 @@
                                     class="route-stop-list"
                                 ></div>
                             </section>
+                            <section
+                                id="trip-location"
+                                data-tab-panel="trip-location-tab"
+                                hidden
+                            >
+                                <section th:replace="~{fragments/tracking :: panel('trip', false)}"></section>
+                            </section>
                         </div>
                         <div class="dialog-actions">
                             <button
@@ -497,6 +510,7 @@
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/tracking.js}"></script>
         <script th:src="@{/assets/js/trips.js}"></script>
     </body>
 </html>

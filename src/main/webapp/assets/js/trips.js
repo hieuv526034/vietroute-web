@@ -17,6 +17,7 @@
         capability = { targets: [] };
     const modal = window.VietRouteUI.modal('trip-dialog', { busy: () => busy }),
         tabs = window.VietRouteUI.tabs(node('trip-tabs'));
+    const tracking = window.VietRouteTracking.attach(node('trip-tracking'));
     const pager = tables.pager('trip', { busy: () => busy, onChange: (query) => perform(() => load(query)) });
     const can = (method, suffix = '') => capability.targets.includes(`${method} ${path}${suffix}`);
     const text = (tag, value) => {
@@ -254,6 +255,11 @@
         detail();
         feedback('', false, 'trip-form-feedback');
         modal.open(trigger);
+        tracking.open(
+            selected && can('GET', '/{id}/tracking')
+                ? { path: `${path}/${selected.id}/tracking`, status: selected.status }
+                : null,
+        );
         requestAnimationFrame(() => {
             tabs.select('trip-info');
             sync();

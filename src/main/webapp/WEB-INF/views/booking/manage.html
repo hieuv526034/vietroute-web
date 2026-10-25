@@ -348,6 +348,13 @@
                                 th:text="#{ui.booking.history}"
                             ></button>
                             <button
+                                th:if="${customerBookings}"
+                                id="booking-location-tab"
+                                type="button"
+                                data-tab-target="booking-location"
+                                th:text="#{ui.tracking.title}"
+                            ></button>
+                            <button
                                 th:unless="${customerBookings}"
                                 id="booking-money-tab"
                                 type="button"
@@ -415,6 +422,14 @@
                                 id="booking-event-list"
                                 class="route-stop-list"
                             ></div>
+                        </section>
+                        <section
+                            th:if="${customerBookings}"
+                            id="booking-location"
+                            data-tab-panel="booking-location-tab"
+                            hidden
+                        >
+                            <section th:replace="~{fragments/tracking :: panel('booking', false)}"></section>
                         </section>
                         <section
                             th:unless="${customerBookings}"
@@ -492,6 +507,7 @@
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/tracking.js}"></script>
         <script th:src="@{/assets/js/bookings.js}"></script>
     </body>
 </html>

@@ -18,6 +18,26 @@
     const can = (method, suffix = '') => capability.targets.includes(`${method} ${path}${suffix}`);
     const modal = window.VietRouteUI.modal('driver-trip-dialog', { busy: () => busy }),
         tabs = window.VietRouteUI.tabs(node('driver-trip-tabs'));
+    const tracking = window.VietRouteTracking.attach(node('driver-trip-tracking'), { driver: true });
+    const trackingContext = () =>
+        selected && can('GET', '/{id}/tracking')
+            ? {
+                  path: `${path}/${selected.id}/tracking`,
+                  id: selected.id,
+                  version: selected.version,
+                  status: selected.status,
+                  canStart:
+                      selected.status === 'IN_PROGRESS' ||
+                      (selected.status === 'OPEN' &&
+                          Date.now() >= new Date(selected.departureAt).getTime() - 1800000 &&
+                          Date.now() < new Date(selected.endAt).getTime() + 86400000),
+                  canWrite:
+                      selected.canUpdate &&
+                      can('POST', '/{id}/tracking/start') &&
+                      can('POST', '/{id}/tracking/stop') &&
+                      can('POST', '/{id}/tracking/samples'),
+              }
+            : null;
     const pager = tables.pager('driver-trip', { busy: () => busy, onChange: (query) => perform(() => load(query)) });
     const passengers = tables.pager('driver-passenger', {
         busy: () => busy,
@@ -188,6 +208,7 @@
         await loadPassengers({ ...passengers.query, page: 0 });
         feedback('', false, 'driver-trip-form-feedback');
         modal.open(trigger);
+        tracking.open(trackingContext());
         requestAnimationFrame(() => {
             tabs.select('driver-trip-info');
             node('driver-trip-dialog-title').focus();
@@ -239,6 +260,7 @@
             const response = await mutate(`${path}/${selected.id}/progress`, action, 'put');
             selected = response.data.data;
             detail();
+            tracking.update(trackingContext());
             form.reset();
             feedback(response.data.message, true, 'driver-trip-form-feedback');
             await load();

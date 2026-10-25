@@ -31,6 +31,7 @@ public final class ApplicationConstants {
 
     /** Mỗi biến môi trường khai báo đúng một lần; không tạo toString chứa giá trị cấu hình. */
     public enum Env {
+        TRACKING_ENABLED("VIETROUTE_TRACKING_ENABLED"),
         // Môi trường, JWT và tài khoản bootstrap.
         ENV("VIETROUTE_ENV"),
         LOCAL_ENV_FILE("VIETROUTE_LOCAL_ENV_FILE"),
@@ -267,6 +268,10 @@ public final class ApplicationConstants {
         public static final String TRIP_PROGRESS = BY_ID + "/progress";
         public static final String TRIP_NOTICE = BY_ID + "/notice";
         public static final String TRIP_PASSENGERS = BY_ID + "/passengers";
+        public static final String TRIP_TRACKING = BY_ID + "/tracking";
+        public static final String TRIP_TRACKING_START = TRIP_TRACKING + "/start";
+        public static final String TRIP_TRACKING_STOP = TRIP_TRACKING + "/stop";
+        public static final String TRIP_TRACKING_SAMPLES = TRIP_TRACKING + "/samples";
         public static final String BOOKINGS_PAGE = "/operations/bookings";
         public static final String REPORTS_PAGE = "/operations/reports";
         public static final String ADMIN_REPORTS = ADMIN_API + "/reports";

@@ -1,0 +1,70 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+    <body>
+        <section
+            th:fragment="panel(prefix, driver)"
+            class="tracking-panel"
+            hidden
+            th:id="${prefix + '-tracking'}"
+            th:attr="data-disabled=#{ui.tracking.disabled},data-off=#{ui.tracking.off},data-waiting=#{ui.tracking.waiting},data-live=#{ui.tracking.live},data-stale=#{ui.tracking.stale},data-closed=#{ui.tracking.closed},data-unavailable=#{ui.tracking.unavailable},data-stopped=#{ui.tracking.stopped},data-starting=#{ui.tracking.starting},data-sharing=#{ui.tracking.sharing},data-denied=#{ui.tracking.denied},data-timeout=#{ui.tracking.timeout},data-old=#{ui.tracking.old},data-offline=#{ui.tracking.offline},data-paused=#{ui.tracking.paused},data-unsupported=#{ui.tracking.unsupported},data-received=#{ui.tracking.received},data-measured=#{ui.tracking.measured},data-coordinates=#{ui.tracking.coordinates},data-accuracy=#{ui.tracking.accuracy}"
+        >
+            <h3 th:text="#{ui.tracking.title}"></h3>
+            <p
+                class="form-help"
+                th:text="#{ui.tracking.mapUnconfigured}"
+            ></p>
+            <p
+                th:if="${driver}"
+                class="form-help"
+                th:text="#{ui.tracking.consent}"
+            ></p>
+            <p
+                data-tracking-status
+                role="status"
+                aria-live="polite"
+            ></p>
+            <div
+                data-tracking-feedback
+                class="feedback"
+                role="alert"
+                hidden
+                th:id="${prefix + '-tracking-feedback'}"
+            ></div>
+            <div
+                data-tracking-summary
+                class="tracking-summary"
+            ></div>
+            <details>
+                <summary th:text="#{ui.tracking.trail}"></summary>
+                <ol
+                    data-tracking-trail
+                    class="tracking-trail"
+                ></ol>
+            </details>
+            <div class="toolbar-actions">
+                <button
+                    data-tracking-refresh
+                    type="button"
+                    class="button button-outline"
+                    th:text="#{ui.ops.refresh}"
+                ></button>
+                <button
+                    th:if="${driver}"
+                    data-tracking-stop
+                    type="button"
+                    class="button button-outline"
+                    disabled
+                    th:text="#{ui.tracking.stop}"
+                ></button>
+                <button
+                    th:if="${driver}"
+                    data-tracking-start
+                    type="button"
+                    class="button"
+                    disabled
+                    th:text="#{ui.tracking.start}"
+                ></button>
+            </div>
+        </section>
+    </body>
+</html>

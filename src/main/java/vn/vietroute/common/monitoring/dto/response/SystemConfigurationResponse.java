@@ -57,7 +57,9 @@ public record SystemConfigurationResponse(
         @Schema(description = "Mail đã bật") boolean mailEnabled,
         @Schema(description = "gmail hoặc smtp") String mailProvider,
         @Schema(description = "Cloudinary public media đã bật") boolean mediaEnabled,
-        @Schema(description = "Giới hạn file upload, byte") int maxUploadBytes
+        @Schema(description = "Giới hạn file upload, byte") int maxUploadBytes,
+        @Schema(description = "Cho phép chia sẻ vị trí; vẫn cần tài xế chủ động consent") boolean trackingEnabled,
+        @Schema(description = "Google Maps chưa cấu hình, không có provider/key được công bố") String mapStatus
     ) {}
 
     @Schema(description = "Không trả token metrics; credentials đặt ngoài UI")
