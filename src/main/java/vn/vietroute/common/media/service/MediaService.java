@@ -3,6 +3,8 @@ package vn.vietroute.common.media.service;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -32,6 +34,11 @@ import vn.vietroute.common.traffic.RateLimitStore;
 @Service
 @RequiredArgsConstructor
 public class MediaService {
+
+    /** Caller chỉ truyền ID từ liên kết business đã công bố, không mở API tra metadata ảnh ẩn danh. */
+    public Map<Long, String> publishedUrls(Connection connection, Set<Long> publishedIds) throws SQLException {
+        return images.readyPublicUrls(connection, publishedIds);
+    }
 
     /** Caller đã kiểm quyền business và giữ transaction; tham chiếu chỉ nhận ảnh READY của principal, khóa cùng delete media. */
     public void requireReference(Connection connection, long id, UserPrincipal actor) throws SQLException {

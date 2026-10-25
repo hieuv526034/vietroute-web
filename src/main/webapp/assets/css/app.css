@@ -2848,6 +2848,41 @@ fieldset:disabled .button[type='submit']::before,
 #driver-trip-workspace .records-table {
     min-width: 900px;
 }
+.public-carrier-table {
+    min-width: 660px;
+}
+.public-carrier-logo {
+    width: 96px;
+    height: 96px;
+    object-fit: contain;
+    margin-bottom: 16px;
+}
+#public-carrier-summary p {
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+.journey-filters {
+    margin-top: 20px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+}
+.journey-filters > summary {
+    cursor: pointer;
+    font-weight: 700;
+}
+.journey-filters[open] > summary {
+    margin-bottom: 16px;
+}
+.journey-filter-picker {
+    min-width: 0;
+}
+.journey-filter-picker h2 {
+    font-size: 1.1rem;
+}
+.journey-filter-picker .trip-picker-search {
+    flex-wrap: wrap;
+}
 #booking-workspace .records-table {
     min-width: 1050px;
 }

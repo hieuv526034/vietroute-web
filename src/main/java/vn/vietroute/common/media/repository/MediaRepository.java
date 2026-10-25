@@ -5,6 +5,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Repository;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
@@ -23,6 +27,28 @@ public class MediaRepository extends BaseRepository {
 
     public MediaRepository(JdbcConnectionFactory connections) {
         super(connections);
+    }
+
+    /** Chỉ URL READY theo lô ID server, không owner/provider ID/title hoặc metadata riêng của thư viện. */
+    public Map<Long, String> readyPublicUrls(Connection connection, Set<Long> ids) throws SQLException {
+        if (ids.isEmpty()) return Map.of();
+        if (ids.size() > 100 || ids.stream().anyMatch(id -> id == null || id < 1)) throw new IllegalArgumentException(
+            "Danh sách ảnh công bố không hợp lệ"
+        );
+        String placeholders = String.join(",", Collections.nCopies(ids.size(), "?"));
+        var urls = new HashMap<Long, String>();
+        try (
+            var query = connection.prepareStatement(
+                "SELECT id,url FROM media_assets WHERE status='READY' AND id IN(" + placeholders + ")"
+            )
+        ) {
+            int at = 1;
+            for (long id : ids) query.setLong(at++, id);
+            try (var row = query.executeQuery()) {
+                while (row.next()) urls.put(row.getLong(1), row.getString(2));
+            }
+        }
+        return Map.copyOf(urls);
     }
 
     /** UPDATE kiểm đồng thời owner, trạng thái và version, tránh TOCTOU giữa kiểm quyền và ghi. */

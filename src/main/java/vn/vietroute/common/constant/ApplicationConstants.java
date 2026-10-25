@@ -232,6 +232,9 @@ public final class ApplicationConstants {
         public static final String ADMIN_BOOKING_SOURCES = ADMIN_API + "/booking-sources";
 
         public static final String CARRIERS_PAGE = "/operations/carriers";
+        public static final String PUBLIC_CARRIERS_PAGE = "/carriers";
+        public static final String PUBLIC_CARRIERS = API + PUBLIC_CARRIERS_PAGE;
+        public static final String PUBLIC_CARRIERS_MATCHER = PUBLIC_CARRIERS + "/**";
 
         public static final String VEHICLES_PAGE = "/operations/vehicles";
 
