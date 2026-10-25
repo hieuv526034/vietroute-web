@@ -13,11 +13,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.DriverManager;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
@@ -45,6 +47,7 @@ import vn.vietroute.business.catalog.service.BookingSourceCatalogService;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.application.ConfigurationEnvironment;
 import vn.vietroute.common.config.web.WebConfig;
+import vn.vietroute.common.constant.ApplicationConstants.Business;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.media.service.MediaService;
@@ -543,6 +546,634 @@ class BusinessIntegrationTest {
         );
         long user = Long.parseLong(sql("SELECT user_id FROM carrier_drivers WHERE id=" + fixture.driver()));
         return actor(user, sql("SELECT username FROM auth_users WHERE id=" + user), "DRIVER");
+    }
+
+    private Authentication customer(String username) throws Exception {
+        sql(
+            "INSERT INTO auth_role_permissions(role_code,permission_code) SELECT 'CUSTOMER',code FROM auth_permissions WHERE code IN('MY_BOOKING_VIEW','MY_BOOKING_READ','MY_BOOKING_CREATE','MY_BOOKING_UPDATE') ON CONFLICT DO NOTHING"
+        );
+        long user = Long.parseLong(
+            sql(
+                "INSERT INTO auth_users(username,password_hash,display_name,must_change_password,email,email_verified_at) SELECT '" +
+                    username +
+                    "',password_hash,'Customer CI',false,'" +
+                    username +
+                    "@example.invalid',CURRENT_TIMESTAMP FROM auth_users WHERE id=1 RETURNING id"
+            )
+        );
+        sql("INSERT INTO auth_user_roles(user_id,role_code) VALUES(" + user + ",'CUSTOMER')");
+        return actor(user, username, "CUSTOMER");
+    }
+
+    private long openBookingTrip(TripFixture fixture, String code, Instant start) throws Exception {
+        long id = call(201, "POST", "/api/v1/admin/trips", tripBody(fixture, code, start), admin)
+            .path("id")
+            .asLong();
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/trips/" + id + "/state",
+            "{\"status\":\"OPEN\",\"version\":0,\"note\":\"\"}",
+            admin
+        );
+        return id;
+    }
+
+    private String bookingBody(long trip, int from, int to, int seats, UUID key) throws Exception {
+        String pickup = sql("SELECT id FROM trip_stops WHERE trip_id=" + trip + " AND stop_order=" + from),
+            dropoff = sql("SELECT id FROM trip_stops WHERE trip_id=" + trip + " AND stop_order=" + to);
+        return (
+            "{\"tripId\":" +
+            trip +
+            ",\"pickupStopId\":" +
+            pickup +
+            ",\"dropoffStopId\":" +
+            dropoff +
+            ",\"seats\":" +
+            seats +
+            ",\"contactName\":\"Liên hệ TEST\",\"contactPhone\":\"0000000000\",\"requestKey\":\"" +
+            key +
+            "\"}"
+        );
+    }
+
+    @Test
+    void bookingStaffScopeFiltersCountIdsMutationsAndCustomerReadRevokesImmediately() throws Exception {
+        seed();
+        var own = tripFixture(false);
+        var other = tripFixture(true);
+        var buyer = customer("scopedbuyer");
+        var staff = member(
+            own.scope(),
+            "BOOK_CI",
+            "'BOOKING_VIEW','BOOKING_READ','BOOKING_CREATE','BOOKING_UPDATE'",
+            "bookstaff"
+        );
+        long trip = openBookingTrip(own, "SCOPEDBOOK", Instant.now().plus(2, ChronoUnit.DAYS)),
+            foreign = openBookingTrip(other, "FOREIGNBOOK", Instant.now().plus(2, ChronoUnit.DAYS));
+        long id = call(201, "POST", "/api/v1/my-bookings", bookingBody(trip, 1, 3, 1, UUID.randomUUID()), buyer)
+            .path("id")
+            .asLong();
+        long foreignId = call(
+            201,
+            "POST",
+            "/api/v1/admin/bookings",
+            bookingBody(foreign, 1, 3, 1, UUID.randomUUID()),
+            admin
+        )
+            .path("id")
+            .asLong();
+        assertEquals(1, call(200, "GET", "/api/v1/admin/bookings?size=1", null, staff).path("totalElements").asInt());
+        call(404, "GET", "/api/v1/admin/bookings/" + foreignId, null, staff);
+        assertEquals(1, call(200, "GET", "/api/v1/admin/bookings/trips", null, staff).path("totalElements").asInt());
+        call(
+            404,
+            "PUT",
+            "/api/v1/admin/bookings/" + foreignId + "/state",
+            "{\"status\":\"CONFIRMED\",\"version\":0,\"note\":\"\"}",
+            staff
+        );
+        call(403, "POST", "/api/v1/admin/bookings", bookingBody(foreign, 1, 2, 1, UUID.randomUUID()), staff);
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/bookings/" + id + "/state",
+            "{\"status\":\"CONFIRMED\",\"version\":0,\"note\":\"\"}",
+            staff
+        );
+        sql("DELETE FROM auth_role_permissions WHERE role_code='CUSTOMER' AND permission_code='MY_BOOKING_READ'");
+        call(403, "GET", "/api/v1/my-bookings", null, buyer);
+        call(403, "GET", "/api/v1/my-bookings/" + id, null, buyer);
+        sql(
+            "UPDATE auth_scope_memberships SET active=false WHERE scope_id=" +
+                own.scope() +
+                " AND user_id=(SELECT id FROM auth_users WHERE username='bookstaff')"
+        );
+        assertEquals(0, call(200, "GET", "/api/v1/admin/bookings", null, staff).path("totalElements").asInt());
+    }
+
+    @Test
+    void publicSearchUsesPickupLocalDateDirectionAndRemainingSegmentsWithoutPrivateFields() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        Instant start = Instant.now()
+            .plus(3, ChronoUnit.DAYS)
+            .truncatedTo(ChronoUnit.DAYS)
+            .plusSeconds(16 * 3600);
+        long trip = openBookingTrip(fixture, "SEARCHOVERNIGHT", start);
+        long middle = id("location_places", "DEMOPLACEB"),
+            last = id("location_places", "DEMOPLACEC");
+        var pickupDate = start
+            .plusSeconds(1510 * 60L)
+            .atZone(ZoneId.of(Business.TIME_ZONE))
+            .toLocalDate();
+        String path = "/api/v1/trips?fromLocationId=" + middle + "&toLocationId=" + last + "&date=" + pickupDate;
+        var response = mvc.perform(request(HttpMethod.GET, path)).andReturn().getResponse();
+        assertEquals(200, response.getStatus());
+        var result = json.readTree(response.getContentAsString()).path("data");
+        assertEquals(1, result.path("totalElements").asInt());
+        assertEquals(150000, result.at("/content/0/unitPrice").asInt());
+        assertEquals(
+            0,
+            call(200, "GET", path.replace(pickupDate.toString(), pickupDate.minusDays(1).toString()), null, admin)
+                .path("totalElements")
+                .asInt()
+        );
+        assertEquals(
+            0,
+            call(
+                200,
+                "GET",
+                "/api/v1/trips?fromLocationId=" + last + "&toLocationId=" + middle + "&date=" + pickupDate,
+                null,
+                admin
+            )
+                .path("totalElements")
+                .asInt()
+        );
+        call(400, "GET", "/api/v1/trips?date=" + pickupDate, null, admin);
+        var detail = call(200, "GET", "/api/v1/trips/" + trip, null, admin);
+        assertFalse(detail.has("driverUserId"));
+        assertFalse(detail.has("driverPhone"));
+        assertFalse(detail.has("createdBy"));
+        assertFalse(detail.has("contactPhone"));
+        long pickupId = detail.at("/stops/1/id").asLong(),
+            dropoffId = detail.at("/stops/2/id").asLong();
+        String quotePath =
+            "/api/v1/trips/" + trip + "/quote?pickupStopId=" + pickupId + "&dropoffStopId=" + dropoffId + "&seats=2";
+        var quote = call(200, "GET", quotePath, null, admin);
+        assertEquals(300000, quote.path("totalPrice").asInt());
+        assertEquals(10, quote.path("availableSeats").asInt());
+        assertTrue(quote.path("accepting").asBoolean());
+        sql("UPDATE trip_segments SET reserved_seats=10 WHERE trip_id=" + trip + " AND segment_order=2");
+        assertEquals(0, call(200, "GET", path, null, admin).path("totalElements").asInt());
+        sql("UPDATE trip_segments SET reserved_seats=0 WHERE trip_id=" + trip);
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/trips/" + trip + "/state",
+            "{\"status\":\"CANCELLED\",\"version\":1,\"note\":\"Dừng chuyến\"}",
+            admin
+        );
+        assertEquals(0, call(200, "GET", path, null, admin).path("totalElements").asInt());
+        assertEquals(
+            "CANCELLED",
+            call(200, "GET", "/api/v1/trips/" + trip, null, admin)
+                .path("status")
+                .asText()
+        );
+    }
+
+    @Test
+    void websiteBookingsKeepPriceAreOwnerBoundIdempotentAndOnlyOneMayRemainActive() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        var owner = customer("bookcustomer");
+        var stranger = customer("bookstranger");
+        long trip = openBookingTrip(fixture, "BOOKWEB", Instant.now().plus(2, ChronoUnit.DAYS));
+        UUID key = UUID.randomUUID();
+        String body = bookingBody(trip, 1, 3, 3, key);
+        var created = call(201, "POST", "/api/v1/my-bookings", body, owner);
+        long id = created.path("id").asLong();
+        assertEquals("WEB", created.path("source").asText());
+        assertEquals("PENDING", created.path("status").asText());
+        assertEquals(750000, created.path("totalPrice").asInt());
+        assertEquals(id, call(201, "POST", "/api/v1/my-bookings", body, owner).path("id").asLong());
+        assertEquals("0", sql("SELECT sum(reserved_seats) FROM trip_segments WHERE trip_id=" + trip));
+        call(409, "POST", "/api/v1/my-bookings", body.replace("\"seats\":3", "\"seats\":2"), owner);
+        call(409, "POST", "/api/v1/my-bookings", bookingBody(trip, 1, 2, 1, UUID.randomUUID()), owner);
+        call(404, "GET", "/api/v1/my-bookings/" + id, null, stranger);
+        call(
+            404,
+            "PUT",
+            "/api/v1/my-bookings/" + id + "/state",
+            "{\"status\":\"CANCELLED\",\"version\":0,\"note\":\"Không phải chủ\"}",
+            stranger
+        );
+        call(
+            409,
+            "PUT",
+            "/api/v1/my-bookings/" + id + "/state",
+            "{\"status\":\"CONFIRMED\",\"version\":0,\"note\":\"\"}",
+            owner
+        );
+        call(400, "POST", "/api/v1/my-bookings", body.replace("\"tripId\":", "\"unitPrice\":1,\"tripId\":"), owner);
+        sql(
+            "UPDATE carrier_route_stops SET cumulative_fare=cumulative_fare+100000 WHERE route_id=" +
+                fixture.route() +
+                " AND stop_order>1"
+        );
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/bookings/" + id + "/state",
+            "{\"status\":\"CONFIRMED\",\"version\":0,\"note\":\"\"}",
+            admin
+        );
+        assertEquals(
+            750000,
+            call(200, "GET", "/api/v1/my-bookings/" + id, null, owner)
+                .path("totalPrice")
+                .asInt()
+        );
+        call(
+            200,
+            "PUT",
+            "/api/v1/my-bookings/" + id + "/state",
+            "{\"status\":\"CANCELLED\",\"version\":1,\"note\":\"Đổi kế hoạch\"}",
+            owner
+        );
+        call(
+            409,
+            "PUT",
+            "/api/v1/my-bookings/" + id + "/state",
+            "{\"status\":\"CANCELLED\",\"version\":1,\"note\":\"Lặp\"}",
+            owner
+        );
+        assertEquals("0", sql("SELECT sum(reserved_seats) FROM trip_segments WHERE trip_id=" + trip));
+        call(201, "POST", "/api/v1/my-bookings", bookingBody(trip, 1, 2, 1, UUID.randomUUID()), owner);
+        call(200, "GET", "/my-bookings?lang=vi", null, owner);
+        call(200, "GET", "/my-bookings?lang=en", null, owner);
+    }
+
+    @Test
+    void concurrentWebRequestsAcrossTripsLeaveOnlyOneActiveBooking() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        var owner = customer("parallelcustomer");
+        long first = openBookingTrip(fixture, "WEBRACEONE", Instant.now().plus(2, ChronoUnit.DAYS));
+        long second = openBookingTrip(fixture, "WEBRACETWO", Instant.now().plus(4, ChronoUnit.DAYS));
+        String firstBody = bookingBody(first, 1, 2, 1, UUID.randomUUID());
+        String secondBody = bookingBody(second, 1, 2, 1, UUID.randomUUID());
+        var start = new CountDownLatch(1);
+        var workers = Executors.newFixedThreadPool(2);
+        try {
+            var one = workers.submit(() -> {
+                start.await();
+                return mutationStatus(HttpMethod.POST, "/api/v1/my-bookings", firstBody, owner);
+            });
+            var two = workers.submit(() -> {
+                start.await();
+                return mutationStatus(HttpMethod.POST, "/api/v1/my-bookings", secondBody, owner);
+            });
+            start.countDown();
+            assertEquals(Set.of(201, 409), Set.of(one.get(20, TimeUnit.SECONDS), two.get(20, TimeUnit.SECONDS)));
+        } finally {
+            workers.shutdownNow();
+        }
+        assertEquals("1", sql("SELECT count(*) FROM bookings WHERE source_code='WEB' AND status='PENDING'"));
+        assertEquals("0", sql("SELECT sum(reserved_seats) FROM trip_segments"));
+    }
+
+    @Test
+    void concurrentTripCancellationCannotLeaveConfirmedBookingOrReservedSeats() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        long trip = openBookingTrip(fixture, "CANCELCONFIRMRACE", Instant.now().plus(2, ChronoUnit.DAYS));
+        long id = call(201, "POST", "/api/v1/admin/bookings", bookingBody(trip, 1, 3, 4, UUID.randomUUID()), admin)
+            .path("id")
+            .asLong();
+        var start = new CountDownLatch(1);
+        var workers = Executors.newFixedThreadPool(2);
+        try {
+            var confirm = workers.submit(() -> {
+                start.await();
+                return mutationStatus(
+                    HttpMethod.PUT,
+                    "/api/v1/admin/bookings/" + id + "/state",
+                    "{\"status\":\"CONFIRMED\",\"version\":0,\"note\":\"\"}",
+                    admin
+                );
+            });
+            var cancel = workers.submit(() -> {
+                start.await();
+                return mutationStatus(
+                    HttpMethod.PUT,
+                    "/api/v1/admin/trips/" + trip + "/state",
+                    "{\"status\":\"CANCELLED\",\"version\":1,\"note\":\"Hủy đồng thời TEST\"}",
+                    admin
+                );
+            });
+            start.countDown();
+            assertEquals(200, cancel.get(20, TimeUnit.SECONDS));
+            assertTrue(Set.of(200, 409).contains(confirm.get(20, TimeUnit.SECONDS)));
+        } finally {
+            workers.shutdownNow();
+        }
+        assertEquals("CANCELLED", sql("SELECT status FROM carrier_trips WHERE id=" + trip));
+        assertEquals("CANCELLED", sql("SELECT status FROM bookings WHERE id=" + id));
+        assertEquals("0", sql("SELECT sum(reserved_seats) FROM trip_segments WHERE trip_id=" + trip));
+        assertEquals(
+            "1",
+            sql("SELECT count(*) FROM booking_events WHERE booking_id=" + id + " AND event_type='CANCELLED'")
+        );
+    }
+
+    @Test
+    void concurrentDepartureAndConfirmationCannotConfirmAfterPickupCloses() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        var driver = tripDriver(fixture);
+        long trip = openBookingTrip(fixture, "DEPARTCONFIRMRACE", Instant.now().plusSeconds(120));
+        long id = call(201, "POST", "/api/v1/admin/bookings", bookingBody(trip, 1, 3, 4, UUID.randomUUID()), admin)
+            .path("id")
+            .asLong();
+        var start = new CountDownLatch(1);
+        var workers = Executors.newFixedThreadPool(2);
+        int confirmed;
+        try {
+            var confirm = workers.submit(() -> {
+                start.await();
+                return mutationStatus(
+                    HttpMethod.PUT,
+                    "/api/v1/admin/bookings/" + id + "/state",
+                    "{\"status\":\"CONFIRMED\",\"version\":0,\"note\":\"\"}",
+                    admin
+                );
+            });
+            var depart = workers.submit(() -> {
+                start.await();
+                return mutationStatus(
+                    HttpMethod.PUT,
+                    "/api/v1/driver/trips/" + trip + "/progress",
+                    "{\"action\":\"START\",\"stopOrder\":1,\"version\":1,\"note\":\"\"}",
+                    driver
+                );
+            });
+            start.countDown();
+            assertEquals(200, depart.get(20, TimeUnit.SECONDS));
+            confirmed = confirm.get(20, TimeUnit.SECONDS);
+            assertTrue(Set.of(200, 409).contains(confirmed));
+        } finally {
+            workers.shutdownNow();
+        }
+        assertEquals("IN_PROGRESS", sql("SELECT status FROM carrier_trips WHERE id=" + trip));
+        assertEquals(confirmed == 200 ? "CONFIRMED" : "REJECTED", sql("SELECT status FROM bookings WHERE id=" + id));
+        assertEquals(
+            confirmed == 200 ? "8" : "0",
+            sql("SELECT sum(reserved_seats) FROM trip_segments WHERE trip_id=" + trip)
+        );
+        assertEquals(
+            "1",
+            sql(
+                "SELECT count(*) FROM trip_stops WHERE trip_id=" +
+                    trip +
+                    " AND stop_order=1 AND actual_departure_at IS NOT NULL"
+            )
+        );
+    }
+
+    /** Dùng trong hai phiên đồng thời; trả status thật để kiểm cả hai thứ tự commit hợp lệ. */
+    private int mutationStatus(HttpMethod method, String path, String body, Authentication actor) throws Exception {
+        return mvc
+            .perform(
+                request(method, path)
+                    .with(authentication(actor))
+                    .with(csrf())
+                    .contentType("application/json")
+                    .content(body)
+            )
+            .andReturn()
+            .getResponse()
+            .getStatus();
+    }
+
+    @Test
+    void confirmationRaceCannotOversellAndSeparateSegmentsReuseSeats() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        long trip = openBookingTrip(fixture, "CAPACITYRACE", Instant.now().plus(2, ChronoUnit.DAYS));
+        long first = call(201, "POST", "/api/v1/admin/bookings", bookingBody(trip, 1, 2, 7, UUID.randomUUID()), admin)
+            .path("id")
+            .asLong();
+        long second = call(201, "POST", "/api/v1/admin/bookings", bookingBody(trip, 1, 2, 7, UUID.randomUUID()), admin)
+            .path("id")
+            .asLong();
+        var workers = Executors.newFixedThreadPool(2);
+        String body = "{\"status\":\"CONFIRMED\",\"version\":0,\"note\":\"\"}";
+        try {
+            var one = workers.submit(() ->
+                mvc
+                    .perform(
+                        request(HttpMethod.PUT, "/api/v1/admin/bookings/" + first + "/state")
+                            .with(authentication(admin))
+                            .with(csrf())
+                            .contentType("application/json")
+                            .content(body)
+                    )
+                    .andReturn()
+                    .getResponse()
+                    .getStatus()
+            );
+            var two = workers.submit(() ->
+                mvc
+                    .perform(
+                        request(HttpMethod.PUT, "/api/v1/admin/bookings/" + second + "/state")
+                            .with(authentication(admin))
+                            .with(csrf())
+                            .contentType("application/json")
+                            .content(body)
+                    )
+                    .andReturn()
+                    .getResponse()
+                    .getStatus()
+            );
+            assertEquals(Set.of(200, 409), Set.of(one.get(20, TimeUnit.SECONDS), two.get(20, TimeUnit.SECONDS)));
+        } finally {
+            workers.shutdownNow();
+        }
+        long last = call(201, "POST", "/api/v1/admin/bookings", bookingBody(trip, 2, 3, 10, UUID.randomUUID()), admin)
+            .path("id")
+            .asLong();
+        call(200, "PUT", "/api/v1/admin/bookings/" + last + "/state", body, admin);
+        assertEquals(
+            "7",
+            sql("SELECT reserved_seats FROM trip_segments WHERE trip_id=" + trip + " AND segment_order=1")
+        );
+        assertEquals(
+            "10",
+            sql("SELECT reserved_seats FROM trip_segments WHERE trip_id=" + trip + " AND segment_order=2")
+        );
+        call(409, "POST", "/api/v1/admin/bookings", bookingBody(trip, 1, 3, 1, UUID.randomUUID()), admin);
+    }
+
+    @Test
+    void tripCancellationAndBookingHistoryFailOrCommitTogetherWithCapacity() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        long trip = openBookingTrip(fixture, "CANCELBOOKINGS", Instant.now().plus(2, ChronoUnit.DAYS));
+        long confirmed = call(
+            201,
+            "POST",
+            "/api/v1/admin/bookings",
+            bookingBody(trip, 1, 3, 5, UUID.randomUUID()),
+            admin
+        )
+            .path("id")
+            .asLong();
+        long pending = call(201, "POST", "/api/v1/admin/bookings", bookingBody(trip, 2, 3, 2, UUID.randomUUID()), admin)
+            .path("id")
+            .asLong();
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/bookings/" + confirmed + "/state",
+            "{\"status\":\"CONFIRMED\",\"version\":0,\"note\":\"\"}",
+            admin
+        );
+        sql(
+            "CREATE FUNCTION fail_booking_event() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN RAISE EXCEPTION ''test booking event failure''; END'; CREATE TRIGGER fail_booking_event BEFORE INSERT ON booking_events FOR EACH ROW EXECUTE FUNCTION fail_booking_event()"
+        );
+        call(
+            503,
+            "PUT",
+            "/api/v1/admin/trips/" + trip + "/state",
+            "{\"status\":\"CANCELLED\",\"version\":1,\"note\":\"Hủy chuyến\"}",
+            admin
+        );
+        assertEquals("OPEN", sql("SELECT status FROM carrier_trips WHERE id=" + trip));
+        assertEquals("10", sql("SELECT sum(reserved_seats) FROM trip_segments WHERE trip_id=" + trip));
+        assertEquals("CONFIRMED", sql("SELECT status FROM bookings WHERE id=" + confirmed));
+        assertEquals("PENDING", sql("SELECT status FROM bookings WHERE id=" + pending));
+        call(503, "POST", "/api/v1/admin/bookings", bookingBody(trip, 1, 2, 1, UUID.randomUUID()), admin);
+        assertEquals("2", sql("SELECT count(*) FROM bookings"));
+        sql("DROP TRIGGER fail_booking_event ON booking_events");
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/trips/" + trip + "/state",
+            "{\"status\":\"CANCELLED\",\"version\":1,\"note\":\"Hủy chuyến\"}",
+            admin
+        );
+        assertEquals("0", sql("SELECT sum(reserved_seats) FROM trip_segments WHERE trip_id=" + trip));
+        assertEquals("2", sql("SELECT count(*) FROM bookings WHERE trip_id=" + trip + " AND status='CANCELLED'"));
+        call(
+            409,
+            "PUT",
+            "/api/v1/admin/bookings/" + pending + "/state",
+            "{\"status\":\"CONFIRMED\",\"version\":1,\"note\":\"\"}",
+            admin
+        );
+    }
+
+    @Test
+    void manualPaymentsAndRefundsAreBoundedIdempotentAndDoNotFollowCancellationAutomatically() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        long trip = openBookingTrip(fixture, "MONEYBOOKING", Instant.now().plus(2, ChronoUnit.DAYS));
+        long id = call(201, "POST", "/api/v1/admin/bookings", bookingBody(trip, 1, 2, 1, UUID.randomUUID()), admin)
+            .path("id")
+            .asLong();
+        String payment =
+            "{\"kind\":\"PAYMENT\",\"amount\":100000,\"note\":\"Đã thu trực tiếp TEST\",\"version\":1,\"requestKey\":\"" +
+            UUID.randomUUID() +
+            "\"}";
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/bookings/" + id + "/state",
+            "{\"status\":\"CONFIRMED\",\"version\":0,\"note\":\"\"}",
+            admin
+        );
+        assertEquals(
+            100000,
+            call(200, "PUT", "/api/v1/admin/bookings/" + id + "/payment", payment, admin)
+                .path("paidAmount")
+                .asInt()
+        );
+        assertEquals(
+            100000,
+            call(200, "PUT", "/api/v1/admin/bookings/" + id + "/payment", payment, admin)
+                .path("paidAmount")
+                .asInt()
+        );
+        call(409, "PUT", "/api/v1/admin/bookings/" + id + "/payment", payment.replace("100000", "1"), admin);
+        var cancelled = call(
+            200,
+            "PUT",
+            "/api/v1/admin/bookings/" + id + "/state",
+            "{\"status\":\"CANCELLED\",\"version\":2,\"note\":\"Khách hủy\"}",
+            admin
+        );
+        assertTrue(cancelled.path("refundDue").asBoolean());
+        assertEquals(0, cancelled.path("refundedAmount").asInt());
+        String refund =
+            "{\"kind\":\"REFUND\",\"amount\":100000,\"note\":\"Đã hoàn trực tiếp TEST\",\"version\":3,\"requestKey\":\"" +
+            UUID.randomUUID() +
+            "\"}";
+        call(400, "PUT", "/api/v1/admin/bookings/" + id + "/payment", refund.replace("100000", "100001"), admin);
+        assertFalse(
+            call(200, "PUT", "/api/v1/admin/bookings/" + id + "/payment", refund, admin)
+                .path("refundDue")
+                .asBoolean()
+        );
+        assertEquals(
+            100000,
+            call(200, "PUT", "/api/v1/admin/bookings/" + id + "/payment", refund, admin)
+                .path("refundedAmount")
+                .asInt()
+        );
+    }
+
+    @Test
+    void driverDepartureRejectsPendingAndArrivalCompletesConfirmedWithoutReleasingHistoricalSegments()
+        throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        var driver = tripDriver(fixture);
+        long trip = openBookingTrip(fixture, "DRIVERBOOKINGS", Instant.now().plusSeconds(120));
+        long pending = call(201, "POST", "/api/v1/admin/bookings", bookingBody(trip, 1, 3, 1, UUID.randomUUID()), admin)
+            .path("id")
+            .asLong();
+        long confirmed = call(
+            201,
+            "POST",
+            "/api/v1/admin/bookings",
+            bookingBody(trip, 1, 2, 4, UUID.randomUUID()),
+            admin
+        )
+            .path("id")
+            .asLong();
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/bookings/" + confirmed + "/state",
+            "{\"status\":\"CONFIRMED\",\"version\":0,\"note\":\"\"}",
+            admin
+        );
+        var passengerList = call(200, "GET", "/api/v1/driver/trips/" + trip + "/passengers?size=1", null, driver);
+        assertEquals(1, passengerList.path("totalElements").asInt());
+        assertFalse(passengerList.at("/content/0").has("customerId"));
+        assertFalse(passengerList.at("/content/0").has("totalPrice"));
+        call(404, "GET", "/api/v1/driver/trips/" + trip + "/passengers", null, admin);
+        call(
+            200,
+            "PUT",
+            "/api/v1/driver/trips/" + trip + "/progress",
+            "{\"action\":\"START\",\"stopOrder\":1,\"version\":1,\"note\":\"\"}",
+            driver
+        );
+        assertEquals("REJECTED", sql("SELECT status FROM bookings WHERE id=" + pending));
+        call(
+            409,
+            "PUT",
+            "/api/v1/admin/bookings/" + confirmed + "/state",
+            "{\"status\":\"CANCELLED\",\"version\":1,\"note\":\"Đã rời điểm\"}",
+            admin
+        );
+        call(
+            200,
+            "PUT",
+            "/api/v1/driver/trips/" + trip + "/progress",
+            "{\"action\":\"ARRIVE\",\"stopOrder\":2,\"version\":2,\"note\":\"\"}",
+            driver
+        );
+        assertEquals("COMPLETED", sql("SELECT status FROM bookings WHERE id=" + confirmed));
+        assertEquals(
+            "4",
+            sql("SELECT reserved_seats FROM trip_segments WHERE trip_id=" + trip + " AND segment_order=1")
+        );
+        call(201, "POST", "/api/v1/admin/bookings", bookingBody(trip, 2, 3, 10, UUID.randomUUID()), admin);
     }
 
     @Test

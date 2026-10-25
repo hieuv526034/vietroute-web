@@ -15,11 +15,13 @@ import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessFunction;
+import vn.vietroute.business.booking.dto.response.DriverPassengerResponse;
 import vn.vietroute.business.trip.dto.request.DriverProgressRequest;
 import vn.vietroute.business.trip.dto.request.TripSearchRequest;
 import vn.vietroute.business.trip.dto.response.TripResponse;
 import vn.vietroute.business.trip.service.DriverTripService;
 import vn.vietroute.common.base.BaseController;
+import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.AccessConstants.Groups;
@@ -39,6 +41,24 @@ public class DriverTripController extends BaseController {
     public DriverTripController(DriverTripService service, ApiResponses responses, ApiExceptionMapper errors) {
         super(responses, errors);
         this.service = service;
+    }
+
+    @GetMapping(Routes.DRIVER_TRIPS + Routes.TRIP_PASSENGERS)
+    @AccessFunction(group = Groups.DRIVER_TRIP, actions = { PermissionAction.READ })
+    @Operation(
+        summary = "Danh sách đón/trả chuyến được giao",
+        description = "Chỉ CONFIRMED/COMPLETED, page/size server; không trả email, customer ID, giá, thu/hoàn hoặc audit"
+    )
+    public ApiResult<PageResponse<DriverPassengerResponse>> passengers(
+        @Parameter(description = "ID chuyến dương") @PathVariable @Min(
+            value = 1,
+            message = "{validation.invalid}"
+        ) long id,
+        @Valid @ModelAttribute PageRequest page,
+        @AuthenticationPrincipal UserPrincipal actor,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () -> service.passengers(id, page, actor));
     }
 
     @GetMapping(Routes.DRIVER_TRIPS)

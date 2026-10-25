@@ -15,6 +15,7 @@ public final class WebRoutePolicy {
     public static List<String> publicMatchers() {
         return List.of(
             Routes.HOME,
+            Routes.JOURNEYS_PAGE,
             Routes.HEALTH,
             Routes.LOGIN,
             Routes.AUTH_LIFECYCLE_PAGE,
@@ -68,6 +69,7 @@ public final class WebRoutePolicy {
     public static boolean recoversInvalidCookie(String path, String method) {
         return (
             path.equals(Routes.HOME) ||
+            path.equals(Routes.JOURNEYS_PAGE) ||
             path.equals(Routes.LOGIN) ||
             path.equals(Routes.DOCS) ||
             path.equals(Routes.AUTH_LIFECYCLE_PAGE) ||
@@ -79,13 +81,23 @@ public final class WebRoutePolicy {
     }
 
     public static List<String> publicLookupMatchers() {
-        return List.of(Routes.CATALOG_MATCHER, Routes.PROVINCES, Routes.LOCATIONS);
+        return List.of(
+            Routes.CATALOG_MATCHER,
+            Routes.PROVINCES,
+            Routes.LOCATIONS,
+            Routes.PUBLIC_TRIPS,
+            Routes.PUBLIC_TRIPS_MATCHER
+        );
     }
 
     private static boolean publicLookup(String path, String method) {
         return (
             method.equals("GET") &&
-            (path.startsWith(Routes.CATALOG_PREFIX) || path.equals(Routes.PROVINCES) || path.equals(Routes.LOCATIONS))
+            (path.startsWith(Routes.CATALOG_PREFIX) ||
+                path.equals(Routes.PROVINCES) ||
+                path.equals(Routes.LOCATIONS) ||
+                path.equals(Routes.PUBLIC_TRIPS) ||
+                path.startsWith(Routes.PUBLIC_TRIPS + "/"))
         );
     }
 

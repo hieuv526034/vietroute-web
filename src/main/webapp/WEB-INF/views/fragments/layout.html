@@ -109,6 +109,10 @@
                         th:href="@{/(lang=${currentLocale})}"
                         th:text="#{ui.home}"
                     ></a>
+                    <a
+                        th:href="@{/journeys(lang=${currentLocale})}"
+                        th:text="#{ui.journey.search}"
+                    ></a>
                     <details
                         class="operations-menu"
                         th:each="item : ${functionNavigation}"

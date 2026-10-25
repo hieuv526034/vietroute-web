@@ -93,6 +93,20 @@ public final class AccessFeatures {
             Groups.DRIVER_TRIP + "_VIEW"
         ),
         new Feature(
+            Functions.BOOKING,
+            Functions.BUSINESS,
+            "access.function.BOOKING",
+            Routes.BOOKINGS_PAGE,
+            Groups.BOOKING + "_VIEW"
+        ),
+        new Feature(
+            Functions.MY_BOOKING,
+            null,
+            "access.function.MY_BOOKING",
+            Routes.MY_BOOKINGS_PAGE,
+            Groups.MY_BOOKING + "_VIEW"
+        ),
+        new Feature(
             Functions.MEDIA,
             Functions.SYSTEM,
             "access.function.MEDIA",

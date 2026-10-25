@@ -409,4 +409,10 @@ V018 thêm `carrier_routes`/`carrier_route_stops`; V019 thêm `carrier_trips`/`t
 
 TRIP_VIEW/READ/CREATE/UPDATE là tài nguyên riêng, không dùng ROUTE/VEHICLE/DRIVER_READ làm quyền phụ thuộc ẩn. Picker tạo/phân công sử dụng chính action TRIP trong scope; ID chuyến dương được kiểm trước khi ép carrier cho picker. VIEW/API tách, quyền scoped và global cùng bắt buộc. Registry/ADMIN sync khi enabled, mapping role thường cần quản trị lưu qua API/UI; thêm source không tự cấp cho OPERATOR/DRIVER/CUSTOMER.
 
-Hợp đồng payload, khóa lịch và snapshot ở [API base](API_BASE.md#điều-hành-chuyến--trip01-trong-business04). Chưa coi bảng trip_segments tự triển khai xác nhận/hủy booking, còn phải tích hợp transaction và ca cạnh tranh của module booking.
+Hợp đồng payload, khóa lịch và snapshot ở [API base](API_BASE.md#điều-hành-chuyến--trip01-trong-business04). BOOKING01 tích hợp xác nhận/hủy trong cùng transaction theo mục dưới.
+
+## Booking theo owner/scope và projection công khai — V020
+
+`bookings` lưu đơn WEB/PHONE, owner nullable chỉ cho PHONE, trip/carrier/scope composite FK, hai stop snapshot, số chỗ, giá đã chốt, contact, trạng thái, UUID, tiền đã thu/hoàn và audit/version. `booking_events` giữ sự kiện chuyển trạng thái/thu/hoàn và số tiền, FK composite về booking. Partial unique WEB PENDING/CONFIRMED theo customer; UUID tạo và UUID sự kiện tiền có unique riêng. Không thêm group hoặc bảng quyền trùng; MY_BOOKING_VIEW/READ/CREATE/UPDATE và BOOKING_VIEW/READ/CREATE/UPDATE là mapping role-permission thông thường, không tự cấp ordinary roles.
+
+MY_BOOKING yêu cầu CUSTOMER ready hiện hành và owner từ principal, kể cả ADMIN không có CUSTOMER không được mượn owner người khác. BOOKING dùng DataScopeGuard trên connection hiện hành, đồng thời SQL count/trang/ID gắn đúng scope; passenger API giữ assigned driver và chỉ projection cần đón/trả. Lookup chuyến công khai tách DTO khỏi booking/driver/user entity và không yêu cầu staff membership. V020 giữ migrations trước nguyên vẹn; bootstrap chỉ tạo schema khi enabled, không seed đơn/tiền hay cấp quyền thường trong build. Hợp đồng khóa, giá, chống lặp và cascade tại [API base](API_BASE.md#đặt-chỗ-theo-chặng-và-tìm-công-khai--booking01search01).

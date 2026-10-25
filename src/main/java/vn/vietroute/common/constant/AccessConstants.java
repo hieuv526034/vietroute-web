@@ -53,6 +53,8 @@ public final class AccessConstants {
         public static final String TRIP = "TRIP";
 
         public static final String DRIVER_TRIP = "DRIVER_TRIP";
+        public static final String BOOKING = "BOOKING";
+        public static final String MY_BOOKING = "MY_BOOKING";
 
         public static final String DEMO = "DEMO";
 
@@ -77,6 +79,9 @@ public final class AccessConstants {
 
     /** Mã cây chức năng ổn định; quan hệ cha/con do AccessFeatures khai báo, không phải role. */
     public static final class Functions {
+
+        public static final String BOOKING = "BOOKING";
+        public static final String MY_BOOKING = "MY_BOOKING";
 
         public static final String VEHICLE_TYPE = "VEHICLE_TYPE";
 

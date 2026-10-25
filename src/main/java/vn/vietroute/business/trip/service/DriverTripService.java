@@ -8,6 +8,9 @@ import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.auth.security.annotation.AccessResource;
+import vn.vietroute.business.booking.dto.response.DriverPassengerResponse;
+import vn.vietroute.business.booking.repository.BookingLifecycleRepository;
+import vn.vietroute.business.booking.repository.BookingRepository;
 import vn.vietroute.business.carrier.repository.CarrierRepository;
 import vn.vietroute.business.trip.dto.request.DriverProgressRequest;
 import vn.vietroute.business.trip.dto.request.TripSearchRequest;
@@ -16,6 +19,7 @@ import vn.vietroute.business.trip.entity.TripStatus;
 import vn.vietroute.business.trip.repository.DriverProgressRepository;
 import vn.vietroute.business.trip.repository.TripRepository;
 import vn.vietroute.business.trip.repository.TripTemplateRepository;
+import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ErrorCode;
@@ -33,6 +37,18 @@ public class DriverTripService {
     private final CarrierRepository carriers;
     private final DriverProgressRepository progress;
     private final JdbcTransactions transactions;
+    private final BookingLifecycleRepository bookings;
+    private final BookingRepository passengerBookings;
+
+    /** Driver không cần BOOKING_READ; chỉ projection đón/trả sau kiểm chính phân công hiện hành. */
+    @AccessOperation(action = PermissionAction.READ)
+    public PageResponse<DriverPassengerResponse> passengers(long id, PageRequest page, UserPrincipal actor) {
+        AccessActors.requireCurrent(actor);
+        return transactions.execute(connection -> {
+            trips.assigned(connection, id, PermissionAction.READ, false, actor.id());
+            return passengerBookings.passengers(connection, id, page);
+        });
+    }
 
     /** SQL count/page cùng ràng buộc người được phân công, không có bypass ADMIN. */
     @AccessOperation(action = PermissionAction.READ)
@@ -135,6 +151,16 @@ public class DriverTripService {
                 }
                 default -> throw new IllegalArgumentException("Hành động tiến độ chưa hỗ trợ");
             }
+            if (
+                body.action() == DriverProgressRequest.Action.START ||
+                body.action() == DriverProgressRequest.Action.DEPART
+            ) bookings.departed(connection, id, body.stopOrder(), actor.id());
+            if (body.action() == DriverProgressRequest.Action.ARRIVE) bookings.arrived(
+                connection,
+                id,
+                body.stopOrder(),
+                actor.id()
+            );
             trips.state(connection, trip, state, trip.operationNote(), actor.id());
             trips.event(
                 connection,

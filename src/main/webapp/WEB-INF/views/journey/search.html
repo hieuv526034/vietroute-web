@@ -1,0 +1,279 @@
+<!doctype html>
+<html
+    xmlns:th="http://www.thymeleaf.org"
+    th:lang="${currentLocale}"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.journey.title})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main
+            id="journey-workspace"
+            class="container-xl workspace-page"
+            th:attr="data-authenticated=${currentUser != null},data-loading=#{ui.loading},data-empty=#{ui.empty},data-choose=#{ui.trip.choose},data-detail=#{ui.route.view},data-book=#{ui.journey.book},data-login=#{ui.journey.login},data-pending=#{ui.driverTrip.pending},data-planned=#{ui.driverTrip.planned},data-actual=#{ui.driverTrip.actual},data-confirmed-stop=#{ui.journey.confirmedStop},data-open=#{ui.trip.OPEN},data-in-progress=#{ui.trip.IN_PROGRESS},data-completed=#{ui.trip.COMPLETED},data-cancelled=#{ui.trip.CANCELLED},data-map=#{ui.journey.map},data-pickup=#{ui.route.pickup},data-dropoff=#{ui.route.dropoff}"
+        >
+            <div class="page-heading">
+                <p
+                    class="eyebrow"
+                    th:text="#{ui.journey.eyebrow}"
+                ></p>
+                <h1 th:text="#{ui.journey.title}"></h1>
+                <p
+                    class="muted"
+                    th:text="#{ui.journey.description}"
+                ></p>
+            </div>
+            <p
+                id="journey-status"
+                class="catalog-status"
+                role="status"
+                aria-live="polite"
+            ></p>
+            <div
+                id="journey-feedback"
+                class="feedback"
+                role="alert"
+                hidden
+            ></div>
+            <fieldset
+                id="journey-controls"
+                class="border-0 p-0 m-0 w-100"
+            >
+                <section class="panel">
+                    <form
+                        id="journey-form"
+                        novalidate
+                    >
+                        <div class="dialog-form-grid">
+                            <div
+                                class="journey-picker"
+                                th:each="side:${ {'from','to'} }"
+                                th:attr="data-side=${side}"
+                            >
+                                <h2 th:text="${side == 'from'} ? #{ui.booking.pickup} : #{ui.booking.dropoff}"></h2>
+                                <label>
+                                    <span th:text="#{ui.journey.by}"></span>
+                                    <select
+                                        data-place-kind
+                                        class="form-select"
+                                    >
+                                        <option
+                                            value="LOCATION"
+                                            th:text="#{ui.route.location}"
+                                        ></option>
+                                        <option
+                                            value="PROVINCE"
+                                            th:text="#{ui.location.province}"
+                                        ></option>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span th:text="#{ui.journey.findPlace}"></span>
+                                    <input
+                                        data-place-query
+                                        maxlength="160"
+                                        class="form-control"
+                                    />
+                                </label>
+                                <div class="trip-picker-search">
+                                    <button
+                                        type="button"
+                                        class="button button-outline"
+                                        data-place-search
+                                        th:text="#{ui.search}"
+                                    ></button>
+                                    <button
+                                        type="button"
+                                        class="button button-outline"
+                                        data-place-prev
+                                        th:text="#{ui.mediaPrevious}"
+                                    ></button>
+                                    <span
+                                        data-place-count
+                                        aria-live="polite"
+                                    ></span>
+                                    <button
+                                        type="button"
+                                        class="button button-outline"
+                                        data-place-next
+                                        th:text="#{ui.mediaNext}"
+                                    ></button>
+                                </div>
+                                <label>
+                                    <span
+                                        th:text="${side == 'from'} ? #{ui.booking.pickup} : #{ui.booking.dropoff}"
+                                    ></span>
+                                    <select
+                                        data-place-select
+                                        required
+                                        class="form-select"
+                                    ></select>
+                                </label>
+                            </div>
+                            <label>
+                                <span th:text="#{ui.journey.date}"></span>
+                                <input
+                                    name="date"
+                                    type="date"
+                                    required
+                                    class="form-control"
+                                />
+                            </label>
+                            <label>
+                                <span th:text="#{ui.booking.seats}"></span>
+                                <input
+                                    name="seats"
+                                    type="number"
+                                    min="1"
+                                    max="200"
+                                    step="1"
+                                    required
+                                    value="1"
+                                    class="form-control"
+                                />
+                            </label>
+                        </div>
+                        <div class="dialog-actions">
+                            <button
+                                class="button"
+                                th:text="#{ui.journey.search}"
+                            ></button>
+                        </div>
+                    </form>
+                </section>
+                <section class="panel">
+                    <div class="panel-heading"><h2 th:text="#{ui.journey.results}"></h2></div>
+                    <p
+                        class="form-help"
+                        th:text="#{ui.booking.pendingHelp}"
+                    ></p>
+                    <div
+                        class="table-responsive"
+                        tabindex="0"
+                        role="region"
+                        th:attr="aria-label=#{ui.table.scroll}"
+                    >
+                        <table class="table records-table">
+                            <thead>
+                                <tr>
+                                    <th th:text="#{ui.booking.trip}"></th>
+                                    <th th:text="#{ui.fleet.carrier}"></th>
+                                    <th th:text="#{ui.booking.leg}"></th>
+                                    <th th:text="#{ui.booking.pickupAt}"></th>
+                                    <th th:text="#{ui.journey.dropoffAt}"></th>
+                                    <th th:text="#{ui.booking.price}"></th>
+                                    <th th:text="#{ui.booking.available}"></th>
+                                    <th
+                                        class="table-actions"
+                                        th:text="#{ui.ops.actions}"
+                                    ></th>
+                                </tr>
+                            </thead>
+                            <tbody id="journey-body"></tbody>
+                        </table>
+                    </div>
+                    <div th:replace="~{fragments/pagination :: pager('journey', 10)}"></div>
+                </section>
+            </fieldset>
+            <dialog
+                id="journey-dialog"
+                class="workspace-dialog route-dialog"
+                aria-labelledby="journey-dialog-title"
+            >
+                <div class="dialog-heading">
+                    <h2
+                        id="journey-dialog-title"
+                        tabindex="-1"
+                        th:text="#{ui.journey.detail}"
+                    ></h2>
+                    <button
+                        type="button"
+                        class="button button-outline"
+                        data-dialog-close
+                        th:text="#{ui.ops.close}"
+                    ></button>
+                </div>
+                <div
+                    id="journey-detail-feedback"
+                    class="feedback"
+                    role="alert"
+                    hidden
+                ></div>
+                <fieldset
+                    id="journey-dialog-controls"
+                    class="border-0 p-0 m-0 w-100"
+                >
+                    <div
+                        id="journey-tabs"
+                        data-tabs
+                    >
+                        <div
+                            class="workspace-tabs"
+                            role="tablist"
+                            th:attr="aria-label=#{ui.journey.detail}"
+                        >
+                            <button
+                                id="journey-info-tab"
+                                type="button"
+                                data-tab-target="journey-info"
+                                aria-selected="true"
+                                th:text="#{ui.trip.info}"
+                            ></button>
+                            <button
+                                id="journey-stops-tab"
+                                type="button"
+                                data-tab-target="journey-stops"
+                                th:text="#{ui.route.stops}"
+                            ></button>
+                        </div>
+                        <section
+                            id="journey-info"
+                            data-tab-panel="journey-info-tab"
+                        >
+                            <div
+                                id="journey-summary"
+                                class="route-stop-list"
+                            ></div>
+                            <p
+                                class="form-help"
+                                th:text="#{ui.journey.progressHelp}"
+                            ></p>
+                        </section>
+                        <section
+                            id="journey-stops"
+                            data-tab-panel="journey-stops-tab"
+                            hidden
+                        >
+                            <div
+                                id="journey-stop-list"
+                                class="route-stop-list"
+                            ></div>
+                        </section>
+                    </div>
+                    <div class="dialog-actions">
+                        <button
+                            type="button"
+                            class="button button-outline"
+                            data-dialog-close
+                            th:text="#{ui.ops.close}"
+                        ></button>
+                        <button
+                            id="journey-refresh"
+                            type="button"
+                            class="button button-outline"
+                            th:text="#{ui.ops.refresh}"
+                        ></button>
+                        <a
+                            id="journey-book"
+                            class="button"
+                            hidden
+                            th:text="#{ui.journey.book}"
+                        ></a>
+                    </div>
+                </fieldset>
+            </dialog>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/journeys.js}"></script>
+    </body>
+</html>

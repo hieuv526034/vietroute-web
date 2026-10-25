@@ -22,6 +22,11 @@
                 >
                     <h2 th:text="${group.name}"></h2>
                     <div class="dashboard-links">
+                        <a
+                            th:if="${group.path != null}"
+                            th:href="${basePath + group.path + '?lang=' + currentLocale}"
+                            th:text="${group.name}"
+                        ></a>
                         <th:block th:insert="~{fragments/layout :: functionMenuItems(${group.children})}"></th:block>
                     </div>
                 </section>
