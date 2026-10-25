@@ -1,6 +1,6 @@
 # Tổng quan VietRoute cho thành viên mới
 
-Cập nhật 25/10/2026, bổ sung BUSINESS02 trên nhánh đang review; mốc merge ở tiến độ. Đọc tài liệu này trước, sau đó mở các tài liệu theo liên kết. Đây là bản đồ source đang có, không phải tuyên bố đã hoàn thành các nghiệp vụ đặt vé.
+Cập nhật 25/10/2026, BUSINESS02 đã merge main tại PR #109; dữ liệu DEMO Neon và tài khoản thử có trạng thái/giới hạn tại tiến độ. Đọc tài liệu này trước, sau đó mở các tài liệu theo liên kết. Đây là bản đồ source đang có, không phải tuyên bố đã hoàn thành các nghiệp vụ đặt vé.
 
 Để biết ai làm gì tiếp theo và phần nào đã/chưa hoàn thành, xem [Tiến độ và kế hoạch nhóm](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md). Bảng tách trạng thái source/API/UI và cấu hình dịch vụ ngoài app, kèm PR và phụ thuộc để bàn giao.
 
@@ -49,6 +49,8 @@ Phần đã có source: nền tảng locale/error/validation/audit/paging, auth/
 | `auth` | Credential, role/permission, principal, cookie/JWT, bootstrap và vòng đời đăng ký/email/reset |
 | `business/catalog` | Danh mục nền đang chạy; controller → service → repository → entity/response |
 | `business/location` | LOCATION01 tỉnh/thành và địa điểm, V016; ADMIN + quyền hành động, public chỉ active, UI `/operations/locations`. Hợp đồng trường/tọa độ/trạng thái ở API base |
+| `business/carrier`, `business/vehicle`, `business/driver` | BUSINESS02/V017: nhà xe và scope, xe, hồ sơ tài xế; API/UI theo quyền hành động và membership hiện hành. Hồ sơ tài xế khác account auth |
+| `business/demo` | Seed bộ DEMO có nhãn qua thao tác ADMIN chủ động; không chạy trong build/startup, không tự cấp account/role |
 | `common/media` | Lõi thư viện ảnh/upload dùng chung, controller public gọi service lõi |
 
 Đổi package chỉ đổi tổ chức code, không đổi route/schema/dữ liệu. Không tạo lớp ở package cũ để chuyển tiếp. Sau khi cập nhật nhánh lần đầu, dừng IDE server → Maven clean → Reload Maven → Rebuild Project rồi Run.
@@ -56,7 +58,7 @@ Phần đã có source: nền tảng locale/error/validation/audit/paging, auth/
 ## 3. Khởi động và dừng
 
 1. Tomcat khởi tạo root context và các bean hạ tầng; Settings kiểm env OS/IDE. WAR không tự đọc `.env`; launcher local chủ động đọc file riêng trước khi tạo context.
-2. DatabaseInitializer chỉ migrate/seed khi `VIETROUTE_DB_INIT_ENABLED=true`. V001–V013 có history/checksum, advisory transaction lock và kiểm metadata trước commit. Không reset admin đã tồn tại. Nâng từ code trước VIEW cần dừng/drain node cũ trước khi áp V013 theo [chuyên đề phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#cây-chức-năng-và-quyền-hành-động--access03).
+2. DatabaseInitializer chỉ migrate/seed khi `VIETROUTE_DB_INIT_ENABLED=true`. V001–V017 có history/checksum, advisory transaction lock và kiểm metadata trước commit. Không reset admin đã tồn tại. Nâng từ code trước VIEW cần dừng/drain node cũ trước khi áp V013 theo [chuyên đề phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#cây-chức-năng-và-quyền-hành-động--access03).
 3. Pool khởi tạo lười. Worker và DatabaseProbe chỉ bắt đầu sau initializer, mỗi loại bật bằng env riêng; tắt mặc định.
 4. MVC context đăng ký controller/advice/Thymeleaf/Swagger; hai context không tạo service/controller trùng. Sau khi mapping sẵn sàng, AccessResourceSynchronizer đồng bộ danh bạ UI/API vào DB nếu ACCESS_SYNC bật (mặc định theo DB_INIT khi không khai báo). Danh bạ không tự cấp quyền hoặc đổi public; xem [schema và phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md).
 5. Shutdown ngừng poll, chờ worker đang chạy theo timeout, đóng pool, GC listener và registry. Kill đột ngột có thể để lại lease; node khác nhận lại khi hết hạn.
