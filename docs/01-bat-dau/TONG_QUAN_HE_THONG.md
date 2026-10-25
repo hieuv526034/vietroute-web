@@ -1,6 +1,6 @@
 # Tổng quan VietRoute cho thành viên mới
 
-Cập nhật 25/10/2026, BUSINESS02 đã merge main tại PR #109; dữ liệu DEMO Neon và tài khoản thử có trạng thái/giới hạn tại tiến độ. Đọc tài liệu này trước, sau đó mở các tài liệu theo liên kết. Đây là bản đồ source đang có, không phải tuyên bố đã hoàn thành các nghiệp vụ đặt vé.
+Cập nhật 25/10/2026 sau BUSINESS04/PR #114–#121: đã có tuyến, chuyến, đặt chỗ theo chặng, màn khách/tài xế/điều hành, báo cáo và tracking riêng tư. Dữ liệu DEMO Neon, ba tài khoản dùng ngay, trạng thái triển khai và bằng chứng kiểm ở tiến độ. Đọc tài liệu này trước, sau đó mở chuyên đề; Maps/Gmail hiện chưa cấu hình theo lựa chọn chủ dự án.
 
 Để biết ai làm gì tiếp theo và phần nào đã/chưa hoàn thành, xem [Tiến độ và kế hoạch nhóm](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md). Bảng tách trạng thái source/API/UI và cấu hình dịch vụ ngoài app, kèm PR và phụ thuộc để bàn giao.
 
@@ -18,7 +18,7 @@ flowchart LR
     Api[API client] --> Web
     Web --> Security[Quota và JWT/CSRF]
     Security --> Services[Service kiểm quyền và transaction]
-    Services --> DB[(PostgreSQL: auth, policy, catalog, locations, carriers/fleet, media, jobs, activity)]
+    Services --> DB[(PostgreSQL: auth/scope, catalog/location, carrier/fleet, route/trip, booking/tracking, media/jobs/activity)]
     Worker[Worker nhận lease] --> DB
     Worker --> Gmail[Gmail HTTPS hoặc SMTP TLS]
     Worker --> Cloudinary[Cloudinary cleanup]
@@ -28,7 +28,7 @@ flowchart LR
     Monitor --> Dashboard[Dashboard và cảnh báo bên ngoài]
 ```
 
-Phần đã có source: nền tảng locale/error/validation/audit/paging, auth/JWT/phân quyền, migration/seed, catalog CRUD, LOCATION01 tỉnh–địa điểm (API/UI quản trị và lookup công khai), hàng đợi PostgreSQL, adapter Gmail/SMTP/Cloudinary và giám sát. BUSINESS02 bổ sung CRUD nhà xe/xe/hồ sơ tài xế có scope, menu danh mục riêng và seed DEMO chủ động; xem hợp đồng ở API base và trạng thái PR tại tiến độ. Tuyến/chuyến, account nhân sự AUTH03, booking/tồn chỗ và Maps là các phần tiếp theo trong [PHAN_CONG.md](../05-ke-hoach/PHAN_CONG.md).
+Phần đã có source: nền tảng locale/error/validation/audit/paging, auth/JWT/phân quyền, migration/seed, catalog CRUD, LOCATION01 tỉnh–địa điểm (API/UI quản trị và lookup công khai), hàng đợi PostgreSQL, adapter Gmail/SMTP/Cloudinary và giám sát. BUSINESS02–04 bổ sung CRUD nhà xe/xe/hồ sơ tài xế có scope, menu danh mục riêng, tuyến một chiều, snapshot chuyến/lịch chồng, tồn chỗ theo chặng, booking WEB/PHONE/thu-hoàn thủ công, tìm/chi tiết/lịch sử khách, tiến độ tài xế, báo cáo và cấp nhân sự scoped. TRACK01 chia sẻ vị trí sau consent, đọc theo chuyến/phạm vi/chủ đơn CONFIRMED; Maps giữ UNCONFIGURED. Hợp đồng ở API base, trạng thái PR/Render ở tiến độ và cách tiếp nhận ở [PHAN_CONG.md](../05-ke-hoach/PHAN_CONG.md).
 
 [Nhật ký API và debug](../04-van-hanh/NHAT_KY_API_VA_DEBUG.md) nằm trong `common.monitoring`: filter trước Security → projection DTO/response → PostgreSQL (V005) → API/page có kiểm quyền. Dùng để tra traceId/controller và xuất Postman đã che dữ liệu; lịch sử dùng chung DB/schema giữa các node, không phải gateway/audit bất biến.
 
@@ -49,7 +49,12 @@ Phần đã có source: nền tảng locale/error/validation/audit/paging, auth/
 | `auth` | Credential, role/permission, principal, cookie/JWT, bootstrap và vòng đời đăng ký/email/reset |
 | `business/catalog` | Danh mục nền đang chạy; controller → service → repository → entity/response |
 | `business/location` | LOCATION01 tỉnh/thành và địa điểm, V016; ADMIN + quyền hành động, public chỉ active, UI `/operations/locations`. Hợp đồng trường/tọa độ/trạng thái ở API base |
-| `business/carrier`, `business/vehicle`, `business/driver` | BUSINESS02/V017: nhà xe và scope, xe, hồ sơ tài xế; API/UI theo quyền hành động và membership hiện hành. Hồ sơ tài xế khác account auth |
+| `business/carrier` (gồm nhà xe, xe và tài xế) | BUSINESS02/V017: nhà xe và scope, xe, hồ sơ tài xế; API/UI theo quyền hành động và membership hiện hành. Hồ sơ tài xế khác account auth |
+| `business/route` | V018: tuyến một chiều và điểm dừng theo thứ tự, offset phút qua ngày, giá cộng dồn; không sửa snapshot chuyến cũ |
+| `business/trip` | V019: phân xe/tài xế, snapshot điểm/chặng, lịch chồng, tiến độ actual và lịch sử; tài xế chỉ chuyến được giao hiện hành |
+| `business/booking`, `business/journey` | V020: đơn WEB/PHONE, khóa tồn chỗ theo chặng, thu-hoàn thủ công, tra cứu public và lịch sử owner; kiểm trạng thái/idempotence/rollback |
+| `business/report` | Báo cáo scoped theo nhóm ngày khởi hành, trạng thái đơn và số tiền thực thu/hoàn tách riêng |
+| `business/tracking` | V021: consent/lease, snapshot/trace PostgreSQL, API vị trí private và fallback Maps chưa cấu hình |
 | `business/demo` | Seed bộ DEMO có nhãn qua thao tác ADMIN chủ động; không chạy trong build/startup, không tự cấp account/role |
 | `common/media` | Lõi thư viện ảnh/upload dùng chung, controller public gọi service lõi |
 
@@ -58,7 +63,7 @@ Phần đã có source: nền tảng locale/error/validation/audit/paging, auth/
 ## 3. Khởi động và dừng
 
 1. Tomcat khởi tạo root context và các bean hạ tầng; Settings kiểm env OS/IDE. WAR không tự đọc `.env`; launcher local chủ động đọc file riêng trước khi tạo context.
-2. DatabaseInitializer chỉ migrate/seed khi `VIETROUTE_DB_INIT_ENABLED=true`. V001–V017 có history/checksum, advisory transaction lock và kiểm metadata trước commit. Không reset admin đã tồn tại. Nâng từ code trước VIEW cần dừng/drain node cũ trước khi áp V013 theo [chuyên đề phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#cây-chức-năng-và-quyền-hành-động--access03).
+2. DatabaseInitializer chỉ migrate/seed khi `VIETROUTE_DB_INIT_ENABLED=true`. V001–V021 có history/checksum, advisory transaction lock và kiểm metadata trước commit. Không reset admin đã tồn tại. Nâng từ code trước VIEW cần dừng/drain node cũ trước khi áp V013 theo [chuyên đề phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#cây-chức-năng-và-quyền-hành-động--access03).
 3. Pool khởi tạo lười. Worker và DatabaseProbe chỉ bắt đầu sau initializer, mỗi loại bật bằng env riêng; tắt mặc định.
 4. MVC context đăng ký controller/advice/Thymeleaf/Swagger; hai context không tạo service/controller trùng. Sau khi mapping sẵn sàng, AccessResourceSynchronizer đồng bộ danh bạ UI/API vào DB nếu ACCESS_SYNC bật (mặc định theo DB_INIT khi không khai báo). Danh bạ không tự cấp quyền hoặc đổi public; xem [schema và phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md).
 5. Shutdown ngừng poll, chờ worker đang chạy theo timeout, đóng pool, GC listener và registry. Kill đột ngột có thể để lại lease; node khác nhận lại khi hết hạn.

@@ -1,8 +1,10 @@
-# Nghiệm thu nền tảng trước nghiệp vụ
+# Nghiệm thu nền tảng và nghiệp vụ
 
 Cập nhật 24/10/2026, đối chiếu main tại `7c53bf6` sau [PR #92](https://github.com/hieuv526034/vietroute-web/pull/92). Phạm vi là source nền tảng và UI quản trị trên Spring MVC/JDBC hiện tại. Đọc cùng [quản trị hệ thống](../04-van-hanh/QUAN_TRI_HE_THONG.md), [tiến độ nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) và [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md). Kết quả trên nhánh chức năng chỉ trở thành bản bàn giao main sau khi PR qua CI và merge. Các mục bằng chứng phía dưới giữ mốc lịch sử; hợp đồng bootstrap hiện tại theo AUTH17, schema theo AUTH19 trong [chuyên đề phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md).
 
-## Các màn và chức năng đã có trong source
+Phần nền tảng bên dưới giữ phạm vi/mốc lịch sử trước BUSINESS04. Đối chiếu nghiệp vụ hiện hành ngày 25/10 ở [ACCEPT01](#đối-chiếu-ca-nghiệp-vụ--accept01); bảng quyền và trạng thái ba account/Render xem tiến độ. Không dùng câu “chưa triển khai nghiệp vụ” tại mốc cũ để suy trạng thái source hiện tại.
+
+## Các màn và chức năng tại mốc nền tảng
 
 | Phần | Đầu ra dùng được | Giới hạn còn lại |
 |---|---|---|
@@ -84,3 +86,36 @@ Runtime áp dụng V012 trên schema đang có và cập nhật tất cả node 
 ACCESS05 đã merge tại [PR #56](https://github.com/hieuv526034/vietroute-web/pull/56), head `973c69f`: local 125 Java/25 Node; [Docker/PostgreSQL CI](https://github.com/hieuv526034/vietroute-web/actions/runs/40056779696) đạt toàn bộ cấp tài khoản/mật khẩu tạm/role/policy/khóa/revoke và bộ nền cũ. Bằng chứng và giới hạn đầy đủ ở đầu bảng tiến độ; không coi kết quả CI là đã triển khai trên Render hoặc nghiệm thu provider production.
 
 ACCESS06 đã merge tại [PR #59](https://github.com/hieuv526034/vietroute-web/pull/59), head `6db2de4`: local 129 Java/25 Node và ba CI đúng head đạt; [Docker/PostgreSQL](https://github.com/hieuv526034/vietroute-web/actions/runs/40061898876) gọi accessGuard production với Authentication cũ và kiểm 8 trạng thái DB thật. Guard root/service và servlet/controller đọc DB khi method security kiểm; thu hồi, role/quyền/account tắt, temp password/tokenVersion và DB lỗi không chạy nghiệp vụ đã có regression. Không cache quyền, không đổi schema/JWT key, không ghi Neon. Cần nâng các node; chưa benchmark chi phí truy vấn hoặc nghiệm thu production/provider. Hợp đồng và giới hạn đồng thời tại [ACCESS06](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#hàm-kiểm-db-trong-preauthorize--access06).
+
+## Đối chiếu ca nghiệp vụ — ACCEPT01
+
+Bảng sau dẫn tới ca kiểm thực trong `src/test/java/vn/vietroute/BusinessIntegrationTest.java`, dùng hai context WAR và PostgreSQL test loopback; dữ liệu/số ca/CI cuối cùng ở [tiến độ BUSINESS04](TIEN_DO_VA_KE_HOACH_NHOM.md#business04--đang-làm-hoàn-thiện-luồng-sử-dụng-từ-tuyến-đến-đặt-vé). Không thay ca test bằng nạp/mutate Neon. Các latch test tạo hai tác nhân/yêu cầu đồng thời trong cùng DB cô lập; các browser screenshot chỉ chứng minh giao diện, không chứng minh tải production hoặc GPS vật lý.
+
+| Ca đặc tả | Bằng chứng source/kiểm thử | Giới hạn cần hiểu |
+|---|---|---|
+| T01/T11 | `membershipFiltersCountRowsIdsAndPickerWithoutLeakingOtherCarrier`, `routesFilterScopeAtCountIdPickerAndRespectIndependentView`, `tripScopeFiltersCountIdsPickerAndIndependentViewWithoutOtherCrudRights`, `bookingStaffScopeFiltersCountIdsMutationsAndCustomerReadRevokesImmediately` | Fixture hai nhà xe tương đương tình huống đặc tả; kiểm scope/count/ID/owner trước projection, không xác nhận dữ liệu doanh nghiệp thật |
+| T02/T03/T09 | `routesValidateStopOrderFareParentsAndAtomicVersion`, `publicSearchUsesPickupLocalDateDirectionAndRemainingSegmentsWithoutPrivateFields`, `tripsSnapshotAcrossDaysValidateAssetsAndRequireVersionAndState` | Đúng hướng, điểm trung gian, ngày tại pickup Việt Nam và giá; đi/về là hai tuyến riêng, không đảo tự động |
+| T04/T05/T06 | `confirmationRaceCannotOversellAndSeparateSegmentsReuseSeats` và public search/quote | MIN từng segment, hai đơn không chung đoạn dùng lại chỗ; tranh chỗ cuối chỉ một xác nhận |
+| T07/T08 | `tripCancellationAndBookingHistoryFailOrCommitTogetherWithCapacity`, `websiteBookingsKeepPriceAreOwnerBoundIdempotentAndOnlyOneMayRemainActive`, `manualPaymentsAndRefundsAreBoundedIdempotentAndDoNotFollowCancellationAutomatically` | Lỗi history rollback cùng chỗ/state, UUID retry không tạo trùng; giao dịch tiền chỉ ghi nhận thủ công thực tế |
+| T10 | `concurrentDepartureAndConfirmationCannotConfirmAfterPickupCloses`, `driverDepartureRejectsPendingAndArrivalCompletesConfirmedWithoutReleasingHistoricalSegments` | Khóa tuần tự trip/booking/segment, không xác nhận lọt sau rời pickup |
+| T12/T17 | `driverSeesOnlyCurrentAssignedNonDraftTripsAndScopeRevocationAppliesImmediately`, `driverProgressEnforcesStopOrderVersionTimeAndTerminalState`, `driverProgressHistoryFailureRollsBackAndConcurrentStartOnlyAdvancesOnce` | Current assigned/profile/membership/role, không ADMIN impersonation; actual từ server, không đi lùi hoặc sửa chỗ lịch sử |
+| T13/T14 | `tripsSnapshotAcrossDaysValidateAssetsAndRequireVersionAndState`, `concurrentTripPublicationSerializesSharedVehicleAndDriverSchedules`, `tripAssignmentProtectsReservedCapacityAndHistoryFailureRollsBackAllWrites` | Snapshot giữ mẫu cũ; publish cạnh tranh chặn lịch chồng xe/tài xế và đổi capacity dưới reserved |
+| T15 | `concurrentTripCancellationCannotLeaveConfirmedBookingOrReservedSeats` | Hủy/xác nhận đồng thời kết thúc bằng đơn hủy/chỗ0, không sự kiện hủy nhân đôi |
+| T16 | UI lộ trình/điểm dừng và Maps UNCONFIGURED, tab vị trí text tại PR #121 | Chủ dự án hoãn key: chỉ nghiệm thu fallback văn bản; Google map/marker/chia waypoint chưa cấu hình và chưa nghiệm thu |
+| T18 | `reportUsesDepartureCohortCountsOnceAndKeepsCancelledMoneyVisible`, `reportReadAndViewAreIndependentAndScopedRightsCannotBeUnionedOrReusedAfterRevocation` | Nhóm chuyến theo ngày khởi hành, tiền hiện tại của đơn; không là cashflow theo ngày thu hoặc doanh thu đã thu từ PENDING |
+| T19/T20/T21 | WEB active/idempotence, capacity/race và `driverDepartureRejectsPendingAndArrivalCompletesConfirmedWithoutReleasingHistoricalSegments`; browser WEB/hủy/PHONE và Render owner/scope/capacity | PENDING không giữ chỗ, PHONE không cần account khách; hủy trả đúng chặng trước rời điểm, giữ history |
+| Cấp nhân sự AUTH03 | `driverProvisioningCreatesOnlyPendingDriverScopeLinkAndAtomicHistory`, `driverProvisioningCannotCrossScopeEscalateRoleOrUseRevokedAssignment`, `driverProvisioningHistoryFailureRollsBackCredentialMembershipAndProfile`, `concurrentDriverProvisioningHasOneAccountAndAssignedTripBlocksIdentityReplacement` | Không tạo sẵn ngoại lệ cho account mới; Gmail tạm hoãn nên tài khoản mới chưa hoàn tất email |
+| Tracking mục17 | Bốn ca `tracking*` ở PR #121 và `src/test/resources/dev/tracking.test.cjs` | Tọa độ trong test là mô phỏng cô lập. Kiểm consent/time/rate/replay/revoke/rollback/retention và lỗi adapter; chưa lấy GPS thiết bị vật lý/khóa màn hình/Google provider |
+
+Thành viên chạy lại theo lệnh chuẩn ở [AI và bàn giao](../06-ai-va-ban-giao/AI_VA_BAN_GIAO.md), test integration cần `-Dbusiness.test.database=jdbc:postgresql://127.0.0.1:<cổng>/vietroute_business_test`; tài khoản `ciadmin`/mật khẩu fixture chỉ dùng test local. Không đổi URL này sang Neon để chứng minh chức năng. Xem API_BASE/SCHEMA/UI trước khi nhận thay đổi, giữ author thực và cập nhật PR theo mẫu CONTRIBUTING.
+
+Nếu cần dựng PostgreSQL test bằng Docker (máy đã có Docker), dùng container riêng, không đặt env Neon cho lệnh test:
+
+```powershell
+docker run --rm --name vietroute-test -e POSTGRES_USER=ciadmin -e POSTGRES_PASSWORD=test_only -e POSTGRES_DB=vietroute_business_test -p 127.0.0.1:15439:5432 -d postgres:17
+.\mvnw.cmd verify '-Dbusiness.test.database=jdbc:postgresql://127.0.0.1:15439/vietroute_business_test'
+node --test src/test/resources/dev/*.test.cjs
+docker stop vietroute-test
+```
+
+Chờ PostgreSQL sẵn sàng trước Maven; cổng có thể đổi trong cả Docker và URL test. Đây là hướng dẫn tạo môi trường mới cho thành viên, không khẳng định Docker container đó đang tồn tại trên máy. `test_only` chỉ là mật khẩu fixture, không dùng cho runtime.

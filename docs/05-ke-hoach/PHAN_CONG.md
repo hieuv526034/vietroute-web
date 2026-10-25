@@ -81,3 +81,9 @@ Yêu cầu ngày 23/10: ưu tiên hoàn thiện nền tảng trước nghiệp v
 - Phần nền tảng hiện tại ghi dưới định danh hieuv526034 đã cấu hình. Khi thành viên tự triển khai, họ commit bằng tài khoản/email của mình; bảng phân công không phải căn cứ tạo đóng góp giả.
 - Hieu review transaction/schema/security/Maps; Bang review các hợp đồng booking/chuyến; Anh và Hien review UI/validation giao tiếp trực tiếp.
 - Báo cáo/slide: mỗi người cung cấp ảnh, luồng, SQL và ca kiểm thử của phần mình; Hieu tổng hợp nội dung tích hợp, không ghi mọi nghiệp vụ thành đóng góp cá nhân của người tổng hợp.
+
+## Tiếp nhận nghiệp vụ sau BUSINESS04
+
+Theo yêu cầu chủ dự án ngày 25/10/2026, hieuv526034 đã tiếp tục triển khai các module còn thiếu theo chuỗi PR được ghi trong tiến độ. Phạm vi chủ trì dự kiến trong bảng bên trên vẫn dùng để phân chia nghiên cứu/nghiệm thu; không phải căn cứ đổi tác giả source hoặc tạo commit thay BangPhamIT/anhhoang104/hiencoi250404-design. Thành viên bắt đầu từ main đã merge, đọc module của mình và ca kiểm tương ứng, nhận một thay đổi cụ thể rồi commit bằng đúng username/email của bản thân. Không viết lại CRUD/tồn chỗ/chuyến/booking chỉ để có bản triển khai thứ hai.
+
+Điểm đọc khi nghiên cứu: Anh theo carrier/catalog/location và AUTH03 ở auth; Bang theo trip/booking/report và transaction chặng; Hien theo route/journey/carrier public/My bookings; Hieu giữ tích hợp auth/scope/tracking/CI. Mỗi người cần trình bày được request → controller → service guard → transaction/SQL → DTO → UI, bảng liên quan, ít nhất một ca lỗi scope/version và một ca rollback/race của phần mình. PR thực tế, kết quả kiểm và việc nhận tiếp ở [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md), không suy từ bảng phân công là đã có đóng góp cá nhân.
