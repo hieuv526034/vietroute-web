@@ -48,6 +48,8 @@ public final class AccessConstants {
 
         public static final String DRIVER = "DRIVER";
 
+        public static final String ROUTE = "ROUTE";
+
         public static final String DEMO = "DEMO";
 
         public static final String LOCATION = "LOCATION";
@@ -79,6 +81,8 @@ public final class AccessConstants {
         public static final String PROVINCE = "PROVINCE";
 
         public static final String BUSINESS = "BUSINESS";
+
+        public static final String ROUTE = "ROUTE";
 
         public static final String CARRIER = "CARRIER";
 

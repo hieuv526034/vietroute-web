@@ -34,6 +34,8 @@ import vn.vietroute.business.carrier.entity.Vehicle;
 import vn.vietroute.business.catalog.entity.CatalogItem;
 import vn.vietroute.business.location.entity.Location;
 import vn.vietroute.business.location.entity.Province;
+import vn.vietroute.business.route.entity.Route;
+import vn.vietroute.business.route.entity.RouteStop;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.jdbc.JdbcSchema;
@@ -95,6 +97,7 @@ public class DatabaseInitializer implements InitializingBean {
         migrate(connection, "V015__data_scope_memberships.sql");
         migrate(connection, "V016__locations.sql");
         migrate(connection, "V017__carriers_and_fleet.sql");
+        migrate(connection, "V018__routes_and_stops.sql");
         JdbcSchemaValidator.verify(
             connection,
             UserAccount.class,
@@ -106,6 +109,8 @@ public class DatabaseInitializer implements InitializingBean {
             Driver.class,
             Province.class,
             Location.class,
+            Route.class,
+            RouteStop.class,
             MediaAsset.class,
             Job.class,
             Role.class,
