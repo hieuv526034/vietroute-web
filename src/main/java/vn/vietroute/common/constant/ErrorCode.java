@@ -31,6 +31,7 @@ public enum ErrorCode {
     ACCESS_CAPACITY_REACHED("COM016", "error.accessCapacity", HttpStatus.CONFLICT),
     LOCATION_PROVINCE_INACTIVE("LOC001", "location.provinceInactive", HttpStatus.CONFLICT),
     ROUTE_INVALID("ROUTE001", "route.invalid", HttpStatus.BAD_REQUEST),
+    DRIVER_ACCOUNT_ROLE("DRIVER001", "driver.accountRole", HttpStatus.CONFLICT),
     TRIP_INVALID("TRIP001", "trip.invalid", HttpStatus.BAD_REQUEST),
     TRIP_SCHEDULE_CONFLICT("TRIP002", "trip.scheduleConflict", HttpStatus.CONFLICT),
     TRIP_STATE_CONFLICT("TRIP003", "trip.stateConflict", HttpStatus.CONFLICT),

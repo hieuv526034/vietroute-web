@@ -15,6 +15,20 @@
     let selected = null;
     let capability = { targets: [] };
     const dialog = window.VietRouteUI.modal('fleet-dialog', { busy: () => busy });
+    const accountForm = node('driver-account-form');
+    let accountSelected = null;
+    const accountDialog = accountForm
+        ? window.VietRouteUI.modal('driver-account-dialog', {
+              busy: () => busy,
+              onClose: () => {
+                  accountForm.reset();
+                  window.VietRouteForms.clear(accountForm);
+                  accountSelected = null;
+              },
+          })
+        : null;
+    const feedbackTarget = () =>
+        accountDialog?.isOpen ? 'driver-account-feedback' : dialog.isOpen ? 'fleet-form-feedback' : 'fleet-feedback';
     const can = (method, suffix = '') => capability.targets.includes(`${method} ${path}${suffix}`);
     const pager = tables.pager('fleet', { busy: () => busy, onChange: (query) => perform(() => load(query)) });
     const text = (tag, value) => {
@@ -44,24 +58,28 @@
         root.setAttribute('aria-busy', 'true');
         node('fleet-controls').disabled = true;
         node('fleet-dialog-controls').disabled = true;
+        if (accountForm) node('driver-account-controls').disabled = true;
         node('fleet-status').textContent = labels.loading;
         node('fleet-conflict').hidden = true;
-        const target = dialog.isOpen ? 'fleet-form-feedback' : 'fleet-feedback';
+        const target = feedbackTarget();
         feedback('', false, target);
         try {
             await action();
         } catch (error) {
             if ([401, 403].includes(error.response?.status)) empty(labels.noRead);
-            failure(error, dialog.isOpen ? 'fleet-form-feedback' : 'fleet-feedback');
+            failure(error, feedbackTarget());
             node('fleet-conflict').hidden = error.response?.status !== 409;
         } finally {
             busy = false;
             root.setAttribute('aria-busy', 'false');
             node('fleet-controls').disabled = false;
             node('fleet-dialog-controls').disabled = false;
+            if (accountForm) node('driver-account-controls').disabled = false;
             const modal = node('fleet-dialog');
             if (dialog.isOpen && (!modal.contains(document.activeElement) || document.activeElement === modal))
                 form.querySelector('input:not(:disabled),select:not(:disabled)')?.focus();
+            if (accountDialog?.isOpen && !node('driver-account-dialog').contains(document.activeElement))
+                node('driver-account-title').focus();
             node('fleet-status').textContent = '';
             syncActions();
         }
@@ -92,7 +110,24 @@
                         perform(() => open(item, trigger)),
                     ),
                 );
-            else group.textContent = '—';
+            if (kind === 'drivers' && !item.userId && item.canAssign && can('POST', '/{id}/account'))
+                group.append(
+                    tables.actionButton(
+                        `${node('driver-account-dialog').dataset.title}: ${item.code}`,
+                        'assign',
+                        (trigger) => {
+                            if (busy) return;
+                            accountSelected = item;
+                            accountForm.reset();
+                            window.VietRouteForms.clear(accountForm);
+                            feedback('', false, 'driver-account-feedback');
+                            node('driver-account-profile').textContent =
+                                `${item.code} · ${item.name} · ${item.carrierName}`;
+                            accountDialog.open(trigger);
+                        },
+                    ),
+                );
+            if (!group.childNodes.length) group.textContent = '—';
             actions.append(group);
             row.append(actions);
             node('fleet-body').append(row);
@@ -219,6 +254,23 @@
             form.reset();
             feedback(result.data.message, true, 'fleet-feedback');
             await load({ ...pager.query, page: 0 });
+        });
+    });
+    accountForm?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (busy || !accountSelected || !window.VietRouteForms.validate(accountForm)) return;
+        void perform(async () => {
+            await mutate(`${path}/${accountSelected.id}/account`, {
+                username: accountForm.elements.username.value.trim(),
+                email: accountForm.elements.email.value.trim(),
+                password: accountForm.elements.password.value,
+                version: accountSelected.version,
+            });
+            node('driver-account-dialog').close();
+            accountForm.reset();
+            accountSelected = null;
+            feedback(node('driver-account-dialog').dataset.created, true, 'fleet-feedback');
+            await load();
         });
     });
     node('fleet-create').addEventListener('click', (event) => {

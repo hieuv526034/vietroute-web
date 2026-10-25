@@ -216,3 +216,9 @@ Trang tìm chuyến gom nhà xe/loại xe/giá vào nhóm Lọc thêm, mặc đ�
 Lỗi giữ bộ lọc, 401 có link đăng nhập lại; báo cáo cũ bị ẩn lúc gửi điều kiện mới, không ghép số cũ với khoảng ngày mới. VIEW không có READ chỉ hiện giải thích thiếu quyền. Nút dùng component màu chung, filter/money card co theo màn hình; không tự gọi mutation khi đọc.
 
 Bằng chứng preview PostgreSQL cô lập: [thu/hoàn desktop](../images/report01-money.png), [báo cáo tiếng Anh 390px](../images/report01-mobile.png). Kiểm VAL016 giữ filter, sửa cận gửi lại và ArrowLeft chuyển tab đạt. Fixture tiền 100 nghìn thu/hoàn trong ảnh chỉ ở local, không là giao dịch Neon.
+
+## Cấp tài khoản tài xế — AUTH03
+
+Bảng Hồ sơ tài xế thêm icon cấp tài khoản chỉ cho hồ sơ chưa liên kết khi capability POST account và canAssign scoped đều đúng. Modal riêng nêu rõ nhà xe/hồ sơ, username/email/mật khẩu tạm và việc hồ sơ tạm ngừng đến khi đổi mật khẩu/xác minh email. Form/feedback/modal/focus/busy dùng component chung, không lưu password vào tab/storage. Lỗi giữ draft/version, không tự retry; đóng hoặc thành công xóa credential khỏi form. Không tự đánh dấu email đã xác minh hoặc tài xế đã sẵn sàng phân công chỉ vì tạo account thành công.
+
+Browser preview cô lập đã kiểm vi/en: [validation modal](../images/auth03-validation.png), [390px](../images/auth03-mobile.png), page 390/modal 352/content 350 không tràn; nút cấp tài khoản không xuất hiện ở hồ sơ đã liên kết. Submit rỗng giữ modal/focus/lỗi cạnh field; đóng và mở lại xóa username/email đã nhập. Happy path tạo credential/membership/link và race/rollback được kiểm qua API PostgreSQL test; không tạo account mới trên Neon để chụp UI.

@@ -45,6 +45,9 @@ public class DriverResponse extends BaseResponse {
     )
     private boolean canUpdate;
 
+    @Schema(description = "Có DRIVER_ASSIGN trong scope hiện hành; UI còn giao endpoint policy/capabilities")
+    private boolean canAssign;
+
     public static DriverResponse from(Driver item) {
         return DriverResponse.builder()
             .id(item.getId())
@@ -56,6 +59,7 @@ public class DriverResponse extends BaseResponse {
             .carrierId(item.getCarrierId())
             .scopeId(item.getScopeId())
             .canUpdate(item.isCanUpdate())
+            .canAssign(item.isCanAssign())
             .carrierName(item.getCarrierName())
             .code(item.getCode())
             .name(item.getName())
