@@ -179,7 +179,8 @@ upgrade_hash=$(upgrade_sql "SELECT md5(password_hash) FROM auth_users WHERE id=1
 docker rm --force vietroute-auth-ci2 >/dev/null
 start_app vietroute-auth-ci2 18081 view_upgrade_ci
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors --retry-connrefused --max-time 5 http://127.0.0.1:18081/health >/dev/null
-[[ "$(upgrade_sql 'SELECT count(*) FROM vietroute_schema_history')" == 16 ]]
+[[ "$(upgrade_sql 'SELECT count(*) FROM vietroute_schema_history')" == 17 ]]
+[[ "$(upgrade_sql "SELECT count(*) FROM information_schema.tables WHERE table_schema=current_schema() AND table_name IN ('carriers','carrier_vehicles','carrier_drivers')")" == 3 ]]
 [[ "$(upgrade_sql "SELECT count(*) FROM auth_role_permissions WHERE role_code='UPGRADE_CI' AND permission_code='CATALOG_VIEW'")" == 1 ]]
 [[ "$(upgrade_sql "SELECT permission_version=5 AND updated_by=0 FROM auth_roles WHERE code='UPGRADE_CI'")" == t ]]
 [[ "$(upgrade_sql "SELECT count(*) FROM auth_role_permissions WHERE role_code='LOOKALIKE_CI' AND permission_code='CATALOG_VIEW'")" == 0 ]]
