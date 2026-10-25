@@ -118,10 +118,14 @@
                             <svg th:replace="~{fragments/layout :: icon(${item.icon})}"></svg>
                             <span th:text="${item.name}"></span>
                         </summary>
-                        <div
-                            class="operations-menu-items"
-                            th:insert="~{fragments/layout :: functionMenuItems(${item.children})}"
-                        ></div>
+                        <div class="operations-menu-items">
+                            <a
+                                th:if="${item.path != null}"
+                                th:href="${basePath + item.path + '?lang=' + currentLocale}"
+                                th:text="#{ui.workspace.overview}"
+                            ></a>
+                            <th:block th:insert="~{fragments/layout :: functionMenuItems(${item.children})}"></th:block>
+                        </div>
                     </details>
                     <details
                         class="operations-menu"
