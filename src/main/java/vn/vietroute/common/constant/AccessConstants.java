@@ -56,6 +56,8 @@ public final class AccessConstants {
         public static final String BOOKING = "BOOKING";
         public static final String MY_BOOKING = "MY_BOOKING";
 
+        public static final String REPORT = "REPORT";
+
         public static final String DEMO = "DEMO";
 
         public static final String LOCATION = "LOCATION";
@@ -79,6 +81,8 @@ public final class AccessConstants {
 
     /** Mã cây chức năng ổn định; quan hệ cha/con do AccessFeatures khai báo, không phải role. */
     public static final class Functions {
+
+        public static final String REPORT = "REPORT";
 
         public static final String BOOKING = "BOOKING";
         public static final String MY_BOOKING = "MY_BOOKING";
