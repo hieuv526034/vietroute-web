@@ -21,10 +21,9 @@
                     th:text="#{ui.ops.refresh}"
                 ></button>
             </div>
-            <p
-                class="text-secondary"
-                th:text="#{ui.ops.configNote}"
-            ></p>
+            <div
+                th:replace="~{fragments/help :: guide('configuration-guide', #{ui.ops.configuration}, ${ {'ui.ops.configNote', 'ui.ops.configReadonly'} })}"
+            ></div>
             <p
                 id="form-feedback"
                 class="feedback"
@@ -40,10 +39,6 @@
                 id="ops-controls"
                 class="border-0 p-0 m-0 w-100"
             >
-                <p
-                    class="alert alert-info"
-                    th:text="#{ui.ops.configReadonly}"
-                ></p>
                 <p>
                     <span th:text="#{ui.ops.configTimestamp}"></span>
                     :

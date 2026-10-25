@@ -18,10 +18,9 @@
                     th:text="#{ui.fleet.eyebrow}"
                 ></p>
                 <h1 th:text="#{ui.trip.title}"></h1>
-                <p
-                    class="muted"
-                    th:text="#{ui.trip.description}"
-                ></p>
+                <div
+                    th:replace="~{fragments/help :: guide('trip-guide', #{ui.trip.title}, ${ {'ui.help.trip.use', 'ui.trip.description', 'ui.trip.assignmentHelp', 'ui.trip.snapshotHelp'} })}"
+                ></div>
             </div>
             <p
                 id="trip-status"
@@ -433,20 +432,12 @@
                                         ></textarea>
                                     </label>
                                 </div>
-                                <p
-                                    class="form-help"
-                                    th:text="#{ui.trip.assignmentHelp}"
-                                ></p>
                             </section>
                             <section
                                 id="trip-stops"
                                 data-tab-panel="trip-stops-tab"
                                 hidden
                             >
-                                <p
-                                    class="form-help"
-                                    th:text="#{ui.trip.snapshotHelp}"
-                                ></p>
                                 <div
                                     id="trip-stop-list"
                                     class="route-stop-list"

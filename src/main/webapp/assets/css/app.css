@@ -196,6 +196,11 @@ button:focus-visible {
     align-items: center;
     justify-content: center;
     gap: 8px;
+    max-width: 100%;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
     min-height: 40px;
     border: 1px solid var(--green);
     border-radius: 9px;
@@ -795,6 +800,7 @@ form .button {
 
 .panel-heading {
     display: flex;
+    flex-wrap: wrap;
     gap: 15px;
     align-items: center;
     justify-content: space-between;
@@ -1884,7 +1890,10 @@ body:has(dialog[open]) {
     display: flex;
     justify-content: center;
     align-items: center;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    width: 70px;
+    max-width: 100%;
+    margin-inline: auto;
     gap: 6px;
 }
 .table .icon-button,
@@ -1915,6 +1924,8 @@ body:has(dialog[open]) {
     align-items: center;
     flex-wrap: wrap;
     gap: 10px;
+    min-width: 0;
+    max-width: 100%;
 }
 .dialog-actions {
     grid-column: 1 / -1;
@@ -1926,6 +1937,71 @@ body:has(dialog[open]) {
 .toolbar-actions .button,
 .table-filter .button {
     margin-top: 0;
+}
+.workspace-dialog .toolbar-actions .button {
+    margin-top: 0;
+}
+.panel-heading > *,
+.dialog-heading > :first-child,
+.table-filter > div {
+    min-width: 0;
+}
+.dialog-heading h2 {
+    overflow-wrap: anywhere;
+}
+.dialog-heading > button {
+    flex-shrink: 0;
+}
+.panel-heading .toolbar-actions {
+    margin-left: auto;
+}
+
+/* Hướng dẫn có cửa sổ riêng, không chiếm chỗ của dữ liệu khi chưa mở. */
+.user-guide {
+    margin-block: 12px 20px;
+}
+.guide-trigger {
+    gap: 6px;
+}
+.guide-icon {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 18px;
+    height: 18px;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    font-size: 12px;
+}
+.guide-topic {
+    color: var(--muted);
+    margin: 12px 0 20px;
+}
+.user-guide-dialog[open] {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.user-guide-dialog .dialog-heading,
+.user-guide-dialog .guide-topic,
+.user-guide-dialog .dialog-actions {
+    flex-shrink: 0;
+}
+.user-guide-dialog .dialog-actions {
+    margin-top: 20px;
+}
+.guide-steps {
+    display: grid;
+    gap: 16px;
+    padding-left: 24px;
+    margin: 0;
+    overflow-wrap: anywhere;
+    line-height: 1.7;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+.guide-steps li {
+    padding-left: 4px;
 }
 /* Bộ lọc ít trường đi cùng nút thao tác; chỉ xuống dòng khi màn hình không còn đủ chỗ. */
 .panel-heading.catalog-heading {
@@ -1971,6 +2047,32 @@ body:has(dialog[open]) {
 @media (max-width: 640px) {
     .record-search {
         grid-template-columns: minmax(0, 1fr);
+    }
+    .panel-heading .toolbar-actions,
+    .toolbar-actions,
+    .dialog-actions {
+        width: 100%;
+    }
+    .toolbar-actions > .button,
+    .dialog-actions > .button {
+        flex: 1 1 128px;
+    }
+    .table-filter:not(.record-search) > div,
+    .table-filter:not(.record-search) > .button {
+        flex: 1 1 140px;
+        margin-left: 0;
+    }
+    .picker-search,
+    .trip-picker-search {
+        flex-wrap: wrap;
+    }
+    .picker-search input,
+    .trip-picker-search input {
+        flex: 1 1 140px;
+    }
+    .picker-search .button,
+    .trip-picker-search .button {
+        white-space: normal;
     }
 }
 .journal-filters .filter-actions {

@@ -19,10 +19,9 @@
                         th:text="#{ui.accounts.guard}"
                     ></p>
                     <h1 th:text="#{ui.accounts.title}"></h1>
-                    <p
-                        class="muted"
-                        th:text="#{ui.accounts.subtitle}"
-                    ></p>
+                    <div
+                        th:replace="~{fragments/help :: guide('accounts-guide', #{ui.accounts.title}, ${ {'ui.help.accounts.use', 'ui.accounts.workflow', 'ui.help.accounts.activation', 'ui.help.accounts.revoke'} })}"
+                    ></div>
                 </div>
                 <div class="toolbar-actions">
                     <button
@@ -39,8 +38,7 @@
                     ></button>
                 </div>
             </div>
-            <div class="accounts-workflow">
-                <span th:text="#{ui.accounts.workflow}"></span>
+            <div class="toolbar-actions mb-3">
                 <a
                     class="button button-small button-outline"
                     th:href="@{/operations/access(lang=${currentLocale})}"
@@ -250,8 +248,8 @@
                                 />
                             </div>
                             <p
-                                class="muted"
-                                th:text="#{ui.accounts.createNote}"
+                                class="form-help"
+                                th:text="#{ui.accounts.activationNotice}"
                             ></p>
                         </section>
                         <div class="account-role-picker">
@@ -312,10 +310,6 @@
                                 class="muted"
                                 role="status"
                                 aria-live="polite"
-                            ></p>
-                            <p
-                                class="muted"
-                                th:text="#{ui.accounts.roleNote}"
                             ></p>
                         </div>
                         <p
@@ -382,10 +376,7 @@
                         class="h6"
                         th:text="#{ui.accounts.effective}"
                     ></h3>
-                    <p
-                        class="muted"
-                        th:text="#{ui.accounts.effectiveNote}"
-                    ></p>
+
                     <div
                         id="account-effective"
                         class="table-responsive"
@@ -436,9 +427,10 @@
                     </div>
                     <p id="account-state-target"></p>
                     <p
-                        class="muted"
-                        th:text="#{ui.accounts.stateNote}"
+                        class="form-help"
+                        th:text="#{ui.accounts.sessionNotice}"
                     ></p>
+
                     <p
                         id="account-state-feedback"
                         class="feedback"

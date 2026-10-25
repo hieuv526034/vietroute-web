@@ -18,10 +18,9 @@
                     th:text="#{ui.fleet.eyebrow}"
                 ></p>
                 <h1 th:text="#{ui.route.title}"></h1>
-                <p
-                    class="muted"
-                    th:text="#{ui.route.description}"
-                ></p>
+                <div
+                    th:replace="~{fragments/help :: guide('route-guide', #{ui.route.title}, ${ {'ui.help.route.use', 'ui.route.description', 'ui.route.stopHelp'} })}"
+                ></div>
             </div>
             <p
                 id="route-status"
@@ -270,10 +269,6 @@
                                 id="route-stops"
                                 hidden
                             >
-                                <p
-                                    class="form-help"
-                                    th:text="#{ui.route.stopHelp}"
-                                ></p>
                                 <div id="route-location-picker">
                                     <label
                                         for="route-location-query"

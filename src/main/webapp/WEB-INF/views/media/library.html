@@ -16,10 +16,9 @@
             <div class="page-heading">
                 <p class="eyebrow">VIETROUTE / MEDIA</p>
                 <h1 th:text="#{ui.media}"></h1>
-                <p
-                    class="muted"
-                    th:text="#{ui.mediaDescription}"
-                ></p>
+                <div
+                    th:replace="~{fragments/help :: guide('media-guide', #{ui.media}, ${ {'ui.help.media.use', 'ui.mediaDescription'} })}"
+                ></div>
             </div>
             <section class="panel mb-4">
                 <p
@@ -81,10 +80,7 @@
                             <span aria-hidden="true">×</span>
                         </button>
                     </div>
-                    <p
-                        class="form-help"
-                        th:text="#{ui.mediaDescription}"
-                    ></p>
+
                     <p
                         id="media-upload-feedback"
                         class="feedback"

@@ -18,10 +18,9 @@
                     th:text="#{ui.journey.eyebrow}"
                 ></p>
                 <h1 th:text="#{ui.journey.title}"></h1>
-                <p
-                    class="muted"
-                    th:text="#{ui.journey.description}"
-                ></p>
+                <div
+                    th:replace="~{fragments/help :: guide('journey-guide', #{ui.journey.title}, ${ {'ui.help.journey.use', 'ui.journey.description', 'ui.journey.progressHelp', 'ui.tracking.publicHelp'} })}"
+                ></div>
             </div>
             <p
                 id="journey-status"
@@ -222,7 +221,7 @@
                     <div class="panel-heading"><h2 th:text="#{ui.journey.results}"></h2></div>
                     <p
                         class="form-help"
-                        th:text="#{ui.booking.pendingHelp}"
+                        th:text="#{ui.booking.pendingNotice}"
                     ></p>
                     <div
                         class="table-responsive"
@@ -311,14 +310,6 @@
                                 id="journey-summary"
                                 class="route-stop-list"
                             ></div>
-                            <p
-                                class="form-help"
-                                th:text="#{ui.journey.progressHelp}"
-                            ></p>
-                            <p
-                                class="form-help"
-                                th:text="#{ui.tracking.publicHelp}"
-                            ></p>
                         </section>
                         <section
                             id="journey-stops"

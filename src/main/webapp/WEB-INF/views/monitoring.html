@@ -185,10 +185,9 @@
                                 th:text="#{ui.foundation.refresh}"
                             ></button>
                         </div>
-                        <p
-                            class="muted"
-                            th:text="#{ui.foundation.trafficNote}"
-                        ></p>
+                        <div
+                            th:replace="~{fragments/help :: guide('activity-guide', #{ui.foundation.traffic}, ${ {'ui.foundation.trafficNote'} })}"
+                        ></div>
                         <p
                             id="activity-feedback"
                             class="feedback"

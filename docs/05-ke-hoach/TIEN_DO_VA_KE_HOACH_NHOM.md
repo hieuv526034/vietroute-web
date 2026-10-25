@@ -1,5 +1,16 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
+## UI25 — Đang chốt PR: hướng dẫn riêng và nhóm nút trên màn hình hẹp
+
+Ngày 25/10/2026, hieuv526034 thực hiện trên `hieuv526034/ui25-huong-dan-mobile`, base main `8e2a142`, [Issue #130](https://github.com/hieuv526034/vietroute-web/issues/130). Chủ dự án yêu cầu bớt chữ hướng dẫn trên các màn và sửa nhiều nút bị vỡ khi xem điện thoại/thu nhỏ. Không đổi API, quyền, schema hoặc dữ liệu Neon.
+
+Đã thêm fragment/help.js dùng modal workspace cho 17 màn: nút Hướng dẫn sử dụng mở nội dung riêng theo ngữ cảnh, đầy đủ vi/en, không tự mở. Nội dung dài cuộn riêng, nút đóng giữ trong viewport, Escape/Đóng trả focus. Nhật ký dùng lại tab hướng dẫn. Chuyển giải thích dài khỏi trang/modal nghiệp vụ; giữ câu ngắn về chưa giữ chỗ, tiền thực thu/hoàn, tài khoản cần thiết lập và thu hồi phiên cạnh thao tác. Bỏ khung workflow dài ở User, giữ liên kết cấu hình Role. Quy ước lâu dài ở [UI](../03-giao-dien/QUY_UOC_UI.md).
+
+Cột thao tác vẫn 96px, nhóm icon 70px wrap tối đa hai icon/hàng; User bốn nút được đo 70×70px, không chồng sang cột khác. Toolbar/footer co xuống dòng, bộ lọc/picker co đúng chiều rộng; nút đóng heading không bị ép chữ. Giữ cuộn ngang trong bảng, không che lỗi bằng overflow toàn trang. Browser preview PostgreSQL cô lập kiểm vi/en ở 320/390/768px trên User/Role, tuyến/chuyến/booking/xe, danh mục, báo cáo, cấu hình, inventory, tìm chuyến, ảnh và dashboard: scrollWidth bằng clientWidth, không thiếu locale; kiểm thêm 1280px và modal booking/thu-hoàn, cây gán quyền, hướng dẫn/focus. Không gửi mutation nghiệp vụ/quyền/tiền/GPS để nghiệm thu UI. Ảnh là fixture local: [hướng dẫn](../images/ui25-guide-mobile.png), [bốn nút](../images/ui25-accounts-actions-mobile.png), [modal 320px](../images/ui25-booking-mobile.png).
+
+Local cuối Maven verify 210/210 (46 PostgreSQL loopback, hai context WAR), Node 66/66. Lượt Java đầu bắt lỗi biểu thức inline-list ở ba template; đã sửa thành danh sách SpEL tường minh và chạy lại full đạt, không bỏ test. Formatter đầu trong sandbox treo đã dừng riêng đúng PID và chạy lại công cụ khóa ngoài sandbox. npm ci/format/format:check/check:rules/check:docs/diff check đều đạt. Còn lại: CI đúng head, PR/merge main và xác nhận asset Render; chưa tuyên bố bản UI25 đã triển khai. Không có review độc lập thành viên khác. Gmail/Maps và giới hạn vận hành trước đó giữ nguyên ưu tiên của chủ dự án.
+
+
 ## ACCESS24 — Đã có trên main và kiểm Render: User → Role → Menu/API
 
 Đã merge [PR #128](https://github.com/hieuv526034/vietroute-web/pull/128), main `d418b5a`, head nguồn cuối `5331c58`, tác giả hieuv526034 từ base `8996677`, [Issue #127](https://github.com/hieuv526034/vietroute-web/issues/127). Ba CI head cuối đạt: [container/PostgreSQL](https://github.com/hieuv526034/vietroute-web/actions/runs/40196629452), [format/quy tắc](https://github.com/hieuv526034/vietroute-web/actions/runs/40196629548), [tài liệu](https://github.com/hieuv526034/vietroute-web/actions/runs/40196629480). CI merge commit cũng đạt đủ [container](https://github.com/hieuv526034/vietroute-web/actions/runs/40197477219), [format](https://github.com/hieuv526034/vietroute-web/actions/runs/40197477186), [docs](https://github.com/hieuv526034/vietroute-web/actions/runs/40197477188).

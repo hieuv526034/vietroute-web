@@ -28,6 +28,10 @@ Role ADMIN chỉ xem; gán role bản thân bị khóa. Modal có tên/đối t�
 
 ## 2. Bảng và phân trang
 
+UI25 (25/10/2026): hướng dẫn dài đặt trong cửa sổ riêng qua `fragments/help :: guide(id, title, keys)` và `help.js`, mở bằng nút Hướng dẫn sử dụng. Dùng câu hướng dẫn thao tác cho người dùng, không giải thích framework/source trên màn nghiệp vụ. Không tự bật hướng dẫn khi tải trang; modal dùng helper workspace để Escape/Đóng trả focus, nội dung dài cuộn riêng và giữ nút đóng trong viewport. Mỗi guide có ID riêng, tiêu đề/nhãn và nội dung đủ vi/en. Nhật ký giữ tab hướng dẫn hiện có. Lỗi, trạng thái dữ liệu và cảnh báo ngắn ảnh hưởng quyết định (chưa giữ chỗ, tiền thực thu/hoàn, thiết lập tài khoản và thu hồi phiên) vẫn đặt cạnh thao tác.
+
+Toolbar, bộ lọc và footer modal co/wrap theo chiều rộng thực tế; nút dài xuống dòng theo nội dung, nút đóng ở heading không bị ép thành từng ký tự. Cột thao tác vẫn 96px nhưng `row-actions` tối đa hai icon mỗi hàng, không ép ba/bốn icon vào một hàng rồi chồng lên cột kế bên. Bảng rộng cuộn trong vùng riêng; không che lỗi bằng overflow hidden trên toàn trang. Kiểm cả 320/390px và cửa sổ 768px, vi/en, không chỉ screenshot desktop. Bằng chứng và giới hạn tại mục UI25 trong [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
+
 `fragments/pagination.html` nhận prefix riêng; `table.js` cung cấp `VietRouteTable`. Dùng cho catalog/users/jobs/journal/media:
 
 ```html

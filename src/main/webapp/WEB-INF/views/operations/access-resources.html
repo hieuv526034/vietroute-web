@@ -13,10 +13,9 @@
             data-resource-inventory
         >
             <h1 th:text="#{ui.grants.resources}"></h1>
-            <p
-                class="muted"
-                th:text="#{ui.grants.inventoryNote}"
-            ></p>
+            <div
+                th:replace="~{fragments/help :: guide('resources-guide', #{ui.grants.resources}, ${ {'ui.help.resources.use', 'ui.grants.inventoryNote'} })}"
+            ></div>
             <p
                 id="form-feedback"
                 class="feedback"

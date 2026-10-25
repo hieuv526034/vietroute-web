@@ -18,10 +18,9 @@
                     th:text="#{ui.fleet.eyebrow}"
                 ></p>
                 <h1 th:text="#{ui.driverTrip.title}"></h1>
-                <p
-                    class="muted"
-                    th:text="#{ui.driverTrip.description}"
-                ></p>
+                <div
+                    th:replace="~{fragments/help :: guide('driver-guide', #{ui.driverTrip.title}, ${ {'ui.help.driver.use', 'ui.driverTrip.startHelp', 'ui.driverTrip.progressHelp'} })}"
+                ></div>
             </div>
             <p
                 id="driver-trip-status"
@@ -212,20 +211,12 @@
                                 id="driver-trip-summary"
                                 class="route-stop-list"
                             ></div>
-                            <p
-                                class="form-help"
-                                th:text="#{ui.driverTrip.startHelp}"
-                            ></p>
                         </section>
                         <section
                             id="driver-trip-stops"
                             data-tab-panel="driver-trip-stops-tab"
                             hidden
                         >
-                            <p
-                                class="form-help"
-                                th:text="#{ui.driverTrip.progressHelp}"
-                            ></p>
                             <div
                                 id="driver-trip-stop-list"
                                 class="route-stop-list"

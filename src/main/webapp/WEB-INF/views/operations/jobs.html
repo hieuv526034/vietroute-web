@@ -21,10 +21,9 @@
                     th:text="#{ui.ops.refresh}"
                 ></button>
             </div>
-            <p
-                class="text-secondary"
-                th:text="#{ui.ops.jobsNote}"
-            ></p>
+            <div
+                th:replace="~{fragments/help :: guide('jobs-guide', #{ui.ops.jobs}, ${ {'ui.help.jobs.use', 'ui.ops.jobsNote'} })}"
+            ></div>
             <p
                 id="form-feedback"
                 class="feedback"

@@ -18,10 +18,9 @@
                     th:text="#{ui.fleet.eyebrow}"
                 ></p>
                 <h1 th:text="#{ui.report.title}"></h1>
-                <p
-                    class="muted"
-                    th:text="#{ui.report.description}"
-                ></p>
+                <div
+                    th:replace="~{fragments/help :: guide('report-guide', #{ui.report.title}, ${ {'ui.help.report.use', 'ui.report.description', 'ui.report.seatsHelp', 'ui.report.moneyHelp'} })}"
+                ></div>
             </div>
             <p
                 id="report-status"
@@ -168,10 +167,7 @@
                             <dd data-metric="confirmedSeats"></dd>
                         </div>
                     </dl>
-                    <p
-                        class="form-help"
-                        th:text="#{ui.report.seatsHelp}"
-                    ></p>
+
                     <div class="report-status-grid">
                         <div>
                             <h2 th:text="#{ui.report.trips}"></h2>
@@ -208,10 +204,6 @@
                     data-tab-panel="report-money-tab"
                     class="panel"
                 >
-                    <p
-                        class="form-help"
-                        th:text="#{ui.report.moneyHelp}"
-                    ></p>
                     <dl class="report-metrics">
                         <div>
                             <dt th:text="#{ui.report.value}"></dt>
