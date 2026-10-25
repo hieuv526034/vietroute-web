@@ -52,6 +52,33 @@ public class AccessChangeService {
     }
 
     /** Lưu đầy đủ mã bị bỏ/thêm, đếm tổng mapping; không nhân bản phần không đổi của tập quyền lớn. */
+    public void resources(
+        Connection connection,
+        Event event,
+        Target kind,
+        String key,
+        long actor,
+        Set<String> before,
+        Set<String> after,
+        long versionBefore,
+        long versionAfter
+    ) throws SQLException {
+        Set<String> removed = new LinkedHashSet<>(before);
+        removed.removeAll(after);
+        Set<String> added = new LinkedHashSet<>(after);
+        added.removeAll(before);
+        record(
+            connection,
+            event,
+            kind,
+            key,
+            actor,
+            AccessChangeStateResponse.resources(removed, before.size(), versionBefore),
+            AccessChangeStateResponse.resources(added, after.size(), versionAfter)
+        );
+    }
+
+    /** Lưu đầy đủ mã bị bỏ/thêm, đếm tổng mapping; không nhân bản phần không đổi của tập quyền lớn. */
     public void mappings(
         Connection connection,
         Event event,

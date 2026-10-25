@@ -48,6 +48,8 @@ public class DataScopeGuard {
                     JOIN auth_role_permissions rp ON rp.role_code=r.code
                     JOIN auth_permissions p ON p.code=rp.permission_code AND p.active
                     WHERE sm.scope_id=ds.id AND sm.user_id=su.id AND sm.active AND p.code=?
+                      AND (?::text IS NULL OR NOT EXISTS(SELECT 1 FROM auth_role_resource_sets rs WHERE rs.role_code=r.code)
+                        OR EXISTS(SELECT 1 FROM auth_role_resources rg WHERE rg.role_code=r.code AND rg.target=?))
                 )
               )
         )
@@ -70,6 +72,9 @@ public class DataScopeGuard {
         query.setLong(start++, actor.id());
         query.setLong(start++, actor.tokenVersion());
         query.setString(start++, Permission.valueOf(resource + "_" + action.name()).name());
+        String target = ResourceEntitlements.currentTarget(authentication);
+        query.setString(start++, target);
+        query.setString(start++, target);
         return start;
     }
 
@@ -107,6 +112,8 @@ public class DataScopeGuard {
                             JOIN auth_role_permissions rp ON rp.role_code=r.code
                             JOIN auth_permissions p ON p.code=rp.permission_code AND p.active
                             WHERE m.scope_id=s.id AND m.user_id=u.id AND m.active AND p.code=?
+                              AND (?::text IS NULL OR NOT EXISTS(SELECT 1 FROM auth_role_resource_sets rs WHERE rs.role_code=r.code)
+                                OR EXISTS(SELECT 1 FROM auth_role_resources rg WHERE rg.role_code=r.code AND rg.target=?))
                         )
                       )
                 )
@@ -117,6 +124,9 @@ public class DataScopeGuard {
             query.setLong(2, actor.id());
             query.setLong(3, actor.tokenVersion());
             query.setString(4, permission);
+            String target = ResourceEntitlements.currentTarget(authentication);
+            query.setString(5, target);
+            query.setString(6, target);
             try (var row = query.executeQuery()) {
                 row.next();
                 if (!row.getBoolean(1)) throw new BusinessException(ErrorCode.ACCESS_DENIED);

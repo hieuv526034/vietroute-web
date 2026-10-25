@@ -49,7 +49,7 @@ public class UserRepository extends BaseRepository {
                            (SELECT thumbnail_url FROM media_assets WHERE id=u.avatar_media_id AND status='READY') AS avatar_url
                     """ +
                         AccountAccessSql.ARRAYS +
-                        " FROM auth_users u WHERE u.id=?"
+                        " FROM auth_users u WHERE u.id=? AND NOT u.deleted"
                 )
             ) {
                 query.setLong(1, id);
@@ -87,7 +87,7 @@ public class UserRepository extends BaseRepository {
             long total;
             try (
                 PreparedStatement count = connection.prepareStatement(
-                    "SELECT count(*) FROM auth_users WHERE lower(username) LIKE ? AND id<>?"
+                    "SELECT count(*) FROM auth_users WHERE NOT deleted AND lower(username) LIKE ? AND id<>?"
                 )
             ) {
                 count.setString(1, prefix);
@@ -102,7 +102,7 @@ public class UserRepository extends BaseRepository {
                 PreparedStatement query = connection.prepareStatement(
                     "SELECT u.id,u.username,u.display_name,u.active,u.version,u.created_at,u.updated_at," +
                         "COALESCE((SELECT string_agg(r.role_code,',' ORDER BY r.role_code) FROM auth_user_roles r WHERE r.user_id=u.id),'') AS roles " +
-                        "FROM auth_users u WHERE lower(u.username) LIKE ? AND u.id<>? ORDER BY u.username,u.id LIMIT ? OFFSET ?"
+                        "FROM auth_users u WHERE NOT u.deleted AND lower(u.username) LIKE ? AND u.id<>? ORDER BY u.username,u.id LIMIT ? OFFSET ?"
                 )
             ) {
                 query.setString(1, prefix);
@@ -168,7 +168,7 @@ public class UserRepository extends BaseRepository {
             PreparedStatement query = connection.prepareStatement(
                 "SELECT *, (SELECT thumbnail_url FROM media_assets WHERE id=avatar_media_id AND status='READY') AS avatar_url FROM auth_users WHERE " +
                     column +
-                    " = ?" +
+                    " = ? AND NOT deleted" +
                     (lock ? " FOR UPDATE" : "")
             )
         ) {

@@ -30,10 +30,20 @@
         features = [],
         applied = { username: '', role: '', active: '' },
         editing,
-        selected;
-    const can = (action) => me?.permissions?.includes(`ACCOUNT_${action}`);
-    const canAssign = () => me?.permissions?.includes('ACCESS_ASSIGN') || me?.permissions?.includes('ACCESS_WRITE');
-    const modalFeedback = () => ['state', 'edit', 'detail'].find((name) => node(`account-${name}-dialog`).open);
+        selected,
+        capabilities = [];
+    const has = (method, path) => capabilities.includes(`${method} ${path}`);
+    const can = (action) =>
+        has(
+            ...({
+                READ: ['GET', base],
+                CREATE: ['POST', base],
+                UPDATE: ['PUT', `${base}/{id}`],
+                DELETE: ['DELETE', `${base}/{id}`],
+            }[action] || []),
+        );
+    const canAssign = () => has('PUT', `${access}/users/{id}/roles`);
+    const modalFeedback = () => ['state', 'edit', 'detail', 'name'].find((name) => node(`account-${name}-dialog`).open);
     const perform = async (work) => {
         if (busy) return;
         busy = true;
@@ -126,6 +136,23 @@
                 buttons.append(
                     tables.actionButton(`${labels.assign}: ${user.username}`, 'assign', () => openEditor(user), false),
                 );
+            if (can('UPDATE') && user.id !== me.id && !user.roles.includes('ADMIN'))
+                buttons.append(tables.actionButton(`${labels.edit}: ${user.username}`, 'edit', () => openName(user)));
+            if (can('DELETE') && user.id !== me.id && !user.roles.includes('ADMIN'))
+                buttons.append(
+                    tables.actionButton(
+                        `${labels.remove}: ${user.username}`,
+                        'delete',
+                        () => {
+                            if (busy || !window.confirm(labels.removeNote + ' @' + user.username)) return;
+                            void perform(async () => {
+                                await app.mutate(`${base}/${user.id}?version=${user.version}`, null, 'delete');
+                                await load();
+                            });
+                        },
+                        true,
+                    ),
+                );
             actions.append(buttons);
             row.append(identity, role, state, text('td', time(user.updatedAt)), actions);
             body.append(row);
@@ -165,11 +192,7 @@
             const content = text('span', '');
             content.append(
                 text('strong', roleNames.get(role.role) || role.role),
-                text(
-                    'small',
-                    `${role.role} · ${role.permissions.length} ${labels.permissions}${role.active ? '' : ' · ' + labels.off}`,
-                    'muted d-block',
-                ),
+                text('small', `${role.role}${role.active ? '' : ' · ' + labels.off}`, 'muted d-block'),
             );
             label.append(input, content);
             host.append(label);
@@ -201,6 +224,28 @@
         app.feedback('', false, 'account-edit-feedback');
         editModal.open();
     };
+    let nameTarget;
+    const nameModal = window.VietRouteUI.modal('account-name-dialog', { busy: () => busy });
+    const openName = (user) => {
+        if (busy) return;
+        nameTarget = user;
+        node('account-name-value').value = user.displayName;
+        app.feedback('', false, 'account-name-feedback');
+        nameModal.open();
+    };
+    node('account-name-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (busy || !forms.validate(event.currentTarget)) return;
+        void perform(async () => {
+            await app.mutate(
+                `${base}/${nameTarget.id}`,
+                { displayName: node('account-name-value').value, version: nameTarget.version },
+                'put',
+            );
+            node('account-name-dialog').close();
+            await load();
+        });
+    });
     // API trả capabilities thật: tên chức năng lấy từ tree source, không suy quyền từ role hoặc checkbox trên client.
     const show = async (user) => {
         const result = await get(`${base}/${user.id}/access`);
@@ -231,9 +276,7 @@
             const actions = document.createElement('td');
             actions.append(
                 chips(
-                    (value?.actions?.filter((item) => item !== 'VIEW') || []).map(
-                        (action) => labels['action' + action.charAt(0) + action.slice(1).toLowerCase()] || action,
-                    ),
+                    value?.targets?.filter((target) => !target.startsWith('GET ' + (feature.path || '__'))) || [],
                     labels.noActions,
                 ),
             );
@@ -252,7 +295,7 @@
         node('account-effective').replaceChildren(table);
         const protectedAccount =
             selected.id === me.id || selected.roles.includes('ADMIN') || selected.activationPending;
-        node('account-state-open').hidden = protectedAccount || !can('UPDATE');
+        node('account-state-open').hidden = protectedAccount || !has('PUT', `${base}/{id}/state`);
         node('account-state-open').textContent = selected.active ? labels.disable : labels.enable;
         node('account-protection').textContent = protectedAccount ? labels.fixed : '';
         app.feedback('', false, 'account-detail-feedback');
@@ -329,6 +372,7 @@
     );
     void perform(async () => {
         me = await get('/api/v1/auth/me');
+        capabilities = (await get('/api/v1/auth/capabilities')).flatMap((item) => item.targets);
         let registry;
         [roles, features, registry] = await Promise.all([
             get(`${access}/roles`),

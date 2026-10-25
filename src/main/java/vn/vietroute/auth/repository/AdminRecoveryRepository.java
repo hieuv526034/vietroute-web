@@ -102,10 +102,10 @@ public class AdminRecoveryRepository {
                 """
                 UPDATE auth_users SET email=?,email_verified_at=CASE WHEN email IS DISTINCT FROM ?
                   OR email_verified_at IS NULL THEN CURRENT_TIMESTAMP ELSE email_verified_at END,
-                  active=true,activation_pending=false,must_change_password=false,
+                  active=true,deleted=false,activation_pending=false,must_change_password=false,
                   token_version=token_version+1,version=version+1,updated_at=CURRENT_TIMESTAMP,updated_by=?
                 WHERE id=? AND (email IS DISTINCT FROM ? OR email_verified_at IS NULL
-                  OR NOT active OR activation_pending OR must_change_password)
+                  OR NOT active OR deleted OR activation_pending OR must_change_password)
                 """
             )
         ) {
@@ -152,6 +152,20 @@ public class AdminRecoveryRepository {
 
     /** ADMIN nhận mọi permission active đã đăng ký, kể cả mã mới; không tự bật custom permission đã bị tắt. */
     public void grantAll(Connection connection, long actor) throws SQLException {
+        RoleResourceRepository.mark(connection, "ADMIN", actor);
+        try (
+            var query = connection.prepareStatement(
+                """
+                INSERT INTO auth_role_resources(role_code,kind,target,created_by,updated_by)
+                SELECT 'ADMIN',kind,target,?,? FROM auth_access_resources
+                WHERE NOT public_route AND declared_permissions<>'' ON CONFLICT DO NOTHING
+                """
+            )
+        ) {
+            query.setLong(1, actor);
+            query.setLong(2, actor);
+            query.executeUpdate();
+        }
         try (
             var insert = connection.prepareStatement(
                 """

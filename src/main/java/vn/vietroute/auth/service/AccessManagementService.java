@@ -44,6 +44,8 @@ public class AccessManagementService {
 
     private final AccessChangeService changes;
 
+    private final RoleResourceService resourceGrants;
+
     /** Registry tên/trạng thái có version riêng; không suy ra quyền từ hằng Java. */
     @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.READ)
     public List<AccessRegistryResponse> registry(String kind) {
@@ -102,6 +104,7 @@ public class AccessManagementService {
                           .anyMatch(permission -> !granted.contains(permission.name()))
                     : !granted.contains(code);
                 if (outside) throw new BusinessException(ErrorCode.ACCESS_DENIED);
+                if ("roles".equals(kind)) resourceGrants.requireDelegable(connection, Role.valueOf(code), actor);
             }
             registry.save(connection, kind, code, body, actor.id(), create);
             var result = List.of(registry.find(connection, kind, code));

@@ -1,10 +1,28 @@
-# Cấu hình schema và quyền theo hành động
+# Cấu hình schema, role và tài nguyên menu/API
 
 Cập nhật 22/10/2026, phụ trách hieuv526034. Quy ước này thay phần schema cố định và quyền WRITE gộp trong tài liệu nền tảng trước đó.
 
+## ACCESS24 — Cấu hình User → Role → Menu/API
+
+Quyết định ngày 25/10/2026 theo yêu cầu chủ dự án: quản trị chọn **từng tài nguyên HTTP cụ thể**, không nhập ma trận READ/WRITE/DELETE thứ hai. Target là method + template của HandlerMapping (HEAD dùng GET). Menu chỉ mở trang; các API dữ liệu/thao tác bên trong được chọn độc lập. Chọn nhóm trên cây chỉ chọn những mục hiện tại đang hiển thị, không wildcard và không tự cấp API tương lai. Một API có thể được dùng ở nhiều màn; cấp API là cấp chức năng đó, không phụ thuộc trang người dùng vừa mở.
+
+`auth_role_resource_sets` đánh dấu role đã chuyển mô hình; marker có thể có **0** tài nguyên, nghĩa là từ chối toàn bộ. `auth_role_resources` lưu `(role_code,kind,target)` có FK tới inventory. User hợp tài nguyên từ role active, đồng thời nguồn annotation bắt buộc vẫn được kiểm: ADMIN-only, ANY/ALL, tài khoản ready/tokenVersion, owner/driver, scope và trạng thái nghiệp vụ. Public/self-service do source xác định, không lấy cờ DB để bỏ guard; public không có checkbox. Tự phục vụ vẫn kiểm principal/chủ sở hữu, không là quyền mặc định của mọi tài nguyên private.
+
+`auth_role_permissions` còn là projection nội bộ cho service/scope và API tương thích, được sinh trong cùng transaction khi lưu cây. Không bắt người vận hành cấu hình projection lần hai. Source vẫn khai báo ngữ nghĩa thao tác, không đoán CREATE/UPDATE từ HTTP verb. Mã alias WRITE chỉ giữ tương thích, không là quyền quản trị toàn cục. HTTP interceptor từ chối target không được gán dù có cùng READ/UPDATE với API khác; service đọc lại snapshot DB trước thân hàm, áp lại target của request đang xử lý. Không snapshot DB thì tài nguyên private bị từ chối; lỗi DB không fallback authorities cũ.
+
+Scope phải có **cùng scoped role** cấp cả projection quyền và target request hiện hành; không mượn API từ role ở nhà xe khác. Lời gọi bean trực tiếp không có HTTP target vẫn kiểm service semantic + scope; không tạo target giả từ header/body. Giới hạn ủy quyền kiểm cả tập target và projection actor đang có, kể cả khi gán/tái bật role. ADMIN bất biến; bootstrap recovery vẫn là đường có xác thực/mật khẩu, không thêm bypass runtime.
+
+V022 nối tiếp V001–V021: backfill một lần từ registry và mapping cũ, giữ hash/history/version/permission mapping, không tự grant permission mới cho role thường. DB mới chưa có inventory được chuyển ở startup sync khi inventory sẵn sàng. API PUT permission tương thích đóng băng tập route hiện tại sau khi lưu, không tự nhận route mới về sau. Chưa được gán tài nguyên khác với được gán tập rỗng. **Dừng/drain toàn bộ node cũ trước khi sửa role theo cây mới**: node V021 không biết rào target và không được cùng phục vụ sau khi áp dụng gán native. Đưa source qua PR/CI, lên kế hoạch thay node rồi nghiệm thu; không lấy build thành lý do migrate/seed Neon. Rollback code cũ sau khi có gán native không an toàn nếu chưa phục hồi mapping theo kế hoạch riêng.
+
+Màn quản trị có ba menu: User (`/operations/accounts`), Role (`/operations/access`) và Menu/API (`/operations/access/resources`). Role giữ tab phạm vi nhà xe/lịch sử ADMIN; form CRUD và cây cấp tài nguyên nằm trong modal, có tìm kiếm, lựa chọn một phần, đếm thêm/bỏ và version. Inventory do source phát hiện, không cho nhập URL thực thi hoặc sửa private thành public. Menu path/parent/nhãn/thứ tự và điều kiện bảo mật vẫn khai báo ở source để review/deploy. API registry/policy/permission cũ giữ cho tương thích; không là ma trận cấu hình chính của UI mới.
+
+User sửa tên bằng API quản trị, username giữ bất biến, email/password vẫn qua lifecycle riêng. Xóa là **xóa mềm** `auth_users.deleted`, tắt active, tăng tokenVersion/version, thu hồi challenge, dọn role/membership trong cùng transaction và ghi ACCOUNT_DELETED. Giữ ID/FK/lịch sử nghiệp vụ và username/email đã dùng, không tái sử dụng danh tính. Không xóa system/bootstrap/bản thân/ADMIN; xóa account không hủy chuyến hoặc xóa booking tự động, người vận hành phải xử lý phân công/nghiệp vụ đang mở. Không cấp ngoại lệ xác minh email/mật khẩu tạm cho account mới.
+
+Auth được chia theo trách nhiệm: credential/JWT, lifecycle mail/mật khẩu, registry/resource assignment, scope, lịch sử và recovery. Số file gồm nhiều DTO/metadata, không phải từng ấy luồng độc lập. `RoleResourceService` tập trung chọn/kiểm/projection/lưu tài nguyên; không gom bảo mật vào một service khổng lồ để giảm số hàm. Phần UI phân quyền cũ trong operations.js đã bỏ; đường tương thích backend còn giữ trong giai đoạn nâng cấp.
+
 ## Bản đồ bảng và ranh giới cấu hình phân quyền
 
-Hệ thống có **11 bảng chuyên trách phân quyền và bảng tài khoản `auth_users`**, tổng cộng 12 bảng liên quan trực tiếp. Đây là cấu trúc từ migration/source; không phải kết quả đếm dữ liệu hoặc kiểm schema trực tiếp trên Neon. Bảng nằm trong schema do `VIETROUTE_DB_SCHEMA` chọn, không viết prefix schema cố định vào DAO.
+Hệ thống có **13 bảng chuyên trách phân quyền và bảng tài khoản `auth_users`**, tổng cộng 14 bảng liên quan trực tiếp. Đây là cấu trúc từ migration/source; không phải kết quả đếm dữ liệu hoặc kiểm schema trực tiếp trên Neon. Bảng nằm trong schema do `VIETROUTE_DB_SCHEMA` chọn, không viết prefix schema cố định vào DAO.
 
 | Bảng | Khóa chính | Trách nhiệm và nguồn ghi |
 |---|---|---|
@@ -12,7 +30,9 @@ Hệ thống có **11 bảng chuyên trách phân quyền và bảng tài khoả
 | `auth_roles` | `code` | Registry vai trò/nhóm quyền, tên vi/en, active/deleted, version registry và version mapping. Quản trị sửa role thường; ADMIN được bảo vệ |
 | `auth_permissions` | `code` | Registry mã RESOURCE_ACTION, tên vi/en, active/version. Startup đăng ký mã source; API quản trị tạo mã tùy chỉnh |
 | `auth_user_roles` | `(user_id, role_code)` | Gán một hoặc nhiều role toàn cục cho tài khoản; mutation giữ version/thu hồi phiên/lịch sử |
-| `auth_role_permissions` | `(role_code, permission_code)` | Gán quyền cho role; nguồn authority chức năng hiện hành sau khi lọc trạng thái DB |
+| `auth_role_permissions` | `(role_code, permission_code)` | Projection nội bộ cho service/scope và mapping tương thích; UI mới sinh từ tài nguyên |
+| `auth_role_resource_sets` | `role_code` | Marker role dùng mô hình tài nguyên; tập rỗng vẫn từ chối, không fallback |
+| `auth_role_resources` | `(role_code,kind,target)` | Menu/API chính xác được cấp cho role, có FK tới inventory; không wildcard |
 | `auth_access_functions` | `code` | Danh bạ cây chức năng: parent, nhãn, đường menu, VIEW, thứ tự. Đồng bộ từ AccessFeatures khi bật sync; không phải menu tùy ý được tạo qua DB |
 | `auth_access_resources` | `(kind, target)` | Danh bạ MENU/ENDPOINT, handler, function, quyền khai báo, ANY/ALL, public/configurable/admin_only và thời điểm startup thấy route. Đồng bộ từ mapping/annotation thật |
 | `auth_access_policies` | `id`, unique `(kind,target)` | Điều kiện bổ sung cho menu/endpoint: enabled, required_permissions và allowed_roles. Quản trị cấu hình; chỉ siết guard nền, không biến route private thành public |
@@ -21,9 +41,9 @@ Hệ thống có **11 bảng chuyên trách phân quyền và bảng tài khoả
 | `auth_scope_memberships` | `(scope_id,user_id)` | Thành viên của scope, active/version/audit; không dùng cho khách public tra cứu chuyến |
 | `auth_scope_roles` | `(scope_id,user_id,role_code)` | Role áp dụng trong scope. FK đến membership và mapping role toàn cục của đúng user; scoped role phải là tập con global roles |
 
-Nguồn tạo bảng: V001 (user/role/mapping user), V003 (permission/mapping role), V007 (policy), V010 (resource), V013 (function và metadata binding), V014 (history), V015 (scope/membership/scoped role). V006/V007/V011/V012/V013 còn bổ sung audit/trạng thái/index cho các bảng cũ; luôn đọc schema cuối sau toàn bộ migration, không chỉ CREATE TABLE đầu tiên.
+Nguồn tạo bảng: V001 (user/role/mapping user), V003 (permission/mapping role), V007 (policy), V010 (resource), V013 (function và metadata binding), V014 (history), V015 (scope/membership/scoped role), V022 (tập/mapping tài nguyên và tombstone user). V006/V007/V011/V012/V013 còn bổ sung audit/trạng thái/index cho các bảng cũ; luôn đọc schema cuối sau toàn bộ migration, không chỉ CREATE TABLE đầu tiên.
 
-Luồng cấp chức năng là `auth_users → auth_user_roles → auth_roles → auth_role_permissions → auth_permissions`. Với dữ liệu nhà xe, `auth_scope_memberships → auth_scope_roles` lọc đúng role của user trong scope trước khi lấy permission. Policy là điều kiện bổ sung ở HTTP; service vẫn kiểm chức năng và DAO kiểm bản ghi/phạm vi. Không có bảng `auth_user_permissions`, tầng nhóm quyền thứ hai hoặc bảng action/endpoint-permission riêng: action là enum, quyền endpoint đang lưu trong `declared_permissions` của resource.
+Luồng cấp chức năng mới là `auth_users → auth_user_roles → auth_roles → auth_role_resources → auth_access_resources`; projection semantic là `auth_role_permissions → auth_permissions`. Với dữ liệu nhà xe, `auth_scope_memberships → auth_scope_roles` lọc đúng role của user trong scope trước khi lấy permission. Policy là điều kiện bổ sung ở HTTP; service vẫn kiểm chức năng và DAO kiểm bản ghi/phạm vi. Không có bảng `auth_user_permissions`, tầng nhóm quyền thứ hai hoặc bảng action/endpoint-permission riêng: action là enum, quyền endpoint đang lưu trong `declared_permissions` của resource.
 
 Hai bảng bảo mật liên quan là `auth_password_history` và `auth_account_challenges` (V011); chúng phục vụ mật khẩu/mã xác minh, không cấp permission. `api_request_journal`, bảng activity và `vietroute_schema_history` phục vụ vận hành/migration, không phải nguồn cấp quyền.
 

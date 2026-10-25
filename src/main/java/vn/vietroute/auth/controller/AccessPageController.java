@@ -23,4 +23,11 @@ public class AccessPageController {
         model.addAttribute("accessHistoryEvents", List.of(Event.values()));
         return "operations/access";
     }
+
+    @GetMapping(Routes.ACCESS_RESOURCES_PAGE)
+    @AccessFunction(group = Groups.ACCESS, function = Functions.ACCESS_RESOURCES, actions = { PermissionAction.VIEW })
+    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.VIEW)
+    public String resources() {
+        return "operations/access-resources";
+    }
 }

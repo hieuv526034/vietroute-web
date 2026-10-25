@@ -461,10 +461,71 @@
                     </div>
                 </fieldset>
             </dialog>
+            <dialog
+                id="account-name-dialog"
+                class="workspace-dialog"
+                aria-labelledby="account-name-title"
+            >
+                <div class="dialog-heading">
+                    <h2
+                        id="account-name-title"
+                        class="h4"
+                        th:text="#{ui.foundation.edit}"
+                    ></h2>
+                    <button
+                        type="button"
+                        class="dialog-close"
+                        data-dialog-close
+                        th:attr="aria-label=#{ui.ops.close}"
+                    >
+                        ×
+                    </button>
+                </div>
+                <form
+                    id="account-name-form"
+                    data-validate
+                >
+                    <fieldset
+                        data-account-controls
+                        class="border-0 p-0 m-0"
+                    >
+                        <label
+                            for="account-name-value"
+                            class="form-label"
+                            th:text="#{ui.accounts.name}"
+                        ></label>
+                        <input
+                            id="account-name-value"
+                            class="form-control"
+                            required
+                            maxlength="120"
+                        />
+                        <p
+                            id="account-name-feedback"
+                            class="feedback"
+                            role="alert"
+                            hidden
+                        ></p>
+                        <div class="dialog-actions">
+                            <button
+                                type="button"
+                                class="button button-outline"
+                                data-dialog-close
+                                th:text="#{ui.catalog.cancel}"
+                            ></button>
+                            <button
+                                type="submit"
+                                class="button"
+                                th:text="#{ui.catalog.save}"
+                            ></button>
+                        </div>
+                    </fieldset>
+                </form>
+            </dialog>
             <div
                 id="accounts-labels"
                 hidden
-                th:attr="data-action-view=#{ui.accessMatrix.VIEW},data-action-read=#{ui.accessMatrix.READ},data-action-list=#{ui.accessMatrix.LIST},data-action-detail=#{ui.accessMatrix.DETAIL},data-action-create=#{ui.accessMatrix.CREATE},data-action-update=#{ui.accessMatrix.UPDATE},data-action-delete=#{ui.accessMatrix.DELETE},data-action-assign=#{ui.accessMatrix.ASSIGN},data-action-retry=#{ui.accessMatrix.RETRY},data-action-send=#{ui.accessMatrix.SEND},data-no-actions=#{ui.accounts.noActions},data-title=#{ui.accounts.title},data-subtitle=#{ui.accounts.subtitle},data-create=#{ui.accounts.create},data-assign=#{ui.accounts.assign},data-detail=#{ui.accounts.detail},data-search=#{ui.accounts.search},data-refresh=#{ui.accounts.refresh},data-username=#{ui.accounts.username},data-name=#{ui.accounts.name},data-password=#{ui.accounts.password},data-roles=#{ui.accounts.roles},data-state=#{ui.accounts.state},data-all=#{ui.accounts.all},data-active=#{ui.accounts.active},data-inactive=#{ui.accounts.inactive},data-pending=#{ui.accounts.pending},data-password-pending=#{ui.accounts.passwordPending},data-email-pending=#{ui.accounts.emailPending},data-locked=#{ui.accounts.locked},data-updated=#{ui.accounts.updated},data-actions=#{ui.accounts.actions},data-save=#{ui.accounts.save},data-cancel=#{ui.accounts.cancel},data-empty=#{ui.accounts.empty},data-total=#{ui.accounts.total},data-role-note=#{ui.accounts.roleNote},data-create-note=#{ui.accounts.createNote},data-role-title=#{ui.accounts.roleTitle},data-driver=#{ui.accounts.driver},data-customer=#{ui.accounts.customer},data-preset=#{ui.accounts.preset},data-scope-note=#{ui.accounts.scopeNote},data-permissions=#{ui.accounts.permissions},data-fixed=#{ui.accounts.fixed},data-grant-note=#{ui.accounts.grantNote},data-success=#{ui.accounts.success},data-created=#{ui.accounts.created},data-view=#{ui.accounts.view},data-api-only=#{ui.accounts.apiOnly},data-allowed=#{ui.accounts.allowed},data-denied=#{ui.accounts.denied},data-feature=#{ui.accounts.feature},data-effective=#{ui.accounts.effective},data-effective-note=#{ui.accounts.effectiveNote},data-blocked=#{ui.accounts.blocked},data-disable=#{ui.accounts.disable},data-enable=#{ui.accounts.enable},data-state-note=#{ui.accounts.stateNote},data-confirm-state=#{ui.accounts.confirmState},data-configure=#{ui.accounts.configure},data-workflow=#{ui.accounts.workflow},data-selection=#{ui.accounts.selection},data-off=#{ui.accounts.off},data-loading=#{ui.accounts.loading},data-conflict=#{ui.accounts.conflict},data-guard=#{ui.accounts.guard},data-no-role=#{ui.accounts.noRole}"
+                th:attr="data-edit=#{ui.foundation.edit},data-remove=#{ui.grants.removeUser},data-remove-note=#{ui.grants.removeUserNote},data-action-view=#{ui.accessMatrix.VIEW},data-action-read=#{ui.accessMatrix.READ},data-action-list=#{ui.accessMatrix.LIST},data-action-detail=#{ui.accessMatrix.DETAIL},data-action-create=#{ui.accessMatrix.CREATE},data-action-update=#{ui.accessMatrix.UPDATE},data-action-delete=#{ui.accessMatrix.DELETE},data-action-assign=#{ui.accessMatrix.ASSIGN},data-action-retry=#{ui.accessMatrix.RETRY},data-action-send=#{ui.accessMatrix.SEND},data-no-actions=#{ui.accounts.noActions},data-title=#{ui.accounts.title},data-subtitle=#{ui.accounts.subtitle},data-create=#{ui.accounts.create},data-assign=#{ui.accounts.assign},data-detail=#{ui.accounts.detail},data-search=#{ui.accounts.search},data-refresh=#{ui.accounts.refresh},data-username=#{ui.accounts.username},data-name=#{ui.accounts.name},data-password=#{ui.accounts.password},data-roles=#{ui.accounts.roles},data-state=#{ui.accounts.state},data-all=#{ui.accounts.all},data-active=#{ui.accounts.active},data-inactive=#{ui.accounts.inactive},data-pending=#{ui.accounts.pending},data-password-pending=#{ui.accounts.passwordPending},data-email-pending=#{ui.accounts.emailPending},data-locked=#{ui.accounts.locked},data-updated=#{ui.accounts.updated},data-actions=#{ui.accounts.actions},data-save=#{ui.accounts.save},data-cancel=#{ui.accounts.cancel},data-empty=#{ui.accounts.empty},data-total=#{ui.accounts.total},data-role-note=#{ui.accounts.roleNote},data-create-note=#{ui.accounts.createNote},data-role-title=#{ui.accounts.roleTitle},data-driver=#{ui.accounts.driver},data-customer=#{ui.accounts.customer},data-preset=#{ui.accounts.preset},data-scope-note=#{ui.accounts.scopeNote},data-permissions=#{ui.accounts.permissions},data-fixed=#{ui.accounts.fixed},data-grant-note=#{ui.accounts.grantNote},data-success=#{ui.accounts.success},data-created=#{ui.accounts.created},data-view=#{ui.accounts.view},data-api-only=#{ui.accounts.apiOnly},data-allowed=#{ui.accounts.allowed},data-denied=#{ui.accounts.denied},data-feature=#{ui.accounts.feature},data-effective=#{ui.accounts.effective},data-effective-note=#{ui.accounts.effectiveNote},data-blocked=#{ui.accounts.blocked},data-disable=#{ui.accounts.disable},data-enable=#{ui.accounts.enable},data-state-note=#{ui.accounts.stateNote},data-confirm-state=#{ui.accounts.confirmState},data-configure=#{ui.accounts.configure},data-workflow=#{ui.accounts.workflow},data-selection=#{ui.accounts.selection},data-off=#{ui.accounts.off},data-loading=#{ui.accounts.loading},data-conflict=#{ui.accounts.conflict},data-guard=#{ui.accounts.guard},data-no-role=#{ui.accounts.noRole}"
             ></div>
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>

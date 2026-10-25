@@ -16,6 +16,7 @@ import vn.vietroute.business.tracking.dto.response.TrackingPointResponse;
 import vn.vietroute.business.tracking.dto.response.TrackingResponse;
 import vn.vietroute.business.trip.dto.response.TripResponse;
 import vn.vietroute.common.config.integration.TrackingSettings;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 
@@ -155,7 +156,9 @@ public class TrackingRepository {
                     JOIN auth_roles rx ON rx.code=sx.role_code AND rx.active AND NOT rx.deleted
                     JOIN auth_role_permissions rp ON rp.role_code=rx.code
                     JOIN auth_permissions p ON p.code=rp.permission_code AND p.active
-                    WHERE sx.scope_id=sm.scope_id AND sx.user_id=sm.user_id AND p.code='DRIVER_TRIP_UPDATE')))
+                    WHERE sx.scope_id=sm.scope_id AND sx.user_id=sm.user_id AND p.code='DRIVER_TRIP_UPDATE'
+                      AND (NOT EXISTS(SELECT 1 FROM auth_role_resource_sets rs WHERE rs.role_code=rx.code)
+                        OR EXISTS(SELECT 1 FROM auth_role_resources rg WHERE rg.role_code=rx.code AND rg.target=?)))))
         """;
         String sql =
             "SELECT t.status,t.driver_user_id AS assigned_user," +
@@ -177,6 +180,7 @@ public class TrackingRepository {
                 query.setLong(at++, bookingId);
                 query.setLong(at++, customerId);
             }
+            query.setString(at++, "POST " + Routes.DRIVER_TRIPS + Routes.TRIP_TRACKING_SAMPLES);
             query.setLong(at++, tripId);
             if (resource != null) DataScopeGuard.bindVisible(query, at, resource, PermissionAction.READ);
             try (var row = query.executeQuery()) {

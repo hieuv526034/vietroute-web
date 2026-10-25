@@ -157,6 +157,13 @@ public final class AccessFeatures {
             "access.function.ACCESS",
             Routes.ACCESS_PAGE,
             Permissions.ACCESS_VIEW
+        ),
+        new Feature(
+            Functions.ACCESS_RESOURCES,
+            Functions.AUTHORIZATION,
+            "access.function.ACCESS_RESOURCES",
+            Routes.ACCESS_RESOURCES_PAGE,
+            Permissions.ACCESS_VIEW
         )
     );
 

@@ -9,6 +9,7 @@ public final class AccessAuditConstants {
 
     public enum Event {
         ROLE_PERMISSIONS,
+        ROLE_RESOURCES,
         USER_ROLES,
         ROLE_CREATED,
         ROLE_UPDATED,
@@ -20,6 +21,8 @@ public final class AccessAuditConstants {
         POLICY_DELETED,
         ACCOUNT_CREATED,
         ACCOUNT_STATUS,
+        ACCOUNT_UPDATED,
+        ACCOUNT_DELETED,
         ADMIN_RECOVERED,
         SCOPE_CREATED,
         SCOPE_UPDATED,

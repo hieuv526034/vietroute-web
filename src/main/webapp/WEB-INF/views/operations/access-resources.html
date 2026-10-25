@@ -1,0 +1,115 @@
+<!doctype html>
+<html
+    lang="vi"
+    xmlns:th="http://www.thymeleaf.org"
+    th:lang="${currentLocale}"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.grants.resources})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <nav th:replace="~{fragments/layout :: breadcrumbs}"></nav>
+        <main
+            class="container-xl py-5 operations-page"
+            data-resource-inventory
+        >
+            <h1 th:text="#{ui.grants.resources}"></h1>
+            <p
+                class="muted"
+                th:text="#{ui.grants.inventoryNote}"
+            ></p>
+            <p
+                id="form-feedback"
+                class="feedback"
+                role="alert"
+                hidden
+            ></p>
+            <section class="card p-4">
+                <fieldset
+                    id="inventory-controls"
+                    class="border-0 p-0 m-0"
+                >
+                    <form
+                        id="inventory-search"
+                        class="table-filter mb-3"
+                    >
+                        <div>
+                            <label
+                                for="inventory-query"
+                                th:text="#{ui.grants.search}"
+                            ></label>
+                            <input
+                                id="inventory-query"
+                                type="search"
+                                name="query"
+                                class="form-control"
+                                maxlength="160"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                for="inventory-kind"
+                                th:text="#{ui.accessResources.kind}"
+                            ></label>
+                            <select
+                                id="inventory-kind"
+                                name="kind"
+                                class="form-select"
+                            >
+                                <option
+                                    value=""
+                                    th:text="#{ui.ops.all}"
+                                ></option>
+                                <option
+                                    value="MENU"
+                                    th:text="#{ui.accessResources.menu}"
+                                ></option>
+                                <option
+                                    value="ENDPOINT"
+                                    th:text="#{ui.accessResources.api}"
+                                ></option>
+                            </select>
+                        </div>
+                        <button
+                            type="submit"
+                            class="button button-outline"
+                            th:text="#{ui.ops.filter}"
+                        ></button>
+                        <button
+                            id="inventory-refresh"
+                            type="button"
+                            class="button button-outline"
+                            th:text="#{ui.ops.refresh}"
+                        ></button>
+                    </form>
+                    <p
+                        id="inventory-status"
+                        role="status"
+                        aria-live="polite"
+                    ></p>
+                    <div class="table-responsive">
+                        <table class="table align-middle resource-inventory-table">
+                            <thead>
+                                <tr>
+                                    <th th:text="#{ui.accessResources.kind}"></th>
+                                    <th th:text="#{ui.accounts.feature}"></th>
+                                    <th th:text="#{ui.grants.endpoint}"></th>
+                                    <th th:text="#{ui.grants.access}"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-body"></tbody>
+                        </table>
+                    </div>
+                    <nav th:replace="~{fragments/pagination :: pager('inventory', 20)}"></nav>
+                </fieldset>
+            </section>
+            <div
+                id="inventory-labels"
+                hidden
+                th:attr="data-public=#{ui.grants.public},data-self=#{ui.grants.self},data-private=#{ui.grants.private},data-admin=#{ui.grants.admin},data-menu=#{ui.accessResources.menu},data-api=#{ui.accessResources.api},data-empty=#{ui.foundation.empty},data-readonly=#{ui.grants.readonly},data-loading=#{ui.ops.loading}"
+            ></div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/resource-inventory.js}"></script>
+    </body>
+</html>

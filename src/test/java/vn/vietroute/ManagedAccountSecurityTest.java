@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,9 +37,11 @@ import vn.vietroute.auth.entity.AuthorizationState;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
+import vn.vietroute.auth.repository.AuthorizationRepository;
 import vn.vietroute.auth.repository.ManagedAccountRepository;
 import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.security.AccessPermissionDefinitions;
+import vn.vietroute.auth.security.DatabaseAccessGuard;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.AccessManagementService;
 import vn.vietroute.auth.service.JwtService;
@@ -325,8 +328,26 @@ class ManagedAccountSecurityTest {
             null,
             null,
             null,
-            new AccessManagementService(registry, null, null, null),
-            null
+            new AccessManagementService(registry, null, null, null, null),
+            null,
+            new DatabaseAccessGuard(
+                new AuthorizationRepository(null) {
+                    @Override
+                    public AuthorizationState find(long id) {
+                        var user = fixture(false);
+                        return new AuthorizationState(
+                            id,
+                            true,
+                            false,
+                            false,
+                            true,
+                            user.getTokenVersion(),
+                            user.getRoles(),
+                            user.getPermissions().stream().map(Permission::name).collect(Collectors.toSet())
+                        );
+                    }
+                }
+            )
         );
         var endpoint = new AccessResourceResponse(
             "MENU",

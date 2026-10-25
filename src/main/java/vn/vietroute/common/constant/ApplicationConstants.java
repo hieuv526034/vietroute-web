@@ -325,6 +325,10 @@ public final class ApplicationConstants {
 
         public static final String ROLE_PERMISSIONS_ACTION = ROLES_ACTION + "/{role}" + PERMISSIONS_ACTION;
 
+        public static final String ROLE_RESOURCES_ACTION = ROLES_ACTION + "/{role}/resources";
+
+        public static final String RESOURCE_CATALOG_ACTION = "/resource-catalog";
+
         public static final String USER_ROLES_ACTION = USERS_ACTION + BY_ID + ROLES_ACTION;
 
         public static final String JOBS = ADMIN_API + "/jobs";
@@ -348,6 +352,8 @@ public final class ApplicationConstants {
         public static final String ACCOUNTS_PAGE = OPERATIONS + "/accounts";
 
         public static final String ACCESS_PAGE = OPERATIONS + "/access";
+
+        public static final String ACCESS_RESOURCES_PAGE = ACCESS_PAGE + "/resources";
 
         public static final String CONFIGURATION_PAGE = OPERATIONS + "/configuration";
 

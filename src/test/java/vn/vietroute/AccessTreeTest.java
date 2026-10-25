@@ -39,6 +39,7 @@ import vn.vietroute.auth.security.AccessAuthorization;
 import vn.vietroute.auth.security.AccessCapabilities;
 import vn.vietroute.auth.security.AccessFeatures;
 import vn.vietroute.auth.security.AccessTargets;
+import vn.vietroute.auth.security.ResourceEntitlements;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.auth.service.AccessService;
@@ -142,11 +143,13 @@ class AccessTreeTest {
     }
 
     private UsernamePasswordAuthenticationToken actor(String... codes) {
-        return UsernamePasswordAuthenticationToken.authenticated(
+        var result = UsernamePasswordAuthenticationToken.authenticated(
             new UserPrincipal(8L, "entry", Set.of(Role.valueOf("ENTRY")), 0),
             null,
             Arrays.stream(codes).map(SimpleGrantedAuthority::new).toList()
         );
+        result.setDetails(new ResourceEntitlements(Set.of(), Set.copyOf(Arrays.asList(codes)), null, null));
+        return result;
     }
 
     @Test

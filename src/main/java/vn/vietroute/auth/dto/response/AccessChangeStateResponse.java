@@ -17,11 +17,62 @@ public record AccessChangeStateResponse(
     @Schema(description = "Tên cấu hình tiếng Anh") String nameEn,
     @Schema(description = "Loại policy nếu có") String policyKind,
     @Schema(description = "Template policy nếu có, không chứa URL/query người dùng") String policyTarget,
-    @Schema(description = "Version cấu hình/mapping tại thời điểm ghi") long version
+    @Schema(description = "Version cấu hình/mapping tại thời điểm ghi") long version,
+    @Schema(description = "Target menu/API bị bỏ hoặc thêm; chỉ route template server") Set<String> resources
 ) {
     public AccessChangeStateResponse {
         roles = roles == null ? Set.of() : Set.copyOf(roles);
         permissions = permissions == null ? Set.of() : Set.copyOf(permissions);
+        resources = resources == null ? Set.of() : Set.copyOf(resources);
+    }
+
+    public AccessChangeStateResponse(
+        Set<String> roles,
+        Set<String> permissions,
+        int mappingCount,
+        boolean delta,
+        Boolean active,
+        Boolean deleted,
+        Boolean enabled,
+        String nameVi,
+        String nameEn,
+        String policyKind,
+        String policyTarget,
+        long version
+    ) {
+        this(
+            roles,
+            permissions,
+            mappingCount,
+            delta,
+            active,
+            deleted,
+            enabled,
+            nameVi,
+            nameEn,
+            policyKind,
+            policyTarget,
+            version,
+            Set.of()
+        );
+    }
+
+    public static AccessChangeStateResponse resources(Set<String> changed, int count, long version) {
+        return new AccessChangeStateResponse(
+            Set.of(),
+            Set.of(),
+            count,
+            true,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            version,
+            changed
+        );
     }
 
     /** Trạng thái chưa tồn tại hoặc đã xóa policy, không dựng dữ liệu giả để lấp lịch sử. */

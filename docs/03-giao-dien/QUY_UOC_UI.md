@@ -8,10 +8,14 @@
 |---|---|---|
 | `/admin` | Tổng quan | Không |
 | `/catalogs/vehicle-types`, `/catalogs/booking-sources` | Từng danh mục riêng | Thêm/sửa/ngừng sử dụng |
-| `/operations/access` | Quyền role / Vai trò tài khoản (ADMIN) | Chỉnh quyền role thường, gán role user |
+| `/operations/accounts` | User: danh tính, role và preview quyền | Thêm, sửa tên, gán role, trạng thái; xóa mềm có xác nhận |
+| `/operations/access` | Role / Phạm vi / Lịch sử (ADMIN) | CRUD role; cây Menu → API cụ thể, public/self-service chỉ đọc |
+| `/operations/access/resources` | Inventory menu/API phân trang | Chỉ đọc nguồn; gán tại màn Role |
 | `/operations/configuration` | Ứng dụng / Pool / Bảo vệ request / Worker / Tính năng / Giám sát | Chỉ đọc, không chỉnh env/secret |
 | `/account`, `/media` | Một nhóm, không thêm tab thừa | Đổi mật khẩu, upload ảnh; ảnh tắt thì khóa nút mở |
 | `/operations/jobs` | Danh sách có lọc trạng thái | Chi tiết/retry theo quyền và version |
+
+ACCESS24: cây chọn target chính xác, không chọn ma trận action thứ hai; menu và từng API độc lập. Tìm kiếm không làm mất lựa chọn ngoài kết quả; chọn cha chỉ chọn mục hiện đang hiển thị, không wildcard tương lai. Public/self-service không có lựa chọn cấp quyền. Hiển thị preview số thêm/bỏ và giữ version/bản nháp khi lỗi; ADMIN chỉ xem.
 
 Role ADMIN chỉ xem; gán role bản thân bị khóa. Modal có tên/đối tượng rõ ràng; kiểm CSRF, version, scope, quyền và thu hồi token vẫn ở API/service.
 

@@ -24,6 +24,8 @@ import vn.vietroute.auth.entity.DataScope;
 import vn.vietroute.auth.entity.PasswordHistory;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
+import vn.vietroute.auth.entity.RoleResource;
+import vn.vietroute.auth.entity.RoleResourceSet;
 import vn.vietroute.auth.entity.ScopeMembership;
 import vn.vietroute.auth.entity.ScopeRole;
 import vn.vietroute.auth.entity.UserAccount;
@@ -109,6 +111,7 @@ public class DatabaseInitializer implements InitializingBean {
         migrate(connection, "V019__trips_and_capacity.sql");
         migrate(connection, "V020__bookings_and_events.sql");
         migrate(connection, "V021__trip_location_sharing.sql");
+        migrate(connection, "V022__role_resource_grants.sql");
         JdbcSchemaValidator.verify(
             connection,
             UserAccount.class,
@@ -133,6 +136,8 @@ public class DatabaseInitializer implements InitializingBean {
             MediaAsset.class,
             Job.class,
             Role.class,
+            RoleResource.class,
+            RoleResourceSet.class,
             Permission.class,
             ApiJournalRecord.class,
             AccessPolicy.class,

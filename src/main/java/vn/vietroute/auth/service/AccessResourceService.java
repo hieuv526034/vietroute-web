@@ -12,6 +12,7 @@ import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.repository.AccessFeatureRepository;
 import vn.vietroute.auth.repository.AccessResourceRepository;
 import vn.vietroute.auth.repository.AdminRecoveryRepository;
+import vn.vietroute.auth.repository.RoleResourceRepository;
 import vn.vietroute.auth.security.AccessPermissionDefinitions;
 import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.base.PageResponse;
@@ -50,6 +51,7 @@ public class AccessResourceService {
             bootstrap.initialize(connection, SystemActor.ID);
             features.synchronize(connection, inventory, serviceCodes);
             resources.synchronize(connection, inventory);
+            RoleResourceRepository.initializeLegacy(connection);
             recovery.grantAll(connection, SystemActor.ID);
             return null;
         });
@@ -66,6 +68,13 @@ public class AccessResourceService {
     }
 
     private record Definition(List<AccessResourceResponse> inventory, Set<String> serviceCodes) {}
+
+    /** Metadata bất biến của node hiện tại; không lấy cờ public do DB chỉnh để làm yếu guard nguồn. */
+    public List<AccessResourceResponse> inventory() {
+        var current = definition;
+        if (current == null) throw new IllegalStateException("Danh bạ endpoint chưa khởi tạo");
+        return current.inventory();
+    }
 
     /** Quyền đặt tại service để lời gọi ngoài controller cũng không đọc được danh bạ quản trị. */
     @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.READ)

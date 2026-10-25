@@ -63,6 +63,14 @@ public final class AccessAuthorization {
             : binding.permissions().stream().anyMatch(codes::contains);
     }
 
+    /** Guard nguồn vẫn bắt buộc; tài nguyên riêng còn phải có mapping DB chính xác. */
+    public static boolean allows(Binding binding, Authentication auth, String target) {
+        if (!allows(binding, auth)) return false;
+        // Chỉ giữ đường tự phục vụ đã khai báo rõ trong source, có kiểm chủ sở hữu tại service.
+        if (binding.permissions().isEmpty()) return binding.authenticated();
+        return auth.getDetails() instanceof ResourceEntitlements grants && grants.allows(target, binding);
+    }
+
     /** Gộp quyền sinh từ action với mã tương thích cũ; chỉ metadata server được dùng, không đoán theo HTTP verb. */
     public static List<String> permissions(AccessFunction declaration) {
         var result = new ArrayList<String>(List.of(declaration.permissions()));
@@ -78,7 +86,8 @@ public final class AccessAuthorization {
             item.publicRoute() ||
             allows(
                 new Binding(item.function(), item.declaredPermissions(), item.match(), item.adminOnly(), false),
-                auth
+                auth,
+                item.target()
             )
         );
     }

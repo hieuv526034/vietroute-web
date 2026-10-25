@@ -52,6 +52,8 @@ public class AccessService {
 
     private final AccessChangeService changes;
 
+    private final RoleResourceService resourceGrants;
+
     /** Registry quyền được dịch theo locale; không truy vấn hay tiết lộ dữ liệu tài khoản. */
     @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.READ)
     public List<PermissionResponse> permissions(Locale locale) {
@@ -113,7 +115,9 @@ public class AccessService {
             }
             access.requireExistingRole(connection, role);
             access.validateMappings(connection, Set.of(), request.getPermissions());
+            resourceGrants.requireDelegable(connection, role, actor);
             access.replacePermissions(connection, role, request.getPermissions(), request.getVersion(), actor.id());
+            resourceGrants.fromPermissions(connection, role, request.getPermissions(), actor);
             var after = access.role(connection, role);
             changes.mappings(
                 connection,
@@ -163,7 +167,8 @@ public class AccessService {
                     .collect(Collectors.toSet());
                 Set<Role> affected = new LinkedHashSet<>(target.getRoles());
                 affected.addAll(request.getRoles());
-                for (Role assigned : affected)
+                for (Role assigned : affected) {
+                    resourceGrants.requireDelegable(connection, assigned, actor);
                     if (
                         access
                             .role(connection, assigned)
@@ -171,6 +176,7 @@ public class AccessService {
                             .stream()
                             .anyMatch(permission -> !granted.contains(permission.name()))
                     ) throw new BusinessException(ErrorCode.ACCESS_DENIED);
+                }
             }
             if (
                 target.isActive() &&

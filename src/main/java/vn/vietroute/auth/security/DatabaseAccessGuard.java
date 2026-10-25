@@ -2,6 +2,7 @@ package vn.vietroute.auth.security;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.aopalliance.intercept.MethodInvocation;
@@ -46,7 +47,13 @@ public class DatabaseAccessGuard {
                 operation.any().stream().anyMatch(current.permissions()::contains));
         // Gọi bean trực tiếp không qua HTTP interceptor: thân service cũng phải kiểm ủy quyền bằng đúng snapshot mới.
         // Actor truyền vào còn role cũ sẽ bị AccessActors từ chối, thay vì dùng ADMIN/authority đã bị thu hồi.
-        if (allowed) SecurityContextHolder.getContext().setAuthentication(snapshot(authentication, current));
+        var refreshed = snapshot(authentication, current);
+        if (
+            allowed && refreshed.getDetails() instanceof ResourceEntitlements grants && grants.requestTarget() != null
+        ) {
+            allowed = AccessAuthorization.allows(grants.requestBinding(), refreshed, grants.requestTarget());
+        }
+        if (allowed) SecurityContextHolder.getContext().setAuthentication(refreshed);
         return allowed;
     }
 
@@ -114,7 +121,7 @@ public class DatabaseAccessGuard {
                       .map(role -> new SimpleGrantedAuthority("ROLE_" + role.name())),
                   current.permissions().stream().map(SimpleGrantedAuthority::new)
               ).toList();
-        return UsernamePasswordAuthenticationToken.authenticated(
+        var result = UsernamePasswordAuthenticationToken.authenticated(
             new UserPrincipal(
                 current.id(),
                 principal.username(),
@@ -126,6 +133,31 @@ public class DatabaseAccessGuard {
             null,
             granted
         );
+        var previous = authentication.getDetails() instanceof ResourceEntitlements grants ? grants : null;
+        result.setDetails(
+            new ResourceEntitlements(
+                current.ready() ? current.resourceTargets() : Set.of(),
+                current.ready() ? current.legacyPermissions() : Set.of(),
+                previous == null ? null : previous.requestTarget(),
+                previous == null ? null : previous.requestBinding()
+            )
+        );
+        return result;
+    }
+
+    /** Đính metadata của handler sau refresh, không lưu request/token trong snapshot. */
+    public Authentication bindRequest(
+        Authentication authentication,
+        String target,
+        AccessAuthorization.Binding binding
+    ) {
+        if (
+            authentication instanceof UsernamePasswordAuthenticationToken token &&
+            token.getDetails() instanceof ResourceEntitlements grants
+        ) {
+            token.setDetails(new ResourceEntitlements(grants.targets(), grants.legacyPermissions(), target, binding));
+        }
+        return authentication;
     }
 
     /** SQL lỗi được truyền ra để trả 503 đã lọc; tuyệt đối không fallback về authorities cũ khi DB không đọc được. */
