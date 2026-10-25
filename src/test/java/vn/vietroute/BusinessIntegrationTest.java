@@ -743,6 +743,77 @@ class BusinessIntegrationTest {
         var result = json.readTree(response.getContentAsString()).path("data");
         assertEquals(1, result.path("totalElements").asInt());
         assertEquals(150000, result.at("/content/0/unitPrice").asInt());
+        var apiDocument = mvc.perform(request(HttpMethod.GET, "/v3/api-docs")).andReturn().getResponse();
+        assertEquals(200, apiDocument.getStatus());
+        var parameters = json.readTree(apiDocument.getContentAsString()).at("/paths/~1api~1v1~1trips/get/parameters");
+        assertTrue(
+            parameters
+                .findValuesAsText("name")
+                .containsAll(
+                    Set.of(
+                        "fromLocationId",
+                        "fromProvinceId",
+                        "toLocationId",
+                        "toProvinceId",
+                        "date",
+                        "seats",
+                        "carrierId",
+                        "vehicleTypeId",
+                        "minPrice",
+                        "maxPrice",
+                        "page",
+                        "size"
+                    )
+                )
+        );
+        assertEquals(
+            1,
+            call(200, "GET", path + "&minPrice=150000&maxPrice=150000&carrierId=" + fixture.carrier(), null, admin)
+                .path("totalElements")
+                .asInt()
+        );
+        assertEquals(
+            0,
+            call(200, "GET", path + "&maxPrice=149999.99", null, admin)
+                .path("totalElements")
+                .asInt()
+        );
+        assertEquals(
+            0,
+            call(200, "GET", path + "&minPrice=150000.01", null, admin)
+                .path("totalElements")
+                .asInt()
+        );
+        assertEquals(
+            0,
+            call(200, "GET", path + "&carrierId=" + id("carriers", "DEMOBACNAM"), null, admin)
+                .path("totalElements")
+                .asInt()
+        );
+        long type = Long.parseLong(sql("SELECT vehicle_type_id FROM carrier_vehicles WHERE id=" + fixture.vehicle()));
+        assertEquals(
+            1,
+            call(200, "GET", path + "&vehicleTypeId=" + type, null, admin)
+                .path("totalElements")
+                .asInt()
+        );
+        long otherType = Long.parseLong(
+            sql("SELECT min(id) FROM catalog_items WHERE type='VEHICLE_TYPE' AND id<>" + type)
+        );
+        assertEquals(
+            0,
+            call(200, "GET", path + "&vehicleTypeId=" + otherType, null, admin)
+                .path("totalElements")
+                .asInt()
+        );
+        var priceError = mvc
+            .perform(request(HttpMethod.GET, path + "&minPrice=2&maxPrice=1"))
+            .andReturn()
+            .getResponse();
+        assertEquals(400, priceError.getStatus());
+        assertEquals("VAL015", json.readTree(priceError.getContentAsString()).at("/errors/0/code").asText());
+        call(400, "GET", path + "&minPrice=-1", null, admin);
+        call(400, "GET", path + "&maxPrice=1.001", null, admin);
         assertEquals(
             0,
             call(200, "GET", path.replace(pickupDate.toString(), pickupDate.minusDays(1).toString()), null, admin)

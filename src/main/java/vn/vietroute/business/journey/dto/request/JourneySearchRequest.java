@@ -2,9 +2,12 @@ package vn.vietroute.business.journey.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import lombok.Getter;
 import lombok.Setter;
@@ -50,6 +53,22 @@ public class JourneySearchRequest extends PageRequest {
     @Min(value = 1, message = "{validation.invalid}")
     @Schema(description = "Lọc loại xe")
     private Long vehicleTypeId;
+
+    @DecimalMin(value = "0", message = "{validation.invalid}")
+    @Digits(integer = 10, fraction = 2, message = "{validation.invalid}")
+    @Schema(description = "Giá một chỗ tối thiểu VND trên cặp điểm, bao gồm cận")
+    private BigDecimal minPrice;
+
+    @DecimalMin(value = "0", message = "{validation.invalid}")
+    @Digits(integer = 10, fraction = 2, message = "{validation.invalid}")
+    @Schema(description = "Giá một chỗ tối đa VND trên cặp điểm, bao gồm cận")
+    private BigDecimal maxPrice;
+
+    @AssertTrue(message = "{validation.priceRange}")
+    @Schema(hidden = true)
+    public boolean isPriceRangeValid() {
+        return minPrice == null || maxPrice == null || minPrice.compareTo(maxPrice) <= 0;
+    }
 
     @AssertTrue(message = "{validation.invalid}")
     @Schema(hidden = true)

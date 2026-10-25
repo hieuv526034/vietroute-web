@@ -38,7 +38,7 @@ public class JourneyRepository extends BaseRepository {
             String filter =
                 " FROM carrier_trips t JOIN carriers c ON c.id=t.carrier_id AND c.scope_id=t.scope_id JOIN auth_data_scopes ds ON ds.id=t.scope_id JOIN trip_stops pick ON pick.trip_id=t.id AND pick.pickup_allowed AND pick.actual_departure_at IS NULL JOIN trip_stops dropoff ON dropoff.trip_id=t.id AND dropoff.dropoff_allowed AND dropoff.stop_order>pick.stop_order JOIN LATERAL (SELECT min(capacity-reserved_seats) AS remaining,count(*) AS segments FROM trip_segments seg WHERE seg.trip_id=t.id AND seg.segment_order>=pick.stop_order AND seg.segment_order<dropoff.stop_order) avail ON avail.segments=dropoff.stop_order-pick.stop_order WHERE c.active AND ds.active AND " +
                 PUBLISHED +
-                " AND (t.status='IN_PROGRESS' OR (t.status='OPEN' AND t.departure_at>CURRENT_TIMESTAMP)) AND pick.scheduled_departure_at>=? AND pick.scheduled_departure_at<? AND ((?::bigint IS NOT NULL AND pick.location_id=?) OR (?::bigint IS NULL AND pick.province_id=?)) AND ((?::bigint IS NOT NULL AND dropoff.location_id=?) OR (?::bigint IS NULL AND dropoff.province_id=?)) AND (?::bigint IS NULL OR c.id=?) AND (?::bigint IS NULL OR t.vehicle_type_id=?) AND avail.remaining>=?";
+                " AND (t.status='IN_PROGRESS' OR (t.status='OPEN' AND t.departure_at>CURRENT_TIMESTAMP)) AND pick.scheduled_departure_at>=? AND pick.scheduled_departure_at<? AND ((?::bigint IS NOT NULL AND pick.location_id=?) OR (?::bigint IS NULL AND pick.province_id=?)) AND ((?::bigint IS NOT NULL AND dropoff.location_id=?) OR (?::bigint IS NULL AND dropoff.province_id=?)) AND (?::bigint IS NULL OR c.id=?) AND (?::bigint IS NULL OR t.vehicle_type_id=?) AND avail.remaining>=? AND (?::numeric IS NULL OR dropoff.cumulative_fare-pick.cumulative_fare>=?) AND (?::numeric IS NULL OR dropoff.cumulative_fare-pick.cumulative_fare<=?)";
             long total;
             try (var query = connection.prepareStatement("SELECT count(*)" + filter)) {
                 bind(query, body);
@@ -101,6 +101,10 @@ public class JourneyRepository extends BaseRepository {
         query.setObject(at++, body.getVehicleTypeId());
         query.setObject(at++, body.getVehicleTypeId());
         query.setInt(at++, body.getSeats());
+        query.setBigDecimal(at++, body.getMinPrice());
+        query.setBigDecimal(at++, body.getMinPrice());
+        query.setBigDecimal(at++, body.getMaxPrice());
+        query.setBigDecimal(at++, body.getMaxPrice());
         return at;
     }
 

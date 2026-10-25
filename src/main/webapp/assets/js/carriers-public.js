@@ -46,6 +46,9 @@
     };
     const detail = async (id) => {
         selected = (await api.get(`${path}/${id}`, { timeout: 10000 })).data.data;
+        const base = document.querySelector('meta[name="app-base"]').content;
+        node('public-carrier-trips').href =
+            `${base}/journeys?lang=${document.documentElement.lang}&carrierId=${selected.id}`;
         const summary = node('public-carrier-summary');
         summary.replaceChildren(
             text('h3', selected.name),
@@ -117,7 +120,6 @@
         if (window.VietRouteForms.validate(form)) void perform(() => load({ ...pager.query, page: 0 }));
     });
     node('public-carrier-refresh').addEventListener('click', () => perform(() => load()));
-    node('public-carrier-detail-refresh').addEventListener('click', () => perform(() => detail(selected.id)));
     void perform(async () => {
         await load();
         const id = Number(new URLSearchParams(location.search).get('carrierId'));

@@ -65,7 +65,7 @@
                         <button
                             type="submit"
                             class="button"
-                            th:text="#{ui.ops.search}"
+                            th:text="#{ui.search}"
                         ></button>
                     </form>
                     <div
@@ -128,12 +128,11 @@
                             data-dialog-close
                             th:text="#{ui.ops.close}"
                         ></button>
-                        <button
-                            id="public-carrier-detail-refresh"
-                            type="button"
+                        <a
+                            id="public-carrier-trips"
                             class="button"
-                            th:text="#{ui.ops.refresh}"
-                        ></button>
+                            th:text="#{ui.publicCarrier.findTrips}"
+                        ></a>
                     </div>
                 </fieldset>
             </dialog>
