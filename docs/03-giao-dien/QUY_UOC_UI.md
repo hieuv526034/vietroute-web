@@ -220,3 +220,5 @@ Bằng chứng preview PostgreSQL cô lập: [thu/hoàn desktop](../images/repor
 ## Cấp tài khoản tài xế — AUTH03
 
 Bảng Hồ sơ tài xế thêm icon cấp tài khoản chỉ cho hồ sơ chưa liên kết khi capability POST account và canAssign scoped đều đúng. Modal riêng nêu rõ nhà xe/hồ sơ, username/email/mật khẩu tạm và việc hồ sơ tạm ngừng đến khi đổi mật khẩu/xác minh email. Form/feedback/modal/focus/busy dùng component chung, không lưu password vào tab/storage. Lỗi giữ draft/version, không tự retry; đóng hoặc thành công xóa credential khỏi form. Không tự đánh dấu email đã xác minh hoặc tài xế đã sẵn sàng phân công chỉ vì tạo account thành công.
+
+Browser preview cô lập đã kiểm vi/en: [validation modal](../images/auth03-validation.png), [390px](../images/auth03-mobile.png), page 390/modal 352/content 350 không tràn; nút cấp tài khoản không xuất hiện ở hồ sơ đã liên kết. Submit rỗng giữ modal/focus/lỗi cạnh field; đóng và mở lại xóa username/email đã nhập. Happy path tạo credential/membership/link và race/rollback được kiểm qua API PostgreSQL test; không tạo account mới trên Neon để chụp UI.
