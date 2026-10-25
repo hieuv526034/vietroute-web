@@ -2789,3 +2789,59 @@ fieldset:disabled .button[type='submit']::before,
 #route-workspace .records-table {
     min-width: 740px;
 }
+
+/* Picker chuyến có tìm/trang độc lập, co trong modal để nút không tràn viewport hẹp. */
+.trip-picker {
+    min-width: 0;
+}
+.trip-picker > label {
+    display: grid;
+    gap: 6px;
+}
+.trip-picker-search,
+.trip-picker-paging {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    align-items: center;
+}
+.trip-picker-search input {
+    min-width: 0;
+    flex: 1;
+}
+.trip-picker-search .button,
+.trip-picker-paging .button {
+    flex-shrink: 0;
+    padding: 8px;
+}
+.trip-picker-paging {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    font-size: 0.8rem;
+}
+#trip-form .grid-span {
+    grid-column: 1 / -1;
+}
+#trip-workspace .records-table {
+    min-width: 980px;
+}
+.trip-filters {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(150px, 190px) minmax(160px, 200px) auto;
+    gap: 12px;
+    align-items: end;
+    margin-bottom: 18px;
+}
+.trip-filters label {
+    margin: 0;
+    display: grid;
+    gap: 6px;
+}
+.trip-filters > .button {
+    margin: 0;
+}
+@media (max-width: 760px) {
+    .trip-filters {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

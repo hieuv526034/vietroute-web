@@ -182,3 +182,9 @@ Các màn `/operations/carriers`, `/operations/vehicles`, `/operations/drivers` 
 ## Tuyến và thứ tự điểm — ROUTE01
 
 `/operations/routes` dùng VIEW độc lập READ, phân trang server và modal hai tab Thông tin/Điểm dừng. Mã/nhà xe giữ bất biến khi sửa. Điểm có select tìm qua lookup, giờ lệch phút, giá cộng dồn, quyền đón/trả và nút lên/xuống/bỏ; nhóm điểm có nhãn ARIA theo thứ tự. READ mở chi tiết chỉ đọc, UPDATE scoped mới có sửa. Lỗi nghiệp vụ/version/401 giữ modal và draft; không tự gửi lại. Footer bên phải, busy chặn đóng, focus giữ trong dialog. Hai ngôn ngữ đã kiểm từ app thật; [tab điểm desktop](../images/route01-stops.jpg), [modal 390px](../images/route01-mobile.jpg) dùng dữ liệu PostgreSQL preview cô lập.
+
+## Điều hành chuyến — TRIP01
+
+Trang `/operations/trips` có bộ lọc từ khóa/trạng thái/ngày Việt Nam, bảng cuộn riêng và modal Thông tin chuyến/Điểm dừng/Lịch sử. Tạo nháp chọn nhà xe/tuyến/xe/tài xế bằng picker có từ khóa và trang server; phụ thuộc bị xóa khi đổi nhà xe, lựa chọn ngoài trang vẫn được giữ. Chỉnh sửa giữ code/carrier/route, giờ chỉ sửa khi DRAFT; các thao tác đổi phân công/mở/hủy dùng endpoint và version riêng. Hủy cần lý do, lỗi giữ modal/draft; busy khóa tab/form và chặn đóng. Quyền UI lấy capabilities/endpoint cộng canUpdate scoped; VIEW không thay READ.
+
+Form chung gắn dấu bắt buộc vào span tiêu đề của label bọc control, tránh dấu nằm riêng một hàng; label không có span giữ cách cũ. Timestamp lưu UTC, UI hiển thị/nhập giờ Việt Nam kể cả trình duyệt dùng múi giờ khác. Preview app thật/PostgreSQL cô lập đã kiểm tạo/lưu/mở bán, lỗi capacity TRIP001 giữ giá trị 30 và sửa lại lưu được, tab snapshot/lịch sử vi/en. 390px: page width 390, modal width 352/scrollWidth 335, không tràn trang. Ảnh [snapshot điểm](../images/trip01-stops.png), [chi tiết mobile tiếng Anh](../images/trip01-mobile.png); trạng thái triển khai ở tiến độ, không suy từ ảnh localhost là đã có trên Render.

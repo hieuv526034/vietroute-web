@@ -21,6 +21,14 @@ public final class ApplicationConstants {
         private SystemActor() {}
     }
 
+    /** Ngày nghiệp vụ hiển thị theo giờ Việt Nam; timestamp lưu UTC bằng Instant. */
+    public static final class Business {
+
+        public static final String TIME_ZONE = "Asia/Ho_Chi_Minh";
+
+        private Business() {}
+    }
+
     /** Mỗi biến môi trường khai báo đúng một lần; không tạo toString chứa giá trị cấu hình. */
     public enum Env {
         // Môi trường, JWT và tài khoản bootstrap.
@@ -238,6 +246,22 @@ public final class ApplicationConstants {
         public static final String ROUTES_PAGE = "/operations/routes";
 
         public static final String ADMIN_ROUTES = ADMIN_API + "/routes";
+
+        public static final String TRIPS_PAGE = "/operations/trips";
+
+        public static final String ADMIN_TRIPS = ADMIN_API + "/trips";
+
+        public static final String DRIVER_TRIPS_PAGE = "/driver/trips";
+
+        public static final String DRIVER_TRIPS = API + DRIVER_TRIPS_PAGE;
+
+        public static final String TRIP_CHOICES = "/choices";
+
+        public static final String TRIP_ASSIGNMENT = BY_ID + "/assignment";
+
+        public static final String TRIP_STATE = BY_ID + "/state";
+
+        public static final String TRIP_PROGRESS = BY_ID + "/progress";
 
         public static final String CARRIER_CHOICES = "/carriers";
 

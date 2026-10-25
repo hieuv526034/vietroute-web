@@ -50,6 +50,10 @@ public final class AccessConstants {
 
         public static final String ROUTE = "ROUTE";
 
+        public static final String TRIP = "TRIP";
+
+        public static final String DRIVER_TRIP = "DRIVER_TRIP";
+
         public static final String DEMO = "DEMO";
 
         public static final String LOCATION = "LOCATION";
@@ -81,6 +85,10 @@ public final class AccessConstants {
         public static final String PROVINCE = "PROVINCE";
 
         public static final String BUSINESS = "BUSINESS";
+
+        public static final String TRIP = "TRIP";
+
+        public static final String DRIVER_TRIP = "DRIVER_TRIP";
 
         public static final String ROUTE = "ROUTE";
 

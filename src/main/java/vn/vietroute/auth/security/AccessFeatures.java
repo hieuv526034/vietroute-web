@@ -79,6 +79,13 @@ public final class AccessFeatures {
             Groups.ROUTE + "_VIEW"
         ),
         new Feature(
+            Functions.TRIP,
+            Functions.BUSINESS,
+            "access.function.TRIP",
+            Routes.TRIPS_PAGE,
+            Groups.TRIP + "_VIEW"
+        ),
+        new Feature(
             Functions.MEDIA,
             Functions.SYSTEM,
             "access.function.MEDIA",
