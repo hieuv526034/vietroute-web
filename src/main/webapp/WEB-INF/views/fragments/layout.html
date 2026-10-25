@@ -122,6 +122,7 @@
                             <a
                                 th:if="${item.path != null}"
                                 th:href="${basePath + item.path + '?lang=' + currentLocale}"
+                                th:attr="aria-current=${currentPath == (basePath + item.path)} ? 'page' : null"
                                 th:text="#{ui.workspace.overview}"
                             ></a>
                             <th:block th:insert="~{fragments/layout :: functionMenuItems(${item.children})}"></th:block>

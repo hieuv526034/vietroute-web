@@ -161,14 +161,38 @@ for page_path in jobs access configuration api-journal; do
 done
 for locale in vi en; do
   call 200 GET "/admin?lang=$locale" '' cookie
-  grep -q 'catalog-workspace' "$result"
-  grep -q 'catalog-previous' "$result"
-  grep -q 'catalog-dialog' "$result"
-  grep -q 'data-tab-target="overview-panel"' "$result"
-  grep -q '/assets/js/workspace.js' "$result"
-  grep -q '/assets/js/catalog.js' "$result"
+  grep -q 'dashboard-links' "$result"
   grep -q 'aria-current="page"' "$result"
+  if grep -q 'catalog-workspace' "$result"; then exit 1; fi
+  for catalog_path in vehicle-types booking-sources; do
+    call 200 GET "/catalogs/$catalog_path?lang=$locale" '' cookie
+    grep -q 'catalog-workspace' "$result"
+    grep -q 'catalog-previous' "$result"
+    grep -q 'catalog-dialog' "$result"
+    grep -q 'catalog-search' "$result"
+    grep -q '/assets/js/workspace.js' "$result"
+    grep -q '/assets/js/catalog.js' "$result"
+    grep -q 'aria-current="page"' "$result"
+    if grep -q 'overview-panel\|??ui\.' "$result"; then exit 1; fi
+  done
+  for catalog_path in provinces locations; do
+    call 200 GET "/catalogs/$catalog_path?lang=$locale" '' cookie
+    grep -q 'location-workspace' "$result"
+    grep -q "data-section=\"$catalog_path\"" "$result"
+    if grep -q '??ui\.' "$result"; then exit 1; fi
+  done
+  for fleet_path in carriers vehicles drivers; do
+    call 200 GET "/operations/$fleet_path?lang=$locale" '' cookie
+    grep -q 'fleet-workspace' "$result"
+    grep -q "data-kind=\"$fleet_path\"" "$result"
+    grep -q 'fleet-dialog' "$result"
+    grep -q 'fleet-previous' "$result"
+    if grep -q '??ui\.' "$result"; then exit 1; fi
+  done
+  call 200 GET "/operations/demo?lang=$locale" '' cookie
+  grep -q 'demo-create' "$result"
   if grep -q '??ui\.' "$result"; then exit 1; fi
+  [[ "$(sql 'SELECT count(*) FROM carriers')" == 0 ]]
   call 200 GET "/media?lang=$locale" '' cookie
   grep -q 'data-enabled="false"' "$result"
   grep -q 'media-dialog' "$result"
