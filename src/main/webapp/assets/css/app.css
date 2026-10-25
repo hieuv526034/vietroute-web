@@ -2905,3 +2905,61 @@ fieldset:disabled .button[type='submit']::before,
 .driver-passenger-table {
     min-width: 780px;
 }
+
+.report-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+    gap: 1rem;
+    margin: 1.25rem 0;
+}
+
+.report-metrics > div {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1rem;
+    min-width: 0;
+}
+
+.report-metrics dt {
+    font-weight: 500;
+    color: var(--muted);
+}
+.report-metrics dd {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0.5rem 0 0;
+    overflow-wrap: anywhere;
+}
+.report-status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 1.5rem;
+}
+
+#report-form {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 760px) {
+    #report-form {
+        grid-template-columns: 1fr;
+    }
+}
+
+#report-workspace .form-help {
+    font-size: 13px;
+}
+#report-workspace .picker-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    grid-column: 1 / -1;
+}
+#report-workspace .picker-toolbar input {
+    flex: 1 1 200px;
+    width: auto;
+}
+#report-workspace .toolbar-actions {
+    grid-column: 1 / -1;
+}

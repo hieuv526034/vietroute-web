@@ -209,6 +209,14 @@ Tab danh sách đón/trả trong `/driver/trips` dùng API assigned và phân tr
 
 Trang tìm chuyến gom nhà xe/loại xe/giá vào nhóm Lọc thêm, mặc định thu gọn và tự mở khi đến từ nhà xe. Hai picker có tìm/trang và giữ lựa chọn ngoài trang, tải song song với địa điểm. Khoảng giá dùng server validation VAL015, lỗi đặt tại giá tối đa và giữ lựa chọn; sửa một trong hai cận bỏ lỗi quan hệ cũ để gửi lại chủ động. Bảng kết quả/quote luôn lấy dữ liệu server. Hai ngôn ngữ và mobile 390px giữ vùng cuộn bảng riêng, không tràn trang. Bằng chứng fixture local: [lọc nhà xe/loại xe/giá và kết quả](../images/search02-filters.png), [chi tiết nhà xe mobile](../images/detail01-mobile.png). Bằng chứng dữ liệu Neon nằm ở tiến độ.
 
+## Báo cáo vận hành — REPORT01
+
+`/operations/reports` có bộ lọc ngày khởi hành Việt Nam/nhà xe và picker có tìm kiếm/phân trang REPORT_READ riêng. Hai tab Chuyến và đặt chỗ / Giá trị và thu-hoàn tái sử dụng workspace.js, ARIA và bàn phím. Số liệu trạng thái là tập 5 mã hữu hạn; không lấy trang đơn rồi cộng trên JavaScript. API trả aggregate có scope và snapshot. Nhãn phân biệt lượt chỗ/ghế vật lý, giá trị đặt/tiền đã thu, tiền đơn hủy còn phải hoàn và nhóm chuyến/ngày thu.
+
+Lỗi giữ bộ lọc, 401 có link đăng nhập lại; báo cáo cũ bị ẩn lúc gửi điều kiện mới, không ghép số cũ với khoảng ngày mới. VIEW không có READ chỉ hiện giải thích thiếu quyền. Nút dùng component màu chung, filter/money card co theo màn hình; không tự gọi mutation khi đọc.
+
+Bằng chứng preview PostgreSQL cô lập: [thu/hoàn desktop](../images/report01-money.png), [báo cáo tiếng Anh 390px](../images/report01-mobile.png). Kiểm VAL016 giữ filter, sửa cận gửi lại và ArrowLeft chuyển tab đạt. Fixture tiền 100 nghìn thu/hoàn trong ảnh chỉ ở local, không là giao dịch Neon.
+
 ## Cấp tài khoản tài xế — AUTH03
 
 Bảng Hồ sơ tài xế thêm icon cấp tài khoản chỉ cho hồ sơ chưa liên kết khi capability POST account và canAssign scoped đều đúng. Modal riêng nêu rõ nhà xe/hồ sơ, username/email/mật khẩu tạm và việc hồ sơ tạm ngừng đến khi đổi mật khẩu/xác minh email. Form/feedback/modal/focus/busy dùng component chung, không lưu password vào tab/storage. Lỗi giữ draft/version, không tự retry; đóng hoặc thành công xóa credential khỏi form. Không tự đánh dấu email đã xác minh hoặc tài xế đã sẵn sàng phân công chỉ vì tạo account thành công.
