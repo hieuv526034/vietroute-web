@@ -152,12 +152,20 @@ call 200 GET /api/v1/admin/system/runtime '' bearer
 [[ "$(field data.databaseProbeEnabled)" == True ]]
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["heapUsedBytes"]>0 and len(d["instanceId"])==36' "$result"
 printf 'System management stage: protected pages, safe config and account lookup\n'
-for page_path in jobs access configuration api-journal; do
+for page_path in jobs access access/resources configuration api-journal; do
   for locale in vi en; do
     call 200 GET "/operations/$page_path?lang=$locale" '' cookie
     if [[ "$page_path" == api-journal ]]; then
       grep -q 'journal-dialog' "$result"
       grep -q 'journal-export-tab' "$result"
+    elif [[ "$page_path" == access ]]; then
+      grep -q 'data-role-workspace' "$result"
+      grep -q 'roles-controls' "$result"
+      grep -q 'grants-dialog' "$result"
+      grep -q '/assets/js/resource-grants.js' "$result"
+    elif [[ "$page_path" == access/resources ]]; then
+      grep -q 'data-resource-inventory' "$result"
+      grep -q 'inventory-controls' "$result"
     else
       grep -q 'data-operations=' "$result"
       grep -q 'ops-controls' "$result"

@@ -44,7 +44,7 @@ call 200 POST /api/v1/auth/login "$work/login.json" cookie
 token=$(field data.accessToken)
 # Ngừng node thứ hai để không có startup sync tự sửa trong lúc kiểm đường thủ công.
 docker stop vietroute-auth-ci2 >/dev/null
-sql "DELETE FROM auth_user_roles WHERE role_code='ADMIN'; DELETE FROM auth_role_permissions WHERE role_code='ADMIN'; DELETE FROM auth_roles WHERE code='ADMIN'; DELETE FROM auth_role_permissions WHERE permission_code='CATALOG_DELETE'; DELETE FROM auth_permissions WHERE code='CATALOG_DELETE'; UPDATE auth_permissions SET active=false WHERE code='CATALOG_UPDATE'" >/dev/null
+sql "DELETE FROM auth_user_roles WHERE role_code='ADMIN'; DELETE FROM auth_role_permissions WHERE role_code='ADMIN'; DELETE FROM auth_role_resource_sets WHERE role_code='ADMIN'; DELETE FROM auth_roles WHERE code='ADMIN'; DELETE FROM auth_role_permissions WHERE permission_code='CATALOG_DELETE'; DELETE FROM auth_permissions WHERE code='CATALOG_DELETE'; UPDATE auth_permissions SET active=false WHERE code='CATALOG_UPDATE'" >/dev/null
 recovery_damaged_ordinary=$(sql "SELECT md5(COALESCE(string_agg(role_code||':'||permission_code,',' ORDER BY role_code,permission_code),'')) FROM auth_role_permissions WHERE role_code<>'ADMIN'")
 sql "INSERT INTO auth_access_policies(kind,target,name_vi,name_en,enabled,required_permissions,allowed_roles) VALUES ('MENU','GET /account','Chặn account cũ','Legacy account deny',false,'','')" >/dev/null
 call 403 GET /api/v1/admin/access/tree '' bearer

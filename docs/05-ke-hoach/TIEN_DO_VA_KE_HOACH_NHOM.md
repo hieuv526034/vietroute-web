@@ -6,6 +6,9 @@ hieuv526034 thực hiện trên `hieuv526034/access24-menu-api`, base main `8996
 
 
 
+CI source đầu `fd7d491`: Java/PostgreSQL, build image, Tomcat và loại test/secret khỏi WAR đạt; [container](https://github.com/hieuv526034/vietroute-web/actions/runs/40194949476) dừng ở verify-auth.sh:162 còn kiểm data-operations/ops-controls của UI cũ. Đã đổi assertion đúng màn Role/cây và thêm màn Menu/API, giữ HTTP/locale/security checks; fixture giả lập xóa ADMIN dọn marker V022 trước để tuân FK mới. Không chấp nhận CI đỏ làm nghiệm thu cuối. [Format](https://github.com/hieuv526034/vietroute-web/actions/runs/40194949480) và [docs](https://github.com/hieuv526034/vietroute-web/actions/runs/40194949650) của head đầu đạt.
+
+
 ## BUSINESS05 — Đã có trên main: dữ liệu chuẩn, breadcrumb và dashboard theo nghiệp vụ
 
 Đã merge [PR #125](https://github.com/hieuv526034/vietroute-web/pull/125), main `b4d919f`, head đã kiểm `28e5df9`. Ba CI cuối đạt: [container/PostgreSQL](https://github.com/hieuv526034/vietroute-web/actions/runs/40184861098), [format/quy tắc](https://github.com/hieuv526034/vietroute-web/actions/runs/40184861113), [tài liệu](https://github.com/hieuv526034/vietroute-web/actions/runs/40184861104). Bản source gồm breadcrumb `066c4d6`, dashboard `4d9c922` và đồng bộ assertion container `28e5df9`; giữ tác giả hieuv526034. Các đoạn dưới ghi lại mốc source/dữ liệu và cách kiểm, không coi lượt CI đầu thất bại là nghiệm thu cuối.
