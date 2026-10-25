@@ -19,6 +19,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
@@ -793,6 +794,148 @@ class BusinessIntegrationTest {
         call(201, "POST", "/api/v1/my-bookings", bookingBody(trip, 1, 2, 1, UUID.randomUUID()), owner);
         call(200, "GET", "/my-bookings?lang=vi", null, owner);
         call(200, "GET", "/my-bookings?lang=en", null, owner);
+    }
+
+    @Test
+    void concurrentWebRequestsAcrossTripsLeaveOnlyOneActiveBooking() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        var owner = customer("parallelcustomer");
+        long first = openBookingTrip(fixture, "WEBRACEONE", Instant.now().plus(2, ChronoUnit.DAYS));
+        long second = openBookingTrip(fixture, "WEBRACETWO", Instant.now().plus(4, ChronoUnit.DAYS));
+        String firstBody = bookingBody(first, 1, 2, 1, UUID.randomUUID());
+        String secondBody = bookingBody(second, 1, 2, 1, UUID.randomUUID());
+        var start = new CountDownLatch(1);
+        var workers = Executors.newFixedThreadPool(2);
+        try {
+            var one = workers.submit(() -> {
+                start.await();
+                return mutationStatus(HttpMethod.POST, "/api/v1/my-bookings", firstBody, owner);
+            });
+            var two = workers.submit(() -> {
+                start.await();
+                return mutationStatus(HttpMethod.POST, "/api/v1/my-bookings", secondBody, owner);
+            });
+            start.countDown();
+            assertEquals(Set.of(201, 409), Set.of(one.get(20, TimeUnit.SECONDS), two.get(20, TimeUnit.SECONDS)));
+        } finally {
+            workers.shutdownNow();
+        }
+        assertEquals("1", sql("SELECT count(*) FROM bookings WHERE source_code='WEB' AND status='PENDING'"));
+        assertEquals("0", sql("SELECT sum(reserved_seats) FROM trip_segments"));
+    }
+
+    @Test
+    void concurrentTripCancellationCannotLeaveConfirmedBookingOrReservedSeats() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        long trip = openBookingTrip(fixture, "CANCELCONFIRMRACE", Instant.now().plus(2, ChronoUnit.DAYS));
+        long id = call(201, "POST", "/api/v1/admin/bookings", bookingBody(trip, 1, 3, 4, UUID.randomUUID()), admin)
+            .path("id")
+            .asLong();
+        var start = new CountDownLatch(1);
+        var workers = Executors.newFixedThreadPool(2);
+        try {
+            var confirm = workers.submit(() -> {
+                start.await();
+                return mutationStatus(
+                    HttpMethod.PUT,
+                    "/api/v1/admin/bookings/" + id + "/state",
+                    "{\"status\":\"CONFIRMED\",\"version\":0,\"note\":\"\"}",
+                    admin
+                );
+            });
+            var cancel = workers.submit(() -> {
+                start.await();
+                return mutationStatus(
+                    HttpMethod.PUT,
+                    "/api/v1/admin/trips/" + trip + "/state",
+                    "{\"status\":\"CANCELLED\",\"version\":1,\"note\":\"Hủy đồng thời TEST\"}",
+                    admin
+                );
+            });
+            start.countDown();
+            assertEquals(200, cancel.get(20, TimeUnit.SECONDS));
+            assertTrue(Set.of(200, 409).contains(confirm.get(20, TimeUnit.SECONDS)));
+        } finally {
+            workers.shutdownNow();
+        }
+        assertEquals("CANCELLED", sql("SELECT status FROM carrier_trips WHERE id=" + trip));
+        assertEquals("CANCELLED", sql("SELECT status FROM bookings WHERE id=" + id));
+        assertEquals("0", sql("SELECT sum(reserved_seats) FROM trip_segments WHERE trip_id=" + trip));
+        assertEquals(
+            "1",
+            sql("SELECT count(*) FROM booking_events WHERE booking_id=" + id + " AND event_type='CANCELLED'")
+        );
+    }
+
+    @Test
+    void concurrentDepartureAndConfirmationCannotConfirmAfterPickupCloses() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        var driver = tripDriver(fixture);
+        long trip = openBookingTrip(fixture, "DEPARTCONFIRMRACE", Instant.now().plusSeconds(120));
+        long id = call(201, "POST", "/api/v1/admin/bookings", bookingBody(trip, 1, 3, 4, UUID.randomUUID()), admin)
+            .path("id")
+            .asLong();
+        var start = new CountDownLatch(1);
+        var workers = Executors.newFixedThreadPool(2);
+        int confirmed;
+        try {
+            var confirm = workers.submit(() -> {
+                start.await();
+                return mutationStatus(
+                    HttpMethod.PUT,
+                    "/api/v1/admin/bookings/" + id + "/state",
+                    "{\"status\":\"CONFIRMED\",\"version\":0,\"note\":\"\"}",
+                    admin
+                );
+            });
+            var depart = workers.submit(() -> {
+                start.await();
+                return mutationStatus(
+                    HttpMethod.PUT,
+                    "/api/v1/driver/trips/" + trip + "/progress",
+                    "{\"action\":\"START\",\"stopOrder\":1,\"version\":1,\"note\":\"\"}",
+                    driver
+                );
+            });
+            start.countDown();
+            assertEquals(200, depart.get(20, TimeUnit.SECONDS));
+            confirmed = confirm.get(20, TimeUnit.SECONDS);
+            assertTrue(Set.of(200, 409).contains(confirmed));
+        } finally {
+            workers.shutdownNow();
+        }
+        assertEquals("IN_PROGRESS", sql("SELECT status FROM carrier_trips WHERE id=" + trip));
+        assertEquals(confirmed == 200 ? "CONFIRMED" : "REJECTED", sql("SELECT status FROM bookings WHERE id=" + id));
+        assertEquals(
+            confirmed == 200 ? "8" : "0",
+            sql("SELECT sum(reserved_seats) FROM trip_segments WHERE trip_id=" + trip)
+        );
+        assertEquals(
+            "1",
+            sql(
+                "SELECT count(*) FROM trip_stops WHERE trip_id=" +
+                    trip +
+                    " AND stop_order=1 AND actual_departure_at IS NOT NULL"
+            )
+        );
+    }
+
+    /** Dùng trong hai phiên đồng thời; trả status thật để kiểm cả hai thứ tự commit hợp lệ. */
+    private int mutationStatus(HttpMethod method, String path, String body, Authentication actor) throws Exception {
+        return mvc
+            .perform(
+                request(method, path)
+                    .with(authentication(actor))
+                    .with(csrf())
+                    .contentType("application/json")
+                    .content(body)
+            )
+            .andReturn()
+            .getResponse()
+            .getStatus();
     }
 
     @Test
