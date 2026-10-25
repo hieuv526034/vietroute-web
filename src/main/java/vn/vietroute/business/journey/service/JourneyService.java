@@ -58,7 +58,11 @@ public class JourneyService {
     /** Count/page đúng pickup local date và remaining theo chặng, không tính lại tại JS. */
     public PageResponse<JourneyMatchResponse> search(JourneySearchRequest body) {
         BusinessRules.require(
-            body.getDate() != null && body.isRouteDefined() && body.getSeats() > 0 && body.getSeats() <= 200,
+            body.getDate() != null &&
+                body.isRouteDefined() &&
+                body.isPriceRangeValid() &&
+                body.getSeats() > 0 &&
+                body.getSeats() <= 200,
             ErrorCode.INVALID_REQUEST
         );
         return journeys.search(body);

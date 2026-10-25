@@ -15,6 +15,7 @@ public final class WebRoutePolicy {
     public static List<String> publicMatchers() {
         return List.of(
             Routes.HOME,
+            Routes.PUBLIC_CARRIERS_PAGE,
             Routes.JOURNEYS_PAGE,
             Routes.HEALTH,
             Routes.LOGIN,
@@ -69,6 +70,7 @@ public final class WebRoutePolicy {
     public static boolean recoversInvalidCookie(String path, String method) {
         return (
             path.equals(Routes.HOME) ||
+            path.equals(Routes.PUBLIC_CARRIERS_PAGE) ||
             path.equals(Routes.JOURNEYS_PAGE) ||
             path.equals(Routes.LOGIN) ||
             path.equals(Routes.DOCS) ||
@@ -85,6 +87,8 @@ public final class WebRoutePolicy {
             Routes.CATALOG_MATCHER,
             Routes.PROVINCES,
             Routes.LOCATIONS,
+            Routes.PUBLIC_CARRIERS,
+            Routes.PUBLIC_CARRIERS_MATCHER,
             Routes.PUBLIC_TRIPS,
             Routes.PUBLIC_TRIPS_MATCHER
         );
@@ -96,6 +100,8 @@ public final class WebRoutePolicy {
             (path.startsWith(Routes.CATALOG_PREFIX) ||
                 path.equals(Routes.PROVINCES) ||
                 path.equals(Routes.LOCATIONS) ||
+                path.equals(Routes.PUBLIC_CARRIERS) ||
+                path.startsWith(Routes.PUBLIC_CARRIERS + "/") ||
                 path.equals(Routes.PUBLIC_TRIPS) ||
                 path.startsWith(Routes.PUBLIC_TRIPS + "/"))
         );

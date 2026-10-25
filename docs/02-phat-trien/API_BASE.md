@@ -322,7 +322,15 @@ V020 thêm `bookings`/`booking_events`, giữ V001–V019. Đơn gắn FK compos
 
 Mutation khóa trip → user (chỉ tạo WEB) → booking → segments tăng dần. `TripCapacityRepository` là một thuật toán dùng chung; confirm tăng đúng [pickup,dropoff), hủy CONFIRMED giảm đúng một lần, kiểm liên tục và đủ mọi chặng. CAS và booking_events cùng transaction; history lỗi rollback. UUID tạo/tiền replay cùng actor và nội dung trả kết quả cũ, khác nội dung bị chặn; không tự retry mutation. Hủy trip cascade PENDING/CONFIRMED và giải phóng chỗ trong transaction trip. START/DEPART đóng PENDING tại điểm đã rời; ARRIVE hoàn thành CONFIRMED ở điểm trả, giữ reserved lịch sử. Hoàn thành/hủy kết thúc ràng buộc một WEB active.
 
-BOOKING001 dữ liệu sai/400, BOOKING002 thiếu chỗ/409, BOOKING003 trạng thái/409, BOOKING004 đã có WEB active/409, BOOKING005 UUID khác nội dung/409, BOOKING006 thu/hoàn vượt giới hạn/400; version cũ COM008/409. Tiền hủy chưa hoàn có refundDue, không tự ghi đã hoàn. Trang `/journeys` công khai, `/my-bookings` MY_BOOKING_VIEW và `/operations/bookings` BOOKING_VIEW độc lập READ. Startup sync registry/ADMIN khi bật; CUSTOMER/OPERATOR vẫn cần mapping DB tường minh. Maps/GPS, tra cứu nhà xe và báo cáo tiếp tục riêng; không suy từ chi tiết text là đã có GPS thật.
+BOOKING001 dữ liệu sai/400, BOOKING002 thiếu chỗ/409, BOOKING003 trạng thái/409, BOOKING004 đã có WEB active/409, BOOKING005 UUID khác nội dung/409, BOOKING006 thu/hoàn vượt giới hạn/400; version cũ COM008/409. Tiền hủy chưa hoàn có refundDue, không tự ghi đã hoàn. Trang `/journeys` công khai, `/my-bookings` MY_BOOKING_VIEW và `/operations/bookings` BOOKING_VIEW độc lập READ. Startup sync registry/ADMIN khi bật; CUSTOMER/OPERATOR vẫn cần mapping DB tường minh. Maps/GPS và báo cáo tiếp tục riêng; không suy từ chi tiết text là đã có GPS thật.
+
+## Tra cứu nhà xe và bộ lọc chuyến — DETAIL01/SEARCH02
+
+GET `/api/v1/carriers` công khai nhận query/page/size; count/trang trong SQL, từ khóa nguyên văn không phân biệt hoa/thường, thứ tự tên/id ổn định. GET `/{id}` chỉ nhà xe và scope còn active, còn lại 404. DTO chỉ id/code/name/phone/description/logoUrl, không scope/audit/version/nhân sự/customer. Đây là thông tin và liên hệ nhà xe đã công bố; không dùng staff membership để lọc lựa chọn của khách. Các API quản trị `/api/v1/admin/carriers` và metadata `/api/v1/media/{id}` vẫn có guard riêng, không mở theo matcher public.
+
+Logo được lấy từ FK server sau kiểm công bố, dùng MediaService đọc URL READY theo lô tối đa 100 ID trên cùng connection, không gọi CDN/N+1 hoặc trả provider ID/metadata thư viện. Ảnh không READY không công bố URL. Trang `/carriers` có tìm/phân trang, modal liên hệ và link `/journeys?carrierId=...`; URL chỉ là bộ lọc, không là quyền/scope.
+
+GET `/api/v1/trips` thêm minPrice/maxPrice nullable: giá một chỗ VND trên đúng cặp điểm, gồm hai cận, không âm, tối đa 10 chữ số phần nguyên/2 thập phân và min≤max. Khoảng đảo trả 400/COM001 với field priceRangeValid, VAL015/validation.priceRange; OpenAPI gồm cả from/to, date/seats/carrierId/vehicleTypeId/minPrice/maxPrice/page/size kế thừa. Picker nhà xe dùng public projection trên; loại xe dùng catalog lookup active, đều có tìm/trang và giữ lựa chọn ngoài trang. Giá và count vẫn tính tại DB, không lọc sau phân trang ở JavaScript. Không migration hoặc ordinary role grant mới.
 
 ## Báo cáo vận hành — REPORT01
 

@@ -27,6 +27,14 @@
         page: 0,
         hasNext: false,
     }));
+    const filters = Array.from(form.querySelectorAll('.journey-filter-picker')).map((element) => ({
+        element,
+        kind: element.dataset.kind,
+        query: element.querySelector('[data-filter-query]'),
+        select: element.querySelector('[data-filter-select]'),
+        page: 0,
+        hasNext: false,
+    }));
     const text = (tag, value) => {
         const item = document.createElement(tag);
         item.textContent = String(value ?? '');
@@ -61,6 +69,10 @@
         for (const picker of pickers) {
             picker.element.querySelector('[data-place-prev]').disabled = busy || picker.page === 0;
             picker.element.querySelector('[data-place-next]').disabled = busy || !picker.hasNext;
+        }
+        for (const filter of filters) {
+            filter.element.querySelector('[data-filter-prev]').disabled = busy || filter.page === 0;
+            filter.element.querySelector('[data-filter-next]').disabled = busy || !filter.hasNext;
         }
     };
     const perform = async (action) => {
@@ -141,6 +153,22 @@
         if (!page.content.length) empty(labels.empty);
         pager.update(page);
     };
+    const findFilter = async (filter, page = 0) => {
+        const path = filter.kind === 'CARRIER' ? '/api/v1/carriers' : '/api/v1/catalogs/VEHICLE_TYPE';
+        const result = (
+            await api.get(path, { params: { query: filter.query.value.trim(), page, size: 10 }, timeout: 10000 })
+        ).data.data;
+        const current = filter.select.selectedOptions[0],
+            options = result.content.map((item) => option(item.id, `${item.name} · ${item.code}`));
+        if (current?.value && !result.content.some((item) => String(item.id) === current.value))
+            options.unshift(option(current.value, current.textContent));
+        filter.select.replaceChildren(option('', labels.all), ...options);
+        if (current?.value) filter.select.value = current.value;
+        filter.page = result.page;
+        filter.hasNext = result.hasNext;
+        filter.element.querySelector('[data-filter-count]').textContent =
+            `${result.totalElements ? result.page + 1 : 0} / ${result.totalPages}`;
+    };
     const detail = () => {
         const item = selected,
             confirmed = item.stops.filter((stop) => stop.actualArrivalAt).at(-1);
@@ -198,10 +226,17 @@
             node('journey-dialog-title').focus();
         });
     };
+    // Đổi một cận phải bỏ lỗi quan hệ cũ ở cận còn lại; server vẫn kiểm lại toàn bộ khoảng giá.
+    for (const name of ['minPrice', 'maxPrice'])
+        form.elements[name].addEventListener('input', () =>
+            window.VietRouteForms.clear(form.elements.maxPrice.closest('label')),
+        );
     form.addEventListener('submit', (event) => {
         event.preventDefault();
         if (busy || !window.VietRouteForms.validate(form)) return;
         criteria = { date: form.elements.date.value, seats: form.elements.seats.value };
+        for (const name of ['carrierId', 'vehicleTypeId', 'minPrice', 'maxPrice'])
+            if (form.elements[name].value) criteria[name] = form.elements[name].value;
         for (const picker of pickers)
             criteria[picker.side + (picker.kind.value === 'LOCATION' ? 'LocationId' : 'ProvinceId')] =
                 picker.select.value;
@@ -230,6 +265,23 @@
             }
         });
     }
+    for (const filter of filters) {
+        filter.element
+            .querySelector('[data-filter-search]')
+            .addEventListener('click', () => perform(() => findFilter(filter)));
+        filter.element
+            .querySelector('[data-filter-prev]')
+            .addEventListener('click', () => perform(() => findFilter(filter, filter.page - 1)));
+        filter.element
+            .querySelector('[data-filter-next]')
+            .addEventListener('click', () => perform(() => findFilter(filter, filter.page + 1)));
+        filter.query.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                void perform(() => findFilter(filter));
+            }
+        });
+    }
     node('journey-refresh').addEventListener('click', () =>
         perform(async () => {
             selected = (await api.get(`/api/v1/trips/${selected.id}`, { timeout: 10000 })).data.data;
@@ -248,7 +300,20 @@
                 .map((part) => [part.type, part.value]),
         );
         form.elements.date.value = `${parts.year}-${parts.month}-${parts.day}`;
-        for (const picker of pickers) await findPlaces(picker);
+        await Promise.all([
+            ...pickers.map((picker) => findPlaces(picker)),
+            ...filters.map((filter) => findFilter(filter)),
+        ]);
+        const params = new URLSearchParams(location.search),
+            carrierId = Number(params.get('carrierId'));
+        if (Number.isSafeInteger(carrierId) && carrierId > 0) {
+            const carrier = (await api.get(`/api/v1/carriers/${carrierId}`, { timeout: 10000 })).data.data,
+                select = form.elements.carrierId;
+            if (!Array.from(select.options).some((item) => item.value === String(carrierId)))
+                select.append(option(carrier.id, `${carrier.name} · ${carrier.code}`));
+            select.value = String(carrierId);
+            form.querySelector('.journey-filters').open = true;
+        }
         empty(labels.empty);
         if (labels.authenticated === 'true') {
             const access = await window.VietRouteAccess.load('MY_BOOKING');

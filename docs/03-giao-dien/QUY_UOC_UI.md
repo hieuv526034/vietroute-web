@@ -203,6 +203,12 @@ Preview thật với account DRIVER trong DB local riêng đã đi đủ START �
 
 Tab danh sách đón/trả trong `/driver/trips` dùng API assigned và phân trang server, chỉ CONFIRMED/COMPLETED với chặng/tên/điện thoại/số chỗ. Cập nhật tiến độ tải lại danh sách để phản ánh tự đóng/hoàn thành đơn. Bảng cuộn trong vùng riêng, cột icon 96px, form/modal giữ chuẩn workspace, vi/en và 390px (page 390/modal 352/scrollWidth 335). Bằng chứng app local với fixture giả: [lỗi WEB thứ hai giữ bản nháp](../images/booking01-draft.png), [lịch sử đơn tiếng Anh mobile](../images/booking01-mobile.png), [danh sách khách được giao](../images/booking01-passengers.png), [tìm chuyến còn 18 chỗ sau xác nhận PHONE 2 chỗ](../images/search01-results.png). Trạng thái triển khai/dữ liệu thật ghi ở tiến độ, không suy từ ảnh local.
 
+## Tra cứu nhà xe và lọc chuyến — DETAIL01/SEARCH02
+
+`/carriers` xuất hiện độc lập trên header cho khách; bảng server paging/từ khóa có cột thao tác icon 96px và vùng cuộn riêng. Modal đọc tên/giới thiệu/điện thoại được công bố, logo READY nếu có, nút gọi tel và tìm chuyến của nhà xe; giữ một nút chính, Close phụ, không thêm tab thừa cho một nhóm thông tin. Liên kết chức năng gốc không có con dùng đúng tên chức năng trong menu, tránh gọi Đơn của tôi thành Tổng quan. [Menu khách 390px](../images/detail01-menu-mobile.png) có panel 351px từ trái 12 đến phải 363 trong vùng trang 375px, các link kéo đủ chiều ngang; không co về phải.
+
+Trang tìm chuyến gom nhà xe/loại xe/giá vào nhóm Lọc thêm, mặc định thu gọn và tự mở khi đến từ nhà xe. Hai picker có tìm/trang và giữ lựa chọn ngoài trang, tải song song với địa điểm. Khoảng giá dùng server validation VAL015, lỗi đặt tại giá tối đa và giữ lựa chọn; sửa một trong hai cận bỏ lỗi quan hệ cũ để gửi lại chủ động. Bảng kết quả/quote luôn lấy dữ liệu server. Hai ngôn ngữ và mobile 390px giữ vùng cuộn bảng riêng, không tràn trang. Bằng chứng fixture local: [lọc nhà xe/loại xe/giá và kết quả](../images/search02-filters.png), [chi tiết nhà xe mobile](../images/detail01-mobile.png). Bằng chứng dữ liệu Neon nằm ở tiến độ.
+
 ## Báo cáo vận hành — REPORT01
 
 `/operations/reports` có bộ lọc ngày khởi hành Việt Nam/nhà xe và picker có tìm kiếm/phân trang REPORT_READ riêng. Hai tab Chuyến và đặt chỗ / Giá trị và thu-hoàn tái sử dụng workspace.js, ARIA và bàn phím. Số liệu trạng thái là tập 5 mã hữu hạn; không lấy trang đơn rồi cộng trên JavaScript. API trả aggregate có scope và snapshot. Nhãn phân biệt lượt chỗ/ghế vật lý, giá trị đặt/tiền đã thu, tiền đơn hủy còn phải hoàn và nhóm chuyến/ngày thu.
