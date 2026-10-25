@@ -339,7 +339,7 @@ call 200 POST /api/v1/auth/login "$work/login.json" cookie
 admin_token=$(field data.accessToken)
 token="$admin_token"
 printf 'Media stage: migration, owner scope, multipart limits and disabled provider\n'
-media_id=$(sql "INSERT INTO media_assets(public_id,status,url,thumbnail_url,format,bytes,width,height,created_by,updated_by) VALUES ('ci-public-image','READY','https://res.cloudinary.com/demo/image/upload/sample.png','https://res.cloudinary.com/demo/image/upload/sample.png','png',128,64,32,1,1) RETURNING id" | head -n 1)
+media_id=$(sql "INSERT INTO media_assets(public_id,status,url,thumbnail_url,format,bytes,width,height,created_by,updated_by) VALUES ('ci-public-image','READY','https://res.cloudinary.com/demo/image/upload/sample.png','https://res.cloudinary.com/demo/image/upload/sample.png','png',128,64,32,1,1) RETURNING id" | sed -n '1p')
 call 200 GET "/api/v1/media/$media_id" '' bearer
 [[ "$(field data.createdBy)" == 1 ]]
 call 200 GET /media '' cookie

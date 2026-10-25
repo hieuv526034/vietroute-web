@@ -33,7 +33,7 @@ done
 call 200 GET /api/v1/admin/access/permissions '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert next(x for x in d if x["code"]=="BOOKING_LIST")["actions"]==["LIST"]; assert next(x for x in d if x["code"]=="BOOKING_DETAIL")["actions"]==["DETAIL"]' "$result"
 call 200 PUT /api/v1/admin/access/roles/SYSTEMSET_CI/permissions "$work/tree-system-permissions.json" bearer
-tree_system_user=$(sql "INSERT INTO auth_users(username,display_name,password_hash,active,email_verified_at,must_change_password,created_by,updated_by) SELECT 'treesystem','System set CI',password_hash,true,CURRENT_TIMESTAMP,false,1,1 FROM auth_users WHERE id=1 RETURNING id" | head -n1)
+tree_system_user=$(sql "INSERT INTO auth_users(username,display_name,password_hash,active,email_verified_at,must_change_password,created_by,updated_by) SELECT 'treesystem','System set CI',password_hash,true,CURRENT_TIMESTAMP,false,1,1 FROM auth_users WHERE id=1 RETURNING id" | sed -n '1p')
 printf '%s\n' '{"roles":["SYSTEMSET_CI"],"version":0}' > "$work/tree-system-roles.json"
 call 200 PUT "/api/v1/admin/access/users/$tree_system_user/roles" "$work/tree-system-roles.json" bearer
 login_body treesystem "$next_password"
@@ -51,7 +51,8 @@ token="$tree_admin_token"
 printf '%s\n' '{"permissions":["CATALOG_VIEW","CATALOG_CREATE"],"version":0}' > "$work/tree-permissions.json"
 call 200 PUT /api/v1/admin/access/roles/ENTRY_CI/permissions "$work/tree-permissions.json" bearer
 call 200 PUT /api/v1/admin/access/roles/ALT_CI/permissions "$work/tree-permissions.json" bearer
-tree_user=$(sql "INSERT INTO auth_users(username,display_name,password_hash,active,email_verified_at,must_change_password,created_by,updated_by) SELECT 'treeentry','Tree entry',password_hash,true,CURRENT_TIMESTAMP,false,1,1 FROM auth_users WHERE id=1 RETURNING id" | head -n1)
+# Đọc hết output docker exec để pipefail không bắt SIGPIPE khi chỉ cần dòng ID đầu.
+tree_user=$(sql "INSERT INTO auth_users(username,display_name,password_hash,active,email_verified_at,must_change_password,created_by,updated_by) SELECT 'treeentry','Tree entry',password_hash,true,CURRENT_TIMESTAMP,false,1,1 FROM auth_users WHERE id=1 RETURNING id" | sed -n '1p')
 printf '%s\n' '{"roles":["ENTRY_CI"],"version":0}' > "$work/tree-roles.json"
 call 200 PUT "/api/v1/admin/access/users/$tree_user/roles" "$work/tree-roles.json" bearer
 login_body treeentry "$next_password"
@@ -126,7 +127,7 @@ call 200 PUT /api/v1/admin/access/roles/POWER_CI/permissions "$work/tree-power.j
 # Role được ủy quyền quản trị: không cần ADMIN nhưng không cấp vượt quyền, tự sửa hoặc đụng ADMIN/system.
 printf '%s\n' '{"permissions":["ACCESS_VIEW","ACCESS_READ","ACCESS_ASSIGN","ACCESS_CREATE","ACCESS_UPDATE","ACCESS_DELETE","CATALOG_VIEW","CATALOG_CREATE","EXTRA_READ"],"version":0}' > "$work/tree-manager.json"
 call 200 PUT /api/v1/admin/access/roles/MANAGER_CI/permissions "$work/tree-manager.json" bearer
-tree_manager=$(sql "INSERT INTO auth_users(username,display_name,password_hash,active,email_verified_at,must_change_password,created_by,updated_by) SELECT 'treemanager','Tree manager',password_hash,true,CURRENT_TIMESTAMP,false,1,1 FROM auth_users WHERE id=1 RETURNING id" | head -n1)
+tree_manager=$(sql "INSERT INTO auth_users(username,display_name,password_hash,active,email_verified_at,must_change_password,created_by,updated_by) SELECT 'treemanager','Tree manager',password_hash,true,CURRENT_TIMESTAMP,false,1,1 FROM auth_users WHERE id=1 RETURNING id" | sed -n '1p')
 printf '%s\n' '{"roles":["MANAGER_CI","POWER_CI"],"version":0}' > "$work/tree-roles.json"
 call 200 PUT "/api/v1/admin/access/users/$tree_manager/roles" "$work/tree-roles.json" bearer
 printf '%s\n' '{"nameVi":"Tạm tắt","nameEn":"Disabled","active":false,"version":0}' > "$work/tree-disable.json"

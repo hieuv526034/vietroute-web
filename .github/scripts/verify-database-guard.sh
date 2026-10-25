@@ -6,7 +6,7 @@ printf '%s\n' '{"nameVi":"Kiểm DB guard","nameEn":"DB guard CI","active":true,
 call 201 POST /api/v1/admin/access/registry/roles/DB_GUARD_CI "$work/db-guard-role.json" bearer
 printf '%s\n' '{"permissions":["BOOKING_LIST"],"version":0}' > "$work/db-guard-permission.json"
 call 200 PUT /api/v1/admin/access/roles/DB_GUARD_CI/permissions "$work/db-guard-permission.json" bearer
-guard_user=$(sql "INSERT INTO auth_users(username,display_name,password_hash,active,email_verified_at,must_change_password) SELECT 'dbguardci','DB guard CI',password_hash,true,CURRENT_TIMESTAMP,false FROM auth_users WHERE id=1 RETURNING id" | head -n1)
+guard_user=$(sql "INSERT INTO auth_users(username,display_name,password_hash,active,email_verified_at,must_change_password) SELECT 'dbguardci','DB guard CI',password_hash,true,CURRENT_TIMESTAMP,false FROM auth_users WHERE id=1 RETURNING id" | sed -n '1p')
 sql "INSERT INTO auth_user_roles(user_id,role_code) VALUES ($guard_user,'DB_GUARD_CI')" >/dev/null
 # Compile helper test ngoài image/WAR; chỉ copy vào container tạm đã chạy để gọi class production.
 javac -proc:none -encoding UTF-8 -cp "$account_cp" -d "$work/guard-tools" src/test/resources/dev/DatabaseGuardInspector.java
