@@ -232,3 +232,9 @@ Fragment tracking dùng chung, nút màu xanh/outline theo chuẩn. Hiển thị
 watchPosition chỉ chạy sau nút chủ động, không lưu nonce/tọa độ/token vào storage. Đóng modal/ẩn trang/offline/pagehide clearWatch ngay, thử stop và không tự bật lại. Stop không tới server vẫn chịu lease; lỗi HTTP giữ modal, 401 có link đăng nhập, không tự gửi lại mẫu hoặc làm mới timestamp của mẫu cũ. Geo API từ chối/timeout/không hỗ trợ có thông báo và lộ trình văn bản. Tám test Node dùng adapter thiết bị giả kiểm các nhánh này, không là bằng chứng đã lấy GPS vật lý.
 
 Browser app/PostgreSQL preview cô lập: [staff thấy Maps chưa cấu hình và chia sẻ OFF](../images/track01-staff-unconfigured.png), [tài xế/consent và khóa bật trước giờ](../images/track01-driver-consent.png), [390px](../images/track01-mobile.png) page390/modal352/scroll335 không tràn. Khách đơn hủy thấy UNAVAILABLE và không có nút phát vị trí; console không lỗi. Không bấm xin quyền vị trí thật trong browser QA, không coi Node adapter/SQL fixture là GPS vật lý đã nghiệm thu.
+
+## Breadcrumb và khoảng cách khối — BUSINESS05
+
+Các trang dùng fragment breadcrumb chung, dữ liệu từ cây menu đã lọc VIEW/policy tại server. Trang chủ, nhóm và trang hiện tại là link giữ context WAR/locale; nhóm không có trang riêng trỏ tới trang con đầu tiên được phép mở. Không suy URL từ query, không hiện đường tới trang bị ẩn quyền. Nhãn hiện tại có aria-current=page; danh sách wrap trên điện thoại. URL địa lý cũ dẫn về mục danh mục tương ứng.
+
+Các panel cùng cấp cách nhau 24px, grid dùng gap thay vì ép card sát nhau. Không thêm margin vào panel đang hidden hoặc làm hiện nhiều tab; kiểm desktop và390px bằng dữ liệu thật/fixture riêng. Không thay guard hoặc mutation khi sửa layout.

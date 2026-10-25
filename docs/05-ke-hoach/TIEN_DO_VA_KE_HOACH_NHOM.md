@@ -1,5 +1,16 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
+
+## BUSINESS05 — Đang làm: luồng/dữ liệu chuẩn, breadcrumb, khoảng cách card rồi dashboard
+
+Ngày 25/10/2026, chủ dự án chốt ưu tiên luồng và dữ liệu, chưa xử lý provider/hạ tầng; “demo” là cách mô tả yêu cầu, dữ liệu phải đúng quan hệ/nghiệp vụ, được dùng tên/liên hệ cá nhân giả hợp lệ. Thêm breadcrumb bấm được trên các màn, giãn card và chỉ làm dashboard sau rà nghiệp vụ. hieuv526034 thực hiện `hieuv526034/business14-luong-du-lieu-dieu-huong` từ main `e0a2bb7`; không đổi tác giả lịch sử hoặc cấp ngoại lệ account mới.
+
+Đã chuẩn hóa 25 bản ghi nền Neon bằng API versioned: tên danh mục/tỉnh, ba bến xe/địa chỉ/tọa độ tham chiếu, hai nhà xe VietRoute, bốn biển số, bốn hồ sơ tài xế và bốn mẫu tuyến. Mã/ID legacy giữ để không phá FK; lịch sử/snapshot chuyến cũ không viết lại. Ba tên hiển thị được đổi qua API hồ sơ của chính account; email/hash/role/membership không đổi. Dữ liệu người/liên hệ/biển số là tổng hợp theo yêu cầu, không là bằng chứng đã xác thực cá nhân/đơn vị vận tải. Địa chỉ công khai đối chiếu [Bến xe Miền Đông mới](https://www.benxemiendongmoi.com.vn/Map/Rental), [Bến xe Trung tâm Đà Nẵng](https://benxedanang.vn/); tọa độ là điểm tham chiếu cấu hình, không GPS thiết bị hoặc xác nhận cổng đón chính xác. Thời gian/giá là chính sách nhà xe cấu hình, không biểu giá/lịch vận tải công bố của bến.
+
+Đã tạo VR20261105HN/08SG/11HN/14SG OPEN từ mẫu đã chuẩn hóa, capacity29/40/29/40, cùng driver01 và cách3ngày, không trùng lịch cũ. VR8 WEB custom01 PENDING1chỗ; VR9 PHONE PENDING2chỗ; VR10 PHONE CONFIRMED3chỗ. VR3 khởi tạo cũ được custom01 hủy qua service với lý do thay yêu cầu theo lịch đã chuẩn hóa, giữ lịch sử và giải phóng đúng chặng. Không xóa đơn/chuyến hoặc giả actual/thu-hoàn/GPS. Kiểm chỉ đọc: current trips còn29/37/29/40 chỗ, custom01 có4đơn/1active, driver01 có8trip, operator01 có10đơn đúngscope, cả ba không quản trị account. Báo cáo 01/10–30/11 có8trip/10đơn/6lượtchỗ/giátrị4,5triệu/thu-hoàn0. Không chạy lại helper khởi tạo cũ để ép ghi đè tên hoặc trạng thái.
+
+Breadcrumb dùng cây menu đã lọc quyền, nhóm không có page trỏ tới trang con được mở, giữ context/locale và trang hiện tại. UI chung bỏ mô tả DEMO trên luồng sử dụng. Test nghiệp vụ dùng PostgreSQL loopback; một lượt dừng do portable PG ngừng, đã khởi động lại đúng15439 và chạy lại, không kiểm ghi Neon. Sau khôi phục PG loopback, BusinessIntegrationTest40/40, PageBreadcrumbsTest2/2 và AuthNavigationTest1/1 đạt. Bắt đầu dashboard sau mốc này; trạng thái/CI/ảnh và phần tiếp theo cập nhật tại đây/PR.
+
 ## BUSINESS04 — Đã có trên main và kiểm Render: tuyến, chuyến, đặt vé và tài khoản dùng ngay
 
 Ngày 25/10/2026, chủ dự án yêu cầu hoàn thiện nghiệp vụ còn thiếu, cấp sẵn ba account đã tạo và nạp dữ liệu/quyền lên Neon để sử dụng ngay. hieuv526034 thực hiện trên `hieuv526034/business04-tuyen-chuyen-dat-ve`, base main `892b17d`, [Issue #113](https://github.com/hieuv526034/vietroute-web/issues/113). Tác giả thực giữ nguyên; phân công tương lai không là lý do đổi author. Kiểm source bằng PostgreSQL cô lập, PR/CI trước triển khai và dữ liệu vận hành trên Neon.

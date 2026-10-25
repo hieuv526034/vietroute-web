@@ -28,6 +28,7 @@ import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.constant.AccessConstants.Functions;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.web.locale.SupportedLocaleResolver;
+import vn.vietroute.common.web.response.PageBreadcrumbs;
 
 /** Model layout dùng chung: base path, locale và thông tin principal an toàn, không chứa token/hash. */
 @ControllerAdvice
@@ -63,15 +64,11 @@ public class PageModelAdvice {
         Map<String, Boolean> pages = capabilities
             .stream()
             .collect(Collectors.toMap(AccessCapabilityResponse::function, AccessCapabilityResponse::view));
-        model.addAttribute(
-            "functionNavigation",
-            AccessNavigation.build(
-                pages,
-                request.getRequestURI().substring(request.getContextPath().length()),
-                new SupportedLocaleResolver().resolveLocale(request),
-                messages
-            )
-        );
+        String current = request.getRequestURI().substring(request.getContextPath().length());
+        var locale = new SupportedLocaleResolver().resolveLocale(request);
+        var menu = AccessNavigation.build(pages, current, locale, messages);
+        model.addAttribute("functionNavigation", menu);
+        model.addAttribute("breadcrumbs", PageBreadcrumbs.build(menu, current, locale, messages));
         model.addAttribute("catalogAllowed", pages.getOrDefault(Functions.CATALOG, false));
         model.addAttribute("mediaAllowed", pages.getOrDefault(Functions.MEDIA, false));
         model.addAttribute("jobsAllowed", pages.getOrDefault(Functions.JOBS, false));

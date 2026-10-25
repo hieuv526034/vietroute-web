@@ -2992,3 +2992,54 @@ fieldset:disabled .button[type='submit']::before,
     font-weight: 650;
     margin-top: 1rem;
 }
+
+/* Khoảng cách giữa các khối cùng cấp; grid giữ gap riêng, panel ẩn không chiếm diện tích. */
+.workspace-page > .panel ~ .panel,
+.workspace-page > fieldset > .panel ~ .panel,
+.workspace-page [role='tabpanel'] > .panel ~ .panel {
+    margin-top: 24px;
+}
+.page-breadcrumbs {
+    padding-top: 20px;
+}
+.page-breadcrumbs ol {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 13px;
+}
+.page-breadcrumbs li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.page-breadcrumbs li + li::before {
+    content: '/';
+    color: var(--muted);
+}
+.page-breadcrumbs a {
+    color: var(--green);
+    text-decoration: none;
+    padding: 4px 0;
+    overflow-wrap: anywhere;
+}
+.page-breadcrumbs a:hover {
+    text-decoration: underline;
+}
+.page-breadcrumbs a[aria-current='page'] {
+    color: var(--ink);
+    font-weight: 600;
+}
+.page-breadcrumbs + .workspace-page {
+    padding-top: 24px;
+}
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    gap: 24px;
+}

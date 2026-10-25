@@ -7,6 +7,7 @@
     <head th:replace="~{fragments/layout :: head(#{ui.ops.access})}"></head>
     <body>
         <header th:replace="~{fragments/layout :: header}"></header>
+        <nav th:replace="~{fragments/layout :: breadcrumbs}"></nav>
         <main
             class="container-xl py-5 operations-page"
             data-operations="access"

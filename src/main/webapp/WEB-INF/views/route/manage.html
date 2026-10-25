@@ -6,6 +6,7 @@
     <head th:replace="~{fragments/layout :: head(#{ui.route.title})}"></head>
     <body>
         <header th:replace="~{fragments/layout :: header}"></header>
+        <nav th:replace="~{fragments/layout :: breadcrumbs}"></nav>
         <main
             id="route-workspace"
             class="container-xl workspace-page"
