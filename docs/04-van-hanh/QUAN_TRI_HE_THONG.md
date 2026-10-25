@@ -1,6 +1,6 @@
 # Giao diện quản trị hệ thống
 
-Cập nhật 24/10/2026. Các màn này hoàn thiện nền tảng trước nghiệp vụ nhà xe/chuyến/booking. Dùng menu **Hệ thống** sau khi đăng nhập; link chỉ xuất hiện theo quyền hiện hành. Backend vẫn kiểm quyền kể cả khi nhập URL hoặc gọi API trực tiếp.
+Cập nhật 25/10/2026. Dùng menu **Hệ thống** và **Quản trị truy cập** sau khi đăng nhập; link chỉ xuất hiện theo quyền hiện hành. Nghiệp vụ nhà xe/chuyến/booking đã có màn riêng; trạng thái triển khai và bằng chứng nằm ở [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md). Backend vẫn kiểm quyền kể cả khi nhập URL hoặc gọi API trực tiếp.
 
 ## Các màn đã triển khai trong source
 
@@ -37,7 +37,7 @@ GET /api/v1/admin/access/users?username=Ad&page=0&size=20
 
 `username` là prefix không phân biệt hoa/thường, chữ/số tối đa 32 ký tự; rỗng để xem tất cả. Chọn tường minh id/username/displayName/active/roles/version/createdAt/updatedAt; không đọc password hash vào DTO hoặc trả token/credential. Role được ủy quyền có ACCESS_READ cũng liệt kê tài khoản, không trả credential. Query dùng PreparedStatement, không wildcard do người dùng cung cấp và không N+1 theo từng user. Nếu dữ liệu lớn cần đo query plan và cân nhắc index prefix qua migration mới, không sửa migration đã áp dụng.
 
-Chọn tài khoản để sửa các role; không tự sửa role bản thân. Ghi dùng API PUT đã có, cần thêm ACCESS_ASSIGN/ACCESS_WRITE và version hiện hành; actor không ADMIN chỉ gán role có quyền nằm trong tập mình có, không đụng user ADMIN/system hoặc bản thân; backend bảo vệ admin cuối và thu hồi token cũ của user đích. ADMIN cấp tài khoản/mật khẩu tạm tại menu Tài khoản; người nhận tự đổi mật khẩu. Scope quản trị có tab riêng trong Phân quyền, khác hồ sơ nhà xe/tài xế và phạm vi booking chưa triển khai; xem [kế hoạch nhóm](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
+Chọn tài khoản để sửa các role; không tự sửa role bản thân. Ghi dùng API PUT đã có, cần thêm ACCESS_ASSIGN/ACCESS_WRITE và version hiện hành; actor không ADMIN chỉ gán role có quyền nằm trong tập mình có, không đụng user ADMIN/system hoặc bản thân; backend bảo vệ admin cuối và thu hồi token cũ của user đích. ADMIN cấp tài khoản/mật khẩu tạm tại menu Tài khoản; người nhận tự đổi mật khẩu. Scope quản trị có tab riêng trong Phân quyền, khác hồ sơ nhà xe/tài xế; phạm vi booking đã được kiểm tại service/DAO nghiệp vụ; xem [kế hoạch nhóm](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
 
 ## Trang cấu hình an toàn
 
@@ -84,7 +84,7 @@ Tab Tài nguyên UI/API chọn MENU/ENDPOINT hoặc tất cả, nhập route/con
 
 ## Cấp tài khoản và kiểm tra phân quyền
 
-Vào **Quản trị truy cập → Tài khoản** bằng admin đã đổi mật khẩu bootstrap. Tạo tài xế/người dùng với role phù hợp, bàn giao mật khẩu tạm qua kênh riêng và yêu cầu người nhận đổi tại Thông tin cá nhân trước khi dùng chức năng. Màn này không phụ thuộc Gmail để cấp danh tính nội bộ; đăng ký công khai vẫn theo kích hoạt email. Email nhận reset được người dùng gắn/xác minh qua luồng hồ sơ hiện có.
+Vào **Quản trị truy cập → Tài khoản** bằng admin để tạo danh tính, gán role và bàn giao mật khẩu tạm qua kênh riêng. Người nhận phải đổi mật khẩu và xác minh email trước khi dùng quyền riêng tư. OPERATOR có DRIVER_ASSIGN chỉ cấp DRIVER tại hồ sơ chưa liên kết trong nhà xe của mình; không được vào quản trị danh tính toàn hệ thống. Account mới và hồ sơ vừa cấp vẫn ở trạng thái chờ thiết lập. Gmail hiện tạm hoãn nên account mới chưa hoàn tất xác minh email; không coi việc tạo danh tính thành công là dùng nghiệp vụ được ngay. Ngoại lệ ba account được chủ dự án xác nhận một lần được ghi ở tiến độ, không áp dụng cho account mới.
 
 Cấu hình role tại Phân quyền → Tạo vai trò → chọn menu/thao tác → Lưu; sau đó gán role tại Tài khoản. Dùng nút xem để kiểm quyền thực tế của tài khoản, gồm policy bổ sung. Lưu gán/khóa/mở làm token cũ hết hiệu lực; người nhận đăng nhập lại. Khóa không xóa lịch sử, không cho khóa ADMIN/system/bản thân hoặc mở bỏ qua email đang chờ. Version 409 cần đọc lại có chủ đích. Xem [hợp đồng chi tiết](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#quản-trị-tài-khoản-và-ma-trận-menu--access05).
 
@@ -99,10 +99,26 @@ Tab Lịch sử phân quyền chỉ ADMIN + ACCESS_READ: lọc loại, tiền t�
 
 Sau khi triển khai đồng nhất V015 trên mọi node: tạo role/quyền và tài khoản toàn cục trước, vào Phân quyền → Phạm vi dữ liệu → Tạo phạm vi → chọn icon thành viên → Gán tài khoản. Tìm prefix username, chọn đúng user, tick tập con role của chính user cho phạm vi này rồi Lưu. Không gán ADMIN/system/self. Một user có thể có quyền quản lý ở A và chỉ đọc ở B; backend không trộn hai tập quyền. Tắt membership/thu hồi global role làm mất quyền scoped ở lần DB check tiếp theo, không hủy transaction đã chạy.
 
-Scope là metadata bảo mật nền, chưa tạo hồ sơ nhà xe/chuyến/booking; CARRIER01/AUTH03 phải gắn quan hệ và DAO đúng scope khi viết business. Khách xem đủ nhà xe/chuyến công khai không cần membership nhân viên. Tắt scope bảo mật chặn mọi thao tác scoped, khác nhà xe ngừng nhận booking nhưng còn xử lý chuyến cũ. Xem [hợp đồng nâng phiên bản/giới hạn](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#nền-phạm-vi-dữ-liệu--scope01). Kiểm trực quan picker/tab scope mới còn giới hạn do browser policy; trạng thái/bằng chứng thực tế nằm ở tiến độ, không suy đã nghiệm thu UX từ hướng dẫn này.
+Scope là metadata bảo mật; tạo scope ở màn phân quyền không tự tạo hồ sơ nhà xe/chuyến/booking. CARRIER01 tạo nhà xe cùng scope; DAO fleet/tuyến/chuyến/booking/report và AUTH03 đã gắn quan hệ và kiểm phạm vi. Khách xem nhà xe/chuyến công khai không cần membership nhân viên. Tắt scope bảo mật chặn mọi thao tác scoped, khác nhà xe ngừng nhận booking nhưng còn xử lý chuyến cũ. Xem [hợp đồng nâng phiên bản/giới hạn](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#nền-phạm-vi-dữ-liệu--scope01); trạng thái/bằng chứng thực tế nằm ở tiến độ.
 
 ## Khôi phục quản trị gốc
 
 Đăng nhập bằng đúng username bootstrap cấu hình server (mặc định admin), đổi mật khẩu tạm nếu được yêu cầu, rồi vào avatar → Thông tin cá nhân → Khôi phục quản trị gốc. Nút này chỉ hiện cho tài khoản gốc, kể cả mất mọi role/quyền. Nhập mật khẩu hiện tại để xác nhận; chờ kết quả, không gửi lại khi chưa rõ trạng thái. Thành công tạo/sửa dữ liệu quyền thiếu và thu hồi mọi phiên của tài khoản; bấm Đăng nhập lại bằng mật khẩu hiện tại. ADMIN khác không có nút này; không dùng mật khẩu bootstrap cấu hình để thay mật khẩu account đã đổi. Policy từ chối /account cũ không khóa được đường cứu hộ.
 
-Nếu không còn bản ghi account, không có phiên để bấm nút: cấu hình đúng username/password bootstrap qua môi trường riêng và khởi động với DB_INIT (schema mới) hoặc ACCESS_SYNC (schema đã đủ V015). Startup giữ hash/trạng thái/khóa của account đã có; khóa 15 phút hoặc account bị tắt không tự được bỏ qua. Nếu cả hai cờ tắt thì startup không tự sửa. Xem [chạy local](../01-bat-dau/CHAY_LOCAL_VA_CLOUDINARY.md) và [hợp đồng cứu hộ](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#cứu-hộ-tài-khoản-bootstrap--access15). Hỏng bảng/migration history hoặc mất dữ liệu nghiệp vụ cần quy trình restore riêng; nút này không thay backup. Việc sửa thủ công ghi ADMIN_RECOVERED trong lịch sử cùng transaction; chỉ admin có quyền đọc lịch sử mới tra được sau khi đăng nhập lại.
+Nếu không còn bản ghi account, không có phiên để bấm nút: cấu hình đúng username/password bootstrap qua môi trường riêng và khởi động với DB_INIT (schema mới) hoặc ACCESS_SYNC (schema đã đủ migration của bản source đang chạy). Startup giữ hash/history/lockout; AUTH17 chỉ cấp sẵn đúng bootstrap identity cấu hình, không phải mọi ADMIN. Nếu cả hai cờ tắt thì startup không tự sửa. Xem [chạy local](../01-bat-dau/CHAY_LOCAL_VA_CLOUDINARY.md) và [hợp đồng cứu hộ](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#cứu-hộ-tài-khoản-bootstrap--access15). Hỏng bảng/migration history hoặc mất dữ liệu nghiệp vụ cần quy trình restore riêng; nút này không thay backup. Việc sửa thủ công ghi ADMIN_RECOVERED trong lịch sử cùng transaction; chỉ admin có quyền đọc lịch sử mới tra được sau khi đăng nhập lại.
+
+## Dùng ba tài khoản đã cấp sẵn
+
+Đăng nhập tại [VietRoute trên Render](https://vietroute-web.onrender.com/login) bằng mật khẩu đã bàn giao riêng. Ba tài khoản dưới đây đã được cấp sẵn theo xác nhận của chủ dự án; không cần thao tác email hoặc đổi mật khẩu tạm để xem nghiệp vụ hiện có.
+
+| Tài khoản | Màn hình bắt đầu | Dữ liệu và thao tác được cấp |
+|---|---|---|
+| `custom01` — CUSTOMER | **Đơn của tôi** (`/my-bookings`), **Tìm chuyến**, **Nhà xe** | Ba đơn WEB của chính mình: hủy, từ chối và xác nhận. Chỉ một đơn WEB đang chờ/đã xác nhận tại một thời điểm; muốn đặt đơn khác phải xử lý đơn hiện hành theo điều kiện nghiệp vụ |
+| `driver01` — DRIVER | **Chuyến được giao** (`/driver/trips`) | Bốn DEMOTRIP01–04 được giao; xem khách đã xác nhận, bắt đầu/đến/rời/hoàn tất đúng thứ tự và thời gian. Không sửa giá, thu tiền, quản trị nhà xe hoặc tài khoản |
+| `operator01` — OPERATOR | **Nghiệp vụ** → Nhà xe, Xe, Tài xế, Tuyến, Chuyến, Đơn đặt chỗ, Báo cáo | Chỉ DEMOMIENNAM/scope 1; hai xe, hai hồ sơ tài xế, hai tuyến, bốn chuyến và bảy đơn WEB/PHONE. Tạo/sửa và xử lý theo hành động đã cấp; DRIVER_ASSIGN cấp danh tính tài xế trong phạm vi, không quản trị tài khoản toàn hệ thống |
+
+Để đối chiếu dữ liệu cố định lúc bàn giao, lọc báo cáo từ **01/10/2026 đến 30/11/2026**: bốn chuyến, bảy đơn, bốn lượt chỗ xác nhận, giá trị đặt 2.400.000 đồng, thực thu/thực hoàn đều 0. Đây là DEMO có nhãn, không là giao dịch vận tải hoặc thu tiền thật. Sau thao tác nghiệp vụ, số liệu sẽ đổi theo DB; không nạp lại dữ liệu để ép về con số cũ. Các chuyến diễn ra từ 25/10 đến 03/11/2026, không tự dời ngày hoặc giả tiến độ khi đã quá giờ.
+
+Tab **Vị trí thiết bị** hiển thị Maps chưa cấu hình. Chỉ tài xế được giao có quyền chủ động bật GPS, trong khung giờ được phép; trạng thái mặc định OFF. Khách chỉ xem khi đơn của chính mình CONFIRMED, đơn khác UNAVAILABLE. Không có GPS công khai, không tự phát vị trí khi mở trang. Khóa/ẩn tab hoặc mất mạng dừng watch; nếu request dừng không tới server, lease giới hạn dữ liệu còn hiển thị. Hợp đồng và giới hạn thiết bị ở [vận hành tracking](GIAM_SAT_VA_VAN_HANH.md#vị-trí-thiết-bị-và-google-maps--track01).
+
+Danh mục có nhóm menu riêng và từng mục con độc lập cho admin. Khi cấp quyền mới: chọn **role → chức năng → hành động**; VIEW cho trang/menu, READ cho dữ liệu, CREATE/UPDATE/ASSIGN theo nhu cầu. Sau đó gán role cho account và membership/scoped role cho nhân sự nhà xe. Tạo permission trong DB không tự sinh chức năng mới; cấu trúc menu và guard bắt buộc vẫn khai báo trong source. Bản đồ 12 bảng và phần cấu hình cố định có chủ đích nằm ở [schema/phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#bản-đồ-bảng-và-ranh-giới-cấu-hình-phân-quyền).
