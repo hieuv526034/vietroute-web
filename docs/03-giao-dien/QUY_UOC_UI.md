@@ -214,3 +214,5 @@ Trang tìm chuyến gom nhà xe/loại xe/giá vào nhóm Lọc thêm, mặc đ�
 `/operations/reports` có bộ lọc ngày khởi hành Việt Nam/nhà xe và picker có tìm kiếm/phân trang REPORT_READ riêng. Hai tab Chuyến và đặt chỗ / Giá trị và thu-hoàn tái sử dụng workspace.js, ARIA và bàn phím. Số liệu trạng thái là tập 5 mã hữu hạn; không lấy trang đơn rồi cộng trên JavaScript. API trả aggregate có scope và snapshot. Nhãn phân biệt lượt chỗ/ghế vật lý, giá trị đặt/tiền đã thu, tiền đơn hủy còn phải hoàn và nhóm chuyến/ngày thu.
 
 Lỗi giữ bộ lọc, 401 có link đăng nhập lại; báo cáo cũ bị ẩn lúc gửi điều kiện mới, không ghép số cũ với khoảng ngày mới. VIEW không có READ chỉ hiện giải thích thiếu quyền. Nút dùng component màu chung, filter/money card co theo màn hình; không tự gọi mutation khi đọc.
+
+Bằng chứng preview PostgreSQL cô lập: [thu/hoàn desktop](../images/report01-money.png), [báo cáo tiếng Anh 390px](../images/report01-mobile.png). Kiểm VAL016 giữ filter, sửa cận gửi lại và ArrowLeft chuyển tab đạt. Fixture tiền 100 nghìn thu/hoàn trong ảnh chỉ ở local, không là giao dịch Neon.
