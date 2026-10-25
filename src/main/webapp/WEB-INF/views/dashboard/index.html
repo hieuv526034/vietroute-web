@@ -22,10 +22,9 @@
                         <span th:text="#{ui.dashboard.welcome}"></span>
                         <span th:text="${currentUser.displayName}"></span>
                     </h1>
-                    <p
-                        class="muted"
-                        th:text="#{ui.dashboard.intro}"
-                    ></p>
+                    <div
+                        th:replace="~{fragments/help :: guide('dashboard-guide', #{ui.dashboard.title}, ${ {'ui.help.dashboard.use', 'ui.dashboard.intro'} })}"
+                    ></div>
                     <div class="dashboard-roles">
                         <span
                             class="status-chip"

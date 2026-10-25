@@ -1,0 +1,62 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+    <body>
+        <div
+            th:fragment="guide(id, title, keys)"
+            class="user-guide"
+        >
+            <button
+                type="button"
+                class="button button-small button-outline guide-trigger"
+                th:attr="data-guide-open=${id},aria-controls=${id},aria-label=#{ui.help.for(${title})}"
+            >
+                <span
+                    class="guide-icon"
+                    aria-hidden="true"
+                >
+                    ?
+                </span>
+                <span th:text="#{ui.help.title}"></span>
+            </button>
+            <dialog
+                th:id="${id}"
+                class="workspace-dialog user-guide-dialog"
+                th:attr="aria-labelledby=${id + '-title'},aria-describedby=${id + '-topic'}"
+            >
+                <div class="dialog-heading">
+                    <h2
+                        th:id="${id + '-title'}"
+                        th:text="#{ui.help.title}"
+                    ></h2>
+                    <button
+                        type="button"
+                        class="dialog-close"
+                        data-dialog-close
+                        th:attr="aria-label=#{ui.ops.close}"
+                    >
+                        ×
+                    </button>
+                </div>
+                <p
+                    class="guide-topic"
+                    th:id="${id + '-topic'}"
+                    th:text="${title}"
+                ></p>
+                <ol class="guide-steps">
+                    <li
+                        th:each="key : ${keys}"
+                        th:text="${#messages.msg(key)}"
+                    ></li>
+                </ol>
+                <div class="dialog-actions">
+                    <button
+                        type="button"
+                        class="button button-outline"
+                        data-dialog-close
+                        th:text="#{ui.ops.close}"
+                    ></button>
+                </div>
+            </dialog>
+        </div>
+    </body>
+</html>

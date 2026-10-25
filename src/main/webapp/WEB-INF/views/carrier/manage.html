@@ -18,10 +18,9 @@
                     th:text="#{ui.fleet.eyebrow}"
                 ></p>
                 <h1 th:text="${#messages.msg('ui.fleet.title.' + fleetKind)}"></h1>
-                <p
-                    class="muted"
-                    th:text="#{ui.fleet.description}"
-                ></p>
+                <div
+                    th:replace="~{fragments/help :: guide('fleet-guide', ${#messages.msg('ui.fleet.title.' + fleetKind)}, ${ {'ui.help.fleet.use', 'ui.fleet.retainNote'} })}"
+                ></div>
             </div>
             <p
                 id="fleet-status"
@@ -140,10 +139,6 @@
                         </table>
                     </div>
                     <div th:replace="~{fragments/pagination :: pager('fleet', 10)}"></div>
-                    <p
-                        class="form-help"
-                        th:text="#{ui.fleet.retainNote}"
-                    ></p>
                 </section>
             </fieldset>
             <dialog

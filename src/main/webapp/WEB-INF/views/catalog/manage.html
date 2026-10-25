@@ -15,10 +15,9 @@
             <div class="page-heading">
                 <p class="eyebrow">WORKSPACE / ADMIN</p>
                 <h1 th:text="${#messages.msg(catalogTitle)}"></h1>
-                <p
-                    class="muted"
-                    th:text="#{ui.catalog.separateDescription}"
-                ></p>
+                <div
+                    th:replace="~{fragments/help :: guide('catalog-guide', ${#messages.msg(catalogTitle)}, ${ {'ui.help.catalog.use', 'ui.catalog.manageNote'} })}"
+                ></div>
             </div>
             <div>
                 <p
@@ -109,10 +108,7 @@
                                 th:text="#{ui.search}"
                             ></button>
                         </form>
-                        <p
-                            class="form-help mb-3"
-                            th:text="#{ui.catalog.manageNote}"
-                        ></p>
+
                         <div
                             class="table-responsive"
                             tabindex="0"

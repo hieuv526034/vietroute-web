@@ -20,10 +20,9 @@
                     th:text="#{ui.fleet.eyebrow}"
                 ></p>
                 <h1 th:text="${customerBookings} ? #{ui.booking.mine} : #{ui.booking.title}"></h1>
-                <p
-                    class="muted"
-                    th:text="#{ui.booking.description}"
-                ></p>
+                <div
+                    th:replace="~{fragments/help :: guide('booking-guide', ${customerBookings} ? #{ui.booking.mine} : #{ui.booking.title}, ${customerBookings ? {'ui.help.booking.customer','ui.booking.pendingHelp'} : {'ui.help.booking.staff','ui.booking.pendingHelp','ui.booking.moneyHelp'}})}"
+                ></div>
             </div>
             <p
                 id="booking-status"
@@ -273,7 +272,7 @@
                         ></button>
                         <p
                             class="form-help"
-                            th:text="#{ui.booking.pendingHelp}"
+                            th:text="#{ui.booking.pendingNotice}"
                         ></p>
                         <div class="dialog-actions">
                             <button
@@ -440,7 +439,7 @@
                         >
                             <p
                                 class="form-help"
-                                th:text="#{ui.booking.moneyHelp}"
+                                th:text="#{ui.booking.moneyNotice}"
                             ></p>
                             <form
                                 id="booking-money-form"

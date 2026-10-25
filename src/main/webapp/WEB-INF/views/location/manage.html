@@ -17,10 +17,9 @@
                 <h1
                     th:text="${geoSection == 'provinces' ? #messages.msg('ui.location.provinces') : geoSection == 'locations' ? #messages.msg('ui.location.locations') : #messages.msg('ui.location.title')}"
                 ></h1>
-                <p
-                    class="muted"
-                    th:text="#{ui.location.description}"
-                ></p>
+                <div
+                    th:replace="~{fragments/help :: guide('location-guide', #{ui.location.title}, ${ {'ui.help.location.use', 'ui.location.stateNote'} })}"
+                ></div>
             </div>
             <p
                 id="location-status"
@@ -458,10 +457,7 @@
                             />
                             <span th:text="#{ui.location.active}"></span>
                         </label>
-                        <p
-                            class="form-help"
-                            th:text="#{ui.location.stateNote}"
-                        ></p>
+
                         <div class="dialog-actions">
                             <button
                                 type="submit"

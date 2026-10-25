@@ -15,10 +15,9 @@
             <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-3">
                 <div>
                     <h1 th:text="#{ui.grants.roles}"></h1>
-                    <p
-                        class="muted"
-                        th:text="#{ui.grants.intro}"
-                    ></p>
+                    <div
+                        th:replace="~{fragments/help :: guide('roles-guide', #{ui.grants.roles}, ${ {'ui.help.roles.use', 'ui.grants.note', 'ui.help.roles.selection', 'ui.help.roles.scope', 'ui.help.roles.history'} })}"
+                    ></div>
                 </div>
             </div>
             <p
