@@ -36,6 +36,20 @@ public final class AccessConstants {
 
         public static final String CATALOG = "CATALOG";
 
+        public static final String VEHICLE_TYPE = "VEHICLE_TYPE";
+
+        public static final String BOOKING_SOURCE = "BOOKING_SOURCE";
+
+        public static final String PROVINCE = "PROVINCE";
+
+        public static final String CARRIER = "CARRIER";
+
+        public static final String VEHICLE = "VEHICLE";
+
+        public static final String DRIVER = "DRIVER";
+
+        public static final String DEMO = "DEMO";
+
         public static final String LOCATION = "LOCATION";
 
         public static final String MEDIA = "MEDIA";
@@ -57,6 +71,22 @@ public final class AccessConstants {
 
     /** Mã cây chức năng ổn định; quan hệ cha/con do AccessFeatures khai báo, không phải role. */
     public static final class Functions {
+
+        public static final String VEHICLE_TYPE = "VEHICLE_TYPE";
+
+        public static final String BOOKING_SOURCE = "BOOKING_SOURCE";
+
+        public static final String PROVINCE = "PROVINCE";
+
+        public static final String BUSINESS = "BUSINESS";
+
+        public static final String CARRIER = "CARRIER";
+
+        public static final String VEHICLE = "VEHICLE";
+
+        public static final String DRIVER = "DRIVER";
+
+        public static final String DEMO = "DEMO";
 
         public static final String LOCATION = "LOCATION";
 

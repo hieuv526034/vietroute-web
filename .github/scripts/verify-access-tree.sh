@@ -3,10 +3,10 @@
 printf 'Access tree stage: bootstrap, actions, multiple roles, delegated assignment and two nodes\n'
 tree_admin_token="$foundation_admin_token"
 token="$tree_admin_token"
-[[ "$(sql 'SELECT count(*) FROM auth_access_functions')" == 12 ]]
+[[ "$(sql 'SELECT count(*) FROM auth_access_functions')" == 20 ]]
 [[ "$(sql "SELECT count(*) FROM auth_access_resources WHERE target='POST /api/v1/admin/catalogs' AND function_code='CATALOG' AND permission_match='ANY' AND declared_permissions LIKE '%CATALOG_CREATE%'")" == 1 ]]
 call 200 GET /api/v1/admin/access/tree '' bearer
-python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; f=next(x for x in d if x["code"]=="CATALOG"); assert f["parent"]=="SYSTEM" and f["viewPermission"]=="CATALOG_VIEW"; a=next(x for x in f["actions"] if x["permission"]=="CATALOG_CREATE"); assert any(x["target"]=="POST /api/v1/admin/catalogs" and x["match"]=="ANY" for x in a["endpoints"])' "$result"
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; f=next(x for x in d if x["code"]=="CATALOG"); assert f["parent"] is None and f["viewPermission"]=="CATALOG_VIEW"; a=next(x for x in f["actions"] if x["permission"]=="CATALOG_CREATE"); assert any(x["target"]=="POST /api/v1/admin/catalogs" and x["match"]=="ANY" for x in a["endpoints"])' "$result"
 # Lấy bộ quyền từ metadata API thật giống thao tác chọn mẫu; lưu mapping, không có authority bypass toàn cục.
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; codes={a["permission"] for f in d if f["systemBundle"] for a in f["actions"] if not a["permission"].endswith("_WRITE") and any(not e["adminOnly"] for e in a["endpoints"])}; assert "CONFIGURATION_READ" in codes and "ACCESS_ASSIGN" in codes and "CATALOG_CREATE" not in codes and "JOURNAL_VIEW" not in codes; json.dump({"permissions":sorted(codes),"version":0},open(sys.argv[2],"w"))' "$result" "$work/tree-system-permissions.json"
 # Bộ lọc dùng chung predicate count/data trên DB, từ khóa nguyên văn không diễn giải wildcard hoặc SQL.

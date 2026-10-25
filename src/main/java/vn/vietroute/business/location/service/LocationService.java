@@ -47,7 +47,12 @@ public class LocationService {
     }
 
     /** Quản trị xem cả dữ liệu ngừng sử dụng để sửa/bật lại đúng version. */
-    @AccessOperation(action = PermissionAction.READ, adminOnly = true)
+    @AccessOperation(
+        resource = Groups.PROVINCE,
+        action = PermissionAction.READ,
+        aliases = { Groups.LOCATION + "_READ" },
+        adminOnly = true
+    )
     public PageResponse<ProvinceResponse> provinces(ProvinceSearchRequest page, Locale locale) {
         return map(locations.provinces(page, page.getActive()), item -> ProvinceResponse.from(item, locale));
     }
@@ -59,7 +64,12 @@ public class LocationService {
     }
 
     /** Đọc tỉnh mới nhất để modal giữ đúng version, không thay bằng lookup công khai. */
-    @AccessOperation(action = PermissionAction.READ, adminOnly = true)
+    @AccessOperation(
+        resource = Groups.PROVINCE,
+        action = PermissionAction.READ,
+        aliases = { Groups.LOCATION + "_READ" },
+        adminOnly = true
+    )
     public ProvinceResponse province(long id, Locale locale) {
         return ProvinceResponse.from(locations.province(id), locale);
     }
@@ -71,7 +81,12 @@ public class LocationService {
     }
 
     /** Transaction tạo mới có actor thật; registry mã duy nhất chốt tại DB. */
-    @AccessOperation(action = PermissionAction.CREATE, adminOnly = true)
+    @AccessOperation(
+        resource = Groups.PROVINCE,
+        action = PermissionAction.CREATE,
+        aliases = { Groups.LOCATION + "_CREATE" },
+        adminOnly = true
+    )
     public ProvinceResponse createProvince(ProvinceCreateRequest body, UserPrincipal actor, Locale locale) {
         AccessActors.requireCurrent(actor);
         return transactions.execute(connection ->
@@ -80,7 +95,12 @@ public class LocationService {
     }
 
     /** Tắt tỉnh chỉ ẩn khỏi tra cứu, không xóa con hoặc lịch sử; version và audit cùng transaction. */
-    @AccessOperation(action = PermissionAction.UPDATE, adminOnly = true)
+    @AccessOperation(
+        resource = Groups.PROVINCE,
+        action = PermissionAction.UPDATE,
+        aliases = { Groups.LOCATION + "_UPDATE" },
+        adminOnly = true
+    )
     public ProvinceResponse updateProvince(long id, ProvinceUpdateRequest body, UserPrincipal actor, Locale locale) {
         AccessActors.requireCurrent(actor);
         return transactions.execute(connection ->

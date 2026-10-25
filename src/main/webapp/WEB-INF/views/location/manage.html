@@ -9,11 +9,13 @@
         <main
             class="container-xl workspace-page"
             id="location-workspace"
-            th:attr="data-loading=#{ui.loading},data-empty=#{ui.empty},data-active=#{ui.location.active},data-inactive=#{ui.location.inactive},data-edit=#{ui.location.edit},data-create=#{ui.location.create},data-save=#{ui.location.save},data-no-read=#{ui.accessTree.noRead},data-provinces=#{ui.location.provinces},data-locations=#{ui.location.locations},data-parent-off=#{ui.location.parentOff},data-choose=#{ui.location.chooseProvince},data-province-note=#{ui.location.provinceNote},data-place-note=#{ui.location.editNote}"
+            th:attr="data-loading=#{ui.loading},data-empty=#{ui.empty},data-active=#{ui.location.active},data-inactive=#{ui.location.inactive},data-edit=#{ui.location.edit},data-create=#{ui.location.create},data-save=#{ui.location.save},data-no-read=#{ui.accessTree.noRead},data-provinces=#{ui.location.provinces},data-locations=#{ui.location.locations},data-parent-off=#{ui.location.parentOff},data-choose=#{ui.location.chooseProvince},data-province-note=#{ui.location.provinceNote},data-place-note=#{ui.location.editNote},data-section=${geoSection}"
         >
             <div class="page-heading">
                 <p class="eyebrow">WORKSPACE / LOCATION</p>
-                <h1 th:text="#{ui.location.title}"></h1>
+                <h1
+                    th:text="${geoSection == 'provinces' ? #messages.msg('ui.location.provinces') : geoSection == 'locations' ? #messages.msg('ui.location.locations') : #messages.msg('ui.location.title')}"
+                ></h1>
                 <p
                     class="muted"
                     th:text="#{ui.location.description}"
@@ -37,6 +39,7 @@
             >
                 <div
                     class="workspace-tabs"
+                    th:hidden="${geoSection != null}"
                     role="tablist"
                     th:attr="aria-label=#{ui.location.title}"
                 >
@@ -66,13 +69,13 @@
                             <div class="toolbar-actions catalog-toolbar">
                                 <button
                                     type="button"
-                                    class="btn btn-outline-secondary"
+                                    class="button button-outline"
                                     data-refresh="locations"
                                     th:text="#{ui.ops.refresh}"
                                 ></button>
                                 <button
                                     type="button"
-                                    class="btn btn-primary"
+                                    class="button"
                                     data-create="locations"
                                     th:text="#{ui.location.create}"
                                 ></button>
@@ -124,7 +127,7 @@
                             </div>
                             <button
                                 type="submit"
-                                class="btn btn-outline-primary"
+                                class="button button-outline"
                                 th:text="#{ui.location.searchButton}"
                             ></button>
                         </form>
@@ -162,13 +165,13 @@
                             <div class="toolbar-actions catalog-toolbar">
                                 <button
                                     type="button"
-                                    class="btn btn-outline-secondary"
+                                    class="button button-outline"
                                     data-refresh="provinces"
                                     th:text="#{ui.ops.refresh}"
                                 ></button>
                                 <button
                                     type="button"
-                                    class="btn btn-primary"
+                                    class="button"
                                     data-create="provinces"
                                     th:text="#{ui.location.create}"
                                 ></button>
@@ -220,7 +223,7 @@
                             </div>
                             <button
                                 type="submit"
-                                class="btn btn-outline-primary"
+                                class="button button-outline"
                                 th:text="#{ui.location.searchButton}"
                             ></button>
                         </form>
@@ -373,7 +376,7 @@
                                         />
                                         <button
                                             type="button"
-                                            class="btn btn-outline-secondary"
+                                            class="button button-outline"
                                             id="place-province-search"
                                             th:text="#{ui.location.searchButton}"
                                         ></button>
@@ -461,7 +464,7 @@
                         <div class="dialog-actions">
                             <button
                                 type="submit"
-                                class="btn btn-primary"
+                                class="button"
                                 id="location-save"
                                 th:text="#{ui.location.save}"
                             ></button>

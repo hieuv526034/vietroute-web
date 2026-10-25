@@ -1175,7 +1175,7 @@ form .button {
 }
 
 /* Cùng breakpoint với navigation.js: header luôn một hàng, menu dài cuộn trong panel thay vì đẩy logo. */
-@media (max-width: 1199px) {
+@media (max-width: 1399px) {
     .site-nav {
         min-height: 64px;
         flex-wrap: wrap;
@@ -1672,6 +1672,42 @@ body:has(dialog[open]) {
     grid-column: 1 / -1;
 }
 
+.dialog-span {
+    grid-column: 1 / -1;
+}
+
+.picker-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.picker-search input {
+    min-width: 0;
+}
+
+.picker-search .button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.dashboard-links {
+    display: grid;
+    gap: 10px;
+}
+
+.dashboard-links a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    color: var(--ink);
+    text-decoration: none;
+    background: var(--mint);
+}
+
 .dialog-form-grid label {
     margin-top: 15px;
 }
@@ -1813,6 +1849,14 @@ body:has(dialog[open]) {
 .table:has(.table-actions) {
     min-width: 560px;
 }
+
+.table.fleet-table {
+    min-width: 900px;
+}
+
+.fleet-table td {
+    overflow-wrap: normal;
+}
 .table-responsive:focus-visible {
     outline: 2px solid var(--green);
     outline-offset: 3px;
@@ -1911,6 +1955,23 @@ body:has(dialog[open]) {
 }
 .table-filter > button {
     margin-left: auto;
+}
+
+.record-search {
+    display: grid;
+    grid-template-columns: minmax(160px, 1fr) minmax(150px, 190px) auto;
+    gap: 8px 12px;
+    margin-bottom: 18px;
+}
+
+.record-search label {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 640px) {
+    .record-search {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 .journal-filters .filter-actions {
     grid-column: 1 / -1;

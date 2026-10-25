@@ -61,7 +61,7 @@ public class AuthPageController {
     @GetMapping(Routes.ADMIN)
     @AccessOperation(resource = Groups.CATALOG, action = PermissionAction.VIEW)
     public String admin() {
-        return "auth/admin";
+        return "auth/dashboard";
     }
 
     @GetMapping(Routes.DOCS)

@@ -6,7 +6,8 @@
 
 | Trang | Nhóm trên trang | Modal |
 |---|---|---|
-| `/admin` | Danh mục / Tổng quan | Thêm/sửa danh mục |
+| `/admin` | Tổng quan | Không |
+| `/catalogs/vehicle-types`, `/catalogs/booking-sources` | Từng danh mục riêng | Thêm/sửa/ngừng sử dụng |
 | `/operations/access` | Quyền role / Vai trò tài khoản (ADMIN) | Chỉnh quyền role thường, gán role user |
 | `/operations/configuration` | Ứng dụng / Pool / Bảo vệ request / Worker / Tính năng / Giám sát | Chỉ đọc, không chỉnh env/secret |
 | `/account`, `/media` | Một nhóm, không thêm tab thừa | Đổi mật khẩu, upload ảnh; ảnh tắt thì khóa nút mở |
@@ -168,3 +169,12 @@ Trang `/operations/locations` có hai tab Địa điểm/Tỉnh thành, dùng wo
 Nút và API đọc dựa trên đúng capabilities/target, không suy từ ADMIN hoặc VIEW. Lỗi giữ modal/draft/version, không tự replay; busy khóa form/tab và chặn đóng modal. Thiếu quyền/401 xóa bảng riêng tư, 401 vẫn có link đăng nhập lại và giữ bản nháp. Ghi chú tỉnh/địa điểm tách riêng; trạng thái tỉnh tắt được hiển thị cùng địa điểm quản trị.
 
 Ảnh từ fixture dữ liệu giả, không dùng đặt chuyến: [desktop](../images/location01-desktop.jpg), [modal mobile tiếng Anh](../images/location01-mobile.jpg). Fixture/renderer dùng hai context và env cách ly, không .env/DB/provider; không thay bằng chứng SQL/bảo mật của CI. Trạng thái kiểm và PR nằm ở [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
+
+
+## Menu danh mục và nghiệp vụ — BUSINESS02
+
+Menu Danh mục có Loại xe/Nguồn đặt chỗ/Tỉnh thành/Địa điểm với URL và capabilities riêng. Các màn một nhóm không thêm tab thừa; URL địa điểm cũ giữ hai tab tương thích. Header thu gọn tại 1399px (CSS/navigation.js cùng breakpoint) để chứa đủ các nhóm mới; panel mobile giữ trái/phải 12px, submenu nằm trong panel cuộn. Nút nghiệp vụ dùng `.button`, outline và danger chung, không dùng btn-primary xanh Bootstrap lẫn với xanh VietRoute.
+
+Các màn `/operations/carriers`, `/operations/vehicles`, `/operations/drivers` dùng modal, form hai cột desktop/một cột mobile, server paging và icon/cột thao tác 96px. Bảng phương tiện có min-width 900px và cuộn ngang trong vùng có tên; không bó chữ từng ký tự. Picker nhà xe và loại xe tìm tại server tối đa 20 kết quả, giữ lựa chọn ngoài kết quả. Lỗi/409 giữ draft + version; busy chặn đóng/mutation lặp, focus đặt lại sau khi mở fieldset. `/operations/demo` chỉ seed theo nút tường minh của ADMIN đủ quyền, hiện số tạo mới/giữ nguyên và số lượng từng loại.
+
+Ảnh browser từ app thật/PostgreSQL local cô lập, dữ liệu giả: [menu Danh mục trên điện thoại](../images/business02-menu-mobile.jpg), [bảng phương tiện](../images/business02-vehicles.jpg). Không dùng ảnh để suy đã triển khai hoặc đã seed Neon; bằng chứng vận hành ở [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).

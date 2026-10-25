@@ -1,0 +1,315 @@
+<!doctype html>
+<html
+    th:lang="${currentLocale}"
+    xmlns:th="http://www.thymeleaf.org"
+>
+    <head th:replace="~{fragments/layout :: head(${#messages.msg(catalogTitle)})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main
+            class="container-xl workspace-page"
+            id="catalog-workspace"
+            th:attr="data-loading=#{ui.loading},data-empty=#{ui.empty},data-edit=#{ui.catalog.edit},data-delete=#{ui.catalog.delete},data-create=#{ui.createCatalog},data-save=#{ui.catalog.save},data-confirm-delete=#{ui.catalog.confirmDelete},data-page=#{ui.ops.page},data-readonly=#{ui.ops.readonly},data-type=${catalogType},data-function=${catalogFunction},data-api=${catalogApi},data-active=#{ui.location.active},data-inactive=#{ui.location.inactive}"
+        >
+            <div class="page-heading">
+                <p class="eyebrow">WORKSPACE / ADMIN</p>
+                <h1 th:text="${#messages.msg(catalogTitle)}"></h1>
+                <p
+                    class="muted"
+                    th:text="#{ui.catalog.separateDescription}"
+                ></p>
+            </div>
+            <div>
+                <p
+                    id="catalog-status"
+                    class="catalog-status"
+                    role="status"
+                    aria-live="polite"
+                ></p>
+                <fieldset
+                    id="catalog-controls"
+                    class="border-0 p-0 m-0 w-100"
+                >
+                    <section
+                        class="panel"
+                        id="catalog-panel"
+                    >
+                        <div class="panel-heading catalog-heading">
+                            <h2 th:text="${#messages.msg(catalogTitle)}"></h2>
+                            <div class="toolbar-actions catalog-toolbar">
+                                <select
+                                    class="form-select"
+                                    id="catalog-filter"
+                                    hidden
+                                    disabled
+                                    th:attr="aria-label=#{ui.catalogType}"
+                                >
+                                    <option
+                                        value="VEHICLE_TYPE"
+                                        th:selected="${catalogType == 'VEHICLE_TYPE'}"
+                                        th:text="#{ui.vehicleType}"
+                                    ></option>
+                                    <option
+                                        value="BOOKING_SOURCE"
+                                        th:selected="${catalogType == 'BOOKING_SOURCE'}"
+                                        th:text="#{ui.bookingSource}"
+                                    ></option>
+                                </select>
+                                <button
+                                    id="catalog-create"
+                                    class="button button-small"
+                                    type="button"
+                                    disabled
+                                    th:text="#{ui.createCatalog}"
+                                ></button>
+                                <button
+                                    id="catalog-refresh"
+                                    class="button button-outline button-small"
+                                    type="button"
+                                    th:text="#{ui.ops.refresh}"
+                                ></button>
+                            </div>
+                        </div>
+                        <form
+                            id="catalog-search"
+                            class="table-filter record-search"
+                        >
+                            <label
+                                for="catalog-query"
+                                th:text="#{ui.fleet.search}"
+                            ></label>
+                            <input
+                                id="catalog-query"
+                                class="form-control"
+                                name="query"
+                                maxlength="160"
+                            />
+                            <select
+                                name="active"
+                                class="form-select"
+                                th:attr="aria-label=#{ui.location.state}"
+                            >
+                                <option
+                                    value=""
+                                    th:text="#{ui.fleet.allStates}"
+                                ></option>
+                                <option
+                                    value="true"
+                                    th:text="#{ui.location.active}"
+                                ></option>
+                                <option
+                                    value="false"
+                                    th:text="#{ui.location.inactive}"
+                                ></option>
+                            </select>
+                            <button
+                                type="submit"
+                                class="button button-outline"
+                                th:text="#{ui.search}"
+                            ></button>
+                        </form>
+                        <p
+                            class="form-help mb-3"
+                            th:text="#{ui.catalog.manageNote}"
+                        ></p>
+                        <div
+                            class="table-responsive"
+                            tabindex="0"
+                            role="region"
+                            th:attr="aria-label=#{ui.table.scroll}"
+                        >
+                            <table class="table catalog-table">
+                                <thead>
+                                    <tr>
+                                        <th th:text="#{ui.code}"></th>
+                                        <th th:text="#{ui.name}"></th>
+                                        <th th:text="#{ui.order}"></th>
+                                        <th th:text="#{ui.location.state}"></th>
+                                        <th
+                                            class="table-actions"
+                                            th:text="#{ui.ops.actions}"
+                                        ></th>
+                                    </tr>
+                                </thead>
+                                <tbody
+                                    id="catalog-body"
+                                    th:attr="data-empty=#{ui.empty}"
+                                ></tbody>
+                            </table>
+                        </div>
+                        <div
+                            id="catalog-feedback"
+                            class="feedback"
+                            role="alert"
+                            hidden
+                        ></div>
+                        <div th:replace="~{fragments/pagination :: pager('catalog', 10)}"></div>
+                    </section>
+                </fieldset>
+            </div>
+            <dialog
+                id="catalog-dialog"
+                class="workspace-dialog"
+                aria-labelledby="catalog-editor-title"
+                aria-describedby="catalog-editor-note"
+            >
+                <fieldset
+                    id="catalog-dialog-controls"
+                    class="dialog-controls"
+                >
+                    <div class="dialog-heading">
+                        <span
+                            class="eyebrow"
+                            th:text="#{ui.catalogs}"
+                        ></span>
+                        <button
+                            class="dialog-close"
+                            type="button"
+                            data-dialog-close
+                            th:attr="aria-label=#{ui.ops.close}"
+                        >
+                            <span aria-hidden="true">×</span>
+                        </button>
+                    </div>
+                    <h2
+                        id="catalog-editor-title"
+                        th:text="#{ui.createCatalog}"
+                    ></h2>
+                    <p
+                        id="catalog-editor-note"
+                        class="form-help"
+                        th:text="#{ui.catalog.createNote}"
+                        th:attr="data-create=#{ui.catalog.createNote},data-edit=#{ui.catalog.editNote}"
+                    ></p>
+                    <div
+                        id="form-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></div>
+                    <p
+                        id="catalog-conflict"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                        th:text="#{ui.ops.conflict}"
+                    ></p>
+                    <form
+                        id="catalog-form"
+                        class="dialog-form-grid"
+                        novalidate
+                    >
+                        <div>
+                            <label
+                                for="catalog-type"
+                                th:text="#{ui.catalogType}"
+                            ></label>
+                            <select
+                                class="form-select"
+                                id="catalog-type"
+                                disabled
+                                name="type"
+                                required
+                            >
+                                <option
+                                    value="VEHICLE_TYPE"
+                                    th:selected="${catalogType == 'VEHICLE_TYPE'}"
+                                    th:text="#{ui.vehicleType}"
+                                ></option>
+                                <option
+                                    value="BOOKING_SOURCE"
+                                    th:selected="${catalogType == 'BOOKING_SOURCE'}"
+                                    th:text="#{ui.bookingSource}"
+                                ></option>
+                            </select>
+                        </div>
+                        <div>
+                            <label
+                                for="catalog-code"
+                                th:text="#{ui.code}"
+                            ></label>
+                            <input
+                                class="form-control"
+                                id="catalog-code"
+                                name="code"
+                                pattern="[A-Z][A-Z0-9]{2,39}"
+                                th:attr="data-pattern-message=#{validation.code}"
+                                maxlength="40"
+                                th:placeholder="#{ui.autoCode}"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                for="catalog-vi"
+                                th:text="#{ui.nameVi}"
+                            ></label>
+                            <input
+                                class="form-control"
+                                id="catalog-vi"
+                                name="nameVi"
+                                maxlength="120"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label
+                                for="catalog-en"
+                                th:text="#{ui.nameEn}"
+                            ></label>
+                            <input
+                                class="form-control"
+                                id="catalog-en"
+                                name="nameEn"
+                                maxlength="120"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label
+                                for="catalog-order"
+                                th:text="#{ui.order}"
+                            ></label>
+                            <input
+                                class="form-control"
+                                id="catalog-order"
+                                name="sortOrder"
+                                type="number"
+                                min="0"
+                                max="10000"
+                                value="0"
+                                required
+                            />
+                        </div>
+                        <label class="checkbox-label">
+                            <input
+                                type="checkbox"
+                                name="active"
+                                checked
+                            />
+                            <span th:text="#{ui.location.active}"></span>
+                        </label>
+                        <div class="dialog-actions">
+                            <button
+                                id="catalog-cancel"
+                                class="button button-outline"
+                                type="button"
+                                data-dialog-close
+                                th:text="#{ui.catalog.cancel}"
+                            ></button>
+                            <button
+                                id="catalog-save"
+                                class="button"
+                                type="submit"
+                                disabled
+                                th:text="#{ui.createCatalog}"
+                            ></button>
+                        </div>
+                    </form>
+                </fieldset>
+            </dialog>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/catalog.js}"></script>
+    </body>
+</html>

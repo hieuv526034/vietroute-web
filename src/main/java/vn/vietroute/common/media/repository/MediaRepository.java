@@ -180,8 +180,14 @@ public class MediaRepository extends BaseRepository {
 
     /** Caller đã khóa ảnh: hồ sơ đang tham chiếu phải gỡ/thay ảnh trước; lỗi rollback cả trạng thái DELETING. */
     public void requireUnreferenced(Connection connection, long id) throws SQLException {
-        try (var query = connection.prepareStatement("SELECT 1 FROM auth_users WHERE avatar_media_id=? LIMIT 1")) {
+        try (
+            var query = connection.prepareStatement(
+                "SELECT 1 FROM auth_users WHERE avatar_media_id=? UNION ALL SELECT 1 FROM carriers WHERE logo_media_id=? UNION ALL SELECT 1 FROM carrier_vehicles WHERE photo_media_id=? LIMIT 1"
+            )
+        ) {
             query.setLong(1, id);
+            query.setLong(2, id);
+            query.setLong(3, id);
             try (var row = query.executeQuery()) {
                 if (row.next()) throw new BusinessException(ErrorCode.RESOURCE_IN_USE);
             }

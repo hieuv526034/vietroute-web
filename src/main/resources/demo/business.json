@@ -1,0 +1,35 @@
+{
+  "catalogs": [
+    {"type":"VEHICLE_TYPE","code":"DEMOSEAT","nameVi":"Ghế ngồi (DEMO)","nameEn":"Seated coach (DEMO)","sortOrder":100},
+    {"type":"VEHICLE_TYPE","code":"DEMOSLEEPER","nameVi":"Giường nằm (DEMO)","nameEn":"Sleeper coach (DEMO)","sortOrder":110},
+    {"type":"VEHICLE_TYPE","code":"DEMOLIMO","nameVi":"Limousine (DEMO)","nameEn":"Limousine (DEMO)","sortOrder":120},
+    {"type":"BOOKING_SOURCE","code":"DEMOWEB","nameVi":"Website (DEMO)","nameEn":"Website (DEMO)","sortOrder":100},
+    {"type":"BOOKING_SOURCE","code":"DEMOPHONE","nameVi":"Điện thoại (DEMO)","nameEn":"Phone (DEMO)","sortOrder":110}
+  ],
+  "provinces": [
+    {"code":"DEMOHCM","nameVi":"TP Hồ Chí Minh (DEMO)","nameEn":"Ho Chi Minh City (DEMO)","sortOrder":100,"active":true},
+    {"code":"DEMODN","nameVi":"Đà Nẵng (DEMO)","nameEn":"Da Nang (DEMO)","sortOrder":110,"active":true},
+    {"code":"DEMOHN","nameVi":"Hà Nội (DEMO)","nameEn":"Hanoi (DEMO)","sortOrder":120,"active":true}
+  ],
+  "locations": [
+    {"code":"DEMOPLACEA","provinceCode":"DEMOHCM","nameVi":"Điểm đón A (DEMO)","nameEn":"Pickup A (DEMO)","address":"Địa chỉ minh họa, không dùng đón khách thật","latitude":10.8,"longitude":106.7,"sortOrder":100,"active":true},
+    {"code":"DEMOPLACEB","provinceCode":"DEMODN","nameVi":"Điểm trung chuyển B (DEMO)","nameEn":"Transfer B (DEMO)","address":"Địa chỉ minh họa, không dùng đón khách thật","latitude":16.05,"longitude":108.2,"sortOrder":110,"active":true},
+    {"code":"DEMOPLACEC","provinceCode":"DEMOHN","nameVi":"Điểm trả C (DEMO)","nameEn":"Dropoff C (DEMO)","address":"Địa chỉ minh họa, không dùng đón khách thật","latitude":21.03,"longitude":105.85,"sortOrder":120,"active":true}
+  ],
+  "carriers": [
+    {"code":"DEMOMIENNAM","name":"Nhà xe Miền Nam (DEMO)","phone":"0000000000","description":"Doanh nghiệp giả lập để học và kiểm thao tác. Không bán vé hoặc nhận cuộc gọi thật.","active":true},
+    {"code":"DEMOBACNAM","name":"Nhà xe Bắc Nam (DEMO)","phone":"0000000000","description":"Doanh nghiệp giả lập thứ hai để kiểm phạm vi dữ liệu. Không bán vé hoặc nhận cuộc gọi thật.","active":true}
+  ],
+  "vehicles": [
+    {"code":"DEMOVEH01","carrierCode":"DEMOMIENNAM","typeCode":"DEMOSEAT","plateNumber":"DEMO-001","capacity":29,"active":true},
+    {"code":"DEMOVEH02","carrierCode":"DEMOMIENNAM","typeCode":"DEMOSLEEPER","plateNumber":"DEMO-002","capacity":40,"active":true},
+    {"code":"DEMOVEH03","carrierCode":"DEMOBACNAM","typeCode":"DEMOLIMO","plateNumber":"DEMO-003","capacity":16,"active":true},
+    {"code":"DEMOVEH04","carrierCode":"DEMOBACNAM","typeCode":"DEMOSLEEPER","plateNumber":"DEMO-004","capacity":34,"active":true}
+  ],
+  "drivers": [
+    {"code":"DEMODRIVER01","carrierCode":"DEMOMIENNAM","name":"Tài xế A (DEMO)","phone":"0000000000","active":true},
+    {"code":"DEMODRIVER02","carrierCode":"DEMOMIENNAM","name":"Tài xế B (DEMO)","phone":"0000000000","active":true},
+    {"code":"DEMODRIVER03","carrierCode":"DEMOBACNAM","name":"Tài xế C (DEMO)","phone":"0000000000","active":true},
+    {"code":"DEMODRIVER04","carrierCode":"DEMOBACNAM","name":"Tài xế D (DEMO)","phone":"0000000000","active":true}
+  ]
+}

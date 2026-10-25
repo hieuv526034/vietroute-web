@@ -6,7 +6,7 @@
     const panel = document.getElementById('navigation-links');
     if (!header || !toggle || !panel) return;
 
-    const compact = window.matchMedia('(max-width: 1199px)');
+    const compact = window.matchMedia('(max-width: 1399px)');
     const menus = Array.from(header.querySelectorAll('.operations-menu'));
     let expanded = false;
 

@@ -1,6 +1,6 @@
 # Tổng quan VietRoute cho thành viên mới
 
-Cập nhật 24/10/2026, bổ sung source LOCATION01 sau PR #102. Đọc tài liệu này trước, sau đó mở các tài liệu theo liên kết. Đây là bản đồ source đang có, không phải tuyên bố đã hoàn thành các nghiệp vụ đặt vé.
+Cập nhật 25/10/2026, bổ sung BUSINESS02 trên nhánh đang review; mốc merge ở tiến độ. Đọc tài liệu này trước, sau đó mở các tài liệu theo liên kết. Đây là bản đồ source đang có, không phải tuyên bố đã hoàn thành các nghiệp vụ đặt vé.
 
 Để biết ai làm gì tiếp theo và phần nào đã/chưa hoàn thành, xem [Tiến độ và kế hoạch nhóm](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md). Bảng tách trạng thái source/API/UI và cấu hình dịch vụ ngoài app, kèm PR và phụ thuộc để bàn giao.
 
@@ -18,7 +18,7 @@ flowchart LR
     Api[API client] --> Web
     Web --> Security[Quota và JWT/CSRF]
     Security --> Services[Service kiểm quyền và transaction]
-    Services --> DB[(PostgreSQL: auth, policy, catalog, locations, media, jobs, activity)]
+    Services --> DB[(PostgreSQL: auth, policy, catalog, locations, carriers/fleet, media, jobs, activity)]
     Worker[Worker nhận lease] --> DB
     Worker --> Gmail[Gmail HTTPS hoặc SMTP TLS]
     Worker --> Cloudinary[Cloudinary cleanup]
@@ -28,7 +28,7 @@ flowchart LR
     Monitor --> Dashboard[Dashboard và cảnh báo bên ngoài]
 ```
 
-Phần đã có source: nền tảng locale/error/validation/audit/paging, auth/JWT/phân quyền, migration/seed, catalog CRUD, LOCATION01 tỉnh–địa điểm (API/UI quản trị và lookup công khai), hàng đợi PostgreSQL, adapter Gmail/SMTP/Cloudinary và giám sát. Nhà xe, tuyến/chuyến, booking/tồn chỗ và Maps là giai đoạn tiếp theo trong [PHAN_CONG.md](../05-ke-hoach/PHAN_CONG.md).
+Phần đã có source: nền tảng locale/error/validation/audit/paging, auth/JWT/phân quyền, migration/seed, catalog CRUD, LOCATION01 tỉnh–địa điểm (API/UI quản trị và lookup công khai), hàng đợi PostgreSQL, adapter Gmail/SMTP/Cloudinary và giám sát. BUSINESS02 bổ sung CRUD nhà xe/xe/hồ sơ tài xế có scope, menu danh mục riêng và seed DEMO chủ động; xem hợp đồng ở API base và trạng thái PR tại tiến độ. Tuyến/chuyến, account nhân sự AUTH03, booking/tồn chỗ và Maps là các phần tiếp theo trong [PHAN_CONG.md](../05-ke-hoach/PHAN_CONG.md).
 
 [Nhật ký API và debug](../04-van-hanh/NHAT_KY_API_VA_DEBUG.md) nằm trong `common.monitoring`: filter trước Security → projection DTO/response → PostgreSQL (V005) → API/page có kiểm quyền. Dùng để tra traceId/controller và xuất Postman đã che dữ liệu; lịch sử dùng chung DB/schema giữa các node, không phải gateway/audit bất biến.
 

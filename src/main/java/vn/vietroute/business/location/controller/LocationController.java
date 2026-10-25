@@ -69,7 +69,13 @@ public class LocationController extends BaseController {
     }
 
     @GetMapping(Routes.ADMIN_PROVINCES)
-    @AccessFunction(group = Groups.LOCATION, actions = { PermissionAction.READ }, adminOnly = true)
+    @AccessFunction(
+        group = Groups.PROVINCE,
+        function = Functions.PROVINCE,
+        actions = { PermissionAction.READ },
+        permissions = { Groups.LOCATION + "_READ" },
+        adminOnly = true
+    )
     @Operation(
         summary = "Danh sách tỉnh/thành quản trị",
         description = "ADMIN + LOCATION_READ; query, active và phân trang tại DB. Xem cả dữ liệu đã ngừng sử dụng."
@@ -82,7 +88,13 @@ public class LocationController extends BaseController {
     }
 
     @GetMapping(Routes.ADMIN_PROVINCES_BY_ID)
-    @AccessFunction(group = Groups.LOCATION, actions = { PermissionAction.READ }, adminOnly = true)
+    @AccessFunction(
+        group = Groups.PROVINCE,
+        function = Functions.PROVINCE,
+        actions = { PermissionAction.READ },
+        permissions = { Groups.LOCATION + "_READ" },
+        adminOnly = true
+    )
     @Operation(
         summary = "Đọc tỉnh/thành quản trị",
         description = "ADMIN + LOCATION_READ; ID không tồn tại trả COM004/404, gồm cả bản ngừng sử dụng."
@@ -99,7 +111,13 @@ public class LocationController extends BaseController {
 
     @PostMapping(Routes.ADMIN_PROVINCES)
     @ResponseStatus(HttpStatus.CREATED)
-    @AccessFunction(group = Groups.LOCATION, actions = { PermissionAction.CREATE }, adminOnly = true)
+    @AccessFunction(
+        group = Groups.PROVINCE,
+        function = Functions.PROVINCE,
+        actions = { PermissionAction.CREATE },
+        permissions = { Groups.LOCATION + "_CREATE" },
+        adminOnly = true
+    )
     @Operation(
         summary = "Tạo tỉnh/thành",
         description = "ADMIN + LOCATION_CREATE; mã trùng COM005/409, audit từ principal."
@@ -115,7 +133,13 @@ public class LocationController extends BaseController {
     }
 
     @PutMapping(Routes.ADMIN_PROVINCES_BY_ID)
-    @AccessFunction(group = Groups.LOCATION, actions = { PermissionAction.UPDATE }, adminOnly = true)
+    @AccessFunction(
+        group = Groups.PROVINCE,
+        function = Functions.PROVINCE,
+        actions = { PermissionAction.UPDATE },
+        permissions = { Groups.LOCATION + "_UPDATE" },
+        adminOnly = true
+    )
     @Operation(
         summary = "Sửa/ngừng sử dụng tỉnh/thành",
         description = "ADMIN + LOCATION_UPDATE; version cũ COM008/409. Giữ mã, không xóa dữ liệu hoặc tham chiếu. Tỉnh tắt ẩn mọi địa điểm con khỏi tra cứu; bật lại giữ trạng thái riêng của từng con."

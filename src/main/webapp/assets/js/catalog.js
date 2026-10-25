@@ -9,6 +9,8 @@
     const controls = document.getElementById('catalog-controls');
     const form = document.getElementById('catalog-form');
     const filter = document.getElementById('catalog-filter');
+    const privateApi = root.dataset.api || '/api/v1/admin/catalogs';
+    const feature = root.dataset.function || 'CATALOG';
     const rows = document.getElementById('catalog-body');
     const status = document.getElementById('catalog-status');
     const conflict = document.getElementById('catalog-conflict');
@@ -22,6 +24,7 @@
     });
     let selected = null;
     let permissions = [];
+    let targets = [];
     let busy = false;
     const editor = window.VietRouteUI.modal('catalog-dialog', {
         busy: () => busy,
@@ -31,7 +34,17 @@
             conflict.hidden = true;
         },
     });
-    const can = (action) => permissions.includes(action);
+    const can = (action) =>
+        root.dataset.api
+            ? targets.includes(
+                  `${{ CREATE: 'POST', READ: 'GET', UPDATE: 'PUT', DELETE: 'DELETE' }[action]} ${privateApi}${['UPDATE', 'DELETE'].includes(action) ? '/{id}' : ''}`,
+              )
+            : permissions.includes(action);
+    const refreshCapabilities = async () => {
+        const data = await window.VietRouteAccess.load(feature);
+        permissions = data.actions;
+        targets = data.targets;
+    };
 
     // Giữ nguyên trường đang sửa khi lỗi; không tự gửi lại mutation sau timeout hoặc conflict.
     const perform = async (action, target = editor.isOpen ? 'form-feedback' : 'catalog-feedback') => {
@@ -62,8 +75,8 @@
     const resetEditor = () => {
         selected = null;
         form.reset();
-        type.value = filter.value;
-        type.disabled = false;
+        type.value = root.dataset.type || filter.value;
+        type.disabled = Boolean(root.dataset.type);
         code.disabled = false;
         save.disabled = !can('CREATE');
         save.textContent = root.dataset.create;
@@ -77,8 +90,9 @@
 
     // Đọc bản mới nhất khi mở form; version được giữ ở bộ nhớ và gửi lại đúng một lần khi lưu.
     const edit = async (item, trigger) => {
-        const current = (await api.get(`/api/v1/admin/catalogs/${item.id}`, { timeout: 10000 })).data.data;
+        const current = (await api.get(`${privateApi}/${item.id}`, { timeout: 10000 })).data.data;
         selected = current;
+        if (form.elements.active) form.elements.active.checked = current.active;
         type.value = current.type;
         code.value = current.code;
         type.disabled = true;
@@ -86,7 +100,7 @@
         form.elements.nameVi.value = current.nameVi;
         form.elements.nameEn.value = current.nameEn;
         form.elements.sortOrder.value = current.sortOrder;
-        save.disabled = !current.active || !can('UPDATE');
+        save.disabled = !can('UPDATE');
         save.textContent = root.dataset.save;
         document.getElementById('catalog-editor-title').textContent = root.dataset.edit;
         const note = document.getElementById('catalog-editor-note');
@@ -100,7 +114,7 @@
         if (!window.confirm(`${root.dataset.confirmDelete}\n${item.code} · ${item.name}`)) {
             return;
         }
-        const response = await mutate(`/api/v1/admin/catalogs/${item.id}`, { version: item.version }, 'delete');
+        const response = await mutate(`${privateApi}/${item.id}`, { version: item.version }, 'delete');
         if (selected?.id === item.id) {
             resetEditor();
         }
@@ -109,14 +123,46 @@
     };
 
     const load = async (query = pager.query) => {
+        if (root.dataset.api && !can('READ')) {
+            rows.replaceChildren();
+            pager.update({
+                content: [],
+                page: 0,
+                size: query.size,
+                totalElements: 0,
+                totalPages: 0,
+                hasNext: false,
+                hasPrevious: false,
+            });
+            feedback(root.dataset.readonly, false, 'catalog-feedback');
+            return;
+        }
+        const fields = document.getElementById('catalog-search')?.elements;
+        const params = {
+            ...query,
+            ...(fields
+                ? { query: fields.query.value.trim(), ...(fields.active.value ? { active: fields.active.value } : {}) }
+                : {}),
+        };
         const result = await tables.readPage(
-            async (params) => (await api.get(`/api/v1/catalogs/${filter.value}`, { params, timeout: 10000 })).data.data,
+            async (paging) =>
+                (
+                    await api.get(root.dataset.api || `/api/v1/catalogs/${filter.value}`, {
+                        params: { ...params, ...paging },
+                        timeout: 10000,
+                    })
+                ).data.data,
             query,
         );
         rows.replaceChildren();
         for (const item of result.content) {
             const row = document.createElement('tr');
-            for (const value of [item.code, item.name, item.sortOrder]) {
+            for (const value of [
+                item.code,
+                item.name,
+                item.sortOrder,
+                ...(root.dataset.api ? [item.active ? root.dataset.active : root.dataset.inactive] : []),
+            ]) {
                 const cell = document.createElement('td');
                 cell.textContent = String(value);
                 row.append(cell);
@@ -125,12 +171,12 @@
             const group = document.createElement('div');
             group.className = 'row-actions';
             actions.className = 'table-actions';
-            if (can('READ') && can('UPDATE')) {
+            if (can('READ') && can('UPDATE') && (!root.dataset.api || targets.includes(`GET ${privateApi}/{id}`))) {
                 group.append(
                     button(`${root.dataset.edit}: ${item.code}`, 'edit', false, (trigger) => edit(item, trigger)),
                 );
             }
-            if (can('DELETE')) {
+            if (can('DELETE') && item.active) {
                 group.append(button(`${root.dataset.delete}: ${item.code}`, 'delete', true, () => remove(item)));
             }
             if (!group.childElementCount) {
@@ -143,7 +189,7 @@
         }
         if (!result.content.length) {
             const cell = document.createElement('td');
-            cell.colSpan = 4;
+            cell.colSpan = root.dataset.api ? 5 : 4;
             cell.textContent = root.dataset.empty;
             const row = document.createElement('tr');
             row.append(cell);
@@ -152,6 +198,11 @@
         pager.update(result);
     };
 
+    document.getElementById('catalog-search')?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (window.VietRouteForms.validate(event.currentTarget))
+            void perform(() => load({ ...pager.query, page: 0 }), 'catalog-feedback');
+    });
     form.addEventListener('submit', (event) => {
         event.preventDefault();
         if (busy || save.disabled || !window.VietRouteForms.validate(form)) {
@@ -162,10 +213,11 @@
                 nameVi: form.elements.nameVi.value.trim(),
                 nameEn: form.elements.nameEn.value.trim(),
                 sortOrder: Number(form.elements.sortOrder.value),
+                ...(selected && form.elements.active ? { active: form.elements.active.checked } : {}),
             };
             const response = selected
-                ? await mutate(`/api/v1/admin/catalogs/${selected.id}`, { ...body, version: selected.version }, 'put')
-                : await mutate('/api/v1/admin/catalogs', {
+                ? await mutate(`${privateApi}/${selected.id}`, { ...body, version: selected.version }, 'put')
+                : await mutate(privateApi, {
                       ...body,
                       type: type.value,
                       ...(code.value.trim() ? { code: code.value.trim() } : {}),
@@ -192,7 +244,7 @@
     );
     document.getElementById('catalog-refresh').addEventListener('click', () =>
         perform(async () => {
-            permissions = (await window.VietRouteAccess.load('CATALOG')).actions;
+            await refreshCapabilities();
             document.getElementById('catalog-create').disabled = !can('CREATE');
             document.getElementById('catalog-create').hidden = !can('CREATE');
             resetEditor();
@@ -200,7 +252,7 @@
         }, 'catalog-feedback'),
     );
     void perform(async () => {
-        permissions = (await window.VietRouteAccess.load('CATALOG')).actions;
+        await refreshCapabilities();
         document.getElementById('catalog-create').disabled = !can('CREATE');
         document.getElementById('catalog-create').hidden = !can('CREATE');
         resetEditor();

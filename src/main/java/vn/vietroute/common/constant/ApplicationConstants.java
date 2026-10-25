@@ -211,6 +211,36 @@ public final class ApplicationConstants {
 
         public static final String ADMIN_CATALOG_BY_ID = ADMIN_CATALOGS + BY_ID;
 
+        public static final String CATALOG_VEHICLE_TYPES_PAGE = "/catalogs/vehicle-types";
+
+        public static final String CATALOG_BOOKING_SOURCES_PAGE = "/catalogs/booking-sources";
+
+        public static final String CATALOG_PROVINCES_PAGE = "/catalogs/provinces";
+
+        public static final String CATALOG_LOCATIONS_PAGE = "/catalogs/locations";
+
+        public static final String ADMIN_VEHICLE_TYPES = ADMIN_API + "/vehicle-types";
+
+        public static final String ADMIN_BOOKING_SOURCES = ADMIN_API + "/booking-sources";
+
+        public static final String CARRIERS_PAGE = "/operations/carriers";
+
+        public static final String VEHICLES_PAGE = "/operations/vehicles";
+
+        public static final String DRIVERS_PAGE = "/operations/drivers";
+
+        public static final String ADMIN_CARRIERS = ADMIN_API + "/carriers";
+
+        public static final String ADMIN_VEHICLES = ADMIN_API + "/vehicles";
+
+        public static final String ADMIN_DRIVERS = ADMIN_API + "/drivers";
+
+        public static final String CARRIER_CHOICES = "/carriers";
+
+        public static final String DEMO_PAGE = "/operations/demo";
+
+        public static final String ADMIN_DEMO = ADMIN_API + "/demo";
+
         public static final String PROVINCES = API + "/provinces";
 
         public static final String LOCATIONS = API + "/locations";
@@ -296,6 +326,10 @@ public final class ApplicationConstants {
 
     /** Regex chỉ mô tả từng loại dữ liệu cụ thể; không áp quy tắc mã cho tên người/địa chỉ/mật khẩu. */
     public static final class Regex {
+
+        public static final String PHONE_NUMBER = "^[+0-9(). -]{6,30}$";
+
+        public static final String VEHICLE_PLATE = "(?i)^(?=(?:[.-]*[A-Z0-9]){5})[A-Z0-9.-]{5,20}$";
 
         public static final String ACCESS_RESOURCE_KIND = "|MENU|ENDPOINT";
 

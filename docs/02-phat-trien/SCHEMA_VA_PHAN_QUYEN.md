@@ -391,3 +391,14 @@ BaseRepository dùng chung JdbcTransactions cho callback độc lập: thành c�
 Lý do: [Neon transaction pooling](https://neon.com/docs/connect/connection-pooling) không bảo đảm session state giữa transaction; đặt search_path ở autocommit rồi mới truy vấn có thể dùng backend khác. Đây là lỗi tương thích thiết kế xác định từ code và hợp đồng provider, chưa phải kết luận nguyên nhân trace 503 cũ đã mất.
 
 CI bổ sung PgBouncer bên trong container PostgreSQL tạm, transaction mode và DISCARD ALL sau mỗi transaction. Helper chứng minh cách đặt path cũ bị reset, rồi kiểm schema LOCAL, commit callback, rollback lỗi, pg_temp không che bảng và node ứng dụng login/guard/journal qua pooler. Chỉ fixture CI, không thêm PgBouncer/Docker service vào app hoặc Render, không thử sửa schema/mutation trên Neon.
+
+
+## Áp dụng scope và quyền danh mục vào nghiệp vụ — BUSINESS02
+
+V017 bổ sung `carriers` (scope duy nhất), `carrier_vehicles`, `carrier_drivers`. Hai bảng con giữ FK `(carrier_id,scope_id)` và định danh `(id,carrier_id,scope_id)` để bước tuyến/chuyến sau này ràng buộc cùng nhà xe; vehicle type dùng FK `(vehicle_type_id,vehicle_type)` vào catalog. Không thêm tầng nhóm quyền mới. `auth_data_scopes/auth_scope_memberships/auth_scope_roles` tiếp tục là nguồn scope, global roles vẫn là trần. Registry/function ADMIN sync khi enabled; không tự cấp quyền CARRIER/VEHICLE/DRIVER cho role thường.
+
+Các mã `VEHICLE_TYPE_*`, `BOOKING_SOURCE_*`, `PROVINCE_*` cho từng danh mục. Alias CATALOG/LOCATION cũ chỉ giữ tác vụ trước đây, không mở sang nhà xe hoặc nhóm mới. CATALOG là nhóm menu có các menu con, `/admin` giữ VIEW cũ để tương thích trang tổng quan. Danh mục tỉnh/địa điểm vẫn ADMIN-only; quyền riêng cho phép tách cấu hình trong tập quản trị. VIEW không thay READ/API, policy bổ sung không thể bỏ service guard.
+
+`DataScopeGuard.visibleSql/bindVisible` lọc SQL cả count/trang/ID từ alias owner do DAO lấy trong DB; đọc lại account/tokenVersion và membership/role/perms, không trust carrierId filter hoặc authority client. CREATE/UPDATE dùng cùng connection và parent lock; ADMIN recovery vẫn cần DB ADMIN + scope active. Trạng thái kinh doanh carrier inactive chặn gán mới/bật xe/tài xế nhưng giữ scope active để có thể ngừng sử dụng/xử lý dữ liệu cũ. Account DRIVER phải ready và có membership DRIVER đúng scope khi liên kết; hồ sơ chưa liên kết không có quyền đăng nhập. Thu hồi account/membership vẫn kiểm lại ở mỗi thao tác tiếp theo.
+
+Hợp đồng route/payload/DEMO và kiểm cô lập ở [API base](API_BASE.md#danh-mục-riêng-và-nhà-xephương-tiệntài-xế--business02). Phần scope này chưa thay các row guard/lock/snapshot/tồn chỗ bắt buộc của tuyến/chuyến/booking tương lai. Chưa có quyền xóa cứng các hồ sơ kinh doanh.

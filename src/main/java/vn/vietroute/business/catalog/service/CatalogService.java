@@ -4,10 +4,13 @@ import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import vn.vietroute.auth.entity.PermissionAction;
+import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.auth.security.annotation.AccessResource;
 import vn.vietroute.business.catalog.dto.request.CatalogCreateRequest;
+import vn.vietroute.business.catalog.dto.request.CatalogLookupRequest;
+import vn.vietroute.business.catalog.dto.request.CatalogSearchRequest;
 import vn.vietroute.business.catalog.dto.request.CatalogUpdateRequest;
 import vn.vietroute.business.catalog.dto.response.CatalogResponse;
 import vn.vietroute.business.catalog.repository.CatalogRepository;
@@ -25,6 +28,29 @@ import vn.vietroute.common.util.CodeGenerator;
 @RequiredArgsConstructor
 public class CatalogService {
 
+    /** Picker tìm/phân trang ở DB, public luôn ép active=true và không đọc cờ nội bộ từ client. */
+    public PageResponse<CatalogResponse> lookup(CatalogType type, CatalogLookupRequest page, Locale locale) {
+        CatalogSearchRequest search = new CatalogSearchRequest();
+        search.setPage(page.getPage());
+        search.setSize(page.getSize());
+        search.setQuery(page.getQuery());
+        search.setActive(true);
+        var result = catalogs.search(type, search);
+        return new PageResponse<>(
+            result
+                .content()
+                .stream()
+                .map(item -> CatalogResponse.from(item, locale))
+                .toList(),
+            result.page(),
+            result.size(),
+            result.totalElements(),
+            result.totalPages(),
+            result.hasNext(),
+            result.hasPrevious()
+        );
+    }
+
     private final CatalogRepository catalogs;
 
     private final JdbcTransactions transactions;
@@ -38,6 +64,7 @@ public class CatalogService {
     /** Một transaction cập nhật version và audit; mã/type được giữ nguyên. */
     @AccessOperation(action = PermissionAction.UPDATE, aliases = { Permissions.CATALOG_WRITE })
     public CatalogResponse update(long id, CatalogUpdateRequest request, UserPrincipal actor, Locale locale) {
+        AccessActors.requireCurrent(actor);
         return transactions.execute(connection ->
             CatalogResponse.from(catalogs.update(connection, id, request, actor.id()), locale)
         );
@@ -46,6 +73,7 @@ public class CatalogService {
     /** Xóa mềm dùng quyền DELETE tường minh; WRITE cũ không cấp thêm khả năng xóa. */
     @AccessOperation(action = PermissionAction.DELETE)
     public CatalogResponse delete(long id, long version, UserPrincipal actor, Locale locale) {
+        AccessActors.requireCurrent(actor);
         return transactions.execute(connection ->
             CatalogResponse.from(catalogs.delete(connection, id, version, actor.id()), locale)
         );
@@ -72,6 +100,7 @@ public class CatalogService {
     /** Tạo danh mục cần quyền chức năng; actor lấy từ JWT đã kiểm tra lại với DB. */
     @AccessOperation(action = PermissionAction.CREATE, aliases = { Permissions.CATALOG_WRITE })
     public CatalogResponse create(CatalogCreateRequest request, UserPrincipal actor, Locale locale) {
+        AccessActors.requireCurrent(actor);
         String code = request.getCode() == null ? CodeGenerator.generate("CAT") : request.getCode();
         return transactions.execute(connection ->
             CatalogResponse.from(catalogs.insert(connection, request, code, actor.id()), locale)
