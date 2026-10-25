@@ -138,9 +138,15 @@ done
 grep -q 'data-password-changed=' "$result"
 printf 'Navigation stage: authenticated home enters workspace and login redirects without another password\n'
 call 200 GET '/?lang=vi' '' cookie
-python3 -c 'import re,sys; h=open(sys.argv[1]).read(); a=re.search(r"id=\"home-workspace\"[\s\S]*?</a>",h).group(); assert "href=\"/admin?lang=vi\"" in a' "$result"
+python3 -c 'import re,sys; h=open(sys.argv[1]).read(); a=re.search(r"id=\"home-workspace\"[\s\S]*?</a>",h).group(); assert "href=\"/dashboard?lang=vi\"" in a' "$result"
 call 302 GET '/login?lang=en' '' cookie
-grep -qi '^Location: .*/admin?lang=en' "$work/headers"
+grep -qi '^Location: .*/dashboard?lang=en' "$work/headers"
+call 200 GET '/dashboard?lang=en' '' cookie
+grep -q 'id="business-dashboard"' "$result"
+grep -q '/assets/js/dashboard.js' "$result"
+# ADMIN có đủ permission không tự thành owner CUSTOMER hoặc tài xế được giao.
+if grep -Fq 'href="/my-bookings?lang=en"' "$result"; then exit 1; fi
+if grep -Fq 'href="/driver/trips?lang=en"' "$result"; then exit 1; fi
 call 200 GET /api/v1/auth/me '' bearer
 call 200 GET /api/v1/admin/system/runtime '' bearer
 [[ "$(field data.databaseProbeEnabled)" == True ]]
@@ -307,9 +313,12 @@ login_body customer "$next_password"
 call 200 POST /api/v1/auth/login "$work/login.json" cookie
 token=$(field data.accessToken)
 call 200 GET '/?lang=en' '' cookie
-python3 -c 'import re,sys; h=open(sys.argv[1]).read(); a=re.search(r"id=\"home-workspace\"[\s\S]*?</a>",h).group(); assert "href=\"/account?lang=en\"" in a' "$result"
+python3 -c 'import re,sys; h=open(sys.argv[1]).read(); a=re.search(r"id=\"home-workspace\"[\s\S]*?</a>",h).group(); assert "href=\"/dashboard?lang=en\"" in a' "$result"
 call 302 GET '/login?lang=en' '' cookie
-grep -qi '^Location: .*/account?lang=en' "$work/headers"
+grep -qi '^Location: .*/dashboard?lang=en' "$work/headers"
+call 200 GET '/dashboard?lang=en' '' cookie
+grep -q 'id="business-dashboard"' "$result"
+if grep -Fq 'href="/operations/accounts?lang=en"' "$result"; then exit 1; fi
 call 403 GET /admin '' cookie
 call 403 GET /api/v1/admin/system/api-journal '' bearer
 for protected_page in api-journal configuration jobs access; do
