@@ -30,6 +30,7 @@ public enum ErrorCode {
     RESOURCE_IN_USE("COM015", "error.inUse", HttpStatus.CONFLICT),
     ACCESS_CAPACITY_REACHED("COM016", "error.accessCapacity", HttpStatus.CONFLICT),
     LOCATION_PROVINCE_INACTIVE("LOC001", "location.provinceInactive", HttpStatus.CONFLICT),
+    ROUTE_INVALID("ROUTE001", "route.invalid", HttpStatus.BAD_REQUEST),
     METHOD_NOT_ALLOWED("COM009", "error.method", HttpStatus.METHOD_NOT_ALLOWED),
     UNSUPPORTED_MEDIA("COM010", "error.media", HttpStatus.UNSUPPORTED_MEDIA_TYPE),
     NOT_ACCEPTABLE("COM011", "error.accept", HttpStatus.NOT_ACCEPTABLE),

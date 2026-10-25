@@ -28,7 +28,8 @@ printf 'Registration waits for the shared role-assignment lock before creating C
 printf '%s\n' '{"nameVi":"Không được đổi","nameEn":"Immutable","active":true,"version":0}' > "$work/foundation-registry.json"
 call 403 PUT /api/v1/admin/access/registry/roles/ADMIN "$work/foundation-registry.json" bearer
 call 403 DELETE '/api/v1/admin/access/registry/roles/ADMIN?version=0' '' bearer
-call 200 GET '/api/v1/admin/access/resources?page=0&size=100' '' bearer
+# Lọc đúng endpoint trên DB; registry lớn hơn một trang không làm ca kiểm metadata bỏ sót bản ghi.
+call 200 GET '/api/v1/admin/access/resources?kind=ENDPOINT&query=PUT%20%2Fapi%2Fv1%2Fadmin%2Fcatalogs%2F%7Bid%7D&page=0&size=100' '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]["content"]; e=next(x for x in d if x["target"]=="PUT /api/v1/admin/catalogs/{id}"); assert e["group"]=="CATALOG" and "CATALOG_UPDATE" in e["declaredPermissions"] and not e["publicRoute"]' "$result"
 
 # Role mặc định ngoài ADMIN sửa/tắt được, version cũ không ghi đè; xóa dọn mapping và giữ tombstone.
@@ -61,7 +62,7 @@ python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert set(
 account_version=$(field data.version)
 
 # Avatar giả chỉ là metadata trong DB CI, không upload/xóa Cloudinary; server vẫn kiểm owner/READY/version.
-own_avatar=$(sql "INSERT INTO media_assets(public_id,status,url,thumbnail_url,format,bytes,width,height,created_by,updated_by) VALUES ('ci/avatar-own','READY','https://res.cloudinary.com/demo/avatar.png','https://res.cloudinary.com/demo/avatar-small.png','png',80,2,2,$account_id,$account_id) RETURNING id" | head -n1)
+own_avatar=$(sql "INSERT INTO media_assets(public_id,status,url,thumbnail_url,format,bytes,width,height,created_by,updated_by) VALUES ('ci/avatar-own','READY','https://res.cloudinary.com/demo/avatar.png','https://res.cloudinary.com/demo/avatar-small.png','png',80,2,2,$account_id,$account_id) RETURNING id" | sed -n '1p')
 printf '{"displayName":"CI profile","avatarMediaId":%s,"version":%s}\n' "$own_avatar" "$account_version" > "$work/foundation-profile.json"
 call 200 PUT /api/v1/auth/profile "$work/foundation-profile.json" bearer
 [[ "$(field data.avatarMediaId)" == "$own_avatar" ]]
@@ -75,7 +76,7 @@ call 200 GET /api/v1/auth/me '' bearer
 account_version=$(field data.version)
 printf '{"displayName":"CI profile","avatarMediaId":%s,"version":%s,"roles":["ADMIN"]}\n' "$own_avatar" "$account_version" > "$work/foundation-forged.json"
 call 400 PUT /api/v1/auth/profile "$work/foundation-forged.json" bearer
-foreign_avatar=$(sql "INSERT INTO media_assets(public_id,status,url,thumbnail_url,format,bytes,width,height,created_by,updated_by) VALUES ('ci/avatar-foreign','READY','https://res.cloudinary.com/demo/foreign.png','https://res.cloudinary.com/demo/foreign-small.png','png',80,2,2,1,1) RETURNING id" | head -n1)
+foreign_avatar=$(sql "INSERT INTO media_assets(public_id,status,url,thumbnail_url,format,bytes,width,height,created_by,updated_by) VALUES ('ci/avatar-foreign','READY','https://res.cloudinary.com/demo/foreign.png','https://res.cloudinary.com/demo/foreign-small.png','png',80,2,2,1,1) RETURNING id" | sed -n '1p')
 printf '{"displayName":"CI profile","avatarMediaId":%s,"version":%s}\n' "$foreign_avatar" "$account_version" > "$work/foundation-profile.json"
 call 404 PUT /api/v1/auth/profile "$work/foundation-profile.json" bearer
 

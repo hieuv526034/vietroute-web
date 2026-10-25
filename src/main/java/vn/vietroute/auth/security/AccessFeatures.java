@@ -72,6 +72,13 @@ public final class AccessFeatures {
         ),
         new Feature(Functions.DEMO, Functions.SYSTEM, "access.function.DEMO", Routes.DEMO_PAGE, Groups.DEMO + "_VIEW"),
         new Feature(
+            Functions.ROUTE,
+            Functions.BUSINESS,
+            "access.function.ROUTE",
+            Routes.ROUTES_PAGE,
+            Groups.ROUTE + "_VIEW"
+        ),
+        new Feature(
             Functions.MEDIA,
             Functions.SYSTEM,
             "access.function.MEDIA",

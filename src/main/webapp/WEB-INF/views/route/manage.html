@@ -1,0 +1,333 @@
+<!doctype html>
+<html
+    xmlns:th="http://www.thymeleaf.org"
+    th:lang="${currentLocale}"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.route.title})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main
+            id="route-workspace"
+            class="container-xl workspace-page"
+            th:attr="data-loading=#{ui.loading},data-empty=#{ui.empty},data-edit=#{ui.location.edit},data-view=#{ui.route.view},data-active=#{ui.location.active},data-inactive=#{ui.location.inactive},data-choose=#{ui.route.choose},data-no-read=#{ui.accessTree.noRead},data-remove=#{ui.route.remove},data-up=#{ui.route.up},data-down=#{ui.route.down},data-location=#{ui.route.location},data-arrival=#{ui.route.arrival},data-departure=#{ui.route.departure},data-fare=#{ui.route.fare},data-pickup=#{ui.route.pickup},data-dropoff=#{ui.route.dropoff},data-stop=#{ui.route.stop}"
+        >
+            <div class="page-heading">
+                <p
+                    class="eyebrow"
+                    th:text="#{ui.fleet.eyebrow}"
+                ></p>
+                <h1 th:text="#{ui.route.title}"></h1>
+                <p
+                    class="muted"
+                    th:text="#{ui.route.description}"
+                ></p>
+            </div>
+            <p
+                id="route-status"
+                class="catalog-status"
+                role="status"
+                aria-live="polite"
+            ></p>
+            <div
+                id="route-feedback"
+                class="feedback"
+                role="alert"
+                hidden
+            ></div>
+            <fieldset
+                id="route-controls"
+                class="border-0 p-0 m-0 w-100"
+            >
+                <section class="panel">
+                    <div class="panel-heading">
+                        <h2 th:text="#{ui.route.title}"></h2>
+                        <div class="toolbar-actions">
+                            <button
+                                id="route-create"
+                                type="button"
+                                class="button"
+                                disabled
+                                th:text="#{ui.fleet.create}"
+                            ></button>
+                            <button
+                                id="route-refresh"
+                                type="button"
+                                class="button button-outline"
+                                th:text="#{ui.ops.refresh}"
+                            ></button>
+                        </div>
+                    </div>
+                    <form
+                        id="route-search"
+                        class="table-filter record-search"
+                    >
+                        <label
+                            for="route-query"
+                            th:text="#{ui.fleet.search}"
+                        ></label>
+                        <input
+                            id="route-query"
+                            name="query"
+                            maxlength="160"
+                            class="form-control"
+                        />
+                        <select
+                            name="active"
+                            class="form-select"
+                            th:attr="aria-label=#{ui.location.state}"
+                        >
+                            <option
+                                value=""
+                                th:text="#{ui.fleet.allStates}"
+                            ></option>
+                            <option
+                                value="true"
+                                th:text="#{ui.location.active}"
+                            ></option>
+                            <option
+                                value="false"
+                                th:text="#{ui.location.inactive}"
+                            ></option>
+                        </select>
+                        <button
+                            class="button button-outline"
+                            th:text="#{ui.search}"
+                        ></button>
+                    </form>
+                    <div
+                        class="table-responsive"
+                        tabindex="0"
+                        role="region"
+                        th:attr="aria-label=#{ui.table.scroll}"
+                    >
+                        <table class="table records-table">
+                            <thead>
+                                <tr>
+                                    <th th:text="#{ui.code}"></th>
+                                    <th th:text="#{ui.route.name}"></th>
+                                    <th th:text="#{ui.fleet.carrier}"></th>
+                                    <th th:text="#{ui.route.stops}"></th>
+                                    <th th:text="#{ui.location.state}"></th>
+                                    <th
+                                        class="table-actions"
+                                        th:text="#{ui.ops.actions}"
+                                    ></th>
+                                </tr>
+                            </thead>
+                            <tbody id="route-body"></tbody>
+                        </table>
+                    </div>
+                    <div th:replace="~{fragments/pagination :: pager('route', 10)}"></div>
+                </section>
+            </fieldset>
+            <dialog
+                id="route-dialog"
+                class="workspace-dialog route-dialog"
+                aria-labelledby="route-dialog-title"
+            >
+                <div class="dialog-heading">
+                    <h2
+                        id="route-dialog-title"
+                        tabindex="-1"
+                        th:text="#{ui.route.title}"
+                    ></h2>
+                    <button
+                        type="button"
+                        class="button button-outline"
+                        data-dialog-close
+                        th:text="#{ui.ops.close}"
+                    ></button>
+                </div>
+                <div
+                    id="route-form-feedback"
+                    class="feedback"
+                    role="alert"
+                    hidden
+                ></div>
+                <p
+                    id="route-conflict"
+                    class="form-help"
+                    hidden
+                    th:text="#{ui.fleet.conflict}"
+                ></p>
+                <form
+                    id="route-form"
+                    novalidate
+                >
+                    <fieldset
+                        id="route-dialog-controls"
+                        class="border-0 p-0 m-0 w-100"
+                    >
+                        <div
+                            id="route-tabs"
+                            data-tabs
+                        >
+                            <div
+                                class="workspace-tabs"
+                                role="tablist"
+                                th:attr="aria-label=#{ui.route.title}"
+                            >
+                                <button
+                                    id="route-info-tab"
+                                    type="button"
+                                    data-tab-target="route-info"
+                                    aria-selected="true"
+                                    th:text="#{ui.route.info}"
+                                ></button>
+                                <button
+                                    id="route-stops-tab"
+                                    type="button"
+                                    data-tab-target="route-stops"
+                                    th:text="#{ui.route.stops}"
+                                ></button>
+                            </div>
+                            <section
+                                id="route-info"
+                                class="dialog-form-grid"
+                            >
+                                <label>
+                                    <span th:text="#{ui.code}"></span>
+                                    <input
+                                        name="code"
+                                        required
+                                        minlength="3"
+                                        maxlength="40"
+                                        class="form-control"
+                                    />
+                                </label>
+                                <label>
+                                    <span th:text="#{ui.fleet.carrier}"></span>
+                                    <select
+                                        name="carrierId"
+                                        required
+                                        class="form-select"
+                                    ></select>
+                                </label>
+                                <div
+                                    class="full-width"
+                                    id="route-carrier-picker"
+                                >
+                                    <label
+                                        for="route-carrier-query"
+                                        th:text="#{ui.fleet.searchCarrier}"
+                                    ></label>
+                                    <div class="record-search">
+                                        <input
+                                            id="route-carrier-query"
+                                            maxlength="160"
+                                            class="form-control"
+                                        />
+                                        <button
+                                            id="route-carrier-search"
+                                            type="button"
+                                            class="button button-outline"
+                                            th:text="#{ui.search}"
+                                        ></button>
+                                    </div>
+                                    <p
+                                        id="route-carrier-count"
+                                        class="form-help"
+                                    ></p>
+                                </div>
+                                <label>
+                                    <span th:text="#{ui.nameVi}"></span>
+                                    <input
+                                        name="nameVi"
+                                        required
+                                        maxlength="160"
+                                        class="form-control"
+                                    />
+                                </label>
+                                <label>
+                                    <span th:text="#{ui.nameEn}"></span>
+                                    <input
+                                        name="nameEn"
+                                        required
+                                        maxlength="160"
+                                        class="form-control"
+                                    />
+                                </label>
+                                <label class="full-width">
+                                    <span th:text="#{ui.fleet.detail}"></span>
+                                    <textarea
+                                        name="description"
+                                        maxlength="2000"
+                                        rows="3"
+                                        class="form-control"
+                                    ></textarea>
+                                </label>
+                                <label class="check-label">
+                                    <input
+                                        name="active"
+                                        type="checkbox"
+                                        checked
+                                    />
+                                    <span th:text="#{ui.location.active}"></span>
+                                </label>
+                            </section>
+                            <section
+                                id="route-stops"
+                                hidden
+                            >
+                                <p
+                                    class="form-help"
+                                    th:text="#{ui.route.stopHelp}"
+                                ></p>
+                                <div id="route-location-picker">
+                                    <label
+                                        for="route-location-query"
+                                        th:text="#{ui.route.findLocation}"
+                                    ></label>
+                                    <div class="record-search">
+                                        <input
+                                            id="route-location-query"
+                                            maxlength="160"
+                                            class="form-control"
+                                        />
+                                        <button
+                                            id="route-location-search"
+                                            type="button"
+                                            class="button button-outline"
+                                            th:text="#{ui.search}"
+                                        ></button>
+                                    </div>
+                                    <p
+                                        id="route-location-count"
+                                        class="form-help"
+                                    ></p>
+                                </div>
+                                <div
+                                    id="route-stop-list"
+                                    class="route-stop-list"
+                                ></div>
+                                <button
+                                    id="route-add-stop"
+                                    type="button"
+                                    class="button button-outline"
+                                    th:text="#{ui.route.addStop}"
+                                ></button>
+                            </section>
+                        </div>
+                        <div class="dialog-actions">
+                            <button
+                                type="button"
+                                class="button button-outline"
+                                data-dialog-close
+                                th:text="#{ui.ops.close}"
+                            ></button>
+                            <button
+                                id="route-save"
+                                type="submit"
+                                class="button"
+                                th:text="#{ui.catalog.save}"
+                            ></button>
+                        </div>
+                    </fieldset>
+                </form>
+            </dialog>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/routes.js}"></script>
+    </body>
+</html>

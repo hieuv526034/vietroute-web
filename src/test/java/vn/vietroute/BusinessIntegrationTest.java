@@ -456,4 +456,132 @@ class BusinessIntegrationTest {
         assertEquals("2", sql("SELECT count(*) FROM auth_data_scopes"));
         assertEquals("2", sql("SELECT count(*) FROM carriers"));
     }
+
+    private String routeBody(long carrier, String code, long first, long middle, long last) {
+        return """
+        {"carrierId":%d,"code":"%s","nameVi":"Tuyến kiểm thử","nameEn":"Test route","description":"","active":true,
+         "stops":[{"locationId":%d,"arrivalOffsetMinutes":0,"departureOffsetMinutes":0,"cumulativeFare":0,"pickupAllowed":true,"dropoffAllowed":false},
+                  {"locationId":%d,"arrivalOffsetMinutes":1500,"departureOffsetMinutes":1510,"cumulativeFare":100000,"pickupAllowed":true,"dropoffAllowed":true},
+                  {"locationId":%d,"arrivalOffsetMinutes":1800,"departureOffsetMinutes":1800,"cumulativeFare":250000,"pickupAllowed":false,"dropoffAllowed":true}]}
+        """.formatted(carrier, code, first, middle, last);
+    }
+
+    @Test
+    void routesValidateStopOrderFareParentsAndAtomicVersion() throws Exception {
+        seed();
+        long carrier = id("carriers", "DEMOMIENNAM"),
+            first = id("location_places", "DEMOPLACEA"),
+            middle = id("location_places", "DEMOPLACEB"),
+            last = id("location_places", "DEMOPLACEC");
+        String body = routeBody(carrier, "TESTROUTE", first, middle, last);
+        var route = call(201, "POST", "/api/v1/admin/routes", body, admin);
+        long routeId = route.path("id").asLong();
+        assertEquals(3, route.path("stopCount").asInt());
+        assertEquals(1500, route.at("/stops/1/arrivalOffsetMinutes").asInt());
+        call(
+            400,
+            "POST",
+            "/api/v1/admin/routes",
+            body.replace("TESTROUTE", "BADFARE").replace("250000", "50000"),
+            admin
+        );
+        call(400, "POST", "/api/v1/admin/routes", body.replace("TESTROUTE", "BADTIME").replace("1800", "1499"), admin);
+        call(400, "POST", "/api/v1/admin/routes", routeBody(carrier, "BADPLACE", first, middle, middle), admin);
+        assertEquals("1", sql("SELECT count(*) FROM carrier_routes"));
+        String changed = body.replace("\"active\":true", "\"version\":0,\"active\":false");
+        var updated = call(200, "PUT", "/api/v1/admin/routes/" + routeId, changed, admin);
+        assertEquals(1, updated.path("version").asInt());
+        call(409, "PUT", "/api/v1/admin/routes/" + routeId, changed, admin);
+        call(400, "PUT", "/api/v1/admin/routes/" + routeId, changed.replace("TESTROUTE", "DIFFERENT"), admin);
+        assertEquals("3", sql("SELECT count(*) FROM carrier_route_stops WHERE route_id=" + routeId));
+        sql(
+            "UPDATE location_provinces SET active=false WHERE id=(SELECT province_id FROM location_places WHERE id=" +
+                first +
+                ")"
+        );
+        call(409, "POST", "/api/v1/admin/routes", body.replace("TESTROUTE", "OFFPARENT"), admin);
+        assertEquals("1", sql("SELECT count(*) FROM carrier_routes"));
+    }
+
+    @Test
+    void routesFilterScopeAtCountIdPickerAndRespectIndependentView() throws Exception {
+        seed();
+        long carrier = id("carriers", "DEMOMIENNAM"),
+            other = id("carriers", "DEMOBACNAM"),
+            first = id("location_places", "DEMOPLACEA"),
+            middle = id("location_places", "DEMOPLACEB"),
+            last = id("location_places", "DEMOPLACEC");
+        long owned = call(
+            201,
+            "POST",
+            "/api/v1/admin/routes",
+            routeBody(carrier, "OWNROUTE", first, middle, last),
+            admin
+        )
+            .path("id")
+            .asLong();
+        long foreign = call(
+            201,
+            "POST",
+            "/api/v1/admin/routes",
+            routeBody(other, "OTHERROUTE", first, middle, last),
+            admin
+        )
+            .path("id")
+            .asLong();
+        long scope = Long.parseLong(sql("SELECT scope_id FROM carriers WHERE id=" + carrier));
+        var staff = member(scope, "ROUTE_CI", "'ROUTE_VIEW','ROUTE_READ','ROUTE_CREATE','ROUTE_UPDATE'", "routestaff");
+        assertEquals(1, call(200, "GET", "/api/v1/admin/routes?size=1", null, staff).path("totalElements").asInt());
+        call(200, "GET", "/api/v1/admin/routes/" + owned, null, staff);
+        call(404, "GET", "/api/v1/admin/routes/" + foreign, null, staff);
+        call(404, "POST", "/api/v1/admin/routes", routeBody(other, "WRONGSCOPE", first, middle, last), staff);
+        call(
+            404,
+            "PUT",
+            "/api/v1/admin/routes/" + foreign,
+            routeBody(other, "OTHERROUTE", first, middle, last).replace(
+                "\"active\":true",
+                "\"version\":0,\"active\":true"
+            ),
+            staff
+        );
+        assertEquals(1, call(200, "GET", "/api/v1/admin/routes/carriers", null, staff).path("totalElements").asInt());
+        call(200, "GET", "/operations/routes?lang=vi", null, staff);
+        sql("DELETE FROM auth_role_permissions WHERE role_code='ROUTE_CI' AND permission_code='ROUTE_VIEW'");
+        call(403, "GET", "/operations/routes", null, staff);
+        call(200, "GET", "/api/v1/admin/routes", null, staff);
+        sql("UPDATE auth_scope_memberships SET active=false WHERE scope_id=" + scope);
+        assertEquals(0, call(200, "GET", "/api/v1/admin/routes", null, staff).path("totalElements").asInt());
+        call(404, "GET", "/api/v1/admin/routes/" + owned, null, staff);
+    }
+
+    @Test
+    void routeStopFailureRollsBackParentAndExistingStopSet() throws Exception {
+        seed();
+        long carrier = id("carriers", "DEMOMIENNAM"),
+            first = id("location_places", "DEMOPLACEA"),
+            middle = id("location_places", "DEMOPLACEB"),
+            last = id("location_places", "DEMOPLACEC");
+        String body = routeBody(carrier, "ROLLBACKROUTE", first, middle, last);
+        long route = call(201, "POST", "/api/v1/admin/routes", body, admin).path("id").asLong();
+        sql(
+            "CREATE FUNCTION fail_route_stop() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN RAISE EXCEPTION ''test stop write failure''; END'; CREATE TRIGGER fail_route_stop BEFORE INSERT ON carrier_route_stops FOR EACH ROW EXECUTE FUNCTION fail_route_stop()"
+        );
+        call(503, "POST", "/api/v1/admin/routes", body.replace("ROLLBACKROUTE", "FAILEDCREATE"), admin);
+        call(
+            503,
+            "PUT",
+            "/api/v1/admin/routes/" + route,
+            body.replace("\"active\":true", "\"version\":0,\"active\":false"),
+            admin
+        );
+        assertEquals("1", sql("SELECT count(*) FROM carrier_routes"));
+        assertEquals(
+            "0:true:3",
+            sql(
+                "SELECT version || ':' || active || ':' || (SELECT count(*) FROM carrier_route_stops WHERE route_id=r.id) FROM carrier_routes r WHERE id=" +
+                    route
+            )
+        );
+    }
 }

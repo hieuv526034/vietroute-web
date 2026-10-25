@@ -235,6 +235,10 @@ public final class ApplicationConstants {
 
         public static final String ADMIN_DRIVERS = ADMIN_API + "/drivers";
 
+        public static final String ROUTES_PAGE = "/operations/routes";
+
+        public static final String ADMIN_ROUTES = ADMIN_API + "/routes";
+
         public static final String CARRIER_CHOICES = "/carriers";
 
         public static final String DEMO_PAGE = "/operations/demo";
