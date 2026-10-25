@@ -1,0 +1,145 @@
+<!doctype html>
+<html
+    xmlns:th="http://www.thymeleaf.org"
+    th:lang="${currentLocale}"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.publicCarrier.title})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main
+            id="public-carrier-workspace"
+            class="container-xl workspace-page"
+            th:attr="data-loading=#{ui.loading},data-empty=#{ui.empty},data-view=#{ui.route.view}"
+        >
+            <div class="page-heading">
+                <p
+                    class="eyebrow"
+                    th:text="#{ui.publicCarrier.eyebrow}"
+                ></p>
+                <h1 th:text="#{ui.publicCarrier.title}"></h1>
+                <p
+                    class="muted"
+                    th:text="#{ui.publicCarrier.description}"
+                ></p>
+            </div>
+            <p
+                id="public-carrier-status"
+                role="status"
+                aria-live="polite"
+                class="catalog-status"
+            ></p>
+            <div
+                id="public-carrier-feedback"
+                class="feedback"
+                role="alert"
+                hidden
+            ></div>
+            <fieldset
+                id="public-carrier-controls"
+                class="border-0 p-0 m-0 w-100"
+            >
+                <section class="panel">
+                    <div class="panel-heading">
+                        <h2 th:text="#{ui.publicCarrier.title}"></h2>
+                        <button
+                            id="public-carrier-refresh"
+                            type="button"
+                            class="button button-outline"
+                            th:text="#{ui.ops.refresh}"
+                        ></button>
+                    </div>
+                    <form
+                        id="public-carrier-search"
+                        class="table-filter record-search"
+                    >
+                        <label
+                            for="public-carrier-query"
+                            th:text="#{ui.publicCarrier.query}"
+                        ></label>
+                        <input
+                            id="public-carrier-query"
+                            name="query"
+                            class="form-control"
+                            maxlength="160"
+                        />
+                        <button
+                            type="submit"
+                            class="button"
+                            th:text="#{ui.ops.search}"
+                        ></button>
+                    </form>
+                    <div
+                        class="table-responsive"
+                        role="region"
+                        tabindex="0"
+                        th:attr="aria-label=#{ui.table.scroll}"
+                    >
+                        <table class="table public-carrier-table">
+                            <thead>
+                                <tr>
+                                    <th th:text="#{ui.code}"></th>
+                                    <th th:text="#{ui.fleet.carrier}"></th>
+                                    <th th:text="#{ui.fleet.phone}"></th>
+                                    <th
+                                        class="table-actions"
+                                        th:text="#{ui.ops.actions}"
+                                    ></th>
+                                </tr>
+                            </thead>
+                            <tbody id="public-carrier-body"></tbody>
+                        </table>
+                    </div>
+                    <div th:replace="~{fragments/pagination :: pager('public-carrier',10)}"></div>
+                </section>
+            </fieldset>
+            <dialog
+                id="public-carrier-dialog"
+                class="workspace-dialog"
+                aria-labelledby="public-carrier-dialog-title"
+            >
+                <div class="dialog-heading">
+                    <h2
+                        id="public-carrier-dialog-title"
+                        tabindex="-1"
+                        th:text="#{ui.publicCarrier.detail}"
+                    ></h2>
+                    <button
+                        type="button"
+                        class="button button-outline"
+                        data-dialog-close
+                        th:text="#{ui.ops.close}"
+                    ></button>
+                </div>
+                <div
+                    id="public-carrier-detail-feedback"
+                    class="feedback"
+                    role="alert"
+                    hidden
+                ></div>
+                <fieldset
+                    id="public-carrier-dialog-controls"
+                    class="border-0 p-0 m-0 w-100"
+                >
+                    <div id="public-carrier-summary"></div>
+                    <div class="dialog-actions">
+                        <button
+                            type="button"
+                            class="button button-outline"
+                            data-dialog-close
+                            th:text="#{ui.ops.close}"
+                        ></button>
+                        <button
+                            id="public-carrier-detail-refresh"
+                            type="button"
+                            class="button"
+                            th:text="#{ui.ops.refresh}"
+                        ></button>
+                    </div>
+                </fieldset>
+            </dialog>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/carriers-public.js}"></script>
+    </body>
+</html>

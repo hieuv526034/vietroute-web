@@ -2848,3 +2848,16 @@ fieldset:disabled .button[type='submit']::before,
 #driver-trip-workspace .records-table {
     min-width: 900px;
 }
+.public-carrier-table {
+    min-width: 660px;
+}
+.public-carrier-logo {
+    width: 96px;
+    height: 96px;
+    object-fit: contain;
+    margin-bottom: 16px;
+}
+#public-carrier-summary p {
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}

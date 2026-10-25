@@ -109,6 +109,10 @@
                         th:href="@{/(lang=${currentLocale})}"
                         th:text="#{ui.home}"
                     ></a>
+                    <a
+                        th:href="@{/carriers(lang=${currentLocale})}"
+                        th:text="#{ui.publicCarrier.title}"
+                    ></a>
                     <details
                         class="operations-menu"
                         th:each="item : ${functionNavigation}"

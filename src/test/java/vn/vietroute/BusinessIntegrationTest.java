@@ -245,6 +245,76 @@ class BusinessIntegrationTest {
     }
 
     @Test
+    void publicCarrierLookupHasIndependentProjectionPagingAndPublicationState() throws Exception {
+        seed();
+        long carrier = id("carriers", "DEMOMIENNAM");
+        long other = id("carriers", "DEMOBACNAM");
+        var response = mvc.perform(request(HttpMethod.GET, "/api/v1/carriers?size=1")).andReturn().getResponse();
+        assertEquals(200, response.getStatus());
+        var page = json.readTree(response.getContentAsString()).path("data");
+        assertEquals(2, page.path("totalElements").asInt());
+        assertEquals(1, page.path("content").size());
+        for (String field : Set.of(
+            "scopeId",
+            "createdBy",
+            "updatedBy",
+            "version",
+            "logoMediaId",
+            "canUpdate",
+            "userId"
+        ))
+            assertFalse(page.at("/content/0").has(field));
+        long scope = Long.parseLong(sql("SELECT scope_id FROM carriers WHERE id=" + carrier));
+        var operator = member(scope, "PUBLICLOOKUP", "'VEHICLE_READ'", "publicviewer");
+        assertEquals(2, call(200, "GET", "/api/v1/carriers", null, operator).path("totalElements").asInt());
+        call(403, "GET", "/api/v1/admin/carriers", null, operator);
+        call(200, "GET", "/carriers?lang=vi", null, operator);
+        call(200, "GET", "/carriers?lang=en", null, operator);
+        assertEquals(0, call(200, "GET", "/api/v1/carriers?query=%25_%27", null, admin).path("totalElements").asInt());
+        sql("UPDATE carriers SET active=false WHERE id=" + other);
+        call(404, "GET", "/api/v1/carriers/" + other, null, admin);
+        assertEquals(1, call(200, "GET", "/api/v1/carriers", null, admin).path("totalElements").asInt());
+        sql("UPDATE auth_data_scopes SET active=false WHERE id=" + scope);
+        call(404, "GET", "/api/v1/carriers/" + carrier, null, admin);
+        assertEquals(0, call(200, "GET", "/api/v1/carriers", null, admin).path("totalElements").asInt());
+    }
+
+    @Test
+    void publicCarrierLogoReturnsOnlyReadyPublishedUrlWithoutOpeningMediaMetadata() throws Exception {
+        seed();
+        long carrier = id("carriers", "DEMOMIENNAM");
+        long image = Long.parseLong(
+            sql(
+                "INSERT INTO media_assets(public_id,status,url,thumbnail_url,format,bytes,width,height,created_by,updated_by) VALUES ('public-logo-test','READY','https://example.invalid/logo.jpg','https://example.invalid/logo-thumb.jpg','jpg',1024,32,32,1,1) RETURNING id"
+            )
+        );
+        sql("UPDATE carriers SET logo_media_id=" + image + " WHERE id=" + carrier);
+        var response = mvc
+            .perform(request(HttpMethod.GET, "/api/v1/carriers/" + carrier))
+            .andReturn()
+            .getResponse();
+        assertEquals(200, response.getStatus());
+        var detail = json.readTree(response.getContentAsString()).path("data");
+        assertEquals("https://example.invalid/logo.jpg", detail.path("logoUrl").asText());
+        assertFalse(detail.has("logoMediaId"));
+        assertFalse(detail.toString().contains("public-logo-test"));
+        assertEquals(
+            401,
+            mvc
+                .perform(request(HttpMethod.GET, "/api/v1/media/" + image))
+                .andReturn()
+                .getResponse()
+                .getStatus()
+        );
+        sql("UPDATE media_assets SET status='DELETING' WHERE id=" + image);
+        assertTrue(
+            call(200, "GET", "/api/v1/carriers/" + carrier, null, admin)
+                .path("logoUrl")
+                .isNull()
+        );
+    }
+
+    @Test
     void membershipFiltersCountRowsIdsAndPickerWithoutLeakingOtherCarrier() throws Exception {
         seed();
         long carrier = id("carriers", "DEMOMIENNAM");
