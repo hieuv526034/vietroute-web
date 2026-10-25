@@ -1,0 +1,495 @@
+<!doctype html>
+<html
+    xmlns:th="http://www.thymeleaf.org"
+    th:lang="${currentLocale}"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.trip.title})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main
+            id="trip-workspace"
+            class="container-xl workspace-page"
+            th:attr="data-loading=#{ui.loading},data-empty=#{ui.empty},data-no-read=#{ui.accessTree.noRead},data-view=#{ui.route.view},data-edit=#{ui.location.edit},data-choose=#{ui.trip.choose},data-draft=#{ui.trip.DRAFT},data-open=#{ui.trip.OPEN},data-in-progress=#{ui.trip.IN_PROGRESS},data-completed=#{ui.trip.COMPLETED},data-cancelled=#{ui.trip.CANCELLED},data-arrival=#{ui.trip.arrival},data-departure=#{ui.trip.departure},data-pickup=#{ui.route.pickup},data-dropoff=#{ui.route.dropoff},data-fare=#{ui.route.fare},data-note-required=#{ui.trip.noteRequired},data-created=#{ui.trip.CREATED},data-opened=#{ui.trip.OPENED},data-assigned=#{ui.trip.ASSIGNED},data-started=#{ui.trip.STARTED},data-arrived=#{ui.trip.ARRIVED},data-departed=#{ui.trip.DEPARTED},data-notice=#{ui.trip.NOTICE}"
+        >
+            <div class="page-heading">
+                <p
+                    class="eyebrow"
+                    th:text="#{ui.fleet.eyebrow}"
+                ></p>
+                <h1 th:text="#{ui.trip.title}"></h1>
+                <p
+                    class="muted"
+                    th:text="#{ui.trip.description}"
+                ></p>
+            </div>
+            <p
+                id="trip-status"
+                class="catalog-status"
+                role="status"
+                aria-live="polite"
+            ></p>
+            <div
+                id="trip-feedback"
+                class="feedback"
+                role="alert"
+                hidden
+            ></div>
+            <fieldset
+                id="trip-controls"
+                class="border-0 p-0 m-0 w-100"
+            >
+                <section class="panel">
+                    <div class="panel-heading">
+                        <h2 th:text="#{ui.trip.title}"></h2>
+                        <div class="toolbar-actions">
+                            <button
+                                id="trip-create"
+                                type="button"
+                                class="button"
+                                disabled
+                                th:text="#{ui.fleet.create}"
+                            ></button>
+                            <button
+                                id="trip-refresh"
+                                type="button"
+                                class="button button-outline"
+                                th:text="#{ui.ops.refresh}"
+                            ></button>
+                        </div>
+                    </div>
+                    <form
+                        id="trip-search"
+                        class="table-filter trip-filters"
+                    >
+                        <label>
+                            <span th:text="#{ui.fleet.search}"></span>
+                            <input
+                                name="query"
+                                maxlength="160"
+                                class="form-control"
+                            />
+                        </label>
+                        <label>
+                            <span th:text="#{ui.location.state}"></span>
+                            <select
+                                name="status"
+                                class="form-select"
+                            >
+                                <option
+                                    value=""
+                                    th:text="#{ui.fleet.allStates}"
+                                ></option>
+                                <option
+                                    th:each="state : ${T(vn.vietroute.business.trip.entity.TripStatus).values()}"
+                                    th:value="${state}"
+                                    th:text="#{'ui.trip.'+${state}}"
+                                ></option>
+                            </select>
+                        </label>
+                        <label>
+                            <span th:text="#{ui.trip.date}"></span>
+                            <input
+                                name="date"
+                                type="date"
+                                class="form-control"
+                            />
+                        </label>
+                        <button
+                            class="button button-outline"
+                            th:text="#{ui.search}"
+                        ></button>
+                    </form>
+                    <div
+                        class="table-responsive"
+                        tabindex="0"
+                        role="region"
+                        th:attr="aria-label=#{ui.table.scroll}"
+                    >
+                        <table class="table records-table">
+                            <thead>
+                                <tr>
+                                    <th th:text="#{ui.code}"></th>
+                                    <th th:text="#{ui.route.name}"></th>
+                                    <th th:text="#{ui.fleet.carrier}"></th>
+                                    <th th:text="#{ui.trip.departure}"></th>
+                                    <th th:text="#{ui.fleet.plate}"></th>
+                                    <th th:text="#{ui.fleet.capacity}"></th>
+                                    <th th:text="#{ui.location.state}"></th>
+                                    <th
+                                        class="table-actions"
+                                        th:text="#{ui.ops.actions}"
+                                    ></th>
+                                </tr>
+                            </thead>
+                            <tbody id="trip-body"></tbody>
+                        </table>
+                    </div>
+                    <div th:replace="~{fragments/pagination :: pager('trip', 10)}"></div>
+                </section>
+            </fieldset>
+            <dialog
+                id="trip-dialog"
+                class="workspace-dialog route-dialog"
+                aria-labelledby="trip-dialog-title"
+            >
+                <div class="dialog-heading">
+                    <h2
+                        id="trip-dialog-title"
+                        tabindex="-1"
+                        th:text="#{ui.trip.title}"
+                    ></h2>
+                    <button
+                        type="button"
+                        class="button button-outline"
+                        data-dialog-close
+                        th:text="#{ui.ops.close}"
+                    ></button>
+                </div>
+                <div
+                    id="trip-form-feedback"
+                    class="feedback"
+                    role="alert"
+                    hidden
+                ></div>
+                <p
+                    id="trip-conflict"
+                    class="form-help"
+                    hidden
+                    th:text="#{ui.fleet.conflict}"
+                ></p>
+                <form
+                    id="trip-form"
+                    novalidate
+                >
+                    <fieldset
+                        id="trip-dialog-controls"
+                        class="border-0 p-0 m-0 w-100"
+                    >
+                        <div
+                            id="trip-tabs"
+                            data-tabs
+                        >
+                            <div
+                                class="workspace-tabs"
+                                role="tablist"
+                                th:attr="aria-label=#{ui.trip.title}"
+                            >
+                                <button
+                                    id="trip-info-tab"
+                                    type="button"
+                                    data-tab-target="trip-info"
+                                    aria-selected="true"
+                                    th:text="#{ui.trip.info}"
+                                ></button>
+                                <button
+                                    id="trip-stops-tab"
+                                    type="button"
+                                    data-tab-target="trip-stops"
+                                    th:text="#{ui.route.stops}"
+                                ></button>
+                                <button
+                                    id="trip-events-tab"
+                                    type="button"
+                                    data-tab-target="trip-events"
+                                    th:text="#{ui.trip.history}"
+                                ></button>
+                            </div>
+                            <section
+                                id="trip-info"
+                                data-tab-panel="trip-info-tab"
+                            >
+                                <p
+                                    id="trip-current-state"
+                                    class="form-help"
+                                ></p>
+                                <div class="dialog-form-grid">
+                                    <label>
+                                        <span th:text="#{ui.code}"></span>
+                                        <input
+                                            name="code"
+                                            class="form-control"
+                                            required
+                                            maxlength="40"
+                                            pattern="[A-Z][A-Z0-9]{2,39}"
+                                        />
+                                    </label>
+                                    <label>
+                                        <span th:text="#{ui.trip.departureInput}"></span>
+                                        <input
+                                            name="departureAt"
+                                            type="datetime-local"
+                                            step="60"
+                                            class="form-control"
+                                            required
+                                        />
+                                    </label>
+                                    <div
+                                        class="trip-picker"
+                                        data-kind="CARRIER"
+                                        data-field="carrierId"
+                                    >
+                                        <label>
+                                            <span th:text="#{ui.fleet.carrier}"></span>
+                                            <select
+                                                name="carrierId"
+                                                class="form-select"
+                                                required
+                                            ></select>
+                                        </label>
+                                        <div class="trip-picker-search">
+                                            <input
+                                                class="form-control"
+                                                maxlength="160"
+                                                th:attr="aria-label=#{ui.fleet.carrier}"
+                                            />
+                                            <button
+                                                type="button"
+                                                class="button button-outline"
+                                                data-picker-search
+                                                th:text="#{ui.search}"
+                                            ></button>
+                                        </div>
+                                        <div class="trip-picker-paging">
+                                            <button
+                                                type="button"
+                                                class="button button-outline"
+                                                data-picker-prev
+                                                th:text="#{ui.mediaPrevious}"
+                                            ></button>
+                                            <span
+                                                data-picker-count
+                                                aria-live="polite"
+                                            ></span>
+                                            <button
+                                                type="button"
+                                                class="button button-outline"
+                                                data-picker-next
+                                                th:text="#{ui.mediaNext}"
+                                            ></button>
+                                        </div>
+                                    </div>
+                                    <div
+                                        class="trip-picker"
+                                        data-kind="ROUTE"
+                                        data-field="routeId"
+                                    >
+                                        <label>
+                                            <span th:text="#{ui.route.title}"></span>
+                                            <select
+                                                name="routeId"
+                                                class="form-select"
+                                                required
+                                            ></select>
+                                        </label>
+                                        <div class="trip-picker-search">
+                                            <input
+                                                class="form-control"
+                                                maxlength="160"
+                                                th:attr="aria-label=#{ui.route.title}"
+                                            />
+                                            <button
+                                                type="button"
+                                                class="button button-outline"
+                                                data-picker-search
+                                                th:text="#{ui.search}"
+                                            ></button>
+                                        </div>
+                                        <div class="trip-picker-paging">
+                                            <button
+                                                type="button"
+                                                class="button button-outline"
+                                                data-picker-prev
+                                                th:text="#{ui.mediaPrevious}"
+                                            ></button>
+                                            <span
+                                                data-picker-count
+                                                aria-live="polite"
+                                            ></span>
+                                            <button
+                                                type="button"
+                                                class="button button-outline"
+                                                data-picker-next
+                                                th:text="#{ui.mediaNext}"
+                                            ></button>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="trip-picker"
+                                        data-kind="VEHICLE"
+                                        data-field="vehicleId"
+                                    >
+                                        <label>
+                                            <span th:text="#{ui.fleet.title.vehicles}"></span>
+                                            <select
+                                                name="vehicleId"
+                                                class="form-select"
+                                                required
+                                            ></select>
+                                        </label>
+                                        <div class="trip-picker-search">
+                                            <input
+                                                class="form-control"
+                                                maxlength="160"
+                                                th:attr="aria-label=#{ui.fleet.title.vehicles}"
+                                            />
+                                            <button
+                                                type="button"
+                                                class="button button-outline"
+                                                data-picker-search
+                                                th:text="#{ui.search}"
+                                            ></button>
+                                        </div>
+                                        <div class="trip-picker-paging">
+                                            <button
+                                                type="button"
+                                                class="button button-outline"
+                                                data-picker-prev
+                                                th:text="#{ui.mediaPrevious}"
+                                            ></button>
+                                            <span
+                                                data-picker-count
+                                                aria-live="polite"
+                                            ></span>
+                                            <button
+                                                type="button"
+                                                class="button button-outline"
+                                                data-picker-next
+                                                th:text="#{ui.mediaNext}"
+                                            ></button>
+                                        </div>
+                                    </div>
+                                    <div
+                                        class="trip-picker"
+                                        data-kind="DRIVER"
+                                        data-field="driverId"
+                                    >
+                                        <label>
+                                            <span th:text="#{ui.fleet.title.drivers}"></span>
+                                            <select
+                                                name="driverId"
+                                                class="form-select"
+                                                required
+                                            ></select>
+                                        </label>
+                                        <div class="trip-picker-search">
+                                            <input
+                                                class="form-control"
+                                                maxlength="160"
+                                                th:attr="aria-label=#{ui.fleet.title.drivers}"
+                                            />
+                                            <button
+                                                type="button"
+                                                class="button button-outline"
+                                                data-picker-search
+                                                th:text="#{ui.search}"
+                                            ></button>
+                                        </div>
+                                        <div class="trip-picker-paging">
+                                            <button
+                                                type="button"
+                                                class="button button-outline"
+                                                data-picker-prev
+                                                th:text="#{ui.mediaPrevious}"
+                                            ></button>
+                                            <span
+                                                data-picker-count
+                                                aria-live="polite"
+                                            ></span>
+                                            <button
+                                                type="button"
+                                                class="button button-outline"
+                                                data-picker-next
+                                                th:text="#{ui.mediaNext}"
+                                            ></button>
+                                        </div>
+                                    </div>
+                                    <label>
+                                        <span th:text="#{ui.fleet.capacity}"></span>
+                                        <input
+                                            name="capacity"
+                                            type="number"
+                                            min="1"
+                                            max="200"
+                                            step="1"
+                                            class="form-control"
+                                            required
+                                        />
+                                    </label>
+                                    <label class="grid-span">
+                                        <span th:text="#{ui.trip.note}"></span>
+                                        <textarea
+                                            name="note"
+                                            maxlength="2000"
+                                            class="form-control"
+                                            rows="3"
+                                        ></textarea>
+                                    </label>
+                                </div>
+                                <p
+                                    class="form-help"
+                                    th:text="#{ui.trip.assignmentHelp}"
+                                ></p>
+                            </section>
+                            <section
+                                id="trip-stops"
+                                data-tab-panel="trip-stops-tab"
+                                hidden
+                            >
+                                <p
+                                    class="form-help"
+                                    th:text="#{ui.trip.snapshotHelp}"
+                                ></p>
+                                <div
+                                    id="trip-stop-list"
+                                    class="route-stop-list"
+                                ></div>
+                            </section>
+                            <section
+                                id="trip-events"
+                                data-tab-panel="trip-events-tab"
+                                hidden
+                            >
+                                <div
+                                    id="trip-event-list"
+                                    class="route-stop-list"
+                                ></div>
+                            </section>
+                        </div>
+                        <div class="dialog-actions">
+                            <button
+                                type="button"
+                                class="button button-outline"
+                                data-dialog-close
+                                th:text="#{ui.ops.close}"
+                            ></button>
+                            <button
+                                id="trip-cancel"
+                                type="button"
+                                class="button button-danger"
+                                hidden
+                                th:text="#{ui.trip.cancel}"
+                            ></button>
+                            <button
+                                id="trip-open"
+                                type="button"
+                                class="button button-outline"
+                                hidden
+                                th:text="#{ui.trip.publish}"
+                            ></button>
+                            <button
+                                id="trip-save"
+                                type="submit"
+                                class="button"
+                                th:text="#{ui.catalog.save}"
+                            ></button>
+                        </div>
+                    </fieldset>
+                </form>
+            </dialog>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/trips.js}"></script>
+    </body>
+</html>

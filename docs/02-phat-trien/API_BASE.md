@@ -275,3 +275,19 @@ V018 bổ sung carrier_routes/carrier_route_stops, FK composite route/carrier/sc
 POST tuyến cần ROUTE_CREATE, PUT `/{id}` cần ROUTE_UPDATE. JSON gồm carrierId/code/nameVi/nameEn/description/active/stops; PUT thêm version và giữ carrierId/code cũ. Mỗi điểm gồm locationId, arrivalOffsetMinutes, departureOffsetMinutes, cumulativeFare, pickupAllowed, dropoffAllowed. 2–32 địa điểm khác nhau, thứ tự theo mảng; phút đến tăng qua mốc rời trước, 0–43200 phút, giá cộng dồn không giảm và tối đa 2 chữ số thập phân. Điểm đầu arrival=0/fare=0/pickup=true; điểm cuối dropoff=true. Hai chiều là hai tuyến riêng; không tự đảo điểm/giá.
 
 Transaction khóa nhà xe → tuyến → danh mục, thay điểm nguyên tử và CAS version. Lỗi ROUTE001/400 giữ draft, version cũ 409, parent ngừng dùng 409; ngoài scope 404. Chuyến sẽ dùng snapshot độc lập khi module TRIP01 được triển khai, không tham chiếu ID mẫu điểm để sửa lịch sử. `/operations/routes` đòi ROUTE_VIEW riêng với READ. Không auto cấp các quyền này cho role thường; mapping vận hành được gán qua quản trị theo yêu cầu chủ dự án.
+
+## Điều hành chuyến — TRIP01 trong BUSINESS04
+
+V019 thêm `carrier_trips`, `trip_stops`, `trip_segments`, `trip_events`; giữ V001–V018. Chuyến lưu snapshot tên tuyến, loại xe/biển số, tài xế và điểm/địa chỉ/tọa độ/giờ/giá. Sửa mẫu/danh mục không sửa lịch sử đã chụp. Tồn chỗ có một dòng cho mỗi đoạn liên tiếp, capacity 1–200 và reserved_seats 0..capacity; module booking dùng các dòng này trong transaction riêng theo thứ tự khóa chung.
+
+| API | Quyền và hợp đồng |
+|---|---|
+| GET `/api/v1/admin/trips` và `/{id}` | TRIP_READ + scope; query/carrierId/status/date/page/size lọc/count tại DB. date là ngày xuất phát ở Asia/Ho_Chi_Minh. Chi tiết có stops và tối đa 100 sự kiện mới nhất. ID ngoài quyền 404. |
+| GET `/api/v1/admin/trips/choices` | kind CARRIER/ROUTE/VEHICLE/DRIVER, carrierId (cần cho con), query/page/size; tripId=0 dùng TRIP_CREATE, tripId dương dùng TRIP_UPDATE và buộc nhà xe của trip. Projection ID/mã/tên/capacity; không cần quyền CRUD danh mục phụ thuộc. |
+| POST `/api/v1/admin/trips` | TRIP_CREATE; code/routeId/vehicleId/driverId/departureAt/capacity. Tạo DRAFT, giờ UTC ISO-8601 trong tương lai tối đa 730 ngày, chuẩn hóa giây. Source active, cùng carrier/scope, DRIVER ready có global/scoped DRIVER. |
+| PUT `/{id}/assignment` | TRIP_UPDATE; vehicleId/driverId/capacity/departureAt nullable/version/note. DRAFT/OPEN; chỉ DRAFT dịch lịch. Không giảm dưới mức reserved cao nhất hoặc vượt xe. Không sửa snapshot điểm/giá. |
+| PUT `/{id}/state` | TRIP_UPDATE; status OPEN/CANCELLED, version và note. DRAFT→OPEN; DRAFT/OPEN→CANCELLED, hủy cần lý do. Không cho staff tự gửi IN_PROGRESS/COMPLETED hoặc đi ngược trạng thái. |
+
+Mở bán khóa trip → nhà xe → source → xe → tài xế/account; khóa xe/tài xế tuần tự hóa cạnh tranh lịch. Đổi phân công dùng trip → nhà xe → xe → tài xế/account → segments tăng dần. Lịch chồng dùng `start < other.end AND end > other.start` cho OPEN/IN_PROGRESS, gồm qua đêm/nhiều ngày; hai chuyến tiếp giáp được phép. Không khóa trip khác khi kiểm lịch để tránh vòng chờ. Mutation tăng version/CAS và ghi trip_events cùng transaction; lỗi lịch sử rollback cả thay đổi. Snapshot địa điểm cũ cũng phải active trước mở bán, kể cả mẫu đã thay điểm.
+
+`/operations/trips` có TRIP_VIEW riêng, modal thông tin/điểm/lịch sử, picker tìm và phân trang server, lỗi giữ draft. TRIP001 là dữ liệu không hợp lệ (400), TRIP002 lịch trùng và TRIP003 trạng thái không cho phép (409); version cũ COM008/409. Không auto grant role thường. Đây là điều hành staff; luồng tài xế tiến độ, booking/giải phóng chỗ khi hủy, tìm công khai, GPS và báo cáo được tích hợp ở các bước BUSINESS04 kế tiếp, chưa suy từ CRUD chuyến là đã hoàn tất các luồng đó.

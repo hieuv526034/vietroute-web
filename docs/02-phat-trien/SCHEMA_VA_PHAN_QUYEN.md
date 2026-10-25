@@ -402,3 +402,11 @@ Các mã `VEHICLE_TYPE_*`, `BOOKING_SOURCE_*`, `PROVINCE_*` cho từng danh mụ
 `DataScopeGuard.visibleSql/bindVisible` lọc SQL cả count/trang/ID từ alias owner do DAO lấy trong DB; đọc lại account/tokenVersion và membership/role/perms, không trust carrierId filter hoặc authority client. CREATE/UPDATE dùng cùng connection và parent lock; ADMIN recovery vẫn cần DB ADMIN + scope active. Trạng thái kinh doanh carrier inactive chặn gán mới/bật xe/tài xế nhưng giữ scope active để có thể ngừng sử dụng/xử lý dữ liệu cũ. Account DRIVER phải ready và có membership DRIVER đúng scope khi liên kết; hồ sơ chưa liên kết không có quyền đăng nhập. Thu hồi account/membership vẫn kiểm lại ở mỗi thao tác tiếp theo.
 
 Hợp đồng route/payload/DEMO và kiểm cô lập ở [API base](API_BASE.md#danh-mục-riêng-và-nhà-xephương-tiệntài-xế--business02). Phần scope này chưa thay các row guard/lock/snapshot/tồn chỗ bắt buộc của tuyến/chuyến/booking tương lai. Chưa có quyền xóa cứng các hồ sơ kinh doanh.
+
+## Tuyến và chuyến trong phạm vi nhà xe — ROUTE01/TRIP01
+
+V018 thêm `carrier_routes`/`carrier_route_stops`; V019 thêm `carrier_trips`/`trip_stops`/`trip_segments`/`trip_events`. FK composite giữ đúng parent/carrier/scope; schema lấy từ connection cấu hình, migration mới không ghi prefix. Tuyến là mẫu một chiều; điểm chuyến là snapshot độc lập và sự kiện ghi cùng transaction. Không thêm tầng role/group hay quyền toàn cục bỏ qua scope.
+
+TRIP_VIEW/READ/CREATE/UPDATE là tài nguyên riêng, không dùng ROUTE/VEHICLE/DRIVER_READ làm quyền phụ thuộc ẩn. Picker tạo/phân công sử dụng chính action TRIP trong scope; ID chuyến dương được kiểm trước khi ép carrier cho picker. VIEW/API tách, quyền scoped và global cùng bắt buộc. Registry/ADMIN sync khi enabled, mapping role thường cần quản trị lưu qua API/UI; thêm source không tự cấp cho OPERATOR/DRIVER/CUSTOMER.
+
+Hợp đồng payload, khóa lịch và snapshot ở [API base](API_BASE.md#điều-hành-chuyến--trip01-trong-business04). Chưa coi bảng trip_segments tự triển khai xác nhận/hủy booking, còn phải tích hợp transaction và ca cạnh tranh của module booking.

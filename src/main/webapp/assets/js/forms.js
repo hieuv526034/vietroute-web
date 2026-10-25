@@ -15,7 +15,8 @@
         marker.className = 'required-marker';
         marker.textContent = '*';
         marker.setAttribute('aria-hidden', 'true');
-        label.append(marker);
+        // Label bọc control có span tiêu đề: gắn dấu vào tiêu đề để không tạo thêm hàng trong grid.
+        (label.querySelector(':scope > span:not(.required-marker)') || label).append(marker);
     };
     const messageNode = (input) => {
         const id = `${input.id || (input.id = `field-${crypto.randomUUID()}`)}-error`;

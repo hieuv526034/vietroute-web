@@ -12,6 +12,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.DriverManager;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -464,6 +466,342 @@ class BusinessIntegrationTest {
                   {"locationId":%d,"arrivalOffsetMinutes":1500,"departureOffsetMinutes":1510,"cumulativeFare":100000,"pickupAllowed":true,"dropoffAllowed":true},
                   {"locationId":%d,"arrivalOffsetMinutes":1800,"departureOffsetMinutes":1800,"cumulativeFare":250000,"pickupAllowed":false,"dropoffAllowed":true}]}
         """.formatted(carrier, code, first, middle, last);
+    }
+
+    private record TripFixture(long carrier, long scope, long route, long vehicle, long driver) {}
+
+    /** Fixture account ready chỉ ở schema test loopback; không gọi email/provider hoặc thay dữ liệu Neon. */
+    private TripFixture tripFixture(boolean other) throws Exception {
+        String suffix = other ? "B" : "A";
+        long carrier = id("carriers", other ? "DEMOBACNAM" : "DEMOMIENNAM");
+        long scope = Long.parseLong(sql("SELECT scope_id FROM carriers WHERE id=" + carrier));
+        long driver = id("carrier_drivers", other ? "DEMODRIVER03" : "DEMODRIVER01");
+        long vehicle = id("carrier_vehicles", other ? "DEMOVEH03" : "DEMOVEH01");
+        String username = "tripdriver" + suffix.toLowerCase(Locale.ROOT);
+        long account = Long.parseLong(
+            sql(
+                "INSERT INTO auth_users(username,password_hash,display_name,must_change_password,email,email_verified_at) SELECT '" +
+                    username +
+                    "',password_hash,'Driver CI',false,'" +
+                    username +
+                    "@example.invalid',CURRENT_TIMESTAMP FROM auth_users WHERE id=1 RETURNING id"
+            )
+        );
+        sql(
+            "INSERT INTO auth_user_roles(user_id,role_code) VALUES(" +
+                account +
+                ",'DRIVER'); INSERT INTO auth_scope_memberships(scope_id,user_id) VALUES(" +
+                scope +
+                "," +
+                account +
+                "); INSERT INTO auth_scope_roles(scope_id,user_id,role_code) VALUES(" +
+                scope +
+                "," +
+                account +
+                ",'DRIVER'); UPDATE carrier_drivers SET user_id=" +
+                account +
+                " WHERE id=" +
+                driver
+        );
+        long route = call(
+            201,
+            "POST",
+            "/api/v1/admin/routes",
+            routeBody(
+                carrier,
+                "TRIPROUTE" + suffix,
+                id("location_places", "DEMOPLACEA"),
+                id("location_places", "DEMOPLACEB"),
+                id("location_places", "DEMOPLACEC")
+            ),
+            admin
+        )
+            .path("id")
+            .asLong();
+        return new TripFixture(carrier, scope, route, vehicle, driver);
+    }
+
+    private String tripBody(TripFixture fixture, String code, Instant start) {
+        return (
+            "{\"code\":\"" +
+            code +
+            "\",\"routeId\":" +
+            fixture.route() +
+            ",\"vehicleId\":" +
+            fixture.vehicle() +
+            ",\"driverId\":" +
+            fixture.driver() +
+            ",\"capacity\":10,\"departureAt\":\"" +
+            start +
+            "\"}"
+        );
+    }
+
+    @Test
+    void tripsSnapshotAcrossDaysValidateAssetsAndRequireVersionAndState() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        var other = tripFixture(true);
+        Instant start = Instant.now().plus(3, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
+        var trip = call(201, "POST", "/api/v1/admin/trips", tripBody(fixture, "SNAPSHOTTRIP", start), admin);
+        long id = trip.path("id").asLong();
+        assertEquals("DRAFT", trip.path("status").asText());
+        assertEquals(3, trip.path("stops").size());
+        assertEquals(start.plusSeconds(1500 * 60L).toString(), trip.at("/stops/1/scheduledArrivalAt").asText());
+        assertEquals("2", sql("SELECT count(*) FROM trip_segments WHERE trip_id=" + id));
+        String snapshot = trip.at("/stops/1/nameVi").asText();
+        sql(
+            "UPDATE location_places SET name_vi='Tên mới' WHERE code='DEMOPLACEB'; UPDATE carrier_route_stops SET cumulative_fare=200000 WHERE route_id=" +
+                fixture.route() +
+                " AND stop_order=2"
+        );
+        var detail = call(200, "GET", "/api/v1/admin/trips/" + id, null, admin);
+        assertEquals(snapshot, detail.at("/stops/1/nameVi").asText());
+        assertEquals(100000, detail.at("/stops/1/cumulativeFare").asInt());
+        call(
+            400,
+            "POST",
+            "/api/v1/admin/trips",
+            tripBody(fixture, "WRONGVEHICLE", start).replace(
+                "\"vehicleId\":" + fixture.vehicle(),
+                "\"vehicleId\":" + other.vehicle()
+            ),
+            admin
+        );
+        call(400, "POST", "/api/v1/admin/trips", tripBody(fixture, "PASTTRIP", Instant.now().minusSeconds(60)), admin);
+        call(
+            409,
+            "PUT",
+            "/api/v1/admin/trips/" + id + "/state",
+            "{\"status\":\"IN_PROGRESS\",\"version\":0,\"note\":\"\"}",
+            admin
+        );
+        sql("UPDATE carrier_drivers SET active=false WHERE id=" + fixture.driver());
+        call(
+            400,
+            "PUT",
+            "/api/v1/admin/trips/" + id + "/state",
+            "{\"status\":\"OPEN\",\"version\":0,\"note\":\"\"}",
+            admin
+        );
+        sql("UPDATE carrier_drivers SET active=true WHERE id=" + fixture.driver());
+        var opened = call(
+            200,
+            "PUT",
+            "/api/v1/admin/trips/" + id + "/state",
+            "{\"status\":\"OPEN\",\"version\":0,\"note\":\"Mở bán\"}",
+            admin
+        );
+        assertEquals(1, opened.path("version").asInt());
+        call(
+            409,
+            "PUT",
+            "/api/v1/admin/trips/" + id + "/state",
+            "{\"status\":\"CANCELLED\",\"version\":0,\"note\":\"Hủy\"}",
+            admin
+        );
+        call(
+            409,
+            "PUT",
+            "/api/v1/admin/trips/" + id + "/state",
+            "{\"status\":\"CANCELLED\",\"version\":1,\"note\":\"\"}",
+            admin
+        );
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/trips/" + id + "/state",
+            "{\"status\":\"CANCELLED\",\"version\":1,\"note\":\"Hủy thử\"}",
+            admin
+        );
+        call(
+            409,
+            "PUT",
+            "/api/v1/admin/trips/" + id + "/state",
+            "{\"status\":\"OPEN\",\"version\":2,\"note\":\"\"}",
+            admin
+        );
+        call(200, "GET", "/operations/trips?lang=vi", null, admin);
+        call(200, "GET", "/operations/trips?lang=en", null, admin);
+    }
+
+    @Test
+    void concurrentTripPublicationSerializesSharedVehicleAndDriverSchedules() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        Instant start = Instant.now().plus(2, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
+        long first = call(201, "POST", "/api/v1/admin/trips", tripBody(fixture, "RACEFIRST", start), admin)
+            .path("id")
+            .asLong();
+        long second = call(
+            201,
+            "POST",
+            "/api/v1/admin/trips",
+            tripBody(fixture, "RACESECOND", start.plusSeconds(3600)),
+            admin
+        )
+            .path("id")
+            .asLong();
+        var workers = Executors.newFixedThreadPool(2);
+        try {
+            var one = workers.submit(() ->
+                mvc
+                    .perform(
+                        request(HttpMethod.PUT, "/api/v1/admin/trips/" + first + "/state")
+                            .with(authentication(admin))
+                            .with(csrf())
+                            .contentType("application/json")
+                            .content("{\"status\":\"OPEN\",\"version\":0,\"note\":\"\"}")
+                    )
+                    .andReturn()
+                    .getResponse()
+                    .getStatus()
+            );
+            var two = workers.submit(() ->
+                mvc
+                    .perform(
+                        request(HttpMethod.PUT, "/api/v1/admin/trips/" + second + "/state")
+                            .with(authentication(admin))
+                            .with(csrf())
+                            .contentType("application/json")
+                            .content("{\"status\":\"OPEN\",\"version\":0,\"note\":\"\"}")
+                    )
+                    .andReturn()
+                    .getResponse()
+                    .getStatus()
+            );
+            assertEquals(Set.of(200, 409), Set.of(one.get(20, TimeUnit.SECONDS), two.get(20, TimeUnit.SECONDS)));
+        } finally {
+            workers.shutdownNow();
+        }
+        assertEquals("1", sql("SELECT count(*) FROM carrier_trips WHERE status='OPEN'"));
+        long open = Long.parseLong(sql("SELECT id FROM carrier_trips WHERE status='OPEN'")),
+            draft = Long.parseLong(sql("SELECT id FROM carrier_trips WHERE status='DRAFT'"));
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/trips/" + open + "/state",
+            "{\"status\":\"CANCELLED\",\"version\":1,\"note\":\"Giải phóng lịch\"}",
+            admin
+        );
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/trips/" + draft + "/state",
+            "{\"status\":\"OPEN\",\"version\":0,\"note\":\"\"}",
+            admin
+        );
+    }
+
+    @Test
+    void tripScopeFiltersCountIdsPickerAndIndependentViewWithoutOtherCrudRights() throws Exception {
+        seed();
+        var own = tripFixture(false);
+        var other = tripFixture(true);
+        Instant start = Instant.now().plus(3, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
+        long id = call(201, "POST", "/api/v1/admin/trips", tripBody(own, "OWNTRIP", start), admin)
+            .path("id")
+            .asLong();
+        long foreign = call(201, "POST", "/api/v1/admin/trips", tripBody(other, "FOREIGNTRIP", start), admin)
+            .path("id")
+            .asLong();
+        var staff = member(own.scope(), "TRIP_CI", "'TRIP_VIEW','TRIP_READ','TRIP_CREATE','TRIP_UPDATE'", "tripstaff");
+        assertEquals(1, call(200, "GET", "/api/v1/admin/trips?size=1", null, staff).path("totalElements").asInt());
+        call(200, "GET", "/api/v1/admin/trips/" + id, null, staff);
+        call(404, "GET", "/api/v1/admin/trips/" + foreign, null, staff);
+        call(404, "POST", "/api/v1/admin/trips", tripBody(other, "DENIEDTRIP", start), staff);
+        assertEquals(
+            1,
+            call(200, "GET", "/api/v1/admin/trips/choices?kind=CARRIER", null, staff).path("totalElements").asInt()
+        );
+        assertEquals(
+            0,
+            call(200, "GET", "/api/v1/admin/trips/choices?kind=VEHICLE&carrierId=" + other.carrier(), null, staff)
+                .path("totalElements")
+                .asInt()
+        );
+        assertEquals(
+            2,
+            call(
+                200,
+                "GET",
+                "/api/v1/admin/trips/choices?kind=VEHICLE&tripId=" + id + "&carrierId=" + other.carrier(),
+                null,
+                staff
+            )
+                .path("totalElements")
+                .asInt()
+        );
+        call(404, "GET", "/api/v1/admin/trips/choices?kind=VEHICLE&tripId=" + foreign, null, staff);
+        call(200, "GET", "/operations/trips", null, staff);
+        sql("DELETE FROM auth_role_permissions WHERE role_code='TRIP_CI' AND permission_code='TRIP_VIEW'");
+        call(403, "GET", "/operations/trips", null, staff);
+        call(200, "GET", "/api/v1/admin/trips", null, staff);
+        sql(
+            "UPDATE auth_scope_memberships SET active=false WHERE scope_id=" +
+                own.scope() +
+                " AND user_id=(SELECT id FROM auth_users WHERE username='tripstaff')"
+        );
+        assertEquals(0, call(200, "GET", "/api/v1/admin/trips", null, staff).path("totalElements").asInt());
+    }
+
+    @Test
+    void tripAssignmentProtectsReservedCapacityAndHistoryFailureRollsBackAllWrites() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        Instant start = Instant.now().plus(3, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
+        long id = call(201, "POST", "/api/v1/admin/trips", tripBody(fixture, "ROLLBACKTRIP", start), admin)
+            .path("id")
+            .asLong();
+        sql("UPDATE trip_segments SET reserved_seats=5 WHERE trip_id=" + id + " AND segment_order=1");
+        String assignment =
+            "{\"vehicleId\":" +
+            fixture.vehicle() +
+            ",\"driverId\":" +
+            fixture.driver() +
+            ",\"capacity\":4,\"departureAt\":\"" +
+            start.plusSeconds(3600) +
+            "\",\"version\":0,\"note\":\"Đổi\"}";
+        call(400, "PUT", "/api/v1/admin/trips/" + id + "/assignment", assignment, admin);
+        sql(
+            "CREATE FUNCTION fail_trip_event() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN RAISE EXCEPTION ''test trip event failure''; END'; CREATE TRIGGER fail_trip_event BEFORE INSERT ON trip_events FOR EACH ROW EXECUTE FUNCTION fail_trip_event()"
+        );
+        call(
+            503,
+            "PUT",
+            "/api/v1/admin/trips/" + id + "/assignment",
+            assignment.replace("\"capacity\":4", "\"capacity\":8"),
+            admin
+        );
+        call(
+            503,
+            "PUT",
+            "/api/v1/admin/trips/" + id + "/state",
+            "{\"status\":\"OPEN\",\"version\":0,\"note\":\"\"}",
+            admin
+        );
+        call(503, "POST", "/api/v1/admin/trips", tripBody(fixture, "FAILEDCREATE", start), admin);
+        assertEquals("1", sql("SELECT count(*) FROM carrier_trips"));
+        assertEquals("3", sql("SELECT count(*) FROM trip_stops"));
+        assertEquals("2", sql("SELECT count(*) FROM trip_segments"));
+        assertEquals(
+            "0:DRAFT:10",
+            sql("SELECT version || ':' || status || ':' || capacity FROM carrier_trips WHERE id=" + id)
+        );
+        assertEquals(
+            "10:5",
+            sql(
+                "SELECT capacity || ':' || reserved_seats FROM trip_segments WHERE trip_id=" +
+                    id +
+                    " AND segment_order=1"
+            )
+        );
+        assertEquals(
+            start.toString(),
+            call(200, "GET", "/api/v1/admin/trips/" + id, null, admin)
+                .path("departureAt")
+                .asText()
+        );
     }
 
     @Test
