@@ -28,7 +28,8 @@ printf 'Registration waits for the shared role-assignment lock before creating C
 printf '%s\n' '{"nameVi":"Không được đổi","nameEn":"Immutable","active":true,"version":0}' > "$work/foundation-registry.json"
 call 403 PUT /api/v1/admin/access/registry/roles/ADMIN "$work/foundation-registry.json" bearer
 call 403 DELETE '/api/v1/admin/access/registry/roles/ADMIN?version=0' '' bearer
-call 200 GET '/api/v1/admin/access/resources?page=0&size=100' '' bearer
+# Lọc đúng endpoint trên DB; registry lớn hơn một trang không làm ca kiểm metadata bỏ sót bản ghi.
+call 200 GET '/api/v1/admin/access/resources?kind=ENDPOINT&query=PUT%20%2Fapi%2Fv1%2Fadmin%2Fcatalogs%2F%7Bid%7D&page=0&size=100' '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]["content"]; e=next(x for x in d if x["target"]=="PUT /api/v1/admin/catalogs/{id}"); assert e["group"]=="CATALOG" and "CATALOG_UPDATE" in e["declaredPermissions"] and not e["publicRoute"]' "$result"
 
 # Role mặc định ngoài ADMIN sửa/tắt được, version cũ không ghi đè; xóa dọn mapping và giữ tombstone.
