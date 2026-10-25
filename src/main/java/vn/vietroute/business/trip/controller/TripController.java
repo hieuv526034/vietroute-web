@@ -21,6 +21,7 @@ import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.business.trip.dto.request.TripAssignmentRequest;
 import vn.vietroute.business.trip.dto.request.TripChoiceRequest;
 import vn.vietroute.business.trip.dto.request.TripCreateRequest;
+import vn.vietroute.business.trip.dto.request.TripNoticeRequest;
 import vn.vietroute.business.trip.dto.request.TripSearchRequest;
 import vn.vietroute.business.trip.dto.request.TripStateRequest;
 import vn.vietroute.business.trip.dto.response.TripChoiceResponse;
@@ -46,6 +47,24 @@ public class TripController extends BaseController {
     public TripController(TripService service, ApiResponses responses, ApiExceptionMapper errors) {
         super(responses, errors);
         this.service = service;
+    }
+
+    @PutMapping(Routes.ADMIN_TRIPS + Routes.TRIP_NOTICE)
+    @AccessFunction(group = Groups.TRIP, actions = { PermissionAction.UPDATE })
+    @Operation(
+        summary = "Đăng thông báo vận hành chuyến",
+        description = "OPEN/IN_PROGRESS, version bắt buộc; giữ trạng thái, ghi NOTICE. Không tự hoàn tiền/chuyển khách"
+    )
+    public ApiResult<TripResponse> notice(
+        @Parameter(description = "ID chuyến dương") @PathVariable @Min(
+            value = 1,
+            message = "{validation.invalid}"
+        ) long id,
+        @Valid @RequestBody TripNoticeRequest body,
+        @AuthenticationPrincipal UserPrincipal actor,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () -> service.notice(id, body, actor));
     }
 
     @GetMapping(Routes.ADMIN_TRIPS)

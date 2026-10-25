@@ -537,6 +537,193 @@ class BusinessIntegrationTest {
         );
     }
 
+    private Authentication tripDriver(TripFixture fixture) throws Exception {
+        sql(
+            "INSERT INTO auth_role_permissions(role_code,permission_code) SELECT 'DRIVER',code FROM auth_permissions WHERE code IN('DRIVER_TRIP_VIEW','DRIVER_TRIP_READ','DRIVER_TRIP_UPDATE') ON CONFLICT DO NOTHING"
+        );
+        long user = Long.parseLong(sql("SELECT user_id FROM carrier_drivers WHERE id=" + fixture.driver()));
+        return actor(user, sql("SELECT username FROM auth_users WHERE id=" + user), "DRIVER");
+    }
+
+    @Test
+    void driverSeesOnlyCurrentAssignedNonDraftTripsAndScopeRevocationAppliesImmediately() throws Exception {
+        seed();
+        var own = tripFixture(false);
+        var other = tripFixture(true);
+        var driver = tripDriver(own);
+        Instant start = Instant.now().plus(2, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
+        long id = call(201, "POST", "/api/v1/admin/trips", tripBody(own, "DRIVERASSIGNED", start), admin)
+            .path("id")
+            .asLong();
+        long foreign = call(201, "POST", "/api/v1/admin/trips", tripBody(other, "DRIVERFOREIGN", start), admin)
+            .path("id")
+            .asLong();
+        assertEquals(0, call(200, "GET", "/api/v1/driver/trips", null, driver).path("totalElements").asInt());
+        call(404, "GET", "/api/v1/driver/trips/" + id, null, driver);
+        for (long trip : new long[] { id, foreign })
+            call(
+                200,
+                "PUT",
+                "/api/v1/admin/trips/" + trip + "/state",
+                "{\"status\":\"OPEN\",\"version\":0,\"note\":\"\"}",
+                admin
+            );
+        assertEquals(1, call(200, "GET", "/api/v1/driver/trips?size=1", null, driver).path("totalElements").asInt());
+        call(200, "GET", "/api/v1/driver/trips/" + id, null, driver);
+        call(404, "GET", "/api/v1/driver/trips/" + foreign, null, driver);
+        call(404, "GET", "/api/v1/driver/trips/" + id, null, admin);
+        call(
+            404,
+            "PUT",
+            "/api/v1/driver/trips/" + foreign + "/progress",
+            "{\"action\":\"START\",\"stopOrder\":1,\"version\":1,\"note\":\"\"}",
+            driver
+        );
+        call(200, "GET", "/driver/trips?lang=vi", null, driver);
+        call(200, "GET", "/driver/trips?lang=en", null, driver);
+        sql("DELETE FROM auth_role_permissions WHERE role_code='DRIVER' AND permission_code='DRIVER_TRIP_VIEW'");
+        call(403, "GET", "/driver/trips", null, driver);
+        call(200, "GET", "/api/v1/driver/trips", null, driver);
+        sql("UPDATE carrier_drivers SET user_id=NULL WHERE id=" + own.driver());
+        assertEquals(0, call(200, "GET", "/api/v1/driver/trips", null, driver).path("totalElements").asInt());
+        call(404, "GET", "/api/v1/driver/trips/" + id, null, driver);
+    }
+
+    @Test
+    void driverProgressEnforcesStopOrderVersionTimeAndTerminalState() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        var driver = tripDriver(fixture);
+        Instant start = Instant.now().plusSeconds(120).truncatedTo(ChronoUnit.SECONDS);
+        long id = call(201, "POST", "/api/v1/admin/trips", tripBody(fixture, "DRIVERPROGRESS", start), admin)
+            .path("id")
+            .asLong();
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/trips/" + id + "/state",
+            "{\"status\":\"OPEN\",\"version\":0,\"note\":\"\"}",
+            admin
+        );
+        String endpoint = "/api/v1/driver/trips/" + id + "/progress";
+        call(409, "PUT", endpoint, "{\"action\":\"ARRIVE\",\"stopOrder\":2,\"version\":1,\"note\":\"\"}", driver);
+        var started = call(
+            200,
+            "PUT",
+            endpoint,
+            "{\"action\":\"START\",\"stopOrder\":1,\"version\":1,\"note\":\"Xuất phát\"}",
+            driver
+        );
+        assertEquals("IN_PROGRESS", started.path("status").asText());
+        assertFalse(started.at("/stops/0/actualDepartureAt").isNull());
+        call(409, "PUT", endpoint, "{\"action\":\"START\",\"stopOrder\":1,\"version\":1,\"note\":\"\"}", driver);
+        call(409, "PUT", endpoint, "{\"action\":\"ARRIVE\",\"stopOrder\":3,\"version\":2,\"note\":\"\"}", driver);
+        call(409, "PUT", endpoint, "{\"action\":\"DEPART\",\"stopOrder\":2,\"version\":2,\"note\":\"\"}", driver);
+        call(200, "PUT", endpoint, "{\"action\":\"ARRIVE\",\"stopOrder\":2,\"version\":2,\"note\":\"\"}", driver);
+        call(409, "PUT", endpoint, "{\"action\":\"COMPLETE\",\"stopOrder\":3,\"version\":3,\"note\":\"\"}", driver);
+        call(200, "PUT", endpoint, "{\"action\":\"DEPART\",\"stopOrder\":2,\"version\":3,\"note\":\"\"}", driver);
+        call(200, "PUT", endpoint, "{\"action\":\"ARRIVE\",\"stopOrder\":3,\"version\":4,\"note\":\"\"}", driver);
+        var completed = call(
+            200,
+            "PUT",
+            endpoint,
+            "{\"action\":\"COMPLETE\",\"stopOrder\":3,\"version\":5,\"note\":\"Đã đến cuối tuyến\"}",
+            driver
+        );
+        assertEquals("COMPLETED", completed.path("status").asText());
+        assertEquals(7, completed.path("events").size());
+        call(409, "PUT", endpoint, "{\"action\":\"ARRIVE\",\"stopOrder\":3,\"version\":6,\"note\":\"\"}", driver);
+        assertEquals(
+            "3",
+            sql(
+                "SELECT count(*) FROM trip_stops WHERE trip_id=" +
+                    id +
+                    " AND actual_arrival_at IS NOT NULL AND actual_departure_at IS NOT NULL"
+            )
+        );
+    }
+
+    @Test
+    void driverProgressHistoryFailureRollsBackAndConcurrentStartOnlyAdvancesOnce() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        var driver = tripDriver(fixture);
+        Instant start = Instant.now().plusSeconds(120).truncatedTo(ChronoUnit.SECONDS);
+        long id = call(201, "POST", "/api/v1/admin/trips", tripBody(fixture, "DRIVERRACE", start), admin)
+            .path("id")
+            .asLong();
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/trips/" + id + "/state",
+            "{\"status\":\"OPEN\",\"version\":0,\"note\":\"\"}",
+            admin
+        );
+        String endpoint = "/api/v1/driver/trips/" + id + "/progress",
+            body = "{\"action\":\"START\",\"stopOrder\":1,\"version\":1,\"note\":\"\"}";
+        sql(
+            "CREATE FUNCTION fail_driver_event() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN RAISE EXCEPTION ''test driver event failure''; END'; CREATE TRIGGER fail_driver_event BEFORE INSERT ON trip_events FOR EACH ROW EXECUTE FUNCTION fail_driver_event()"
+        );
+        call(503, "PUT", endpoint, body, driver);
+        call(503, "PUT", "/api/v1/admin/trips/" + id + "/notice", "{\"note\":\"Thông báo thử\",\"version\":1}", admin);
+        assertEquals("OPEN:1", sql("SELECT status || ':' || version FROM carrier_trips WHERE id=" + id));
+        assertEquals(
+            "0",
+            sql("SELECT count(*) FROM trip_stops WHERE trip_id=" + id + " AND actual_arrival_at IS NOT NULL")
+        );
+        sql("DROP TRIGGER fail_driver_event ON trip_events");
+        var workers = Executors.newFixedThreadPool(2);
+        try {
+            var one = workers.submit(() ->
+                mvc
+                    .perform(
+                        request(HttpMethod.PUT, endpoint)
+                            .with(authentication(driver))
+                            .with(csrf())
+                            .contentType("application/json")
+                            .content(body)
+                    )
+                    .andReturn()
+                    .getResponse()
+                    .getStatus()
+            );
+            var two = workers.submit(() ->
+                mvc
+                    .perform(
+                        request(HttpMethod.PUT, endpoint)
+                            .with(authentication(driver))
+                            .with(csrf())
+                            .contentType("application/json")
+                            .content(body)
+                    )
+                    .andReturn()
+                    .getResponse()
+                    .getStatus()
+            );
+            assertEquals(Set.of(200, 409), Set.of(one.get(20, TimeUnit.SECONDS), two.get(20, TimeUnit.SECONDS)));
+        } finally {
+            workers.shutdownNow();
+        }
+        assertEquals("1", sql("SELECT count(*) FROM trip_events WHERE trip_id=" + id + " AND event_type='STARTED'"));
+        var notice = call(
+            200,
+            "PUT",
+            "/api/v1/admin/trips/" + id + "/notice",
+            "{\"note\":\"Sự cố, liên hệ điều hành\",\"version\":2}",
+            admin
+        );
+        assertEquals("IN_PROGRESS", notice.path("status").asText());
+        assertEquals(3, notice.path("version").asInt());
+        call(
+            409,
+            "PUT",
+            "/api/v1/admin/trips/" + id + "/state",
+            "{\"status\":\"CANCELLED\",\"version\":3,\"note\":\"Không hủy chuyến đang chạy\"}",
+            admin
+        );
+        call(409, "PUT", endpoint, "{\"action\":\"ARRIVE\",\"stopOrder\":2,\"version\":2,\"note\":\"\"}", driver);
+    }
+
     @Test
     void tripsSnapshotAcrossDaysValidateAssetsAndRequireVersionAndState() throws Exception {
         seed();

@@ -39,6 +39,16 @@ public class TripRepository extends BaseRepository {
         "t.id,t.carrier_id,t.scope_id,owner.name AS carrier_name,owner.phone AS carrier_phone,t.route_id,t.code,t.name_vi,t.name_en,t.vehicle_id,t.plate_number,t.vehicle_type_id,t.vehicle_type_name_vi,t.vehicle_type_name_en,t.driver_id,t.driver_user_id,t.driver_name,t.driver_phone,t.departure_at,t.end_at,t.capacity,t.status,t.operation_note,t.version,(" +
         DataScopeGuard.visibleSql() +
         ") AS can_update";
+    private static final String ASSIGNED = """
+    AND t.status<>'DRAFT' AND t.driver_user_id=?
+    AND EXISTS (SELECT 1 FROM carrier_drivers cd WHERE cd.id=t.driver_id AND cd.carrier_id=t.carrier_id
+                AND cd.scope_id=t.scope_id AND cd.active AND cd.user_id=t.driver_user_id)
+    AND EXISTS (SELECT 1 FROM auth_scope_memberships dm
+                JOIN auth_scope_roles dr ON dr.scope_id=dm.scope_id AND dr.user_id=dm.user_id
+                JOIN auth_user_roles du ON du.user_id=dr.user_id AND du.role_code=dr.role_code
+                JOIN auth_roles role ON role.code=du.role_code AND role.active AND NOT role.deleted
+                WHERE dm.scope_id=t.scope_id AND dm.user_id=t.driver_user_id AND dm.active AND role.code='DRIVER')
+    """;
 
     public TripRepository(JdbcConnectionFactory connections) {
         super(connections);
@@ -46,15 +56,25 @@ public class TripRepository extends BaseRepository {
 
     /** Count và trang cùng bộ lọc ngày xuất phát Việt Nam, không lọc lại trong RAM. */
     public PageResponse<TripResponse> page(TripSearchRequest search) {
+        return page(search, Groups.TRIP, null);
+    }
+
+    /** Chỉ chuyến được giao và hồ sơ DRIVER/membership hiện hành, kể cả người gọi cũng có ADMIN. */
+    public PageResponse<TripResponse> assignedPage(TripSearchRequest search, long driverUserId) {
+        return page(search, Groups.DRIVER_TRIP, driverUserId);
+    }
+
+    private PageResponse<TripResponse> page(TripSearchRequest search, String resource, Long driverUserId) {
         return read(connection -> {
             String filter =
                 FROM +
                 " WHERE " +
                 DataScopeGuard.visibleSql() +
-                " AND (?::bigint IS NULL OR owner.id=?) AND (?::text IS NULL OR t.status=?) AND (?::timestamptz IS NULL OR (t.departure_at>=? AND t.departure_at<?)) AND strpos(lower(concat_ws(' ',t.code,t.name_vi,t.name_en,t.plate_number,owner.name)),?)>0";
+                " AND (?::bigint IS NULL OR owner.id=?) AND (?::text IS NULL OR t.status=?) AND (?::timestamptz IS NULL OR (t.departure_at>=? AND t.departure_at<?)) AND strpos(lower(concat_ws(' ',t.code,t.name_vi,t.name_en,t.plate_number,owner.name)),?)>0" +
+                (driverUserId == null ? "" : " " + ASSIGNED);
             long total;
             try (var query = connection.prepareStatement("SELECT count(*)" + filter)) {
-                bindSearch(query, 1, search);
+                bindSearch(query, 1, search, resource, driverUserId);
                 try (var row = query.executeQuery()) {
                     row.next();
                     total = row.getLong(1);
@@ -66,8 +86,8 @@ public class TripRepository extends BaseRepository {
                     "SELECT " + COLUMNS + filter + " ORDER BY t.departure_at DESC,t.id DESC LIMIT ? OFFSET ?"
                 )
             ) {
-                int at = DataScopeGuard.bindVisible(query, 1, Groups.TRIP, PermissionAction.UPDATE);
-                at = bindSearch(query, at, search);
+                int at = DataScopeGuard.bindVisible(query, 1, resource, PermissionAction.UPDATE);
+                at = bindSearch(query, at, search, resource, driverUserId);
                 query.setInt(at++, search.getSize());
                 query.setLong(at, search.offset());
                 try (var row = query.executeQuery()) {
@@ -78,8 +98,9 @@ public class TripRepository extends BaseRepository {
         });
     }
 
-    private int bindSearch(PreparedStatement query, int at, TripSearchRequest body) throws SQLException {
-        at = DataScopeGuard.bindVisible(query, at, Groups.TRIP, PermissionAction.READ);
+    private int bindSearch(PreparedStatement query, int at, TripSearchRequest body, String resource, Long driverUserId)
+        throws SQLException {
+        at = DataScopeGuard.bindVisible(query, at, resource, PermissionAction.READ);
         query.setObject(at++, body.getCarrierId());
         query.setObject(at++, body.getCarrierId());
         String status = body.getStatus() == null ? null : body.getStatus().name();
@@ -97,12 +118,36 @@ public class TripRepository extends BaseRepository {
         query.setTimestamp(at++, start);
         query.setTimestamp(at++, end);
         query.setString(at++, body.getQuery() == null ? "" : body.getQuery().strip().toLowerCase(Locale.ROOT));
+        if (driverUserId != null) query.setLong(at++, driverUserId);
         return at;
     }
 
     /** ID ngoài scope trả 404; UPDATE khóa trip trước khi service khóa tài nguyên phân công. */
     public TripResponse find(Connection connection, long id, PermissionAction action, boolean lock, boolean detail)
         throws SQLException {
+        return find(connection, id, action, lock, detail, Groups.TRIP, null);
+    }
+
+    /** Tài xế ngoài phân công hiện hành nhận 404 trước đọc điểm/lịch sử hoặc khóa mutation. */
+    public TripResponse assigned(
+        Connection connection,
+        long id,
+        PermissionAction action,
+        boolean lock,
+        long driverUserId
+    ) throws SQLException {
+        return find(connection, id, action, lock, true, Groups.DRIVER_TRIP, driverUserId);
+    }
+
+    private TripResponse find(
+        Connection connection,
+        long id,
+        PermissionAction action,
+        boolean lock,
+        boolean detail,
+        String resource,
+        Long driverUserId
+    ) throws SQLException {
         try (
             var query = connection.prepareStatement(
                 "SELECT " +
@@ -110,12 +155,14 @@ public class TripRepository extends BaseRepository {
                     FROM +
                     " WHERE t.id=? AND " +
                     DataScopeGuard.visibleSql() +
+                    (driverUserId == null ? "" : ASSIGNED) +
                     (lock ? " FOR UPDATE OF t" : "")
             )
         ) {
-            int at = DataScopeGuard.bindVisible(query, 1, Groups.TRIP, PermissionAction.UPDATE);
+            int at = DataScopeGuard.bindVisible(query, 1, resource, PermissionAction.UPDATE);
             query.setLong(at++, id);
-            DataScopeGuard.bindVisible(query, at, Groups.TRIP, action);
+            at = DataScopeGuard.bindVisible(query, at, resource, action);
+            if (driverUserId != null) query.setLong(at, driverUserId);
             try (var row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
                 return map(

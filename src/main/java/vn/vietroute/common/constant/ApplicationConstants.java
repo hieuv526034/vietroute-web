@@ -262,6 +262,7 @@ public final class ApplicationConstants {
         public static final String TRIP_STATE = BY_ID + "/state";
 
         public static final String TRIP_PROGRESS = BY_ID + "/progress";
+        public static final String TRIP_NOTICE = BY_ID + "/notice";
 
         public static final String CARRIER_CHOICES = "/carriers";
 
