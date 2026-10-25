@@ -1,0 +1,424 @@
+<!doctype html>
+<html
+    xmlns:th="http://www.thymeleaf.org"
+    th:lang="${currentLocale}"
+>
+    <head th:replace="~{fragments/layout :: head(${#messages.msg('ui.fleet.title.' + fleetKind)})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main
+            id="fleet-workspace"
+            class="container-xl workspace-page"
+            th:attr="data-kind=${fleetKind},data-feature=${fleetFeature},data-loading=#{ui.loading},data-empty=#{ui.empty},data-edit=#{ui.location.edit},data-create=#{ui.fleet.create},data-save=#{ui.catalog.save},data-active=#{ui.location.active},data-inactive=#{ui.location.inactive},data-no-read=#{ui.accessTree.noRead},data-unlinked=#{ui.fleet.unlinked},data-choose=#{ui.fleet.chooseCarrier},data-pick-count=#{ui.fleet.pickCount}"
+        >
+            <div class="page-heading">
+                <p
+                    class="eyebrow"
+                    th:text="#{ui.fleet.eyebrow}"
+                ></p>
+                <h1 th:text="${#messages.msg('ui.fleet.title.' + fleetKind)}"></h1>
+                <p
+                    class="muted"
+                    th:text="#{ui.fleet.description}"
+                ></p>
+            </div>
+            <p
+                id="fleet-status"
+                class="catalog-status"
+                role="status"
+                aria-live="polite"
+            ></p>
+            <div
+                id="fleet-feedback"
+                class="feedback"
+                role="alert"
+                hidden
+            ></div>
+            <fieldset
+                id="fleet-controls"
+                class="border-0 p-0 m-0 w-100"
+            >
+                <section class="panel">
+                    <div class="panel-heading">
+                        <h2 th:text="${#messages.msg('ui.fleet.title.' + fleetKind)}"></h2>
+                        <div class="toolbar-actions">
+                            <button
+                                id="fleet-create"
+                                type="button"
+                                class="button"
+                                disabled
+                                th:text="#{ui.fleet.create}"
+                            ></button>
+                            <button
+                                id="fleet-refresh"
+                                type="button"
+                                class="button button-outline"
+                                th:text="#{ui.ops.refresh}"
+                            ></button>
+                        </div>
+                    </div>
+                    <form
+                        id="fleet-search"
+                        class="table-filter record-search"
+                    >
+                        <label
+                            for="fleet-query"
+                            th:text="#{ui.fleet.search}"
+                        ></label>
+                        <input
+                            id="fleet-query"
+                            name="query"
+                            class="form-control"
+                            maxlength="160"
+                            th:placeholder="#{ui.fleet.searchHint}"
+                        />
+                        <select
+                            name="active"
+                            class="form-select"
+                            th:attr="aria-label=#{ui.location.state}"
+                        >
+                            <option
+                                value=""
+                                th:text="#{ui.fleet.allStates}"
+                            ></option>
+                            <option
+                                value="true"
+                                th:text="#{ui.location.active}"
+                            ></option>
+                            <option
+                                value="false"
+                                th:text="#{ui.location.inactive}"
+                            ></option>
+                        </select>
+                        <button
+                            type="submit"
+                            class="button button-outline"
+                            th:text="#{ui.search}"
+                        ></button>
+                    </form>
+                    <div
+                        class="table-responsive"
+                        role="region"
+                        tabindex="0"
+                        th:attr="aria-label=#{ui.table.scroll}"
+                    >
+                        <table class="table catalog-table fleet-table">
+                            <thead>
+                                <tr>
+                                    <th th:text="#{ui.code}"></th>
+                                    <th
+                                        th:if="${fleetKind != 'carriers'}"
+                                        th:text="#{ui.fleet.carrier}"
+                                    ></th>
+                                    <th
+                                        th:text="${fleetKind == 'vehicles' ? #messages.msg('ui.fleet.plate') : #messages.msg('ui.name')}"
+                                    ></th>
+                                    <th
+                                        th:text="${fleetKind == 'vehicles' ? #messages.msg('ui.vehicleType') : #messages.msg('ui.fleet.phone')}"
+                                    ></th>
+                                    <th
+                                        th:if="${fleetKind == 'vehicles'}"
+                                        th:text="#{ui.fleet.capacity}"
+                                    ></th>
+                                    <th
+                                        th:if="${fleetKind == 'drivers'}"
+                                        th:text="#{ui.fleet.account}"
+                                    ></th>
+                                    <th
+                                        th:if="${fleetKind == 'carriers'}"
+                                        th:text="#{ui.fleet.scope}"
+                                    ></th>
+                                    <th th:text="#{ui.location.state}"></th>
+                                    <th
+                                        class="table-actions"
+                                        th:text="#{ui.ops.actions}"
+                                    ></th>
+                                </tr>
+                            </thead>
+                            <tbody id="fleet-body"></tbody>
+                        </table>
+                    </div>
+                    <div th:replace="~{fragments/pagination :: pager('fleet', 10)}"></div>
+                    <p
+                        class="form-help"
+                        th:text="#{ui.fleet.retainNote}"
+                    ></p>
+                </section>
+            </fieldset>
+            <dialog
+                id="fleet-dialog"
+                class="workspace-dialog"
+                aria-labelledby="fleet-editor-title"
+            >
+                <fieldset
+                    id="fleet-dialog-controls"
+                    class="dialog-controls"
+                >
+                    <div class="dialog-heading">
+                        <span
+                            class="eyebrow"
+                            th:text="${#messages.msg('ui.fleet.title.' + fleetKind)}"
+                        ></span>
+                        <button
+                            type="button"
+                            class="dialog-close"
+                            data-dialog-close
+                            th:attr="aria-label=#{ui.ops.close}"
+                        >
+                            <span aria-hidden="true">×</span>
+                        </button>
+                    </div>
+                    <h2 id="fleet-editor-title"></h2>
+                    <p
+                        class="form-help"
+                        th:text="#{ui.fleet.immutable}"
+                    ></p>
+                    <div
+                        id="fleet-form-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></div>
+                    <p
+                        id="fleet-conflict"
+                        class="form-help"
+                        hidden
+                        th:text="#{ui.fleet.conflict}"
+                    ></p>
+                    <form
+                        id="fleet-form"
+                        class="dialog-form-grid"
+                        novalidate
+                    >
+                        <div>
+                            <label
+                                for="fleet-code"
+                                th:text="#{ui.code}"
+                            ></label>
+                            <input
+                                id="fleet-code"
+                                name="code"
+                                class="form-control"
+                                required
+                                pattern="[A-Z][A-Z0-9]{2,39}"
+                                minlength="3"
+                                maxlength="40"
+                            />
+                        </div>
+                        <div th:if="${fleetKind != 'carriers'}">
+                            <label
+                                for="fleet-carrier"
+                                th:text="#{ui.fleet.carrier}"
+                            ></label>
+                            <select
+                                id="fleet-carrier"
+                                name="carrierId"
+                                class="form-select"
+                                required
+                            ></select>
+
+                            <div
+                                id="fleet-carrier-picker"
+                                class="picker-search"
+                            >
+                                <input
+                                    id="fleet-carrier-query"
+                                    class="form-control"
+                                    maxlength="160"
+                                    th:attr="aria-label=#{ui.fleet.searchCarrier}"
+                                    th:placeholder="#{ui.fleet.searchCarrier}"
+                                />
+                                <button
+                                    id="fleet-carrier-search"
+                                    type="button"
+                                    class="button button-outline button-small"
+                                    th:text="#{ui.search}"
+                                ></button>
+                            </div>
+                            <p
+                                id="fleet-carrier-count"
+                                class="form-help"
+                                aria-live="polite"
+                            ></p>
+                        </div>
+                        <div th:if="${fleetKind != 'vehicles'}">
+                            <label
+                                for="fleet-name"
+                                th:text="#{ui.name}"
+                            ></label>
+                            <input
+                                id="fleet-name"
+                                name="name"
+                                class="form-control"
+                                required
+                                maxlength="120"
+                            />
+                        </div>
+                        <div th:if="${fleetKind != 'vehicles'}">
+                            <label
+                                for="fleet-phone"
+                                th:text="#{ui.fleet.phone}"
+                            ></label>
+                            <input
+                                id="fleet-phone"
+                                name="phone"
+                                type="tel"
+                                class="form-control"
+                                required
+                                pattern="[+0-9(). \-]{6,30}"
+                                maxlength="30"
+                            />
+                        </div>
+                        <div
+                            th:if="${fleetKind == 'carriers'}"
+                            class="dialog-span"
+                        >
+                            <label
+                                for="fleet-description"
+                                th:text="#{ui.fleet.detail}"
+                            ></label>
+                            <textarea
+                                id="fleet-description"
+                                name="description"
+                                class="form-control"
+                                maxlength="2000"
+                                rows="3"
+                            ></textarea>
+                        </div>
+                        <div th:if="${fleetKind == 'vehicles'}">
+                            <label
+                                for="fleet-plate"
+                                th:text="#{ui.fleet.plate}"
+                            ></label>
+                            <input
+                                id="fleet-plate"
+                                name="plateNumber"
+                                class="form-control"
+                                required
+                                minlength="5"
+                                maxlength="20"
+                            />
+                        </div>
+                        <div th:if="${fleetKind == 'vehicles'}">
+                            <label
+                                for="fleet-type"
+                                th:text="#{ui.vehicleType}"
+                            ></label>
+                            <select
+                                id="fleet-type"
+                                name="vehicleTypeId"
+                                class="form-select"
+                                required
+                            ></select>
+                            <div class="picker-search">
+                                <input
+                                    id="fleet-type-query"
+                                    class="form-control"
+                                    maxlength="160"
+                                    th:attr="aria-label=#{ui.fleet.searchType}"
+                                    th:placeholder="#{ui.fleet.searchType}"
+                                />
+                                <button
+                                    id="fleet-type-search"
+                                    type="button"
+                                    class="button button-outline button-small"
+                                    th:text="#{ui.search}"
+                                ></button>
+                            </div>
+                            <p
+                                id="fleet-type-count"
+                                class="form-help"
+                                aria-live="polite"
+                            ></p>
+                        </div>
+                        <div th:if="${fleetKind == 'vehicles'}">
+                            <label
+                                for="fleet-capacity"
+                                th:text="#{ui.fleet.capacity}"
+                            ></label>
+                            <input
+                                id="fleet-capacity"
+                                name="capacity"
+                                type="number"
+                                class="form-control"
+                                required
+                                min="1"
+                                max="200"
+                                step="1"
+                            />
+                        </div>
+                        <div th:if="${fleetKind == 'drivers'}">
+                            <label
+                                for="fleet-user"
+                                th:text="#{ui.fleet.account}"
+                            ></label>
+                            <input
+                                id="fleet-user"
+                                name="userId"
+                                type="number"
+                                class="form-control"
+                                min="1"
+                                step="1"
+                            />
+                            <p
+                                class="form-help"
+                                th:text="#{ui.fleet.accountNote}"
+                            ></p>
+                        </div>
+                        <div th:if="${fleetKind != 'drivers'}">
+                            <label
+                                for="fleet-image"
+                                th:text="#{ui.fleet.image}"
+                            ></label>
+                            <input
+                                id="fleet-image"
+                                name="mediaId"
+                                type="number"
+                                class="form-control"
+                                min="1"
+                                step="1"
+                            />
+                            <p
+                                class="form-help"
+                                th:text="#{ui.fleet.imageNote}"
+                            ></p>
+                        </div>
+                        <div>
+                            <label class="checkbox-label">
+                                <input
+                                    name="active"
+                                    type="checkbox"
+                                    checked
+                                    th:disabled="${fleetKind == 'carriers' and !carrierStateEditable}"
+                                />
+                                <span th:text="#{ui.location.active}"></span>
+                            </label>
+                            <p
+                                th:if="${fleetKind == 'carriers'}"
+                                class="form-help"
+                                th:text="#{ui.fleet.adminState}"
+                            ></p>
+                        </div>
+                        <div class="dialog-actions">
+                            <button
+                                type="button"
+                                class="button button-outline"
+                                data-dialog-close
+                                th:text="#{ui.ops.close}"
+                            ></button>
+                            <button
+                                id="fleet-save"
+                                type="submit"
+                                class="button"
+                                th:text="#{ui.catalog.save}"
+                            ></button>
+                        </div>
+                    </form>
+                </fieldset>
+            </dialog>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/fleet.js}"></script>
+    </body>
+</html>

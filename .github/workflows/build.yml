@@ -34,6 +34,23 @@ jobs:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Verify Java and business transactions with isolated PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --detach --name vietroute-business-tests \
+            -p 127.0.0.1:15439:5432 -e POSTGRES_HOST_AUTH_METHOD=trust \
+            -e POSTGRES_USER=ciadmin -e POSTGRES_DB=vietroute_business_test postgres:17-alpine
+          for attempt in {1..30}; do
+            if docker exec vietroute-business-tests pg_isready -U ciadmin -d vietroute_business_test; then break; fi
+            sleep 1
+          done
+          sh ./mvnw verify -Dbusiness.test.database=jdbc:postgresql://127.0.0.1:15439/vietroute_business_test
       - uses: docker/setup-buildx-action@v3
       - name: Build production image with cached Maven and Docker layers
         uses: docker/build-push-action@v6
@@ -81,5 +98,5 @@ jobs:
       - name: Remove CI container
         if: always()
         run: |
-          docker rm --force vietroute-ci vietroute-auth-ci vietroute-auth-ci2 vietroute-pooler-ci vietroute-db-ci vietroute-redis-ci || true
+          docker rm --force vietroute-ci vietroute-auth-ci vietroute-auth-ci2 vietroute-pooler-ci vietroute-db-ci vietroute-redis-ci vietroute-business-tests || true
           docker network rm vietroute-auth-net || true

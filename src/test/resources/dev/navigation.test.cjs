@@ -126,7 +126,7 @@ function fixture(width = 390) {
 }
 
 test('compact navigation exposes one panel with ARIA and Escape closes the submenu before the panel', () => {
-    for (const width of [320, 390, 768, 1199]) {
+    for (const width of [320, 390, 768, 1199, 1280, 1399]) {
         const ui = fixture(width);
         assert.equal(ui.panel.hidden, true);
         assert.equal(ui.toggle.hidden, false);
@@ -181,7 +181,7 @@ test('click outside, selecting a link and Tab leaving the header dismiss navigat
 });
 
 test('resizing restores desktop links and never leaves focus inside a hidden control', () => {
-    const ui = fixture(1280);
+    const ui = fixture(1400);
     assert.equal(ui.panel.hidden, false);
     assert.equal(ui.toggle.hidden, true);
     ui.primaryLink.focus();
@@ -190,7 +190,7 @@ test('resizing restores desktop links and never leaves focus inside a hidden con
     assert.equal(ui.panel.hidden, true);
     assert.equal(ui.primary.open, false);
     assert.equal(ui.document.activeElement, ui.toggle);
-    ui.resize(1280);
+    ui.resize(1400);
     assert.equal(ui.toggle.hidden, true);
     assert.equal(ui.panel.hidden, false);
     assert.equal(ui.document.activeElement, ui.home);

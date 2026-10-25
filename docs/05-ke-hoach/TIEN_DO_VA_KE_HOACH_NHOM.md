@@ -1,5 +1,15 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
+## BUSINESS02 — Đang làm: danh mục riêng, UI và nghiệp vụ nhà xe/dữ liệu DEMO
+
+Ngày 25/10/2026, hieuv526034 thực hiện trên `hieuv526034/business02-danh-muc-nha-xe`, base `9c9c924`, [Issue #108](https://github.com/hieuv526034/vietroute-web/issues/108). Chủ dự án tạm gác Gmail và đã chọn rõ tạo dữ liệu DEMO trên Neon hiện tại để xem website triển khai. Phần source/thử nghiệm vẫn dùng PostgreSQL cô lập; chỉ seed Neon sau kiểm/PR, không xóa hoặc ghi đè dữ liệu có sẵn, không miễn xác minh cho account thường.
+
+Hợp đồng đang triển khai: menu gốc Danh mục với Loại xe/Nguồn đặt/Tỉnh thành/Địa điểm; quyền VIEW/READ/CREATE/UPDATE/DELETE riêng từng loại, giữ alias CATALOG/LOCATION có phạm vi tương thích cũ và không tự gán role thường. `/admin` chuyển về tổng quan; CRUD dùng màn URL riêng và component nút màu xanh chung (màn địa điểm trước dùng btn-primary Bootstrap nên lệch chuẩn). API typed không cho sửa ID/type của nhóm khác.
+
+Đợt nghiệp vụ nhà xe thêm V017 (giữ V001–V016), scope duy nhất cho nhà xe, xe/tài xế gắn FK ID + carrier + scope, SQL count/paging cùng predicate quyền scoped hiện hành. ADMIN tạo/đổi trạng thái nhà xe; OPERATOR có scope sửa thông tin/quản lý xe/hồ sơ tài xế. Profile DRIVER chỉ gắn account DRIVER đã ready và có membership đúng nhà xe; không tạo account giả hoặc bỏ bước email khi Gmail tạm hoãn. Ảnh dùng media chung/owner/READY và bảo vệ tham chiếu khi xóa.
+
+Đã có source/UI/lookup/form/search/version và seed DEMO idempotent trên nhánh. Kiểm local: Maven verify 165/165 (gồm 6 integration), sau bổ sung ca quota/history chạy riêng BusinessIntegrationTest 7/7; Node 44/44; format/check đạt. Bảy ca PostgreSQL 17 thật kiểm hai context, scope count/ID/picker/revoke và quyền UPDATE không union, độc lập VIEW/READ/type, version/race, plate/capacity, parent inactive, account driver, media reference, seed rollback/idempotence và lỗi lịch sử/quota scope. Browser app thật/PostgreSQL preview riêng đạt: menu 390px, bố cục/bảng/bộ lọc và modal; ảnh trong quy ước UI. Chưa có PR/CI/main hoặc seed Neon tại mốc ghi này. Tuyến/chuyến/tồn chỗ/booking/tracking tiếp tục theo phụ thuộc, chưa có source trong đợt nền này. Chốt PR/test/seed thật và giới hạn trước bàn giao; không dùng file generator/process trong target/.tools làm nguồn bàn giao.
+
 ## MAIL03 — Chuyển SMTP local, đang chờ mật khẩu ứng dụng
 
 Ngày 25/10/2026 theo yêu cầu chủ dự án tạm hoãn OAuth. hieuv526034 thực hiện cấu hình local; nhánh tài liệu `hieuv526034/mail03-cau-hinh-smtp`, base main `dbf2202`, tiếp tục [Issue #104](https://github.com/hieuv526034/vietroute-web/issues/104). Source SMTP/HTML đã có tại MAIL02, không sửa Java/schema/default Render hoặc tạo adapter mới. Hướng dẫn dùng lại ở [nền mail](../02-phat-trien/NEN_TANG_MO_RONG.md#smtp-tài-khoản-và-mật-khẩu--mail03).

@@ -1,0 +1,33 @@
+<!doctype html>
+<html
+    xmlns:th="http://www.thymeleaf.org"
+    th:lang="${currentLocale}"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.workspace.overview})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main class="container-xl workspace-page">
+            <div class="page-heading">
+                <p class="eyebrow">VIETROUTE / WORKSPACE</p>
+                <h1 th:text="#{ui.workspace.overview}"></h1>
+                <p
+                    class="muted"
+                    th:text="#{ui.dashboard.description}"
+                ></p>
+            </div>
+            <div class="summary-grid">
+                <section
+                    class="panel"
+                    th:each="group : ${functionNavigation}"
+                >
+                    <h2 th:text="${group.name}"></h2>
+                    <div class="dashboard-links">
+                        <th:block th:insert="~{fragments/layout :: functionMenuItems(${group.children})}"></th:block>
+                    </div>
+                </section>
+            </div>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+    </body>
+</html>

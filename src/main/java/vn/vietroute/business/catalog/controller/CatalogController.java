@@ -22,6 +22,7 @@ import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.business.catalog.dto.request.CatalogCreateRequest;
 import vn.vietroute.business.catalog.dto.request.CatalogDeleteRequest;
+import vn.vietroute.business.catalog.dto.request.CatalogLookupRequest;
 import vn.vietroute.business.catalog.dto.request.CatalogUpdateRequest;
 import vn.vietroute.business.catalog.dto.response.CatalogResponse;
 import vn.vietroute.business.catalog.service.CatalogService;
@@ -59,11 +60,11 @@ public class CatalogController extends BaseController {
     )
     public ApiResult<PageResponse<CatalogResponse>> page(
         @Parameter(description = "Nhóm danh mục cần tra cứu", example = "VEHICLE_TYPE") @PathVariable CatalogType type,
-        @Valid @ModelAttribute PageRequest page,
+        @Valid @ModelAttribute CatalogLookupRequest page,
         HttpServletRequest request
     ) {
         // @Valid kiểm tra phân trang trước; service/repository chỉ đọc danh mục đang hoạt động.
-        return execute(SuccessCode.OK, request, () -> catalogs.page(type, page, locale(request)));
+        return execute(SuccessCode.OK, request, () -> catalogs.lookup(type, page, locale(request)));
     }
 
     @PostMapping(Routes.ADMIN_CATALOGS)

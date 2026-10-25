@@ -4,9 +4,13 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Locale;
 import org.springframework.stereotype.Repository;
 import vn.vietroute.business.catalog.dto.request.CatalogCreateRequest;
+import vn.vietroute.business.catalog.dto.request.CatalogManageUpdateRequest;
+import vn.vietroute.business.catalog.dto.request.CatalogSearchRequest;
 import vn.vietroute.business.catalog.dto.request.CatalogUpdateRequest;
 import vn.vietroute.business.catalog.entity.CatalogItem;
 import vn.vietroute.common.base.PageRequest;
@@ -21,6 +25,72 @@ import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 @Repository
 public class CatalogRepository extends BaseRepository {
 
+    /** Count và trang theo loại cố định; có thể xem/bật lại mục ngừng dùng, không làm đổi lookup public. */
+    public PageResponse<CatalogItem> search(CatalogType type, CatalogSearchRequest page) {
+        return read(connection -> {
+            String filter =
+                " WHERE type=? AND (?::boolean IS NULL OR active=?) AND lower(concat_ws(' ',code,name_vi,name_en)) LIKE ? ESCAPE '\\'";
+            long total;
+            try (var query = connection.prepareStatement("SELECT count(*) FROM catalog_items" + filter)) {
+                bindSearch(query, type, page);
+                try (var row = query.executeQuery()) {
+                    row.next();
+                    total = row.getLong(1);
+                }
+            }
+            var content = new ArrayList<CatalogItem>();
+            try (
+                var query = connection.prepareStatement(
+                    "SELECT * FROM catalog_items" + filter + " ORDER BY sort_order,id LIMIT ? OFFSET ?"
+                )
+            ) {
+                bindSearch(query, type, page);
+                query.setInt(5, page.getSize());
+                query.setLong(6, page.offset());
+                try (var rows = query.executeQuery()) {
+                    while (rows.next()) content.add(map(rows));
+                }
+            }
+            return PageResponse.of(content, page, total);
+        });
+    }
+
+    private void bindSearch(PreparedStatement query, CatalogType type, CatalogSearchRequest page) throws SQLException {
+        query.setString(1, type.name());
+        query.setObject(2, page.getActive(), Types.BOOLEAN);
+        query.setObject(3, page.getActive(), Types.BOOLEAN);
+        String term = page.getQuery() == null ? "" : page.getQuery().strip().toLowerCase(Locale.ROOT);
+        query.setString(4, "%" + term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%");
+    }
+
+    /** ID + type + version trong UPDATE, giữ bất biến mã và cho phép khôi phục trạng thái. */
+    public CatalogItem updateManaged(
+        Connection connection,
+        long id,
+        CatalogType type,
+        CatalogManageUpdateRequest body,
+        long actor
+    ) throws SQLException {
+        try (
+            var query = connection.prepareStatement(
+                "UPDATE catalog_items SET name_vi=?,name_en=?,sort_order=?,active=?,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=? AND type=? AND version=? RETURNING *"
+            )
+        ) {
+            query.setString(1, body.getNameVi().strip());
+            query.setString(2, body.getNameEn().strip());
+            query.setInt(3, body.getSortOrder());
+            query.setBoolean(4, body.isActive());
+            query.setLong(5, actor);
+            query.setLong(6, id);
+            query.setString(7, type.name());
+            query.setLong(8, body.getVersion());
+            try (var row = query.executeQuery()) {
+                if (row.next()) return map(row);
+            }
+        }
+        throw new BusinessException(ErrorCode.STALE_VERSION);
+    }
+
     public CatalogRepository(JdbcConnectionFactory connections) {
         super(connections);
     }
@@ -30,7 +100,8 @@ public class CatalogRepository extends BaseRepository {
         return read(connection -> find(connection, id));
     }
 
-    private CatalogItem find(Connection connection, long id) throws SQLException {
+    /** Đọc trên connection của caller để service typed kiểm loại và ghi trong cùng transaction. */
+    public CatalogItem find(Connection connection, long id) throws SQLException {
         try (PreparedStatement query = connection.prepareStatement("SELECT * FROM catalog_items WHERE id=?")) {
             query.setLong(1, id);
             try (ResultSet row = query.executeQuery()) {

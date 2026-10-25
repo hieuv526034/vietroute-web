@@ -19,20 +19,58 @@ public final class AccessFeatures {
 
     private static final List<Feature> DEFINITIONS = List.of(
         new Feature(Functions.SYSTEM, null, "access.function.SYSTEM", null, null),
+        new Feature(Functions.CATALOG, null, "access.function.CATALOG", Routes.ADMIN, Permissions.CATALOG_VIEW),
+        new Feature(
+            Functions.VEHICLE_TYPE,
+            Functions.CATALOG,
+            "access.function.VEHICLE_TYPE",
+            Routes.CATALOG_VEHICLE_TYPES_PAGE,
+            Groups.VEHICLE_TYPE + "_VIEW"
+        ),
+        new Feature(
+            Functions.BOOKING_SOURCE,
+            Functions.CATALOG,
+            "access.function.BOOKING_SOURCE",
+            Routes.CATALOG_BOOKING_SOURCES_PAGE,
+            Groups.BOOKING_SOURCE + "_VIEW"
+        ),
+        new Feature(
+            Functions.PROVINCE,
+            Functions.CATALOG,
+            "access.function.PROVINCE",
+            Routes.CATALOG_PROVINCES_PAGE,
+            Groups.PROVINCE + "_VIEW"
+        ),
         new Feature(
             Functions.LOCATION,
-            Functions.SYSTEM,
+            Functions.CATALOG,
             "access.function.LOCATION",
-            Routes.LOCATION_PAGE,
+            Routes.CATALOG_LOCATIONS_PAGE,
             Groups.LOCATION + "_VIEW"
         ),
+        new Feature(Functions.BUSINESS, null, "access.function.BUSINESS", null, null),
         new Feature(
-            Functions.CATALOG,
-            Functions.SYSTEM,
-            "access.function.CATALOG",
-            Routes.ADMIN,
-            Permissions.CATALOG_VIEW
+            Functions.CARRIER,
+            Functions.BUSINESS,
+            "access.function.CARRIER",
+            Routes.CARRIERS_PAGE,
+            Groups.CARRIER + "_VIEW"
         ),
+        new Feature(
+            Functions.VEHICLE,
+            Functions.BUSINESS,
+            "access.function.VEHICLE",
+            Routes.VEHICLES_PAGE,
+            Groups.VEHICLE + "_VIEW"
+        ),
+        new Feature(
+            Functions.DRIVER,
+            Functions.BUSINESS,
+            "access.function.DRIVER",
+            Routes.DRIVERS_PAGE,
+            Groups.DRIVER + "_VIEW"
+        ),
+        new Feature(Functions.DEMO, Functions.SYSTEM, "access.function.DEMO", Routes.DEMO_PAGE, Groups.DEMO + "_VIEW"),
         new Feature(
             Functions.MEDIA,
             Functions.SYSTEM,

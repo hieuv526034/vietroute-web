@@ -9,6 +9,12 @@
     const labels = root.dataset;
     const form = node('location-form');
     const kinds = ['locations', 'provinces'];
+    const visibleKinds = root.dataset.section ? [root.dataset.section] : kinds;
+    const tabs = window.VietRouteUI.tabs('location-tabs');
+    if (root.dataset.section) {
+        tabs.show('location-places-panel', root.dataset.section === 'locations');
+        tabs.show('location-provinces-panel', root.dataset.section === 'provinces');
+    }
     let busy = false;
     let selected = null;
     let kind = 'locations';
@@ -232,7 +238,15 @@
     root.querySelectorAll('[data-refresh]').forEach((button) =>
         button.addEventListener('click', () =>
             perform(async () => {
-                capability = await window.VietRouteAccess.load('LOCATION');
+                const features = await Promise.all(
+                    visibleKinds.map((resource) =>
+                        window.VietRouteAccess.load(resource === 'provinces' ? 'PROVINCE' : 'LOCATION'),
+                    ),
+                );
+                capability = {
+                    actions: [...new Set(features.flatMap((feature) => feature.actions))],
+                    targets: [...new Set(features.flatMap((feature) => feature.targets))],
+                };
                 await load(button.dataset.refresh);
             }),
         ),
@@ -245,7 +259,15 @@
         }),
     );
     void perform(async () => {
-        capability = await window.VietRouteAccess.load('LOCATION');
-        await Promise.all(kinds.map((resource) => load(resource)));
+        const features = await Promise.all(
+            visibleKinds.map((resource) =>
+                window.VietRouteAccess.load(resource === 'provinces' ? 'PROVINCE' : 'LOCATION'),
+            ),
+        );
+        capability = {
+            actions: [...new Set(features.flatMap((feature) => feature.actions))],
+            targets: [...new Set(features.flatMap((feature) => feature.targets))],
+        };
+        await Promise.all(visibleKinds.map((resource) => load(resource)));
     });
 })();

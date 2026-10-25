@@ -1,5 +1,7 @@
 package vn.vietroute.common.media.service;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -7,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.entity.Role;
+import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.base.PageRequest;
@@ -29,6 +32,12 @@ import vn.vietroute.common.traffic.RateLimitStore;
 @Service
 @RequiredArgsConstructor
 public class MediaService {
+
+    /** Caller đã kiểm quyền business và giữ transaction; tham chiếu chỉ nhận ảnh READY của principal, khóa cùng delete media. */
+    public void requireReference(Connection connection, long id, UserPrincipal actor) throws SQLException {
+        AccessActors.requireCurrent(actor);
+        images.requireAvatar(connection, id, actor.id());
+    }
 
     private final MediaRepository images;
 

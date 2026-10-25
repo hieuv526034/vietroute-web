@@ -50,7 +50,7 @@ for port in 18080 18081; do
 done
 sql() { docker exec -e PGOPTIONS=-csearch_path=vietroute vietroute-db-ci psql -U vietroute_ci -d vietroute_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
 [[ "$(sql "SELECT count(*) FROM auth_users WHERE username='admin'")" == 1 ]]
-[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 16 ]]
+[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 17 ]]
 [[ "$(sql 'SELECT count(*) FROM catalog_items')" == 5 ]]
 [[ "$(sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','catalog_items','vietroute_schema_history')")" == 0 ]]
 [[ "$(sql "SELECT count(*) FROM pg_indexes WHERE schemaname='vietroute' AND indexname IN ('idx_auth_users_created_by','idx_auth_users_updated_by','idx_auth_user_roles_role_code','idx_catalog_created_by','idx_catalog_updated_by')")" == 5 ]]
@@ -161,14 +161,38 @@ for page_path in jobs access configuration api-journal; do
 done
 for locale in vi en; do
   call 200 GET "/admin?lang=$locale" '' cookie
-  grep -q 'catalog-workspace' "$result"
-  grep -q 'catalog-previous' "$result"
-  grep -q 'catalog-dialog' "$result"
-  grep -q 'data-tab-target="overview-panel"' "$result"
-  grep -q '/assets/js/workspace.js' "$result"
-  grep -q '/assets/js/catalog.js' "$result"
+  grep -q 'dashboard-links' "$result"
   grep -q 'aria-current="page"' "$result"
+  if grep -q 'catalog-workspace' "$result"; then exit 1; fi
+  for catalog_path in vehicle-types booking-sources; do
+    call 200 GET "/catalogs/$catalog_path?lang=$locale" '' cookie
+    grep -q 'catalog-workspace' "$result"
+    grep -q 'catalog-previous' "$result"
+    grep -q 'catalog-dialog' "$result"
+    grep -q 'catalog-search' "$result"
+    grep -q '/assets/js/workspace.js' "$result"
+    grep -q '/assets/js/catalog.js' "$result"
+    grep -q 'aria-current="page"' "$result"
+    if grep -q 'overview-panel\|??ui\.' "$result"; then exit 1; fi
+  done
+  for catalog_path in provinces locations; do
+    call 200 GET "/catalogs/$catalog_path?lang=$locale" '' cookie
+    grep -q 'location-workspace' "$result"
+    grep -q "data-section=\"$catalog_path\"" "$result"
+    if grep -q '??ui\.' "$result"; then exit 1; fi
+  done
+  for fleet_path in carriers vehicles drivers; do
+    call 200 GET "/operations/$fleet_path?lang=$locale" '' cookie
+    grep -q 'fleet-workspace' "$result"
+    grep -q "data-kind=\"$fleet_path\"" "$result"
+    grep -q 'fleet-dialog' "$result"
+    grep -q 'fleet-previous' "$result"
+    if grep -q '??ui\.' "$result"; then exit 1; fi
+  done
+  call 200 GET "/operations/demo?lang=$locale" '' cookie
+  grep -q 'demo-create' "$result"
   if grep -q '??ui\.' "$result"; then exit 1; fi
+  [[ "$(sql 'SELECT count(*) FROM carriers')" == 0 ]]
   call 200 GET "/media?lang=$locale" '' cookie
   grep -q 'data-enabled="false"' "$result"
   grep -q 'media-dialog' "$result"
@@ -590,7 +614,7 @@ start_app vietroute-auth-ci2 18081 vietroute_legacy_ci 300 '' legacy_custom
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 http://127.0.0.1:18081/health >/dev/null
 legacy_sql() { docker exec -e PGOPTIONS=-csearch_path=legacy_custom vietroute-db-ci psql -U vietroute_ci -d vietroute_legacy_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(legacy_sql 'SELECT count(*) FROM vietroute_schema_history')" == 16 ]]
+[[ "$(legacy_sql 'SELECT count(*) FROM vietroute_schema_history')" == 17 ]]
 [[ "$(legacy_sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','catalog_items','vietroute_schema_history')")" == 0 ]]
 [[ "$(legacy_sql "SELECT display_name FROM auth_users WHERE id=1 AND username='admin'")" == 'Legacy admin retained' ]]
 [[ "$(legacy_sql "SELECT code FROM catalog_items WHERE id=1")" == LEGACY ]]
@@ -617,7 +641,7 @@ start_app vietroute-auth-ci 18080 vietroute_schema_ci 300 '' select
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 http://127.0.0.1:18080/health >/dev/null
 custom_sql() { docker exec -e 'PGOPTIONS=-csearch_path="select"' vietroute-db-ci psql -U vietroute_ci -d vietroute_schema_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(custom_sql 'SELECT count(*) FROM vietroute_schema_history')" == 16 ]]
+[[ "$(custom_sql 'SELECT count(*) FROM vietroute_schema_history')" == 17 ]]
 [[ "$(custom_sql 'SELECT count(*) FROM catalog_items')" == 5 ]]
 [[ "$(custom_sql "SELECT count(*) FROM pg_namespace WHERE nspname='vietroute'")" == 0 ]]
 for migration in src/main/resources/db/migration/V00*.sql; do
@@ -659,7 +683,7 @@ start_app vietroute-auth-ci 18080 vietroute_schema_ci 300 '' renamed_app
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 "$base/health" >/dev/null
 renamed_sql() { docker exec -e PGOPTIONS=-csearch_path=renamed_app vietroute-db-ci psql -U vietroute_ci -d vietroute_schema_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(renamed_sql 'SELECT count(*) FROM vietroute_schema_history')" == 16 ]]
+[[ "$(renamed_sql 'SELECT count(*) FROM vietroute_schema_history')" == 17 ]]
 [[ "$(renamed_sql 'SELECT count(*) FROM catalog_items')" == 6 ]]
 renamed_sql "SELECT password_hash FROM auth_users WHERE username='admin'" > "$work/renamed-hash"
 cmp --silent "$work/custom-hash" "$work/renamed-hash"

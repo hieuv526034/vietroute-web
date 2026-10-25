@@ -28,6 +28,9 @@ import vn.vietroute.auth.entity.ScopeMembership;
 import vn.vietroute.auth.entity.ScopeRole;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.auth.service.BootstrapAdminInitializer;
+import vn.vietroute.business.carrier.entity.Carrier;
+import vn.vietroute.business.carrier.entity.Driver;
+import vn.vietroute.business.carrier.entity.Vehicle;
 import vn.vietroute.business.catalog.entity.CatalogItem;
 import vn.vietroute.business.location.entity.Location;
 import vn.vietroute.business.location.entity.Province;
@@ -91,12 +94,16 @@ public class DatabaseInitializer implements InitializingBean {
         migrate(connection, "V014__access_change_history.sql");
         migrate(connection, "V015__data_scope_memberships.sql");
         migrate(connection, "V016__locations.sql");
+        migrate(connection, "V017__carriers_and_fleet.sql");
         JdbcSchemaValidator.verify(
             connection,
             UserAccount.class,
             AccountChallenge.class,
             PasswordHistory.class,
             CatalogItem.class,
+            Carrier.class,
+            Vehicle.class,
+            Driver.class,
             Province.class,
             Location.class,
             MediaAsset.class,

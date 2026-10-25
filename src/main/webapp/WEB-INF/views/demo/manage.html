@@ -1,0 +1,55 @@
+<!doctype html>
+<html
+    xmlns:th="http://www.thymeleaf.org"
+    th:lang="${currentLocale}"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.demo.title})}"></head>
+    <body>
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <main
+            id="demo-workspace"
+            class="container-xl workspace-page"
+            th:attr="data-loading=#{ui.loading},data-done=#{ui.demo.done},data-created=#{ui.demo.created},data-reused=#{ui.demo.reused},data-catalogs=#{access.function.CATALOG},data-provinces=#{ui.location.provinces},data-locations=#{ui.location.locations},data-carriers=#{ui.fleet.title.carriers},data-vehicles=#{ui.fleet.title.vehicles},data-drivers=#{ui.fleet.title.drivers}"
+        >
+            <div class="page-heading">
+                <p class="eyebrow">DEMO / BUSINESS</p>
+                <h1 th:text="#{ui.demo.title}"></h1>
+                <p
+                    class="muted"
+                    th:text="#{ui.demo.description}"
+                ></p>
+            </div>
+            <section class="panel">
+                <h2 th:text="#{ui.demo.dataset}"></h2>
+                <p th:text="#{ui.demo.contents}"></p>
+                <p
+                    class="form-help"
+                    th:text="#{ui.demo.note}"
+                ></p>
+                <div
+                    id="demo-feedback"
+                    class="feedback"
+                    role="alert"
+                    hidden
+                ></div>
+                <p
+                    id="demo-status"
+                    role="status"
+                    aria-live="polite"
+                ></p>
+                <div class="toolbar-actions">
+                    <button
+                        id="demo-create"
+                        class="button"
+                        type="button"
+                        disabled
+                        th:text="#{ui.demo.create}"
+                    ></button>
+                </div>
+            </section>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/demo.js}"></script>
+    </body>
+</html>

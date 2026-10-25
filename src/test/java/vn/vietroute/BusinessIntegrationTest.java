@@ -1,0 +1,459 @@
+package vn.vietroute;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.sql.DriverManager;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.core.io.FileSystemResourceLoader;
+import org.springframework.http.HttpMethod;
+import org.springframework.mock.web.MockServletContext;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
+import vn.vietroute.auth.entity.Role;
+import vn.vietroute.auth.security.UserPrincipal;
+import vn.vietroute.business.carrier.dto.request.CarrierSearchRequest;
+import vn.vietroute.business.carrier.service.VehicleService;
+import vn.vietroute.business.catalog.service.BookingSourceCatalogService;
+import vn.vietroute.common.config.RootConfig;
+import vn.vietroute.common.config.application.ConfigurationEnvironment;
+import vn.vietroute.common.config.web.WebConfig;
+import vn.vietroute.common.constant.ErrorCode;
+import vn.vietroute.common.exception.BusinessException;
+import vn.vietroute.common.media.service.MediaService;
+
+/** PostgreSQL thật, hai context WAR; chỉ cho phép DB test loopback, không đọc .env hoặc dùng Neon. */
+@EnabledIfSystemProperty(
+    named = "business.test.database",
+    matches = "jdbc:postgresql://127[.]0[.]0[.]1:[0-9]+/vietroute_business_test"
+)
+class BusinessIntegrationTest {
+
+    private static String schema;
+    private AnnotationConfigWebApplicationContext root;
+    private AnnotationConfigWebApplicationContext child;
+    private MockMvc mvc;
+    private final ObjectMapper json = new ObjectMapper();
+    private Authentication admin;
+
+    @Configuration
+    static class Environment {
+
+        @Bean
+        @Primary
+        ConfigurationEnvironment businessTestEnvironment() {
+            var values = Map.ofEntries(
+                Map.entry("VIETROUTE_ENV", "development"),
+                Map.entry("VIETROUTE_COOKIE_SECURE", "false"),
+                Map.entry("VIETROUTE_DB_URL", System.getProperty("business.test.database")),
+                Map.entry("VIETROUTE_DB_USER", System.getProperty("business.test.user", "ciadmin")),
+                Map.entry("VIETROUTE_DB_PASSWORD", "test_only"),
+                Map.entry("VIETROUTE_DB_SCHEMA", schema),
+                Map.entry("VIETROUTE_DB_INIT_ENABLED", "true"),
+                Map.entry("VIETROUTE_ACCESS_SCOPE_CAPACITY", "2"),
+                Map.entry("VIETROUTE_ACCESS_SYNC_ENABLED", "true"),
+                Map.entry("VIETROUTE_JWT_SECRET", "business_test_only_never_use_for_runtime_0123456789"),
+                Map.entry("VIETROUTE_BOOTSTRAP_ADMIN_USERNAME", "testadmin"),
+                Map.entry("VIETROUTE_BOOTSTRAP_ADMIN_EMAIL", "testadmin@example.invalid"),
+                Map.entry("VIETROUTE_BOOTSTRAP_ADMIN_PASSWORD", "TestOnly!2026Aa"),
+                Map.entry("VIETROUTE_AUTH_SELF_SERVICE_ENABLED", "false"),
+                Map.entry("VIETROUTE_WORKER_ENABLED", "false"),
+                Map.entry("VIETROUTE_MAIL_ENABLED", "false"),
+                Map.entry("VIETROUTE_MEDIA_ENABLED", "false"),
+                Map.entry("VIETROUTE_API_JOURNAL_ENABLED", "false"),
+                Map.entry("VIETROUTE_ACTIVITY_ENABLED", "false"),
+                Map.entry("VIETROUTE_MONITORING_DB_ENABLED", "false")
+            );
+            return new ConfigurationEnvironment(values::get, null);
+        }
+    }
+
+    @BeforeEach
+    void start() {
+        schema = "business02_it_" + UUID.randomUUID().toString().replace("-", "");
+        var web = new MockServletContext("src/main/webapp", new FileSystemResourceLoader());
+        root = new AnnotationConfigWebApplicationContext();
+        root.setServletContext(web);
+        root.register(RootConfig.class, Environment.class);
+        root.refresh();
+        child = new AnnotationConfigWebApplicationContext();
+        child.setParent(root);
+        child.setServletContext(web);
+        child.register(WebConfig.class);
+        child.refresh();
+        mvc = MockMvcBuilders.webAppContextSetup(child).apply(springSecurity()).build();
+        admin = actor(1, "testadmin", "ADMIN");
+    }
+
+    @AfterEach
+    void stop() throws Exception {
+        SecurityContextHolder.clearContext();
+        if (child != null) child.close();
+        if (root != null) root.close();
+        // Schema random do test tạo; URL/class condition chặn tuyệt đối target ngoài loopback test.
+        if (schema != null && schema.matches("business02_it_[a-f0-9]{32}")) {
+            try (
+                var connection = DriverManager.getConnection(
+                    System.getProperty("business.test.database"),
+                    System.getProperty("business.test.user", "ciadmin"),
+                    "test_only"
+                );
+                var statement = connection.createStatement()
+            ) {
+                statement.execute("DROP SCHEMA IF EXISTS " + schema + " CASCADE");
+            }
+        }
+    }
+
+    private Authentication actor(long id, String username, String role) {
+        return UsernamePasswordAuthenticationToken.authenticated(
+            new UserPrincipal(id, username, Set.of(Role.valueOf(role)), 0),
+            null,
+            Set.of()
+        );
+    }
+
+    private JsonNode call(int expected, String method, String path, String body, Authentication who) throws Exception {
+        var request = request(HttpMethod.valueOf(method), path).with(authentication(who)).with(csrf());
+        if (body != null) request.contentType("application/json").content(body);
+        var response = mvc.perform(request).andReturn().getResponse();
+        assertEquals(expected, response.getStatus(), method + " " + path + " (chỉ in mã lỗi khi thất bại)");
+        return response.getContentType() != null && response.getContentType().contains("json")
+            ? json.readTree(response.getContentAsString()).path("data")
+            : json.nullNode();
+    }
+
+    private String sql(String text) throws Exception {
+        try (
+            var connection = DriverManager.getConnection(
+                System.getProperty("business.test.database"),
+                System.getProperty("business.test.user", "ciadmin"),
+                "test_only"
+            );
+            var statement = connection.createStatement()
+        ) {
+            statement.execute("SET search_path TO " + schema + ",pg_temp");
+            if (!statement.execute(text)) return "";
+            try (var rows = statement.getResultSet()) {
+                return rows.next() ? rows.getString(1) : "";
+            }
+        }
+    }
+
+    private JsonNode seed() throws Exception {
+        return call(200, "POST", "/api/v1/admin/demo", "{}", admin);
+    }
+
+    private long id(String table, String code) throws Exception {
+        return Long.parseLong(sql("SELECT id FROM " + table + " WHERE code='" + code + "'"));
+    }
+
+    private Authentication member(long scope, String role, String permissions, String username) throws Exception {
+        sql(
+            "INSERT INTO auth_roles(code,name_vi,name_en) VALUES ('" +
+                role +
+                "','Kiểm thử','Test'); INSERT INTO auth_role_permissions(role_code,permission_code) SELECT '" +
+                role +
+                "',code FROM auth_permissions WHERE code IN (" +
+                permissions +
+                ")"
+        );
+        long user = Long.parseLong(
+            sql(
+                "INSERT INTO auth_users(username,password_hash,display_name,must_change_password,email,email_verified_at) SELECT '" +
+                    username +
+                    "',password_hash,'Test',false,'" +
+                    username +
+                    "@example.invalid',CURRENT_TIMESTAMP FROM auth_users WHERE id=1 RETURNING id"
+            )
+        );
+        sql(
+            "INSERT INTO auth_user_roles(user_id,role_code) VALUES (" +
+                user +
+                ",'" +
+                role +
+                "'); INSERT INTO auth_scope_memberships(scope_id,user_id) VALUES (" +
+                scope +
+                "," +
+                user +
+                "); INSERT INTO auth_scope_roles(scope_id,user_id,role_code) VALUES (" +
+                scope +
+                "," +
+                user +
+                ",'" +
+                role +
+                "')"
+        );
+        return actor(user, username, role);
+    }
+
+    @Test
+    void demoIsAtomicIdempotentAndCatalogTypesCannotCrossIds() throws Exception {
+        assertEquals(21, seed().path("created").asInt());
+        var repeat = seed();
+        assertEquals(0, repeat.path("created").asInt());
+        assertEquals(21, repeat.path("reused").asInt());
+        assertEquals("2", sql("SELECT count(*) FROM auth_data_scopes"));
+        assertEquals("2", sql("SELECT count(*) FROM auth_users"));
+        long source = id("catalog_items", "DEMOWEB");
+        call(404, "GET", "/api/v1/admin/vehicle-types/" + source, null, admin);
+        call(
+            404,
+            "PUT",
+            "/api/v1/admin/vehicle-types/" + source,
+            "{\"nameVi\":\"Sai\",\"nameEn\":\"Wrong\",\"sortOrder\":0,\"version\":0,\"active\":true}",
+            admin
+        );
+        call(404, "DELETE", "/api/v1/admin/vehicle-types/" + source, "{\"version\":0}", admin);
+        assertEquals(
+            3,
+            call(200, "GET", "/api/v1/catalogs/VEHICLE_TYPE?query=DEMO&size=2", null, admin)
+                .path("totalElements")
+                .asInt()
+        );
+        assertEquals(
+            0,
+            call(200, "GET", "/api/v1/catalogs/VEHICLE_TYPE?query=%25_%27", null, admin).path("totalElements").asInt()
+        );
+    }
+
+    @Test
+    void membershipFiltersCountRowsIdsAndPickerWithoutLeakingOtherCarrier() throws Exception {
+        seed();
+        long carrier = id("carriers", "DEMOMIENNAM");
+        long scope = Long.parseLong(sql("SELECT scope_id FROM carriers WHERE id=" + carrier));
+        var operator = member(
+            scope,
+            "TESTOP",
+            "'VEHICLE_VIEW','VEHICLE_READ','VEHICLE_CREATE','VEHICLE_UPDATE'",
+            "testoperator"
+        );
+        var page = call(200, "GET", "/api/v1/admin/vehicles?size=1", null, operator);
+        assertEquals(2, page.path("totalElements").asInt());
+        assertEquals(1, page.path("content").size());
+        assertTrue(page.path("content").get(0).path("canUpdate").asBoolean());
+        assertEquals(
+            0,
+            call(200, "GET", "/api/v1/admin/vehicles?carrierId=" + id("carriers", "DEMOBACNAM"), null, operator)
+                .path("totalElements")
+                .asInt()
+        );
+        var picker = call(200, "GET", "/api/v1/admin/vehicles/carriers", null, operator);
+        assertEquals(1, picker.path("totalElements").asInt());
+        assertFalse(picker.toString().contains("phone"));
+        long other = id("carrier_vehicles", "DEMOVEH03");
+        call(404, "GET", "/api/v1/admin/vehicles/" + other, null, operator);
+        long type = id("catalog_items", "DEMOSEAT");
+        String body =
+            "{\"plateNumber\":\"DEMO-999\",\"vehicleTypeId\":" +
+            type +
+            ",\"capacity\":20,\"active\":true,\"version\":0}";
+        call(404, "PUT", "/api/v1/admin/vehicles/" + other, body, operator);
+        call(403, "GET", "/api/v1/admin/carriers", null, operator);
+        call(403, "GET", "/catalogs/booking-sources", null, operator);
+        call(403, "POST", "/api/v1/admin/demo", "{}", operator);
+        // UPDATE toàn cục từ role khác không được union sang role scoped chỉ còn READ.
+        long operatorId = ((UserPrincipal) operator.getPrincipal()).id();
+        sql(
+            "INSERT INTO auth_roles(code,name_vi,name_en) VALUES ('GLOBALWRITE','Test','Test'); INSERT INTO auth_role_permissions(role_code,permission_code) VALUES ('GLOBALWRITE','VEHICLE_UPDATE'); INSERT INTO auth_user_roles(user_id,role_code) VALUES (" +
+                operatorId +
+                ",'GLOBALWRITE'); DELETE FROM auth_role_permissions WHERE role_code='TESTOP' AND permission_code='VEHICLE_UPDATE'"
+        );
+        var scopedReadOnly = call(200, "GET", "/api/v1/admin/vehicles", null, operator);
+        assertFalse(scopedReadOnly.path("content").get(0).path("canUpdate").asBoolean());
+        call(404, "PUT", "/api/v1/admin/vehicles/" + id("carrier_vehicles", "DEMOVEH01"), body, operator);
+        // Thu hồi membership trong DB có hiệu lực ở lần kiểm tiếp theo dù principal vẫn như cũ.
+        sql("UPDATE auth_scope_memberships SET active=false WHERE scope_id=" + scope);
+        assertEquals(0, call(200, "GET", "/api/v1/admin/vehicles", null, operator).path("totalElements").asInt());
+    }
+
+    @Test
+    void viewReadAndTypePermissionsStayIndependentInBothContexts() throws Exception {
+        seed();
+        long scope = Long.parseLong(sql("SELECT min(scope_id) FROM carriers"));
+        var view = member(scope, "VIEWONLY", "'VEHICLE_VIEW','VEHICLE_TYPE_VIEW'", "testviewer");
+        call(200, "GET", "/operations/vehicles", null, view);
+        call(200, "GET", "/catalogs/vehicle-types", null, view);
+        call(403, "GET", "/api/v1/admin/vehicles", null, view);
+        call(403, "GET", "/catalogs/booking-sources", null, view);
+        SecurityContextHolder.getContext().setAuthentication(view);
+        assertThrows(AccessDeniedException.class, () ->
+            root.getBean(VehicleService.class).page(new CarrierSearchRequest())
+        );
+        assertThrows(AccessDeniedException.class, () ->
+            root.getBean(BookingSourceCatalogService.class).find(1, Locale.ROOT)
+        );
+        var read = member(scope, "TYPEONLY", "'VEHICLE_TYPE_READ'", "testtypereader");
+        call(200, "GET", "/api/v1/admin/vehicle-types", null, read);
+        call(403, "GET", "/catalogs/vehicle-types", null, read);
+        call(403, "GET", "/api/v1/admin/booking-sources", null, read);
+        call(403, "POST", "/api/v1/admin/catalogs", "{}", read);
+    }
+
+    @Test
+    void plateUniquenessParentStatusVersionsAndDriverAccountAreEnforced() throws Exception {
+        seed();
+        long carrier = id("carriers", "DEMOMIENNAM");
+        long vehicle = id("carrier_vehicles", "DEMOVEH01");
+        long type = id("catalog_items", "DEMOSEAT");
+        String update =
+            "{\"plateNumber\":\"DEMO-001\",\"vehicleTypeId\":" +
+            type +
+            ",\"capacity\":28,\"active\":true,\"version\":0}";
+        call(200, "PUT", "/api/v1/admin/vehicles/" + vehicle, update, admin);
+        call(409, "PUT", "/api/v1/admin/vehicles/" + vehicle, update, admin);
+        String create =
+            "{\"code\":\"TESTDUP\",\"carrierId\":" +
+            carrier +
+            ",\"plateNumber\":\"DEMO.001\",\"vehicleTypeId\":" +
+            type +
+            ",\"capacity\":20,\"active\":true}";
+        call(409, "POST", "/api/v1/admin/vehicles", create, admin);
+        call(
+            400,
+            "POST",
+            "/api/v1/admin/vehicles",
+            create.replace("TESTDUP", "TESTINVALID").replace("DEMO.001", "TEST-005").replace("20,", "201,"),
+            admin
+        );
+        call(
+            400,
+            "POST",
+            "/api/v1/admin/drivers",
+            "{\"code\":\"TESTDRIVER\",\"carrierId\":" +
+                carrier +
+                ",\"name\":\"Test\",\"phone\":\"0000000000\",\"userId\":1}",
+            admin
+        );
+        sql("UPDATE carriers SET active=false WHERE id=" + carrier);
+        call(409, "POST", "/api/v1/admin/vehicles", create.replace("DEMO.001", "TEST-006"), admin);
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/vehicles/" + vehicle,
+            update.replace("true", "false").replace("version\":0", "version\":1"),
+            admin
+        );
+        assertEquals("2", sql("SELECT version FROM carrier_vehicles WHERE id=" + vehicle));
+    }
+
+    @Test
+    void demoCollisionRollsBackEveryEarlierInsertAndKeepsExistingData() throws Exception {
+        long carrier = call(
+            201,
+            "POST",
+            "/api/v1/admin/carriers",
+            "{\"code\":\"DEMOBACNAM\",\"name\":\"Nhà xe đang dùng\",\"phone\":\"0000000000\",\"description\":\"Giữ nguyên\"}",
+            admin
+        )
+            .path("id")
+            .asLong();
+        call(409, "POST", "/api/v1/admin/demo", "{}", admin);
+        assertEquals("0", sql("SELECT count(*) FROM catalog_items WHERE code LIKE 'DEMO%'"));
+        assertEquals("0", sql("SELECT count(*) FROM location_provinces"));
+        assertEquals("1", sql("SELECT count(*) FROM auth_data_scopes"));
+        assertEquals("Giữ nguyên", sql("SELECT description FROM carriers WHERE id=" + carrier));
+    }
+
+    @Test
+    void concurrentUpdatesHaveOneWinnerAndReferencedImageCannotBeDeleted() throws Exception {
+        seed();
+        long vehicle = id("carrier_vehicles", "DEMOVEH01");
+        long type = id("catalog_items", "DEMOSEAT");
+        long image = Long.parseLong(
+            sql(
+                "INSERT INTO media_assets(public_id,status,url,thumbnail_url,format,bytes,width,height,created_by,updated_by) VALUES ('business-test','READY','https://example.invalid/photo.jpg','https://example.invalid/thumb.jpg','jpg',1024,32,32,1,1) RETURNING id"
+            )
+        );
+        String body =
+            "{\"plateNumber\":\"DEMO-001\",\"vehicleTypeId\":" +
+            type +
+            ",\"capacity\":28,\"active\":true,\"version\":0,\"photoMediaId\":" +
+            image +
+            "}";
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            var first = executor.submit(() ->
+                mvc
+                    .perform(
+                        request(HttpMethod.PUT, "/api/v1/admin/vehicles/" + vehicle)
+                            .with(authentication(admin))
+                            .with(csrf())
+                            .contentType("application/json")
+                            .content(body)
+                    )
+                    .andReturn()
+                    .getResponse()
+                    .getStatus()
+            );
+            var second = executor.submit(() ->
+                mvc
+                    .perform(
+                        request(HttpMethod.PUT, "/api/v1/admin/vehicles/" + vehicle)
+                            .with(authentication(admin))
+                            .with(csrf())
+                            .contentType("application/json")
+                            .content(body)
+                    )
+                    .andReturn()
+                    .getResponse()
+                    .getStatus()
+            );
+            var a = first.get(15, TimeUnit.SECONDS);
+            var b = second.get(15, TimeUnit.SECONDS);
+            assertEquals(Set.of(200, 409), Set.of(a, b));
+        } finally {
+            executor.shutdownNow();
+        }
+        assertEquals("1", sql("SELECT version FROM carrier_vehicles WHERE id=" + vehicle));
+        SecurityContextHolder.getContext().setAuthentication(admin);
+        var error = assertThrows(BusinessException.class, () ->
+            root.getBean(MediaService.class).delete(image, 0, (UserPrincipal) admin.getPrincipal())
+        );
+        assertEquals(ErrorCode.RESOURCE_IN_USE, error.getErrorCode());
+        assertEquals("READY:0", sql("SELECT status || ':' || version FROM media_assets WHERE id=" + image));
+    }
+
+    @Test
+    void scopeHistoryFailureAndCapacityCannotLeaveOrphanCarrierOrScope() throws Exception {
+        sql(
+            "CREATE FUNCTION fail_business_history() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN RAISE EXCEPTION ''Business history test failure''; END'; CREATE TRIGGER fail_business_history BEFORE INSERT ON auth_access_changes FOR EACH ROW EXECUTE FUNCTION fail_business_history()"
+        );
+        String body =
+            "{\"code\":\"TESTCAPACITY\",\"name\":\"Test capacity\",\"phone\":\"0000000000\",\"description\":\"Test\"}";
+        call(503, "POST", "/api/v1/admin/carriers", body, admin);
+        assertEquals("0", sql("SELECT count(*) FROM auth_data_scopes"));
+        assertEquals("0", sql("SELECT count(*) FROM carriers"));
+        sql("DROP TRIGGER fail_business_history ON auth_access_changes; DROP FUNCTION fail_business_history()");
+        seed();
+        assertEquals("2", sql("SELECT count(*) FROM auth_access_changes WHERE event_type='SCOPE_CREATED'"));
+        call(409, "POST", "/api/v1/admin/carriers", body, admin);
+        assertEquals("2", sql("SELECT count(*) FROM auth_data_scopes"));
+        assertEquals("2", sql("SELECT count(*) FROM carriers"));
+    }
+}

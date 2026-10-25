@@ -244,3 +244,26 @@ Bootstrap admin lấy email từ VIETROUTE_BOOTSTRAP_ADMIN_EMAIL hoặc bootstra
 ### AUTH18 — trạng thái quyền và actor tự phục vụ
 
 ManagedAccountResponse thêm boolean emailVerificationRequired ở danh sách/chi tiết/tạo account; chỉ cho biết cần xác minh, không trả địa chỉ email. GET access/users/{id}/effective giữ active là cờ DB, sources rỗng nếu account chưa sẵn sàng (tắt/pending/mật khẩu tạm/email chưa xác minh), không xóa mapping đã gán. Đây là nguồn quyền chung, không thay capabilities/policy/scope. Me/đổi mật khẩu/profile/gắn email và logout có principal chỉ chấp nhận actor cùng phiên server; lời gọi bean nội bộ truyền user khác trả AUTH003 trước đọc/ghi. Logout anonymous vẫn xóa cookie.
+
+
+## Danh mục riêng và nhà xe/phương tiện/tài xế — BUSINESS02
+
+Mỗi danh mục có trang riêng dưới menu Danh mục: `/catalogs/vehicle-types`, `/catalogs/booking-sources`, `/catalogs/provinces`, `/catalogs/locations`. `/admin` là tổng quan. URL cũ `/operations/locations` và API `/api/v1/admin/catalogs` giữ hợp đồng tương thích; không còn là nơi chọn mọi loại mới. VIEW độc lập READ và CREATE/UPDATE/DELETE. Tập function hiện có 20 định nghĩa, bao gồm nhóm cha.
+
+| API dưới `/api/v1/admin` | Hành động/quyền | Hợp đồng |
+|---|---|---|
+| `/vehicle-types`, `/booking-sources` | GET list/id READ, POST CREATE, PUT id UPDATE, DELETE id DELETE của `VEHICLE_TYPE`/`BOOKING_SOURCE` | Lọc query/active, count/page PostgreSQL; cập nhật active + version; DELETE nhận JSON version và ngừng sử dụng. ID/type khác endpoint trả 404/400. Giữ alias CATALOG tương ứng trong phạm vi hai loại cũ. |
+| `/provinces`, `/locations` | PROVINCE hoặc LOCATION VIEW/READ/CREATE/UPDATE, ADMIN-only như nền địa điểm | Giữ alias LOCATION cho tỉnh cũ; public lookup vẫn chỉ active. |
+| `/carriers` | CARRIER_VIEW/READ/CREATE/UPDATE | ADMIN tạo scope+nhà xe trong một giao dịch qua auth, cùng quota/khóa gán role và lịch sử SCOPE_CREATED; chỉ ADMIN đổi active. Thành viên có scope sửa thông tin; scope security không bị tắt theo business active. |
+| `/vehicles` | VEHICLE_VIEW/READ/CREATE/UPDATE | Tạo cần carrierId được kiểm scope; code/carrier/scope bất biến khi sửa. Biển số chuẩn hóa chữ hoa, DB unique theo ký tự chữ/số, capacity 1–200, loại VEHICLE_TYPE active. |
+| `/drivers` | DRIVER_VIEW/READ/CREATE/UPDATE | Hồ sơ có thể chưa có account. Khi gắn account: account ready, có global DRIVER và scoped DRIVER đúng nhà xe. Không suy membership từ tên role. |
+| `/vehicles/carriers`, `/drivers/carriers` | CREATE tương ứng | Picker tìm/phân trang tại DB bằng đúng quyền scoped của tài nguyên con, chỉ trả id/code/name; không đòi CARRIER_READ hoặc lộ hồ sơ đầy đủ. |
+| `/demo` POST | ADMIN + DEMO_CREATE + mọi CREATE của bộ dữ liệu | Thao tác chủ động từ `/operations/demo`; không tự seed lúc startup. Một transaction/advisory lock, mã DEMO cố định, chỉ INSERT phần thiếu, giữ nguyên bản đã có, collision nhãn ngoài DEMO rollback toàn bộ. |
+
+Danh sách carrier/vehicle/driver nhận query/active/carrierId/page/size; cả count lẫn trang dữ liệu kiểm account/tokenVersion/scope/membership/role/permission hiện hành. Truy cập ID ngoài scope trả 404; filter carrierId không cấp quyền. CREATE/UPDATE suy scope từ cha trong DB, khóa cha trước con, audit lấy principal; stale version 409 và không tự gửi lại. Mỗi dòng trả canUpdate từ guard SQL cùng scope; UI giao cờ này với capabilities/endpoint policy chung. Ngừng sử dụng thay xóa vật lý. Ảnh logo/photo chỉ nhận ID ảnh chung READY thuộc actor; xóa media bị chặn khi carrier/vehicle còn tham chiếu, kể cả inactive. Không gọi provider trong transaction này.
+
+Bộ dữ liệu `src/main/resources/demo/business.json`: 5 catalog, 3 tỉnh, 3 địa điểm, 2 nhà xe, 4 xe, 4 hồ sơ tài xế (21 bản ghi nghiệp vụ + 2 scope). Không tạo account, membership, grant hoặc email; mã/biển số/điện thoại/tọa độ minh họa. Chạy lại trả created=0/reused=21 nếu bộ đã đủ và còn nhãn DEMO; không đặt lại trạng thái/nội dung người dùng đã sửa. Không xóa hoặc ghi đè để ép seed thành công. DEMO chưa có tuyến/chuyến/booking; không bán vé thật. Mặc định role thường không được tự cấp quyền source mới; quản trị gán global role/quyền rồi membership đúng carrier scope qua màn Phạm vi dữ liệu.
+
+V017 thêm carriers/carrier_vehicles/carrier_drivers và FK composite vào scope/parent/catalog; giữ V001–V016. Triển khai source cùng migration qua startup init đã bật, sync registry/ADMIN khi enabled; không chạy migration/seed trong Maven. Email đang tạm hoãn không miễn xác minh cho người dùng thường hoặc tài xế. AUTH03 cấp account nhân sự, ROUTE01/TRIP01/BOOKING01/TRACK01 vẫn là các phần riêng theo đặc tả, chưa được coi hoàn thành bởi CRUD này.
+
+Regression `BusinessIntegrationTest` chỉ chạy với `-Dbusiness.test.database=jdbc:postgresql://127.0.0.1:15439/vietroute_business_test`, PostgreSQL test user ciadmin, database dành riêng không có app schema khác; tạo/drop schema random `business02_it_*` sau mỗi ca. Không đọc .env; CI dựng PostgreSQL 17 cô lập và chạy Maven verify trước image build. Kiểm hai context WAR, VIEW/READ/type độc lập, scope count/ID/picker/revoke, stale/concurrent version, unique plate, parent inactive, account DRIVER, rollback/idempotence seed và media reference. Preview phải dùng DB khác (ví dụ vietroute_business_preview) vì startup chủ động chặn nhiều app history trong cùng DB.
