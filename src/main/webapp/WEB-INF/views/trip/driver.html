@@ -196,6 +196,12 @@
                                 data-tab-target="driver-trip-passengers"
                                 th:text="#{ui.booking.passengers}"
                             ></button>
+                            <button
+                                id="driver-trip-location-tab"
+                                type="button"
+                                data-tab-target="driver-trip-location"
+                                th:text="#{ui.tracking.title}"
+                            ></button>
                         </div>
                         <section
                             id="driver-trip-info"
@@ -261,6 +267,13 @@
                             </div>
                             <div th:replace="~{fragments/pagination :: pager('driver-passenger', 10)}"></div>
                         </section>
+                        <section
+                            id="driver-trip-location"
+                            data-tab-panel="driver-trip-location-tab"
+                            hidden
+                        >
+                            <section th:replace="~{fragments/tracking :: panel('driver-trip', true)}"></section>
+                        </section>
                     </div>
                     <form
                         id="driver-trip-form"
@@ -295,6 +308,7 @@
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/assets/js/tracking.js}"></script>
         <script th:src="@{/assets/js/driver-trips.js}"></script>
     </body>
 </html>

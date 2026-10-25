@@ -2963,3 +2963,32 @@ fieldset:disabled .button[type='submit']::before,
 #report-workspace .toolbar-actions {
     grid-column: 1 / -1;
 }
+
+.tracking-panel {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1rem 0;
+    min-width: 0;
+}
+
+.tracking-panel .form-help {
+    font-size: 13px;
+}
+.tracking-panel .toolbar-actions {
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+.tracking-summary,
+.tracking-trail {
+    overflow-wrap: anywhere;
+}
+.tracking-trail {
+    max-height: 240px;
+    overflow-y: auto;
+    padding-left: 1.25rem;
+}
+.tracking-panel [data-tracking-status] {
+    font-weight: 650;
+    margin-top: 1rem;
+}

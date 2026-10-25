@@ -12,6 +12,7 @@ import vn.vietroute.business.booking.dto.response.DriverPassengerResponse;
 import vn.vietroute.business.booking.repository.BookingLifecycleRepository;
 import vn.vietroute.business.booking.repository.BookingRepository;
 import vn.vietroute.business.carrier.repository.CarrierRepository;
+import vn.vietroute.business.tracking.repository.TrackingRepository;
 import vn.vietroute.business.trip.dto.request.DriverProgressRequest;
 import vn.vietroute.business.trip.dto.request.TripSearchRequest;
 import vn.vietroute.business.trip.dto.response.TripResponse;
@@ -39,6 +40,7 @@ public class DriverTripService {
     private final JdbcTransactions transactions;
     private final BookingLifecycleRepository bookings;
     private final BookingRepository passengerBookings;
+    private final TrackingRepository tracking;
 
     /** Driver không cần BOOKING_READ; chỉ projection đón/trả sau kiểm chính phân công hiện hành. */
     @AccessOperation(action = PermissionAction.READ)
@@ -162,6 +164,7 @@ public class DriverTripService {
                 actor.id()
             );
             trips.state(connection, trip, state, trip.operationNote(), actor.id());
+            if (state == TripStatus.COMPLETED) tracking.stop(connection, id, actor.id());
             trips.event(
                 connection,
                 id,

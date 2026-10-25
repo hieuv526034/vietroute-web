@@ -32,6 +32,11 @@ public enum ErrorCode {
     LOCATION_PROVINCE_INACTIVE("LOC001", "location.provinceInactive", HttpStatus.CONFLICT),
     ROUTE_INVALID("ROUTE001", "route.invalid", HttpStatus.BAD_REQUEST),
     DRIVER_ACCOUNT_ROLE("DRIVER001", "driver.accountRole", HttpStatus.CONFLICT),
+
+    TRACKING_SAMPLE_INVALID("TRACK001", "tracking.invalid", HttpStatus.BAD_REQUEST),
+    TRACKING_SESSION("TRACK002", "tracking.session", HttpStatus.CONFLICT),
+    TRACKING_THROTTLED("TRACK003", "tracking.throttled", HttpStatus.TOO_MANY_REQUESTS),
+    TRACKING_DISABLED("TRACK004", "tracking.disabled", HttpStatus.SERVICE_UNAVAILABLE),
     TRIP_INVALID("TRIP001", "trip.invalid", HttpStatus.BAD_REQUEST),
     TRIP_SCHEDULE_CONFLICT("TRIP002", "trip.scheduleConflict", HttpStatus.CONFLICT),
     TRIP_STATE_CONFLICT("TRIP003", "trip.stateConflict", HttpStatus.CONFLICT),

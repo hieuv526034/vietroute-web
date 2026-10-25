@@ -41,6 +41,7 @@ import vn.vietroute.common.config.database.DatabaseSettings;
 import vn.vietroute.common.config.integration.JobSettings;
 import vn.vietroute.common.config.integration.MailSettings;
 import vn.vietroute.common.config.integration.MediaSettings;
+import vn.vietroute.common.config.integration.TrackingSettings;
 import vn.vietroute.common.config.monitoring.ActivitySettings;
 import vn.vietroute.common.config.monitoring.MonitoringSettings;
 import vn.vietroute.common.config.traffic.TrafficSettings;
@@ -267,6 +268,7 @@ class SystemManagementTest {
             new JobSettings(source::get),
             new MailSettings(source::get),
             new MediaSettings(source::get),
+            new TrackingSettings(source::get),
             new MonitoringSettings(source::get),
             new ActivitySettings(source::get),
             Clock.systemUTC()
@@ -278,5 +280,7 @@ class SystemManagementTest {
         assertFalse(json.contains("jwtKey"));
         assertFalse(json.contains("password"));
         assertFalse(json.contains("refreshToken"));
+        assertTrue(json.contains("\"trackingEnabled\":true"));
+        assertTrue(json.contains("\"mapStatus\":\"UNCONFIGURED\""));
     }
 }
