@@ -57,10 +57,15 @@ public record AccessChangeStateResponse(
         );
     }
 
-    public static AccessChangeStateResponse resources(Set<String> changed, int count, long version) {
+    public static AccessChangeStateResponse resources(
+        Set<String> changed,
+        int count,
+        long version,
+        Set<String> permissions
+    ) {
         return new AccessChangeStateResponse(
             Set.of(),
-            Set.of(),
+            permissions,
             count,
             true,
             null,

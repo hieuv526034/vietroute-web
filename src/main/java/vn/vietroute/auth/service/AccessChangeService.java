@@ -61,20 +61,26 @@ public class AccessChangeService {
         Set<String> before,
         Set<String> after,
         long versionBefore,
-        long versionAfter
+        long versionAfter,
+        Set<String> permissionsBefore,
+        Set<String> permissionsAfter
     ) throws SQLException {
         Set<String> removed = new LinkedHashSet<>(before);
         removed.removeAll(after);
         Set<String> added = new LinkedHashSet<>(after);
         added.removeAll(before);
+        Set<String> removedPermissions = new LinkedHashSet<>(permissionsBefore);
+        removedPermissions.removeAll(permissionsAfter);
+        Set<String> addedPermissions = new LinkedHashSet<>(permissionsAfter);
+        addedPermissions.removeAll(permissionsBefore);
         record(
             connection,
             event,
             kind,
             key,
             actor,
-            AccessChangeStateResponse.resources(removed, before.size(), versionBefore),
-            AccessChangeStateResponse.resources(added, after.size(), versionAfter)
+            AccessChangeStateResponse.resources(removed, before.size(), versionBefore, removedPermissions),
+            AccessChangeStateResponse.resources(added, after.size(), versionAfter, addedPermissions)
         );
     }
 

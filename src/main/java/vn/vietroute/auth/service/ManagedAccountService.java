@@ -22,6 +22,7 @@ import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.repository.AccessRepository;
 import vn.vietroute.auth.repository.AccountRepository;
+import vn.vietroute.auth.repository.DataScopeRepository;
 import vn.vietroute.auth.repository.ManagedAccountRepository;
 import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.security.AccessActors;
@@ -107,8 +108,24 @@ public class ManagedAccountService {
                 ErrorCode.ACCESS_DENIED
             );
             var assigned = accounts.assignedRoles(connection, id).stream().map(Role::name).collect(Collectors.toSet());
+            var memberships = DataScopeRepository.memberships(connection, id);
             accounts.delete(connection, id, version, actor.id());
             lifecycle.invalidate(connection, id);
+            for (var membership : memberships) {
+                changes.record(
+                    connection,
+                    Event.SCOPE_MEMBERSHIP,
+                    Target.MEMBERSHIP,
+                    membership.scopeId() + ":" + id,
+                    actor.id(),
+                    AccessChangeStateResponse.membership(
+                        membership.roles().stream().map(Role::name).collect(Collectors.toSet()),
+                        membership.active(),
+                        membership.version()
+                    ),
+                    AccessChangeStateResponse.empty()
+                );
+            }
             changes.record(
                 connection,
                 Event.ACCOUNT_DELETED,

@@ -60,7 +60,7 @@ public class RoleResourceService {
             var selected = select(body.targets());
             requireDelegable(previous, actor);
             requireDelegable(body.targets(), actor);
-            Set<Permission> projection = projection(selected);
+            Set<Permission> projection = projection(selected, previous, before.permissions());
             if (!actor.roles().contains(Role.ADMIN)) {
                 var held = SecurityContextHolder.getContext()
                     .getAuthentication()
@@ -84,7 +84,9 @@ public class RoleResourceService {
                 previous,
                 body.targets(),
                 before.version(),
-                before.version() + 1
+                before.version() + 1,
+                before.permissions().stream().map(Permission::name).collect(Collectors.toSet()),
+                projection.stream().map(Permission::name).collect(Collectors.toSet())
             );
             return new RoleResourcesResponse(role.name(), Set.copyOf(body.targets()), before.version() + 1);
         });
@@ -159,10 +161,24 @@ public class RoleResourceService {
         return !item.publicRoute() && !item.declaredPermissions().isEmpty();
     }
 
-    private static Set<Permission> projection(Set<AccessResourceResponse> selected) {
+    private static Set<Permission> projection(
+        Set<AccessResourceResponse> selected,
+        Set<String> previous,
+        Set<Permission> oldPermissions
+    ) {
         Set<Permission> result = new LinkedHashSet<>();
         for (var item : selected) {
             List<String> codes = item.declaredPermissions();
+            // Migration giữ ANY/ALL phối hợp nhiều role: lưu lại target không được âm thầm lấp quyền còn thiếu.
+            // Muốn cấp trọn API này phải bỏ/lưu rồi cấp mới tường minh, vẫn kiểm giới hạn ủy quyền actor.
+            if (
+                item.match().equals("ALL") &&
+                previous.contains(item.target()) &&
+                !codes.stream().map(Permission::valueOf).allMatch(oldPermissions::contains)
+            ) {
+                codes.stream().map(Permission::valueOf).filter(oldPermissions::contains).forEach(result::add);
+                continue;
+            }
             // ANY có alias WRITE: chọn mã cụ thể để không mở rộng service khác qua alias cũ.
             var canonical = codes
                 .stream()

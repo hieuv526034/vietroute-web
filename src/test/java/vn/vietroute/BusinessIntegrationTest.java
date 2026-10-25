@@ -15,6 +15,7 @@ import java.sql.DriverManager;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -1322,7 +1323,7 @@ class BusinessIntegrationTest {
     void upgradeV021PreservesExistingMappingsAndNeverEnrollsNewEndpointsOnRestart() throws Exception {
         seed();
         long scope = Long.parseLong(sql("SELECT min(scope_id) FROM carriers"));
-        var user = member(scope, "UPGRADENATIVE", "'VEHICLE_READ','VEHICLE_VIEW'", "upgradenative");
+        var user = member(scope, "UPGRADENATIVE", "'VEHICLE_READ','VEHICLE_VIEW','VEHICLE_CREATE'", "upgradenative");
         String hash = sql("SELECT md5(password_hash) FROM auth_users WHERE id=1");
         sql(
             "DROP TABLE auth_role_resources; DROP TABLE auth_role_resource_sets; ALTER TABLE auth_users DROP CONSTRAINT ck_auth_users_deleted; ALTER TABLE auth_users DROP COLUMN deleted; DELETE FROM vietroute_schema_history WHERE version='V022__role_resource_grants.sql'"
@@ -1331,7 +1332,7 @@ class BusinessIntegrationTest {
         assertEquals("22", sql("SELECT count(*) FROM vietroute_schema_history"));
         assertEquals(hash, sql("SELECT md5(password_hash) FROM auth_users WHERE id=1"));
         assertEquals("0", sql("SELECT permission_version FROM auth_roles WHERE code='UPGRADENATIVE'"));
-        assertEquals("2", sql("SELECT count(*) FROM auth_role_permissions WHERE role_code='UPGRADENATIVE'"));
+        assertEquals("3", sql("SELECT count(*) FROM auth_role_permissions WHERE role_code='UPGRADENATIVE'"));
         assertEquals(
             "1",
             sql(
@@ -1351,6 +1352,18 @@ class BusinessIntegrationTest {
             )
         );
         assertEquals("0", sql("SELECT permission_version FROM auth_roles WHERE code='UPGRADENATIVE'"));
+        var current = call(200, "GET", "/api/v1/admin/access/roles/UPGRADENATIVE/resources", null, admin);
+        Set<String> targets = new LinkedHashSet<>();
+        current.path("targets").forEach(item -> targets.add(item.asText()));
+        assertTrue(targets.contains("POST /api/v1/admin/demo"));
+        grantResources("UPGRADENATIVE", 0, targets, admin, 200);
+        assertEquals("3", sql("SELECT count(*) FROM auth_role_permissions WHERE role_code='UPGRADENATIVE'"));
+        assertEquals(
+            "0",
+            sql(
+                "SELECT count(*) FROM auth_role_permissions WHERE role_code='UPGRADENATIVE' AND permission_code IN ('DEMO_CREATE','PROVINCE_CREATE','ACCESS_ASSIGN')"
+            )
+        );
     }
 
     @Test
@@ -1363,6 +1376,12 @@ class BusinessIntegrationTest {
             list = "GET /api/v1/admin/vehicles",
             detail = list + "/{id}";
         grantResources("NATIVEREADER", 0, Set.of(page, list), admin, 200);
+        assertEquals(
+            "0",
+            sql(
+                "SELECT jsonb_array_length(after_state->'roles') FROM auth_access_changes WHERE event_type='ROLE_RESOURCES' AND target_key='NATIVEREADER' ORDER BY id DESC LIMIT 1"
+            )
+        );
         assertEquals(2, call(200, "GET", "/api/v1/admin/vehicles", null, user).path("totalElements").asInt());
         call(200, "GET", "/operations/vehicles", null, user);
         long vehicle = id("carrier_vehicles", "DEMOVEH01");
@@ -1481,6 +1500,18 @@ class BusinessIntegrationTest {
         seed();
         var user = customer("softdeleteuser");
         long userId = ((UserPrincipal) user.getPrincipal()).id();
+        long scope = Long.parseLong(sql("SELECT min(scope_id) FROM carriers"));
+        sql(
+            "INSERT INTO auth_scope_memberships(scope_id,user_id) VALUES(" +
+                scope +
+                "," +
+                userId +
+                "); INSERT INTO auth_scope_roles(scope_id,user_id,role_code) VALUES(" +
+                scope +
+                "," +
+                userId +
+                ",'CUSTOMER')"
+        );
         var edited = call(
             200,
             "PUT",
@@ -1497,6 +1528,17 @@ class BusinessIntegrationTest {
             sql("SELECT deleted||':'||active||':'||token_version FROM auth_users WHERE id=" + userId)
         );
         assertEquals("0", sql("SELECT count(*) FROM auth_user_roles WHERE user_id=" + userId));
+        assertEquals("0", sql("SELECT count(*) FROM auth_scope_memberships WHERE user_id=" + userId));
+        assertEquals(
+            "1",
+            sql(
+                "SELECT count(*) FROM auth_access_changes WHERE event_type='SCOPE_MEMBERSHIP' AND target_key='" +
+                    scope +
+                    ":" +
+                    userId +
+                    "' AND before_state->'roles' @> '[\"CUSTOMER\"]'::jsonb AND after_state->'roles'='[]'::jsonb"
+            )
+        );
         assertEquals(
             0,
             call(200, "GET", "/api/v1/admin/accounts?username=softdeleteuser", null, admin)
