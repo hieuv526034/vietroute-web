@@ -180,7 +180,7 @@ public class AccessManagementController extends BaseController {
         summary = "Danh bạ tài nguyên UI/API đã đồng bộ",
         description = "ACCESS_READ; lọc kind=MENU/ENDPOINT và query nguyên văn trước phân trang; công khai/cứu hộ chỉ đọc, không tự cấp quyền"
     )
-    @AccessFunction(group = Groups.ACCESS, actions = { PermissionAction.READ })
+    @AccessFunction(group = Groups.ACCESS, function = Functions.ACCESS_RESOURCES, actions = { PermissionAction.READ })
     public ApiResult<PageResponse<AccessResourceResponse>> resources(
         @Valid @ModelAttribute AccessResourceSearchRequest page,
         HttpServletRequest request

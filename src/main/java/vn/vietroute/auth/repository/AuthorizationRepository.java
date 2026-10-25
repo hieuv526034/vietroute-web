@@ -20,7 +20,7 @@ public class AuthorizationRepository extends BaseRepository {
                 var query = connection.prepareStatement(
                     "SELECT u.id,u.active,u.activation_pending,u.must_change_password,u.token_version,(u.email_verified_at IS NOT NULL) AS email_verified" +
                         AccountAccessSql.ARRAYS +
-                        " FROM auth_users u WHERE u.id=?"
+                        " FROM auth_users u WHERE u.id=? AND NOT u.deleted"
                 )
             ) {
                 query.setLong(1, id);
@@ -38,7 +38,9 @@ public class AuthorizationRepository extends BaseRepository {
                         rows.getBoolean("email_verified"),
                         version,
                         AccountAccessSql.roles(rows),
-                        AccountAccessSql.strings(rows, "permission_codes")
+                        AccountAccessSql.strings(rows, "permission_codes"),
+                        AccountAccessSql.strings(rows, "resource_targets"),
+                        AccountAccessSql.strings(rows, "legacy_permission_codes")
                     );
                 }
             }

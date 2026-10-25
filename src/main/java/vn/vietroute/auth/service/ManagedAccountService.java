@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import vn.vietroute.auth.dto.request.ManagedAccountCreateRequest;
 import vn.vietroute.auth.dto.request.ManagedAccountSearchRequest;
 import vn.vietroute.auth.dto.request.ManagedAccountStateRequest;
+import vn.vietroute.auth.dto.request.ManagedAccountUpdateRequest;
 import vn.vietroute.auth.dto.response.AccessChangeStateResponse;
 import vn.vietroute.auth.dto.response.AccessResourceResponse;
 import vn.vietroute.auth.dto.response.ManagedAccountAccessResponse;
@@ -21,10 +22,12 @@ import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.repository.AccessRepository;
 import vn.vietroute.auth.repository.AccountRepository;
+import vn.vietroute.auth.repository.DataScopeRepository;
 import vn.vietroute.auth.repository.ManagedAccountRepository;
 import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.AccessCapabilities;
+import vn.vietroute.auth.security.DatabaseAccessGuard;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.base.PageResponse;
@@ -60,6 +63,94 @@ public class ManagedAccountService {
     private final AccessManagementService policies;
 
     private final AccessChangeService changes;
+
+    private final DatabaseAccessGuard guard;
+
+    /** Sửa tên không thay credential hay trạng thái xác minh; tài khoản gốc/bản thân/ADMIN có luồng riêng. */
+    @AccessOperation(resource = Groups.ACCOUNT, action = PermissionAction.UPDATE, adminOnly = true)
+    public ManagedAccountResponse update(long id, ManagedAccountUpdateRequest body, UserPrincipal actor) {
+        AccessActors.requireCurrent(actor);
+        BusinessRules.require(id != SystemActor.ID && id != actor.id(), ErrorCode.ACCESS_DENIED);
+        return transactions.execute(connection -> {
+            access.lockRoleAssignments(connection);
+            var target = BusinessRules.requireFound(users.findById(connection, id, true));
+            BusinessRules.require(
+                !bootstrap.username().equals(target.getUsername()) && !target.getRoles().contains(Role.ADMIN),
+                ErrorCode.ACCESS_DENIED
+            );
+            accounts.update(connection, id, body.displayName().strip(), body.version(), actor.id());
+            changes.record(
+                connection,
+                Event.ACCOUNT_UPDATED,
+                Target.USER,
+                Long.toString(id),
+                actor.id(),
+                AccessChangeStateResponse.status(target.isActive(), target.getVersion()),
+                AccessChangeStateResponse.status(target.isActive(), body.version() + 1)
+            );
+            return ManagedAccountResponse.from(
+                users.findById(connection, id, false),
+                accounts.assignedRoles(connection, id)
+            );
+        });
+    }
+
+    /** Xóa mềm và thu hồi quyền hiện hành; lịch sử/FK nghiệp vụ vẫn trỏ đúng ID cũ. */
+    @AccessOperation(resource = Groups.ACCOUNT, action = PermissionAction.DELETE, adminOnly = true)
+    public void delete(long id, long version, UserPrincipal actor) {
+        AccessActors.requireCurrent(actor);
+        BusinessRules.require(id != SystemActor.ID && id != actor.id(), ErrorCode.ACCESS_DENIED);
+        transactions.execute(connection -> {
+            access.lockRoleAssignments(connection);
+            var target = BusinessRules.requireFound(users.findById(connection, id, true));
+            BusinessRules.require(
+                !bootstrap.username().equals(target.getUsername()) && !target.getRoles().contains(Role.ADMIN),
+                ErrorCode.ACCESS_DENIED
+            );
+            var assigned = accounts.assignedRoles(connection, id).stream().map(Role::name).collect(Collectors.toSet());
+            var memberships = DataScopeRepository.memberships(connection, id);
+            accounts.delete(connection, id, version, actor.id());
+            lifecycle.invalidate(connection, id);
+            for (var membership : memberships) {
+                changes.record(
+                    connection,
+                    Event.SCOPE_MEMBERSHIP,
+                    Target.MEMBERSHIP,
+                    membership.scopeId() + ":" + id,
+                    actor.id(),
+                    AccessChangeStateResponse.membership(
+                        membership.roles().stream().map(Role::name).collect(Collectors.toSet()),
+                        membership.active(),
+                        membership.version()
+                    ),
+                    AccessChangeStateResponse.empty()
+                );
+            }
+            changes.record(
+                connection,
+                Event.ACCOUNT_DELETED,
+                Target.USER,
+                Long.toString(id),
+                actor.id(),
+                AccessChangeStateResponse.membership(assigned, target.isActive(), target.getVersion()),
+                new AccessChangeStateResponse(
+                    Set.of(),
+                    Set.of(),
+                    0,
+                    false,
+                    false,
+                    true,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    version + 1
+                )
+            );
+            return null;
+        });
+    }
 
     /** Danh sách chỉ ADMIN có ACCOUNT_READ; không cho OPERATOR tra danh tính ngoài nhà xe. */
     @AccessOperation(resource = Groups.ACCOUNT, action = PermissionAction.READ, adminOnly = true)
@@ -180,7 +271,7 @@ public class ManagedAccountService {
             user.getEmailVerifiedAt() != null;
         return new ManagedAccountAccessResponse(
             ManagedAccountResponse.from(user, accounts.assignedRoles(id)),
-            AccessCapabilities.compute(inventory, usable ? auth : null, policies.requestPolicies(auth))
+            AccessCapabilities.compute(inventory, usable ? guard.refresh(auth) : null, policies.requestPolicies(auth))
         );
     }
 }

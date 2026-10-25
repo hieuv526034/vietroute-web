@@ -7,7 +7,8 @@ Cập nhật 25/10/2026. Dùng menu **Hệ thống** và **Quản trị truy c�
 | Trang | Quyền xem | Chức năng |
 |---|---|---|
 | `/operations/jobs` | JOB_VIEW; dữ liệu cần JOB_READ | Lọc trạng thái, phân trang, xem metadata và mã lỗi, retry DEAD khi có JOB_RETRY |
-| `/operations/access` | ACCESS_VIEW; dữ liệu cần ACCESS_READ | Ma trận quyền của role; sửa role thường nếu có ACCESS_ASSIGN/ACCESS_WRITE trong phạm vi cho phép |
+| `/operations/access` | Được gán trang; projection ACCESS_VIEW/READ/ASSIGN tương ứng | Role CRUD và modal cây menu/API, scope/lịch sử trong tab ADMIN |
+| `/operations/access/resources` | Được gán trang và API inventory | Danh bạ menu/API, lọc loại/từ khóa và phân trang server |
 | `/operations/configuration` | CONFIGURATION_VIEW; dữ liệu cần CONFIGURATION_READ | Xem snapshot whitelist thông số không nhạy cảm của instance; chỉ đọc |
 | `/monitoring` | SYSTEM_VIEW; dữ liệu cần SYSTEM_READ | JVM/heap/CPU/HTTP/pool/worker và mẫu probe DB opt-in; hướng dẫn tại [giám sát](GIAM_SAT_VA_VAN_HANH.md) |
 
@@ -23,21 +24,14 @@ Chi tiết job có cả createdBy/updatedBy; ID 0 hiển thị system. Retry ghi
 
 409 nghĩa dữ liệu/trạng thái đã đổi: UI hiển thị lỗi trong hộp chi tiết, không tự retry, người dùng làm mới rồi xem lại. Thành công giữ ID/dedup, queue nhận lại khi worker bật. At least once vẫn có thể lặp tác động provider nếu ACK trước đó mất; kiểm receipt/kết quả gửi trước khi retry. Không có nút retry hàng loạt hoặc xóa job/PII tùy ý.
 
-## Ma trận quyền và role tài khoản
+## Cây menu/API và role tài khoản — ACCESS24
 
-Ma trận lấy registry có tên vi/en và version role từ API hiện hành. ADMIN có quyền cứu hộ cố định: không cho sửa. Người chỉ ACCESS_READ xem được nhưng không lưu. Người được ủy quyền chỉ gán quyền thuộc tập họ đang có; nếu role hiện hành chứa quyền ngoài tập của mình, UI cho xem và yêu cầu ADMIN xử lý, backend vẫn chặn việc nâng quyền. Request PUT thay toàn bộ tập quyền, có version và CSRF; tập rỗng nghĩa thu hồi quyền chức năng của role thường.
+Vào Quản trị truy cập → Role: thêm/sửa tên vi/en và trạng thái role, mở icon **Gán menu và API**. Tìm tên màn hoặc route, tích menu để mở trang và từng API để thực hiện chức năng. Checkbox nhóm chỉ chọn các mục hiện có trong kết quả, không tự cấp API tương lai. ADMIN chỉ xem; API công khai/tự phục vụ không cần gán và được tra riêng trong Menu/API. Không cấu hình thêm ma trận READ/WRITE/DELETE; backend sinh projection semantic và vẫn giữ kiểm owner/scope/ADMIN.
 
-Sau khi lưu mapping, UI lấy lại `/auth/me` vì thay quyền có hiệu lực ở request kế tiếp. Nếu tự mất ACCESS_READ qua role của mình, chuyển về trang tài khoản; không để UI tiếp tục coi quyền cũ còn hợp lệ. Làm mới lấy lại quyền trước khi dựng controls. Conflict không được gửi lại mutation tự động.
+Preview hiển thị số target thêm/bỏ; tập rỗng thu hồi toàn bộ. Lưu có version/CSRF, lỗi giữ draft và không gửi lại tự động. Người được ủy quyền chỉ gán trong tập target/quyền đang có; role chứa tài nguyên mạnh hơn cần ADMIN xử lý. Cùng một API từ nhiều role vẫn là hợp quyền; bỏ ở một role chưa chắc thu hồi nếu role khác còn cấp. Tài khoản phải hoàn tất thiết lập trước quyền private. Quy tắc nâng cấp V022, ALL nhiều role và giới hạn ở [schema/phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#access24--cấu-hình-user--role--menuapi).
 
-Phần tra tài khoản mở cho ACCESS_READ; gán cần ACCESS_ASSIGN trong phạm vi được ủy quyền. API bổ sung:
+User quản lý danh tính, sửa tên, gán role, khóa/mở và xóa mềm. Xóa thu hồi phiên/challenge/role/membership, giữ username/email/ID/FK/lịch sử; không dùng lại danh tính và không tự hủy nghiệp vụ đang mở. Không xóa system/bootstrap/bản thân/ADMIN. Scope giữ trong tab Role, khác hồ sơ nhà xe/chuyến. API tương thích tra/gán role còn giữ cho công cụ cũ, không là màn cấu hình chính.
 
-```text
-GET /api/v1/admin/access/users?username=Ad&page=0&size=20
-```
-
-`username` là prefix không phân biệt hoa/thường, chữ/số tối đa 32 ký tự; rỗng để xem tất cả. Chọn tường minh id/username/displayName/active/roles/version/createdAt/updatedAt; không đọc password hash vào DTO hoặc trả token/credential. Role được ủy quyền có ACCESS_READ cũng liệt kê tài khoản, không trả credential. Query dùng PreparedStatement, không wildcard do người dùng cung cấp và không N+1 theo từng user. Nếu dữ liệu lớn cần đo query plan và cân nhắc index prefix qua migration mới, không sửa migration đã áp dụng.
-
-Chọn tài khoản để sửa các role; không tự sửa role bản thân. Ghi dùng API PUT đã có, cần thêm ACCESS_ASSIGN/ACCESS_WRITE và version hiện hành; actor không ADMIN chỉ gán role có quyền nằm trong tập mình có, không đụng user ADMIN/system hoặc bản thân; backend bảo vệ admin cuối và thu hồi token cũ của user đích. ADMIN cấp tài khoản/mật khẩu tạm tại menu Tài khoản; người nhận tự đổi mật khẩu. Scope quản trị có tab riêng trong Phân quyền, khác hồ sơ nhà xe/tài xế; phạm vi booking đã được kiểm tại service/DAO nghiệp vụ; xem [kế hoạch nhóm](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
 
 ## Trang cấu hình an toàn
 
@@ -64,34 +58,24 @@ Các kiểm tra này không chứng minh provider production, cảnh báo thật
 
 ## Quản trị role, quyền và menu/endpoint
 
-Vào **Quản trị truy cập → Role và phân quyền** bằng tài khoản có ACCESS_VIEW và quyền hành động tương ứng. Tab **Role và quyền** chọn loại role/quyền, thêm bằng modal, sửa tên/trạng thái bằng icon ở cột thao tác. Mã giữ nguyên sau tạo, tên có cả vi/en; mã lõi được bảo vệ. Tab gán quyền role và role user vẫn tách riêng. Mỗi thao tác kiểm quyền hành động và version ở backend; 409 cần đọc lại rồi đối chiếu, không tự gửi lại bản nháp.
-
-Tab **Menu và endpoint** chọn target từ inventory thật, chọn tất cả quyền bắt buộc và một trong các role cho phép. Để roles rỗng nếu không hạn chế theo role; permissions rỗng chỉ không thêm điều kiện quyền. Bỏ chọn cho phép sẽ chặn người thường. ADMIN có đường cứu hộ, còn guard nền trong code luôn giữ. Xóa policy trong modal chỉ bỏ điều kiện bổ sung. Nội dung và ca kiểm chi tiết ở [nền tảng mở rộng](../02-phat-trien/NEN_TANG_MO_RONG.md#registry-động-chính-sách-menuendpoint).
+Quản trị truy cập được tách thành **User**, **Role** và **Menu/API**. CRUD role và gán tài nguyên theo cây ở Role; User quản lý tài khoản và role; Menu/API là inventory nguồn chỉ đọc. Registry permission và policy bổ sung cũ vẫn có API tương thích, không hiển thị thành một ma trận action thứ hai. Cờ public và handler không được nhập tùy ý trên UI để tránh vô tình mở tài nguyên.
 
 **Giám sát → Truy cập và online** hiển thị cửa sổ 3 phút, phân trang trình duyệt và tín hiệu bất thường. Không dùng số này làm báo cáo lượt người chính xác tuyệt đối; đọc [giới hạn lưu trữ/đa node](GIAM_SAT_VA_VAN_HANH.md#truy-cập-người-online-và-tín-hiệu-bất-thường). Thư viện ảnh có modal sửa tên/mô tả; thêm/sửa/xóa vẫn kiểm owner, quyền riêng và version, lỗi giữ bản nháp trong modal.
 
-## Cây gán quyền — ACCESS03
+## Cây gán quyền và tìm tài nguyên
 
-Chọn role, mở **Chỉnh sửa quyền vai trò** để xem cây nhóm → chức năng → hành động. Có tìm kiếm theo tên/mã/nhóm, checkbox ba trạng thái, mở/thu gọn và chi tiết endpoint/ANY/ALL. ADMIN mở cây chỉ đọc. Chọn tất cả áp dụng trong kết quả đang hiển thị; preview luôn liệt kê mã thêm/bỏ và số tài khoản gán role ở snapshot. VIEW và READ độc lập; UI gợi VIEW cho nhánh đang chọn, đánh dấu quyền dùng chung. Sửa qua UI cần READ+UPDATE; API-only có thể chỉ dùng hành động.
-
-Tab tài khoản có nút xem nguồn quyền, chỉ rõ role nào cấp từng permission. Bỏ quyền ở một role không làm mất quyền đến từ role khác. Registry role/permission ngừng hoạt động không được actor thiếu quyền kích hoạt lại để tự nâng quyền. Lưu có version/CSRF/loading, lỗi giữ draft, không tự gửi lại. Giới hạn và hợp đồng đầy đủ ở [schema và phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#cây-chức-năng-và-quyền-hành-động--access03); nâng V012 lên V013 cần dừng/drain các node cũ trước.
-
-## Gán bộ hệ thống và tìm tài nguyên — ACCESS04
-
-Ở Phân quyền, chọn role → Chỉnh sửa quyền vai trò → Chọn bộ quyền hệ thống → xem preview → Lưu. Đây là gán nhiều mapping quyền một lần, vẫn có thể bỏ riêng một quyền sau đó. Không gồm CRUD danh mục/ảnh/nghiệp vụ, không mở quyền chỉ ADMIN; actor được ủy quyền phải có đủ bộ quyền mới chọn được mẫu. Quyền chưa lưu chỉ ở draft; mở lại role đọc mapping từ DB. Module nghiệp vụ tiếp tục gán VIEW/LIST/DETAIL/CREATE/UPDATE/DELETE theo nhu cầu, READ cũ giữ hợp đồng.
-
-Tab Tài nguyên UI/API chọn MENU/ENDPOINT hoặc tất cả, nhập route/controller/mô tả/mã quyền rồi Tra cứu. Lọc thực hiện trước paging; đổi trang giữ bộ lọc đã tìm, tìm mới về trang đầu. Từ khóa tối đa 160 ký tự, không phải biểu thức SQL/wildcard. Tài liệu Swagger ở menu API có đủ query kế thừa cùng body JSON/multipart để thử trực tiếp; dùng token/cookie của chính tài khoản đang kiểm.
+Cây ACCESS24 thay màn action của ACCESS03/04, xem hướng dẫn phía trên. Danh bạ **Menu/API** lọc MENU/ENDPOINT, route/controller/mô tả/chức năng, tìm trước phân trang; từ khóa tối đa 160 ký tự, không biểu thức SQL/wildcard. Source quyết định cây chức năng, route và điều kiện bảo mật; thêm bản ghi permission không tự tạo màn/API mới. Swagger vẫn mô tả input/DTO để thử trực tiếp bằng tài khoản của chính người vận hành.
 
 ## Cấp tài khoản và kiểm tra phân quyền
 
 Vào **Quản trị truy cập → Tài khoản** bằng admin để tạo danh tính, gán role và bàn giao mật khẩu tạm qua kênh riêng. Người nhận phải đổi mật khẩu và xác minh email trước khi dùng quyền riêng tư. OPERATOR có DRIVER_ASSIGN chỉ cấp DRIVER tại hồ sơ chưa liên kết trong nhà xe của mình; không được vào quản trị danh tính toàn hệ thống. Account mới và hồ sơ vừa cấp vẫn ở trạng thái chờ thiết lập. Gmail hiện tạm hoãn nên account mới chưa hoàn tất xác minh email; không coi việc tạo danh tính thành công là dùng nghiệp vụ được ngay. Ngoại lệ ba account được chủ dự án xác nhận một lần được ghi ở tiến độ, không áp dụng cho account mới. [Modal cấp tài xế trên Render](../images/auth03-neon-driver-account.png) được kiểm bằng operator01 và đóng mà không tạo account.
 
-Cấu hình role tại Phân quyền → Tạo vai trò → chọn menu/thao tác → Lưu; sau đó gán role tại Tài khoản. Dùng nút xem để kiểm quyền thực tế của tài khoản, gồm policy bổ sung. Lưu gán/khóa/mở làm token cũ hết hiệu lực; người nhận đăng nhập lại. Khóa không xóa lịch sử, không cho khóa ADMIN/system/bản thân hoặc mở bỏ qua email đang chờ. Version 409 cần đọc lại có chủ đích. Xem [hợp đồng chi tiết](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#quản-trị-tài-khoản-và-ma-trận-menu--access05).
+Cấu hình role tại Role → Tạo vai trò → Gán menu và API → Lưu; sau đó gán role tại Tài khoản. Dùng nút xem để kiểm quyền thực tế của tài khoản, gồm policy bổ sung. Lưu gán/khóa/mở làm token cũ hết hiệu lực; người nhận đăng nhập lại. Khóa không xóa lịch sử, không cho khóa ADMIN/system/bản thân hoặc mở bỏ qua email đang chờ. Version 409 cần đọc lại có chủ đích. Xem [hợp đồng chi tiết](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#quản-trị-tài-khoản-và-ma-trận-menu--access05).
 
 
 ## Tìm role và tra lịch sử đổi quyền
 
-Ma trận/gán tài khoản tìm role theo tên vi/en hoặc mã, gõ không dấu vẫn tìm được. Lọc không bỏ các checkbox đã chọn; trước Lưu xem preview thêm/bỏ và số tài khoản bị ảnh hưởng. Tab Role và quyền có từ khóa/trạng thái/phân trang server, số mã đã dùng và quota; COM016 là đạt quota, khác 409 do trùng/version. Tombstone giữ mã role đã xóa nhưng không chiếm suất tạo mã khác.
+User tìm role theo tên vi/en hoặc mã; cây tài nguyên ở Role tìm theo tên/route. Lọc không bỏ checkbox đã chọn; trước Lưu xem số thêm/bỏ. Danh sách Role có từ khóa và phân trang server; COM016 là đạt quota, khác 409 do trùng/version. Tombstone giữ mã role đã xóa nhưng không chiếm suất tạo mã khác.
 
 Tab Lịch sử phân quyền chỉ ADMIN + ACCESS_READ: lọc loại, tiền tố mã/ID đối tượng và ID người thực hiện, mở icon để xem actor/time/traceId/version trước–sau. Mapping hiển thị mã bị bỏ/thêm, không phải toàn bộ quyền; thao tác thất bại không có sự kiện thành công giả. TraceId có thể tra thêm Nhật ký API bằng ADMIN + SYSTEM_READ, nhưng không phải mọi request đều có mutation hoặc mọi trace đều được lưu khi DB lỗi. Lịch sử quyền mặc định giữ 7 ngày/mục tiêu 1.000 sự kiện, không bất biến trước quản trị DB và không có dữ liệu quá khứ trước V014.
 
@@ -123,4 +107,4 @@ Sau đăng nhập, vào **Tổng quan** (`/dashboard`) để xem số liệu và
 
 Tab **Vị trí thiết bị chia sẻ** hiển thị Maps chưa cấu hình. Chỉ tài xế được giao có quyền chủ động bật GPS, trong khung giờ được phép; trạng thái mặc định OFF. Khách chỉ xem khi đơn của chính mình CONFIRMED, đơn khác UNAVAILABLE. Không có GPS công khai, không tự phát vị trí khi mở trang. Khóa/ẩn tab hoặc mất mạng dừng watch; nếu request dừng không tới server, lease giới hạn dữ liệu còn hiển thị. Hợp đồng và giới hạn thiết bị ở [vận hành tracking](GIAM_SAT_VA_VAN_HANH.md#vị-trí-thiết-bị-và-google-maps--track01).
 
-Danh mục có nhóm menu riêng và từng mục con độc lập cho admin. Khi cấp quyền mới: chọn **role → chức năng → hành động**; VIEW cho trang/menu, READ cho dữ liệu, CREATE/UPDATE/ASSIGN theo nhu cầu. Sau đó gán role cho account và membership/scoped role cho nhân sự nhà xe. Tạo permission trong DB không tự sinh chức năng mới; cấu trúc menu và guard bắt buộc vẫn khai báo trong source. Bản đồ 12 bảng và phần cấu hình cố định có chủ đích nằm ở [schema/phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#bản-đồ-bảng-và-ranh-giới-cấu-hình-phân-quyền).
+Danh mục có nhóm menu riêng và từng mục con độc lập cho admin. Khi cấp quyền mới: chọn **role → menu → API cụ thể**; menu và chức năng bên trong độc lập. Sau đó gán role cho account và membership/scoped role cho nhân sự nhà xe. Tạo permission trong DB không tự sinh chức năng mới; cấu trúc menu và guard bắt buộc vẫn khai báo trong source. Bản đồ 14 bảng và phần cấu hình cố định có chủ đích nằm ở [schema/phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#bản-đồ-bảng-và-ranh-giới-cấu-hình-phân-quyền).

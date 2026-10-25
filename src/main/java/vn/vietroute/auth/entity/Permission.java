@@ -212,6 +212,12 @@ public final class Permission {
         Set.of(PermissionAction.UPDATE)
     );
 
+    public static final Permission ACCOUNT_DELETE = new Permission(
+        Permissions.ACCOUNT_DELETE,
+        Groups.ACCOUNTS,
+        Set.of(PermissionAction.DELETE)
+    );
+
     private final String code;
 
     private final String resource;
@@ -252,6 +258,7 @@ public final class Permission {
             ACCOUNT_READ,
             ACCOUNT_CREATE,
             ACCOUNT_UPDATE,
+            ACCOUNT_DELETE,
             CATALOG_VIEW,
             MEDIA_VIEW,
             ACCESS_VIEW,

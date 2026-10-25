@@ -15,6 +15,7 @@ import java.sql.DriverManager;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -42,7 +43,9 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import vn.vietroute.auth.dto.request.DriverAccountCreateRequest;
 import vn.vietroute.auth.entity.Role;
+import vn.vietroute.auth.security.AccessResourceSynchronizer;
 import vn.vietroute.auth.security.UserPrincipal;
+import vn.vietroute.auth.service.AccessResourceService;
 import vn.vietroute.business.carrier.dto.request.CarrierSearchRequest;
 import vn.vietroute.business.carrier.service.DriverService;
 import vn.vietroute.business.carrier.service.VehicleService;
@@ -53,6 +56,7 @@ import vn.vietroute.business.tracking.dto.request.TrackingStartRequest;
 import vn.vietroute.business.tracking.service.DriverTrackingService;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.application.ConfigurationEnvironment;
+import vn.vietroute.common.config.database.DatabaseInitializer;
 import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ApplicationConstants.Business;
 import vn.vietroute.common.constant.ErrorCode;
@@ -1304,6 +1308,294 @@ class BusinessIntegrationTest {
 
     private record TripFixture(long carrier, long scope, long route, long vehicle, long driver) {}
 
+    private JsonNode grantResources(String role, long version, Set<String> targets, Authentication who, int status)
+        throws Exception {
+        return call(
+            status,
+            "PUT",
+            "/api/v1/admin/access/roles/" + role + "/resources",
+            json.writeValueAsString(Map.of("targets", targets, "version", version)),
+            who
+        );
+    }
+
+    @Test
+    void upgradeV021PreservesExistingMappingsAndNeverEnrollsNewEndpointsOnRestart() throws Exception {
+        seed();
+        long scope = Long.parseLong(sql("SELECT min(scope_id) FROM carriers"));
+        var user = member(scope, "UPGRADENATIVE", "'VEHICLE_READ','VEHICLE_VIEW','VEHICLE_CREATE'", "upgradenative");
+        String hash = sql("SELECT md5(password_hash) FROM auth_users WHERE id=1");
+        sql(
+            "DROP TABLE auth_role_resources; DROP TABLE auth_role_resource_sets; ALTER TABLE auth_users DROP CONSTRAINT ck_auth_users_deleted; ALTER TABLE auth_users DROP COLUMN deleted; DELETE FROM vietroute_schema_history WHERE version='V022__role_resource_grants.sql'"
+        );
+        root.getBean(DatabaseInitializer.class).afterPropertiesSet();
+        assertEquals("22", sql("SELECT count(*) FROM vietroute_schema_history"));
+        assertEquals(hash, sql("SELECT md5(password_hash) FROM auth_users WHERE id=1"));
+        assertEquals("0", sql("SELECT permission_version FROM auth_roles WHERE code='UPGRADENATIVE'"));
+        assertEquals("3", sql("SELECT count(*) FROM auth_role_permissions WHERE role_code='UPGRADENATIVE'"));
+        assertEquals(
+            "1",
+            sql(
+                "SELECT count(*) FROM auth_role_resources WHERE role_code='UPGRADENATIVE' AND target='GET /api/v1/admin/vehicles/{id}'"
+            )
+        );
+        call(200, "GET", "/api/v1/admin/vehicles", null, user);
+        sql(
+            "INSERT INTO auth_access_resources(kind,target,handler,description,public_route,configurable,declared_permissions,function_code) VALUES('ENDPOINT','GET /future-native-api','Fixture#future','Future',false,true,'VEHICLE_READ','VEHICLE')"
+        );
+        var metadata = child.getBean(AccessResourceSynchronizer.class).inventory();
+        root.getBean(AccessResourceService.class).synchronize(metadata, Set.of());
+        assertEquals(
+            "0",
+            sql(
+                "SELECT count(*) FROM auth_role_resources WHERE role_code='UPGRADENATIVE' AND target='GET /future-native-api'"
+            )
+        );
+        assertEquals("0", sql("SELECT permission_version FROM auth_roles WHERE code='UPGRADENATIVE'"));
+        var current = call(200, "GET", "/api/v1/admin/access/roles/UPGRADENATIVE/resources", null, admin);
+        Set<String> targets = new LinkedHashSet<>();
+        current.path("targets").forEach(item -> targets.add(item.asText()));
+        assertTrue(targets.contains("POST /api/v1/admin/demo"));
+        grantResources("UPGRADENATIVE", 0, targets, admin, 200);
+        assertEquals("3", sql("SELECT count(*) FROM auth_role_permissions WHERE role_code='UPGRADENATIVE'"));
+        assertEquals(
+            "0",
+            sql(
+                "SELECT count(*) FROM auth_role_permissions WHERE role_code='UPGRADENATIVE' AND permission_code IN ('DEMO_CREATE','PROVINCE_CREATE','ACCESS_ASSIGN')"
+            )
+        );
+    }
+
+    @Test
+    void nativeResourcesSeparateListDetailMenuAndRevocationAcrossWarContexts() throws Exception {
+        seed();
+        long carrier = id("carriers", "DEMOMIENNAM");
+        long scope = Long.parseLong(sql("SELECT scope_id FROM carriers WHERE id=" + carrier));
+        var user = member(scope, "NATIVEREADER", "'VEHICLE_READ','VEHICLE_VIEW'", "nativereader");
+        String page = "GET /operations/vehicles",
+            list = "GET /api/v1/admin/vehicles",
+            detail = list + "/{id}";
+        grantResources("NATIVEREADER", 0, Set.of(page, list), admin, 200);
+        assertEquals(
+            "0",
+            sql(
+                "SELECT jsonb_array_length(after_state->'roles') FROM auth_access_changes WHERE event_type='ROLE_RESOURCES' AND target_key='NATIVEREADER' ORDER BY id DESC LIMIT 1"
+            )
+        );
+        assertEquals(2, call(200, "GET", "/api/v1/admin/vehicles", null, user).path("totalElements").asInt());
+        call(200, "GET", "/operations/vehicles", null, user);
+        long vehicle = id("carrier_vehicles", "DEMOVEH01");
+        call(403, "GET", "/api/v1/admin/vehicles/" + vehicle, null, user);
+        call(403, "GET", "/api/v1/admin/vehicles/carriers", null, user);
+        call(403, "GET", "/operations/routes", null, user);
+        grantResources("NATIVEREADER", 0, Set.of(detail), admin, 409);
+        grantResources("NATIVEREADER", 1, Set.of("GET /api/v1/carriers"), admin, 400);
+        grantResources("NATIVEREADER", 1, Set.of("GET /api/v1/auth/me"), admin, 400);
+        grantResources("NATIVEREADER", 1, Set.of(page, detail), admin, 200);
+        call(403, "GET", "/api/v1/admin/vehicles", null, user);
+        call(200, "GET", "/api/v1/admin/vehicles/" + vehicle, null, user);
+        assertEquals(
+            "1",
+            sql(
+                "SELECT count(*) FROM auth_role_permissions WHERE role_code='NATIVEREADER' AND permission_code='VEHICLE_READ'"
+            )
+        );
+        var preview = call(
+            200,
+            "GET",
+            "/api/v1/admin/accounts/" + ((UserPrincipal) user.getPrincipal()).id() + "/access",
+            null,
+            admin
+        );
+        assertFalse(preview.path("capabilities").toString().contains("\"GET /api/v1/admin/vehicles\""));
+        assertTrue(preview.path("capabilities").toString().contains(detail));
+        grantResources("NATIVEREADER", 2, Set.of(), admin, 200);
+        call(403, "GET", "/operations/vehicles", null, user);
+        call(403, "GET", "/api/v1/admin/vehicles/" + vehicle, null, user);
+        call(200, "GET", "/api/v1/auth/capabilities", null, user);
+        assertEquals("0", sql("SELECT count(*) FROM auth_role_resources WHERE role_code='NATIVEREADER'"));
+    }
+
+    @Test
+    void nativeScopeCannotBorrowDetailEndpointFromRoleOutsideThatScope() throws Exception {
+        seed();
+        long first = id("carriers", "DEMOMIENNAM"),
+            second = id("carriers", "DEMOBACNAM");
+        long scopeA = Long.parseLong(sql("SELECT scope_id FROM carriers WHERE id=" + first));
+        long scopeB = Long.parseLong(sql("SELECT scope_id FROM carriers WHERE id=" + second));
+        var user = member(scopeA, "SCOPEDLIST", "'VEHICLE_READ'", "scopedlist");
+        long userId = ((UserPrincipal) user.getPrincipal()).id();
+        grantResources("SCOPEDLIST", 0, Set.of("GET /api/v1/admin/vehicles"), admin, 200);
+        call(
+            201,
+            "POST",
+            "/api/v1/admin/access/registry/roles/SCOPEDDETAIL",
+            "{\"nameVi\":\"Chi tiết\",\"nameEn\":\"Detail\",\"active\":true,\"version\":0}",
+            admin
+        );
+        grantResources("SCOPEDDETAIL", 0, Set.of("GET /api/v1/admin/vehicles/{id}"), admin, 200);
+        sql(
+            "INSERT INTO auth_user_roles(user_id,role_code) VALUES(" +
+                userId +
+                ",'SCOPEDDETAIL'); " +
+                "INSERT INTO auth_scope_roles(scope_id,user_id,role_code) VALUES(" +
+                scopeA +
+                "," +
+                userId +
+                ",'SCOPEDDETAIL'); " +
+                "INSERT INTO auth_scope_memberships(scope_id,user_id) VALUES(" +
+                scopeB +
+                "," +
+                userId +
+                "); " +
+                "INSERT INTO auth_scope_roles(scope_id,user_id,role_code) VALUES(" +
+                scopeB +
+                "," +
+                userId +
+                ",'SCOPEDLIST')"
+        );
+        assertEquals(4, call(200, "GET", "/api/v1/admin/vehicles", null, user).path("totalElements").asInt());
+        call(200, "GET", "/api/v1/admin/vehicles/" + id("carrier_vehicles", "DEMOVEH01"), null, user);
+        call(404, "GET", "/api/v1/admin/vehicles/" + id("carrier_vehicles", "DEMOVEH03"), null, user);
+    }
+
+    @Test
+    void compatibilityAssignmentsAndRoleDeletionRetainExactResourceHistory() throws Exception {
+        call(
+            201,
+            "POST",
+            "/api/v1/admin/access/registry/roles/RESOURCEHISTORY",
+            "{\"nameVi\":\"Lịch sử\",\"nameEn\":\"History\",\"active\":true,\"version\":0}",
+            admin
+        );
+        grantResources("RESOURCEHISTORY", 0, Set.of("GET /api/v1/admin/vehicles"), admin, 200);
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/access/roles/RESOURCEHISTORY/permissions",
+            "{\"permissions\":[\"VEHICLE_READ\"],\"version\":1}",
+            admin
+        );
+        assertEquals(
+            "2",
+            sql(
+                "SELECT count(*) FROM auth_access_changes WHERE event_type='ROLE_RESOURCES' AND target_key='RESOURCEHISTORY'"
+            )
+        );
+        assertEquals(
+            "true",
+            sql(
+                "SELECT (after_state->'resources' @> '[\"GET /api/v1/admin/vehicles/{id}\"]'::jsonb)::text FROM auth_access_changes WHERE event_type='ROLE_RESOURCES' AND target_key='RESOURCEHISTORY' ORDER BY id DESC LIMIT 1"
+            )
+        );
+        call(200, "DELETE", "/api/v1/admin/access/registry/roles/RESOURCEHISTORY?version=0", null, admin);
+        assertEquals(
+            "true",
+            sql(
+                "SELECT (before_state->'resources' @> '[\"GET /api/v1/admin/vehicles/{id}\"]'::jsonb AND after_state->'resources'='[]'::jsonb)::text FROM auth_access_changes WHERE event_type='ROLE_DELETED' AND target_key='RESOURCEHISTORY'"
+            )
+        );
+        assertEquals("0", sql("SELECT count(*) FROM auth_role_resource_sets WHERE role_code='RESOURCEHISTORY'"));
+    }
+
+    @Test
+    void nativeDelegationAndHistoryFailureCannotEscalateOrPartiallyCommit() throws Exception {
+        seed();
+        long scope = Long.parseLong(sql("SELECT min(scope_id) FROM carriers"));
+        var delegate = member(scope, "NATIVEDELEGATE", "'ACCESS_ASSIGN','VEHICLE_READ'", "nativedelegate");
+        grantResources(
+            "NATIVEDELEGATE",
+            0,
+            Set.of("PUT /api/v1/admin/access/roles/{role}/resources", "GET /api/v1/admin/vehicles"),
+            admin,
+            200
+        );
+        call(
+            201,
+            "POST",
+            "/api/v1/admin/access/registry/roles/NATIVETARGET",
+            "{\"nameVi\":\"Đích\",\"nameEn\":\"Target\",\"active\":true,\"version\":0}",
+            admin
+        );
+        grantResources("NATIVETARGET", 0, Set.of("GET /api/v1/admin/vehicles/{id}"), delegate, 403);
+        grantResources("NATIVETARGET", 0, Set.of("GET /api/v1/admin/vehicles"), delegate, 200);
+        grantResources("ADMIN", 0, Set.of(), admin, 403);
+        sql(
+            "CREATE FUNCTION fail_resource_history() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN RAISE EXCEPTION ''test history failure''; END'; CREATE TRIGGER fail_resource_history BEFORE INSERT ON auth_access_changes FOR EACH ROW EXECUTE FUNCTION fail_resource_history()"
+        );
+        grantResources("NATIVETARGET", 1, Set.of(), admin, 503);
+        assertEquals("1", sql("SELECT permission_version FROM auth_roles WHERE code='NATIVETARGET'"));
+        assertEquals("1", sql("SELECT count(*) FROM auth_role_resources WHERE role_code='NATIVETARGET'"));
+        assertEquals(
+            "1",
+            sql(
+                "SELECT count(*) FROM auth_role_permissions WHERE role_code='NATIVETARGET' AND permission_code='VEHICLE_READ'"
+            )
+        );
+    }
+
+    @Test
+    void managedAccountEditAndSoftDeletePreserveIdentityAndRevokeAccess() throws Exception {
+        seed();
+        var user = customer("softdeleteuser");
+        long userId = ((UserPrincipal) user.getPrincipal()).id();
+        long scope = Long.parseLong(sql("SELECT min(scope_id) FROM carriers"));
+        sql(
+            "INSERT INTO auth_scope_memberships(scope_id,user_id) VALUES(" +
+                scope +
+                "," +
+                userId +
+                "); INSERT INTO auth_scope_roles(scope_id,user_id,role_code) VALUES(" +
+                scope +
+                "," +
+                userId +
+                ",'CUSTOMER')"
+        );
+        var edited = call(
+            200,
+            "PUT",
+            "/api/v1/admin/accounts/" + userId,
+            "{\"displayName\":\"Tên mới\",\"version\":0}",
+            admin
+        );
+        assertEquals("Tên mới", edited.path("displayName").asText());
+        call(409, "DELETE", "/api/v1/admin/accounts/" + userId + "?version=0", null, admin);
+        call(403, "DELETE", "/api/v1/admin/accounts/1?version=0", null, admin);
+        call(200, "DELETE", "/api/v1/admin/accounts/" + userId + "?version=1", null, admin);
+        assertEquals(
+            "true:false:1",
+            sql("SELECT deleted||':'||active||':'||token_version FROM auth_users WHERE id=" + userId)
+        );
+        assertEquals("0", sql("SELECT count(*) FROM auth_user_roles WHERE user_id=" + userId));
+        assertEquals("0", sql("SELECT count(*) FROM auth_scope_memberships WHERE user_id=" + userId));
+        assertEquals(
+            "1",
+            sql(
+                "SELECT count(*) FROM auth_access_changes WHERE event_type='SCOPE_MEMBERSHIP' AND target_key='" +
+                    scope +
+                    ":" +
+                    userId +
+                    "' AND before_state->'roles' @> '[\"CUSTOMER\"]'::jsonb AND after_state->'roles'='[]'::jsonb"
+            )
+        );
+        assertEquals(
+            0,
+            call(200, "GET", "/api/v1/admin/accounts?username=softdeleteuser", null, admin)
+                .path("totalElements")
+                .asInt()
+        );
+        call(403, "GET", "/api/v1/my-bookings", null, user);
+        call(404, "GET", "/api/v1/admin/accounts/" + userId + "/access", null, admin);
+        assertEquals(
+            "1",
+            sql(
+                "SELECT count(*) FROM auth_access_changes WHERE event_type='ACCOUNT_DELETED' AND target_key='" +
+                    userId +
+                    "' AND after_state->>'deleted'='true'"
+            )
+        );
+    }
+
     /** Fixture account ready chỉ ở schema test loopback; không gọi email/provider hoặc thay dữ liệu Neon. */
     private TripFixture tripFixture(boolean other) throws Exception {
         String suffix = other ? "B" : "A";
@@ -1375,6 +1667,7 @@ class BusinessIntegrationTest {
         sql(
             "INSERT INTO auth_role_permissions(role_code,permission_code) SELECT 'DRIVER',code FROM auth_permissions WHERE code IN('DRIVER_TRIP_VIEW','DRIVER_TRIP_READ','DRIVER_TRIP_UPDATE') ON CONFLICT DO NOTHING"
         );
+        assignFixtureResources("DRIVER");
         long user = Long.parseLong(sql("SELECT user_id FROM carrier_drivers WHERE id=" + fixture.driver()));
         return actor(user, sql("SELECT username FROM auth_users WHERE id=" + user), "DRIVER");
     }
@@ -1383,6 +1676,7 @@ class BusinessIntegrationTest {
         sql(
             "INSERT INTO auth_role_permissions(role_code,permission_code) SELECT 'CUSTOMER',code FROM auth_permissions WHERE code IN('MY_BOOKING_VIEW','MY_BOOKING_READ','MY_BOOKING_CREATE','MY_BOOKING_UPDATE') ON CONFLICT DO NOTHING"
         );
+        assignFixtureResources("CUSTOMER");
         long user = Long.parseLong(
             sql(
                 "INSERT INTO auth_users(username,password_hash,display_name,must_change_password,email,email_verified_at) SELECT '" +
@@ -1394,6 +1688,17 @@ class BusinessIntegrationTest {
         );
         sql("INSERT INTO auth_user_roles(user_id,role_code) VALUES(" + user + ",'CUSTOMER')");
         return actor(user, username, "CUSTOMER");
+    }
+
+    /** Fixture native gán chính xác API đã biết sau khi thêm projection; không bỏ marker để né guard mới. */
+    private void assignFixtureResources(String role) throws Exception {
+        sql(
+            "INSERT INTO auth_role_resources(role_code,kind,target) SELECT '" +
+                role +
+                "',kind,target FROM auth_access_resources r WHERE NOT r.public_route AND EXISTS(SELECT 1 FROM auth_role_permissions p WHERE p.role_code='" +
+                role +
+                "' AND p.permission_code=ANY(string_to_array(r.declared_permissions,','))) ON CONFLICT DO NOTHING"
+        );
     }
 
     private long openBookingTrip(TripFixture fixture, String code, Instant start) throws Exception {

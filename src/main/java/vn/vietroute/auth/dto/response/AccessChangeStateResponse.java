@@ -17,11 +17,67 @@ public record AccessChangeStateResponse(
     @Schema(description = "Tên cấu hình tiếng Anh") String nameEn,
     @Schema(description = "Loại policy nếu có") String policyKind,
     @Schema(description = "Template policy nếu có, không chứa URL/query người dùng") String policyTarget,
-    @Schema(description = "Version cấu hình/mapping tại thời điểm ghi") long version
+    @Schema(description = "Version cấu hình/mapping tại thời điểm ghi") long version,
+    @Schema(description = "Target menu/API bị bỏ hoặc thêm; chỉ route template server") Set<String> resources
 ) {
     public AccessChangeStateResponse {
         roles = roles == null ? Set.of() : Set.copyOf(roles);
         permissions = permissions == null ? Set.of() : Set.copyOf(permissions);
+        resources = resources == null ? Set.of() : Set.copyOf(resources);
+    }
+
+    public AccessChangeStateResponse(
+        Set<String> roles,
+        Set<String> permissions,
+        int mappingCount,
+        boolean delta,
+        Boolean active,
+        Boolean deleted,
+        Boolean enabled,
+        String nameVi,
+        String nameEn,
+        String policyKind,
+        String policyTarget,
+        long version
+    ) {
+        this(
+            roles,
+            permissions,
+            mappingCount,
+            delta,
+            active,
+            deleted,
+            enabled,
+            nameVi,
+            nameEn,
+            policyKind,
+            policyTarget,
+            version,
+            Set.of()
+        );
+    }
+
+    public static AccessChangeStateResponse resources(
+        Set<String> changed,
+        int count,
+        long version,
+        Set<String> permissions
+    ) {
+        return new AccessChangeStateResponse(
+            Set.of(),
+            permissions,
+            count,
+            true,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            version,
+            changed
+        );
     }
 
     /** Trạng thái chưa tồn tại hoặc đã xóa policy, không dựng dữ liệu giả để lấp lịch sử. */
@@ -54,12 +110,21 @@ public record AccessChangeStateResponse(
 
     /** Trước khi xóa role phải giữ cả mapping sắp bị dọn, không chỉ trạng thái registry. */
     public static AccessChangeStateResponse registry(AccessRegistryResponse value, Set<String> permissions) {
+        return registry(value, permissions, Set.of());
+    }
+
+    /** Xóa role còn phải ghi chính xác target bị dọn, không chỉ projection nội bộ. */
+    public static AccessChangeStateResponse registry(
+        AccessRegistryResponse value,
+        Set<String> permissions,
+        Set<String> resources
+    ) {
         return value == null
             ? empty()
             : new AccessChangeStateResponse(
                   Set.of(),
                   permissions,
-                  permissions.size(),
+                  permissions.size() + resources.size(),
                   false,
                   value.active(),
                   false,
@@ -68,7 +133,8 @@ public record AccessChangeStateResponse(
                   value.nameEn(),
                   null,
                   null,
-                  value.version()
+                  value.version(),
+                  resources
               );
     }
 

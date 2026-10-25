@@ -28,6 +28,7 @@
         for (const [key, label] of [
             ['roles', labels.roles],
             ['permissions', labels.permissions],
+            ['resources', labels.resources || 'Menu / API'],
         ]) {
             if (state[key]?.length) field(host, label, state[key].slice().sort().join(', '));
         }

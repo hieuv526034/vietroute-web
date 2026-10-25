@@ -235,6 +235,7 @@ public class AccessRegistryRepository extends BaseRepository {
                 grant.executeUpdate();
             }
         }
+        if (create && "roles".equals(kind)) RoleResourceRepository.mark(connection, code, actor);
     }
 
     /** Chặn tham chiếu user/policy; chỉ dọn mapping của role sau khi kiểm version trong cùng transaction. */
@@ -262,6 +263,10 @@ public class AccessRegistryRepository extends BaseRepository {
             if (query.executeUpdate() != 1) throw new BusinessException(ErrorCode.STALE_VERSION);
         }
         try (var query = connection.prepareStatement("DELETE FROM auth_role_permissions WHERE role_code=?")) {
+            query.setString(1, code);
+            query.executeUpdate();
+        }
+        try (var query = connection.prepareStatement("DELETE FROM auth_role_resource_sets WHERE role_code=?")) {
             query.setString(1, code);
             query.executeUpdate();
         }

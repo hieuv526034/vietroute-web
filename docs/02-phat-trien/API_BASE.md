@@ -1,5 +1,14 @@
 # Hợp đồng API nền tảng
 
+## ACCESS24 — Tài nguyên cụ thể và quản trị User
+
+- GET `/api/v1/admin/access/resource-catalog`: inventory source hiện tại, ACCESS_READ; public/self-service chỉ xem, không cấp quyền từ cờ DB.
+- GET/PUT `/api/v1/admin/access/roles/{role}/resources`: GET ACCESS_READ, PUT ACCESS_ASSIGN. PUT `{targets:["GET /operations/vehicles","GET /api/v1/admin/vehicles"],version:0}` thay toàn bộ, tập rỗng thu hồi. Target phải nằm trong nguồn hiện tại và private có guard; không sửa ADMIN. Version cũ 409; public/self-service/target lạ 400; gán vượt tập target/projection actor 403. History failure rollback toàn bộ.
+- PUT `/api/v1/admin/accounts/{id}`: ADMIN + ACCOUNT_UPDATE, `{displayName,version}`; username/email/password không thay trong CRUD này.
+- DELETE `/api/v1/admin/accounts/{id}?version=...`: ADMIN + ACCOUNT_DELETE; xóa mềm, thu hồi phiên/challenge/role/membership, giữ ID/FK/lịch sử; bảo vệ system/bootstrap/self/ADMIN. Không tự xử lý chuyến/booking đang mở.
+- GET/menu/capabilities/preview kiểm cùng target DB; cùng action không đồng nghĩa cùng API. HEAD theo GET. Source service semantic/ANY/ALL/adminOnly và scope/owner luôn bắt buộc. API tương thích permission còn giữ nhưng không là màn cấu hình chính. Xem [schema/quyền](SCHEMA_VA_PHAN_QUYEN.md#access24--cấu-hình-user--role--menuapi) về migration V022 và yêu cầu drain node V021 trước gán native.
+
+
 Quản trị hệ thống bổ sung: `GET /api/v1/admin/system/configuration` dùng CONFIGURATION_READ và DTO whitelist chỉ đọc; `GET /api/v1/admin/access/users` dùng ACCESS_READ, prefix username/page/size; list jobs có query status tùy chọn. UI và hợp đồng chi tiết tại [QUAN_TRI_HE_THONG.md](../04-van-hanh/QUAN_TRI_HE_THONG.md). Không có API ghi env/credential.
 
 Giám sát bổ sung: `GET /api/v1/admin/system/runtime` dùng SYSTEM_READ và envelope chung; `GET /monitoring` cần SYSTEM_VIEW, dữ liệu đọc bằng SYSTEM_READ. `GET /internal/metrics` là Prometheus text, token vận hành riêng, không bọc envelope/JWT và không truy vấn DB. Token rỗng đóng endpoint. Xem [giám sát và vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md) và [tổng quan](../01-bat-dau/TONG_QUAN_HE_THONG.md).

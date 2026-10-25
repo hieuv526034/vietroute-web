@@ -104,6 +104,7 @@ public class AccessController extends BaseController {
     )
     @AccessFunction(
         group = Groups.ACCESS,
+        function = Functions.ACCOUNTS,
         actions = { PermissionAction.ASSIGN },
         permissions = { Permissions.ACCESS_WRITE }
     )

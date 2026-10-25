@@ -39,27 +39,30 @@ public final class AccessPolicyInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String path = String.valueOf(request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE));
+        String method = request.getMethod().equals("HEAD") ? "GET" : request.getMethod();
+        String target = method + " " + path;
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof UserPrincipal) {
             auth = guard.refresh(auth);
+            if (handler instanceof HandlerMethod methodHandler && !AccessTargets.isPublic(method, path)) {
+                auth = guard.bindRequest(auth, target, AccessAuthorization.binding(methodHandler));
+            }
             SecurityContextHolder.getContext().setAuthentication(auth);
         }
         // Guard annotation thực thi cả khi route không cho cấu hình policy; DB không thể biến route thành public.
         if (
             handler instanceof HandlerMethod methodHandler &&
             !AccessTargets.isPublic(request.getMethod(), path) &&
-            !AccessAuthorization.allows(AccessAuthorization.binding(methodHandler), auth)
+            !AccessAuthorization.allows(AccessAuthorization.binding(methodHandler), auth, target)
         ) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }
         List<AccessPolicyResponse> policies = access.requestPolicies(auth);
         request.setAttribute(Http.ACCESS_POLICY_ATTRIBUTE, policies);
         // Spring tự phục vụ HEAD từ GET; cùng chính sách để HEAD không bỏ qua ràng buộc của GET.
-        String method = request.getMethod().equals("HEAD") ? "GET" : request.getMethod();
         if (!AccessTargets.configurable(method, path)) {
             return true;
         }
-        String target = method + " " + path;
         for (var policy : policies) {
             boolean applies =
                 policy.target().equals(target) && (policy.kind().equals("ENDPOINT") || method.equals("GET"));

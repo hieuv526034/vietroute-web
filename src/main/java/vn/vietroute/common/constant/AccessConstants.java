@@ -133,6 +133,8 @@ public final class AccessConstants {
 
         public static final String ACCOUNTS = "ACCOUNTS";
 
+        public static final String ACCESS_RESOURCES = "ACCESS_RESOURCES";
+
         private Functions() {}
     }
 
@@ -143,6 +145,8 @@ public final class AccessConstants {
         public static final String ACCOUNT_READ = "ACCOUNT_READ";
         public static final String ACCOUNT_CREATE = "ACCOUNT_CREATE";
         public static final String ACCOUNT_UPDATE = "ACCOUNT_UPDATE";
+
+        public static final String ACCOUNT_DELETE = "ACCOUNT_DELETE";
 
         public static final String CATALOG_READ = Groups.CATALOG + "_READ";
 

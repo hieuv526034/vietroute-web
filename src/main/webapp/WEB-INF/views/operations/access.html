@@ -4,110 +4,40 @@
     xmlns:th="http://www.thymeleaf.org"
     th:lang="${currentLocale}"
 >
-    <head th:replace="~{fragments/layout :: head(#{ui.ops.access})}"></head>
+    <head th:replace="~{fragments/layout :: head(#{ui.grants.roles})}"></head>
     <body>
         <header th:replace="~{fragments/layout :: header}"></header>
         <nav th:replace="~{fragments/layout :: breadcrumbs}"></nav>
         <main
             class="container-xl py-5 operations-page"
-            data-operations="access"
+            data-role-workspace
         >
             <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-3">
-                <h1 th:text="#{ui.ops.access}"></h1>
-                <button
-                    class="button button-outline"
-                    type="button"
-                    id="ops-refresh"
-                    th:text="#{ui.ops.refresh}"
-                ></button>
+                <div>
+                    <h1 th:text="#{ui.grants.roles}"></h1>
+                    <p
+                        class="muted"
+                        th:text="#{ui.grants.intro}"
+                    ></p>
+                </div>
             </div>
-            <p
-                class="text-secondary"
-                th:text="#{ui.accessWorkspace.intro}"
-            ></p>
-            <section
-                class="access-intro"
-                th:attr="aria-label=#{ui.accessWorkspace.guide}"
-            >
-                <ol class="access-workflow">
-                    <li>
-                        <span aria-hidden="true">1</span>
-                        <div>
-                            <strong th:text="#{ui.accessWorkspace.stepRole}"></strong>
-                            <small th:text="#{ui.accessWorkspace.stepRoleNote}"></small>
-                        </div>
-                    </li>
-                    <li>
-                        <span aria-hidden="true">2</span>
-                        <div>
-                            <strong th:text="#{ui.accessWorkspace.stepPermissions}"></strong>
-                            <small th:text="#{ui.accessWorkspace.stepPermissionsNote}"></small>
-                        </div>
-                    </li>
-                    <li>
-                        <span aria-hidden="true">3</span>
-                        <div>
-                            <strong th:text="#{ui.accessWorkspace.stepAccounts}"></strong>
-                            <small th:text="#{ui.accessWorkspace.stepAccountsNote}"></small>
-                        </div>
-                    </li>
-                </ol>
-                <details class="access-help">
-                    <summary th:text="#{ui.accessWorkspace.guide}"></summary>
-                    <p th:text="#{ui.accessWorkspace.example}"></p>
-                    <p th:text="#{ui.accessWorkspace.advancedNote}"></p>
-                </details>
-            </section>
             <p
                 id="form-feedback"
                 class="feedback"
                 role="alert"
                 hidden
             ></p>
-            <p
-                id="ops-status"
-                role="status"
-                aria-live="polite"
-            ></p>
-            <fieldset
-                id="ops-controls"
-                data-tabs
-                class="border-0 p-0 m-0 w-100"
-            >
-                <div class="access-workspace-heading">
-                    <p
-                        class="eyebrow"
-                        th:text="#{ui.accessWorkspace.common}"
-                    ></p>
-                    <button
-                        id="access-advanced-toggle"
-                        type="button"
-                        class="button button-outline button-small"
-                        th:if="${accessAllowed}"
-                        aria-expanded="false"
-                        aria-controls="registry-tab policies-tab resources-tab"
-                        th:attr="data-show=#{ui.accessWorkspace.advanced},data-hide=#{ui.accessWorkspace.hideAdvanced}"
-                        th:text="#{ui.accessWorkspace.advanced}"
-                        hidden
-                    ></button>
-                </div>
+            <div data-tabs>
                 <div
                     class="workspace-tabs"
                     role="tablist"
-                    th:attr="aria-label=#{ui.ops.access}"
+                    th:attr="aria-label=#{ui.grants.roles}"
                 >
                     <button
-                        id="permissions-tab"
+                        id="role-tab"
                         type="button"
-                        data-tab-target="access-roles-section"
-                        th:text="#{ui.accessWorkspace.roles}"
-                    ></button>
-                    <button
-                        id="users-tab"
-                        type="button"
-                        data-tab-target="access-users-section"
-                        hidden
-                        th:text="#{ui.accessWorkspace.accounts}"
+                        data-tab-target="roles-panel"
+                        th:text="#{ui.grants.roles}"
                     ></button>
                     <button
                         id="scopes-tab"
@@ -123,512 +53,31 @@
                         th:if="${adminUser}"
                         th:text="#{ui.accessHistory.title}"
                     ></button>
-                    <button
-                        id="registry-tab"
-                        type="button"
-                        data-tab-target="access-registry-section"
-                        data-access-advanced
-                        th:if="${accessAllowed}"
-                        th:text="#{ui.accessWorkspace.registry}"
-                    ></button>
-                    <button
-                        id="policies-tab"
-                        type="button"
-                        data-tab-target="access-policies-section"
-                        data-access-advanced
-                        th:if="${accessAllowed}"
-                        th:text="#{ui.accessWorkspace.policies}"
-                    ></button>
-                    <button
-                        id="resources-tab"
-                        type="button"
-                        data-tab-target="access-resources-section"
-                        data-access-advanced
-                        th:if="${accessAllowed}"
-                        th:text="#{ui.accessResources.title}"
-                    ></button>
                 </div>
                 <section
-                    id="access-roles-section"
+                    id="roles-panel"
                     class="card p-4"
-                    aria-labelledby="role-title"
                 >
-                    <div class="access-role-heading">
-                        <h2
-                            id="role-title"
-                            class="h4"
-                            th:text="#{ui.accessWorkspace.roles}"
-                        ></h2>
-                        <div class="toolbar-actions">
-                            <a
-                                class="button button-outline"
-                                th:if="${adminUser}"
-                                th:href="@{/operations/accounts(lang=${currentLocale})}"
-                                th:text="#{ui.accounts.title}"
-                            ></a>
-                            <button
-                                id="access-new-role"
-                                class="button"
-                                type="button"
-                                hidden
-                                th:text="#{ui.foundation.newRole}"
-                            ></button>
-                        </div>
-                    </div>
-                    <div class="access-role-picker">
-                        <div>
-                            <label
-                                for="access-role-search"
-                                class="form-label"
-                                th:text="#{ui.accessRoles.search}"
-                            ></label>
-                            <input
-                                id="access-role-search"
-                                type="search"
-                                class="form-control mb-2"
-                                maxlength="160"
-                                autocomplete="off"
-                            />
-                            <p
-                                id="access-role-count"
-                                role="status"
-                                class="muted"
-                            ></p>
-                        </div>
-                        <div>
-                            <label
-                                for="access-role"
-                                class="form-label"
-                                th:text="#{ui.ops.role}"
-                            ></label>
-                            <select
-                                id="access-role"
-                                class="form-select mb-3"
-                                disabled
-                            ></select>
-                        </div>
-                    </div>
-                    <p
-                        id="role-note"
-                        class="text-secondary"
-                        role="status"
-                    ></p>
-                    <div class="access-role-toolbar">
-                        <p
-                            id="role-permission-count"
-                            class="access-role-count"
-                            role="status"
-                        ></p>
-                        <button
-                            id="permissions-edit"
-                            class="button"
-                            type="button"
-                            disabled
-                            th:attr="data-edit=#{ui.workspace.editPermissions},data-readonly=#{ui.accessWorkspace.viewPermissions}"
-                            th:text="#{ui.workspace.editPermissions}"
-                        ></button>
-                    </div>
-                    <details class="access-help">
-                        <summary th:text="#{ui.accessWorkspace.assignedFeatures}"></summary>
-                        <p class="muted">
-                            <span th:text="#{ui.ops.version}"></span>
-                            :
-                            <strong id="role-version">—</strong>
-                        </p>
-                        <div
-                            id="role-permission-summary"
-                            class="access-role-summary"
-                            th:attr="data-permissions=#{ui.accessWorkspace.permissionCount},data-accounts=#{ui.accessWorkspace.accountCount},data-extra=#{ui.accessWorkspace.extra},data-empty=#{ui.accessWorkspace.empty}"
-                        ></div>
-                    </details>
-                </section>
-                <section
-                    class="card p-4"
-                    id="access-users-section"
-                    aria-labelledby="user-role-title"
-                    hidden
-                >
-                    <h2
-                        id="user-role-title"
-                        class="h4"
-                        th:text="#{ui.ops.userRoles}"
-                    ></h2>
-                    <p
-                        th:text="#{ui.ops.userRolesNote}"
-                        class="text-secondary"
-                    ></p>
-                    <form
-                        id="users-search"
-                        class="table-filter mb-3"
-                    >
-                        <div>
-                            <label
-                                for="user-prefix"
-                                class="form-label"
-                                th:text="#{ui.ops.usernamePrefix}"
-                            ></label>
-                            <input
-                                id="user-prefix"
-                                name="username"
-                                class="form-control"
-                                maxlength="32"
-                                pattern="[A-Za-z0-9]{0,32}"
-                                autocomplete="off"
-                            />
-                        </div>
-                        <button
-                            type="submit"
-                            class="button button-outline"
-                            th:text="#{ui.ops.filter}"
-                        ></button>
-                    </form>
-                    <div
-                        class="table-responsive"
-                        tabindex="0"
-                        role="region"
-                        th:attr="aria-label=#{ui.table.scroll}"
-                    >
-                        <table class="table align-middle">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th th:text="#{ui.ops.username}"></th>
-                                    <th th:text="#{ui.ops.displayName}"></th>
-                                    <th th:text="#{ui.ops.role}"></th>
-                                    <th th:text="#{ui.ops.status}"></th>
-                                    <th
-                                        class="table-actions"
-                                        th:text="#{ui.ops.actions}"
-                                    ></th>
-                                </tr>
-                            </thead>
-                            <tbody id="users-body"></tbody>
-                        </table>
-                    </div>
-                    <div th:replace="~{fragments/pagination :: pager('users', 20)}"></div>
-                </section>
-                <section
-                    id="access-resources-section"
-                    class="card p-4"
-                    hidden
-                    th:if="${accessAllowed}"
-                    aria-labelledby="resources-title"
-                >
-                    <h2
-                        id="resources-title"
-                        class="h4"
-                        th:text="#{ui.accessResources.title}"
-                    ></h2>
-                    <p
-                        class="text-secondary"
-                        th:text="#{ui.accessResources.note}"
-                    ></p>
-                    <form
-                        id="resources-filter"
-                        class="table-filter mb-3 resources-filter"
-                    >
-                        <div class="filter-field">
-                            <label
-                                for="resources-kind"
-                                th:text="#{ui.accessResources.kind}"
-                            ></label>
-                            <select
-                                id="resources-kind"
-                                class="form-select"
-                            >
-                                <option
-                                    value=""
-                                    th:text="#{ui.ops.all}"
-                                ></option>
-                                <option
-                                    value="MENU"
-                                    th:text="#{ui.accessResources.menu}"
-                                ></option>
-                                <option
-                                    value="ENDPOINT"
-                                    th:text="#{ui.accessResources.api}"
-                                ></option>
-                            </select>
-                        </div>
-                        <div class="filter-field">
-                            <label
-                                for="resources-query"
-                                th:text="#{ui.accessResources.search}"
-                            ></label>
-                            <input
-                                id="resources-query"
-                                class="form-control"
-                                type="search"
-                                maxlength="160"
-                                th:placeholder="#{ui.accessResources.searchHint}"
-                            />
-                        </div>
-                        <div class="toolbar-actions">
-                            <button
-                                id="resources-search"
-                                type="submit"
-                                class="button"
-                                th:text="#{ui.ops.filter}"
-                            ></button>
-                            <button
-                                id="resources-refresh"
-                                type="button"
-                                class="button button-outline"
-                                th:text="#{ui.foundation.refresh}"
-                            ></button>
-                        </div>
-                    </form>
-                    <p
-                        id="resources-status"
-                        role="status"
-                    ></p>
-                    <div
-                        class="table-responsive"
-                        tabindex="0"
-                        role="region"
-                        th:attr="aria-label=#{ui.table.scroll}"
-                    >
-                        <table class="table align-middle access-resources-table">
-                            <thead>
-                                <tr>
-                                    <th th:text="#{ui.accessResources.kind}"></th>
-                                    <th th:text="#{ui.accessResources.target}"></th>
-                                    <th th:text="#{ui.accessResources.description}"></th>
-                                    <th th:text="#{ui.accessResources.access}"></th>
-                                    <th th:text="#{ui.accessResources.lastSeen}"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="resources-body"></tbody>
-                        </table>
-                    </div>
-                    <nav th:replace="~{fragments/pagination :: pager('resources', 20)}"></nav>
-                </section>
-                <section
-                    id="access-registry-section"
-                    class="card p-4"
-                    th:if="${accessAllowed}"
-                >
-                    <h2
-                        class="h4"
-                        th:text="#{ui.foundation.registry}"
-                    ></h2>
-                    <p th:text="#{ui.foundation.registryNote}"></p>
-                    <form
-                        id="registry-filter"
-                        class="table-filter mb-3"
-                    >
-                        <div>
-                            <label
-                                for="registry-kind"
-                                th:text="#{ui.foundation.kind}"
-                            ></label>
-                            <select
-                                id="registry-kind"
-                                class="form-select"
-                            >
-                                <option
-                                    value="roles"
-                                    th:text="#{ui.foundation.roles}"
-                                ></option>
-                                <option
-                                    value="permissions"
-                                    th:text="#{ui.foundation.permissions}"
-                                ></option>
-                            </select>
-                        </div>
-                        <div>
-                            <label
-                                for="registry-query"
-                                th:text="#{ui.accessRoles.registrySearch}"
-                            ></label>
-                            <input
-                                id="registry-query"
-                                class="form-control"
-                                type="search"
-                                maxlength="160"
-                            />
-                        </div>
-                        <div>
-                            <label
-                                for="registry-active"
-                                th:text="#{ui.foundation.active}"
-                            ></label>
-                            <select
-                                id="registry-active"
-                                class="form-select"
-                            >
-                                <option
-                                    value=""
-                                    th:text="#{ui.accessResources.allKinds}"
-                                ></option>
-                                <option
-                                    value="true"
-                                    th:text="#{ui.monitoring.on}"
-                                ></option>
-                                <option
-                                    value="false"
-                                    th:text="#{ui.monitoring.off}"
-                                ></option>
-                            </select>
-                        </div>
-                        <button
-                            id="registry-search"
-                            type="submit"
-                            class="button button-outline"
-                            th:text="#{ui.ops.filter}"
-                        ></button>
-                        <button
-                            id="registry-refresh"
-                            type="button"
-                            class="button button-outline"
-                            th:text="#{ui.foundation.refresh}"
-                        ></button>
-                        <button
-                            id="registry-create"
-                            type="button"
-                            class="button button-outline"
-                            th:text="#{ui.foundation.new}"
-                        ></button>
-                    </form>
-                    <p
-                        id="registry-capacity"
-                        class="muted"
-                        role="status"
-                    ></p>
-                    <p
-                        id="registry-status"
-                        role="status"
-                    ></p>
-                    <div class="table-responsive">
-                        <table class="table align-middle">
-                            <thead>
-                                <tr>
-                                    <th th:text="#{ui.foundation.code}"></th>
-                                    <th th:text="#{ui.foundation.nameVi}"></th>
-                                    <th th:text="#{ui.foundation.nameEn}"></th>
-                                    <th th:text="#{ui.foundation.active}"></th>
-                                    <th th:text="#{ui.foundation.version}"></th>
-                                    <th
-                                        class="table-actions"
-                                        th:text="#{ui.foundation.actions}"
-                                    ></th>
-                                </tr>
-                            </thead>
-                            <tbody id="registry-body"></tbody>
-                        </table>
-                    </div>
-                    <nav th:replace="~{fragments/pagination :: pager('registry', 20)}"></nav>
-                </section>
-                <section
-                    id="access-policies-section"
-                    class="card p-4"
-                    th:if="${accessAllowed}"
-                >
-                    <h2
-                        class="h4"
-                        th:text="#{ui.foundation.policies}"
-                    ></h2>
-                    <p th:text="#{ui.foundation.policyNote}"></p>
-                    <div class="toolbar-actions mb-3">
-                        <button
-                            id="policies-refresh"
-                            type="button"
-                            class="button button-outline"
-                            th:text="#{ui.foundation.refresh}"
-                        ></button>
-                        <button
-                            id="policies-create"
-                            type="button"
-                            class="button button-outline"
-                            th:text="#{ui.foundation.new}"
-                        ></button>
-                    </div>
-                    <p
-                        id="policies-status"
-                        role="status"
-                    ></p>
-                    <div class="table-responsive">
-                        <table class="table align-middle">
-                            <thead>
-                                <tr>
-                                    <th th:text="#{ui.foundation.kind}"></th>
-                                    <th th:text="#{ui.foundation.target}"></th>
-                                    <th th:text="#{ui.foundation.nameVi}"></th>
-                                    <th th:text="#{ui.foundation.active}"></th>
-                                    <th
-                                        class="table-actions"
-                                        th:text="#{ui.foundation.actions}"
-                                    ></th>
-                                </tr>
-                            </thead>
-                            <tbody id="policies-body"></tbody>
-                        </table>
-                    </div>
-                </section>
-                <section
-                    id="access-scopes-section"
-                    class="card p-4"
-                    hidden
-                    th:if="${adminUser}"
-                    aria-labelledby="scopes-title"
-                >
-                    <h2
-                        id="scopes-title"
-                        class="h4"
-                        th:text="#{ui.scope.title}"
-                    ></h2>
-                    <p
-                        class="muted"
-                        th:text="#{ui.scope.note}"
-                    ></p>
-                    <p
-                        id="scopes-feedback"
-                        class="feedback"
-                        role="alert"
-                        hidden
-                    ></p>
                     <fieldset
-                        id="scopes-controls"
+                        id="roles-controls"
                         class="border-0 p-0 m-0"
                     >
                         <form
-                            id="scopes-search"
+                            id="roles-search"
                             class="table-filter mb-3"
                         >
                             <div>
                                 <label
-                                    for="scope-query"
+                                    for="roles-query"
                                     th:text="#{ui.accessRoles.registrySearch}"
                                 ></label>
                                 <input
-                                    id="scope-query"
+                                    id="roles-query"
+                                    name="query"
                                     type="search"
-                                    maxlength="160"
                                     class="form-control"
+                                    maxlength="160"
                                 />
-                            </div>
-                            <div>
-                                <label
-                                    for="scope-active-filter"
-                                    th:text="#{ui.foundation.active}"
-                                ></label>
-                                <select
-                                    id="scope-active-filter"
-                                    class="form-select"
-                                >
-                                    <option
-                                        value=""
-                                        th:text="#{ui.ops.all}"
-                                    ></option>
-                                    <option
-                                        value="true"
-                                        th:text="#{ui.monitoring.on}"
-                                    ></option>
-                                    <option
-                                        value="false"
-                                        th:text="#{ui.monitoring.off}"
-                                    ></option>
-                                </select>
                             </div>
                             <button
                                 type="submit"
@@ -636,170 +85,21 @@
                                 th:text="#{ui.ops.filter}"
                             ></button>
                             <button
-                                id="scopes-refresh"
+                                id="roles-refresh"
                                 type="button"
                                 class="button button-outline"
                                 th:text="#{ui.ops.refresh}"
                             ></button>
                             <button
-                                id="scope-create"
+                                id="role-create"
                                 type="button"
                                 class="button"
-                                th:text="#{ui.scope.create}"
+                                hidden
+                                th:text="#{ui.foundation.newRole}"
                             ></button>
                         </form>
                         <p
-                            id="scope-status"
-                            role="status"
-                        ></p>
-                        <div class="table-responsive">
-                            <table class="table align-middle">
-                                <thead>
-                                    <tr>
-                                        <th th:text="#{ui.foundation.code}"></th>
-                                        <th th:text="#{ui.foundation.nameVi}"></th>
-                                        <th th:text="#{ui.foundation.active}"></th>
-                                        <th
-                                            class="table-actions"
-                                            th:text="#{ui.ops.actions}"
-                                        ></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="scopes-body"></tbody>
-                            </table>
-                        </div>
-                        <nav th:replace="~{fragments/pagination :: pager('scopes', 20)}"></nav>
-                        <section
-                            id="scope-members-section"
-                            hidden
-                            class="mt-4"
-                        >
-                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                                <h3
-                                    id="scope-members-title"
-                                    class="h5"
-                                ></h3>
-                                <button
-                                    id="scope-member-create"
-                                    type="button"
-                                    class="button button-outline"
-                                    th:text="#{ui.scope.assign}"
-                                ></button>
-                            </div>
-                            <p
-                                class="muted"
-                                th:text="#{ui.scope.membersNote}"
-                            ></p>
-                            <div class="table-responsive">
-                                <table class="table align-middle">
-                                    <thead>
-                                        <tr>
-                                            <th th:text="#{ui.ops.username}"></th>
-                                            <th th:text="#{ui.ops.role}"></th>
-                                            <th th:text="#{ui.foundation.active}"></th>
-                                            <th
-                                                class="table-actions"
-                                                th:text="#{ui.ops.actions}"
-                                            ></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="scope-members-body"></tbody>
-                                </table>
-                            </div>
-                            <nav th:replace="~{fragments/pagination :: pager('scope-members', 20)}"></nav>
-                        </section>
-                    </fieldset>
-                </section>
-                <section
-                    id="access-history-section"
-                    class="card p-4"
-                    aria-labelledby="history-title"
-                    th:if="${adminUser}"
-                    hidden
-                >
-                    <h2
-                        id="history-title"
-                        class="h4"
-                        th:text="#{ui.accessHistory.title}"
-                    ></h2>
-                    <p
-                        class="muted"
-                        th:text="#{ui.accessHistory.note}"
-                    ></p>
-                    <p
-                        id="history-feedback"
-                        class="feedback"
-                        role="alert"
-                        hidden
-                    ></p>
-                    <fieldset
-                        id="history-controls"
-                        class="border-0 p-0 m-0 w-100"
-                    >
-                        <form
-                            id="history-filter"
-                            class="table-filter mb-3"
-                        >
-                            <div class="filter-field">
-                                <label
-                                    for="history-event"
-                                    th:text="#{ui.accessHistory.event}"
-                                ></label>
-                                <select
-                                    id="history-event"
-                                    class="form-select"
-                                >
-                                    <option
-                                        value=""
-                                        th:text="#{ui.accounts.all}"
-                                    ></option>
-                                    <option
-                                        th:each="item : ${accessHistoryEvents}"
-                                        th:value="${item.name()}"
-                                        th:text="${#messages.msg(item.messageKey())}"
-                                    ></option>
-                                </select>
-                            </div>
-                            <div class="filter-field">
-                                <label
-                                    for="history-target"
-                                    th:text="#{ui.accessHistory.target}"
-                                ></label>
-                                <input
-                                    id="history-target"
-                                    class="form-control"
-                                    maxlength="120"
-                                />
-                            </div>
-                            <div class="filter-field">
-                                <label
-                                    for="history-actor"
-                                    th:text="#{ui.accessHistory.actorId}"
-                                ></label>
-                                <input
-                                    id="history-actor"
-                                    class="form-control"
-                                    type="number"
-                                    min="0"
-                                    step="1"
-                                />
-                            </div>
-                            <div class="toolbar-actions">
-                                <button
-                                    type="submit"
-                                    class="button"
-                                    th:text="#{ui.ops.filter}"
-                                ></button>
-                                <button
-                                    id="history-refresh"
-                                    type="button"
-                                    class="button button-outline"
-                                    th:text="#{ui.ops.refresh}"
-                                ></button>
-                            </div>
-                        </form>
-                        <p
-                            id="history-status"
+                            id="roles-status"
                             role="status"
                             aria-live="polite"
                         ></p>
@@ -807,479 +107,35 @@
                             <table class="table align-middle">
                                 <thead>
                                     <tr>
-                                        <th th:text="#{ui.accessHistory.time}"></th>
-                                        <th th:text="#{ui.accessHistory.event}"></th>
-                                        <th th:text="#{ui.accessHistory.target}"></th>
-                                        <th th:text="#{ui.accessHistory.actor}"></th>
+                                        <th th:text="#{ui.foundation.code}"></th>
+                                        <th th:text="#{ui.foundation.nameVi}"></th>
+                                        <th th:text="#{ui.foundation.nameEn}"></th>
+                                        <th th:text="#{ui.foundation.active}"></th>
                                         <th
                                             class="table-actions"
                                             th:text="#{ui.ops.actions}"
                                         ></th>
                                     </tr>
                                 </thead>
-                                <tbody id="history-body"></tbody>
+                                <tbody id="roles-body"></tbody>
                             </table>
                         </div>
-                        <nav th:replace="~{fragments/pagination :: pager('history', 20)}"></nav>
+                        <nav th:replace="~{fragments/pagination :: pager('roles', 20)}"></nav>
                     </fieldset>
                 </section>
-            </fieldset>
+                <section th:replace="~{fragments/access-advanced :: scopes}"></section>
+                <section th:replace="~{fragments/access-advanced :: history}"></section>
+            </div>
             <dialog
-                id="permissions-dialog"
-                class="workspace-dialog workspace-dialog-wide"
-                aria-labelledby="permissions-dialog-title"
-            >
-                <fieldset
-                    class="dialog-controls"
-                    data-modal-controls
-                >
-                    <div class="dialog-heading">
-                        <h2
-                            id="permissions-dialog-title"
-                            class="h4"
-                            th:text="#{ui.workspace.editPermissions}"
-                        ></h2>
-                        <button
-                            class="dialog-close"
-                            type="button"
-                            data-dialog-close
-                            th:attr="aria-label=#{ui.ops.close}"
-                        >
-                            <span aria-hidden="true">×</span>
-                        </button>
-                    </div>
-                    <p
-                        id="permissions-target"
-                        class="muted"
-                    ></p>
-                    <p
-                        id="permissions-feedback"
-                        class="feedback"
-                        role="alert"
-                        hidden
-                    ></p>
-                    <form id="permissions-form">
-                        <div
-                            id="permissions-body"
-                            class="access-tree"
-                        ></div>
-                        <div class="dialog-actions">
-                            <button
-                                class="button button-outline"
-                                type="button"
-                                data-dialog-close
-                                th:text="#{ui.catalog.cancel}"
-                            ></button>
-                            <button
-                                id="permissions-save"
-                                class="button"
-                                type="submit"
-                                disabled
-                                th:text="#{ui.ops.savePermissions}"
-                            ></button>
-                        </div>
-                    </form>
-                </fieldset>
-            </dialog>
-            <dialog
-                id="user-roles-dialog"
+                id="role-dialog"
                 class="workspace-dialog"
-                aria-labelledby="selected-user"
-            >
-                <fieldset
-                    class="dialog-controls"
-                    data-modal-controls
-                >
-                    <div class="dialog-heading">
-                        <span
-                            class="eyebrow"
-                            th:text="#{ui.ops.userRoles}"
-                        ></span>
-                        <button
-                            class="dialog-close"
-                            type="button"
-                            data-dialog-close
-                            th:attr="aria-label=#{ui.ops.close}"
-                        >
-                            <span aria-hidden="true">×</span>
-                        </button>
-                    </div>
-                    <p
-                        id="user-roles-feedback"
-                        class="feedback"
-                        role="alert"
-                        hidden
-                    ></p>
-                    <form
-                        id="user-roles-form"
-                        class="border rounded p-3"
-                    >
-                        <h3
-                            class="h5"
-                            id="selected-user"
-                        ></h3>
-                        <p>
-                            <span th:text="#{ui.ops.version}"></span>
-                            :
-                            <strong id="user-version"></strong>
-                        </p>
-                        <label
-                            for="user-role-search"
-                            class="form-label"
-                            th:text="#{ui.accessRoles.search}"
-                        ></label>
-                        <input
-                            id="user-role-search"
-                            type="search"
-                            class="form-control"
-                            maxlength="160"
-                            autocomplete="off"
-                        />
-                        <p
-                            id="user-role-count"
-                            role="status"
-                            class="muted"
-                        ></p>
-                        <fieldset
-                            id="user-role-options"
-                            data-required-selection
-                            data-validation-key="roles"
-                        >
-                            <legend
-                                class="h6"
-                                th:text="#{ui.ops.role}"
-                            ></legend>
-                        </fieldset>
-                        <div class="dialog-actions">
-                            <button
-                                class="button button-outline"
-                                type="button"
-                                data-dialog-close
-                                th:text="#{ui.catalog.cancel}"
-                            ></button>
-                            <button
-                                id="user-roles-save"
-                                class="button"
-                                type="submit"
-                                disabled
-                                th:text="#{ui.ops.saveRoles}"
-                            ></button>
-                        </div>
-                    </form>
-                </fieldset>
-            </dialog>
-            <div
-                id="ops-labels"
-                hidden
-                th:attr="data-empty=#{ui.ops.empty},data-loading=#{ui.ops.loading},data-saved=#{ui.ops.saved},data-confirm-retry=#{ui.ops.confirmRetry},data-confirm-permissions=#{ui.ops.confirmPermissions},data-confirm-roles=#{ui.ops.confirmRoles},data-details=#{ui.ops.details},data-retry=#{ui.ops.retry},data-select=#{ui.ops.select},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off},data-page=#{ui.ops.page},data-fixed=#{ui.ops.fixed},data-readonly=#{ui.ops.readonly},data-restricted=#{ui.ops.restricted},data-self=#{ui.ops.self},data-conflict=#{ui.ops.conflict}"
-            ></div>
-            <th:block th:if="${accessAllowed}">
-                <dialog
-                    id="registry-dialog"
-                    class="workspace-dialog"
-                    aria-labelledby="registry-dialog-title"
-                >
-                    <fieldset class="dialog-controls">
-                        <div class="dialog-heading">
-                            <h2
-                                id="registry-dialog-title"
-                                class="h4"
-                                th:text="#{ui.foundation.registry}"
-                            ></h2>
-                            <button
-                                type="button"
-                                class="dialog-close"
-                                data-dialog-close
-                                th:attr="aria-label=#{ui.ops.close}"
-                            >
-                                ×
-                            </button>
-                        </div>
-                        <p
-                            id="registry-dialog-feedback"
-                            class="feedback"
-                            role="alert"
-                            hidden
-                        ></p>
-                        <form id="registry-form">
-                            <div class="mb-3">
-                                <label
-                                    class="form-label"
-                                    for="registry-code"
-                                    th:text="#{ui.foundation.code}"
-                                ></label>
-                                <input
-                                    id="registry-code"
-                                    name="code"
-                                    class="form-control"
-                                    required
-                                    maxlength="40"
-                                    pattern="[A-Z][A-Z0-9_]+"
-                                />
-                            </div>
-                            <div class="mb-3">
-                                <label
-                                    class="form-label"
-                                    for="registry-name-vi"
-                                    th:text="#{ui.foundation.nameVi}"
-                                ></label>
-                                <input
-                                    id="registry-name-vi"
-                                    name="nameVi"
-                                    class="form-control"
-                                    required
-                                    maxlength="120"
-                                />
-                            </div>
-                            <div class="mb-3">
-                                <label
-                                    class="form-label"
-                                    for="registry-name-en"
-                                    th:text="#{ui.foundation.nameEn}"
-                                ></label>
-                                <input
-                                    id="registry-name-en"
-                                    name="nameEn"
-                                    class="form-control"
-                                    required
-                                    maxlength="120"
-                                />
-                            </div>
-                            <label class="form-check mb-3">
-                                <input
-                                    name="active"
-                                    type="checkbox"
-                                    class="form-check-input"
-                                />
-                                <span th:text="#{ui.foundation.active}"></span>
-                            </label>
-                            <div class="dialog-actions">
-                                <button
-                                    type="button"
-                                    class="button button-outline"
-                                    data-dialog-close
-                                    th:text="#{ui.foundation.cancel}"
-                                ></button>
-                                <button
-                                    type="submit"
-                                    class="button"
-                                    th:text="#{ui.foundation.save}"
-                                ></button>
-                            </div>
-                        </form>
-                    </fieldset>
-                </dialog>
-                <dialog
-                    id="policy-dialog"
-                    class="workspace-dialog"
-                    aria-labelledby="policy-dialog-title"
-                >
-                    <fieldset class="dialog-controls">
-                        <div class="dialog-heading">
-                            <h2
-                                id="policy-dialog-title"
-                                class="h4"
-                                th:text="#{ui.foundation.policies}"
-                            ></h2>
-                            <button
-                                type="button"
-                                class="dialog-close"
-                                data-dialog-close
-                                th:attr="aria-label=#{ui.ops.close}"
-                            >
-                                ×
-                            </button>
-                        </div>
-                        <p
-                            id="policy-dialog-feedback"
-                            class="feedback"
-                            role="alert"
-                            hidden
-                        ></p>
-                        <form id="policy-form">
-                            <label
-                                for="policy-target"
-                                class="form-label"
-                                th:text="#{ui.foundation.target}"
-                            ></label>
-                            <select
-                                id="policy-target"
-                                name="target"
-                                class="form-select mb-3"
-                                required
-                            ></select>
-                            <div class="mb-3">
-                                <label
-                                    class="form-label"
-                                    for="policy-name-vi"
-                                    th:text="#{ui.foundation.nameVi}"
-                                ></label>
-                                <input
-                                    id="policy-name-vi"
-                                    name="nameVi"
-                                    class="form-control"
-                                    required
-                                    maxlength="160"
-                                />
-                            </div>
-                            <div class="mb-3">
-                                <label
-                                    class="form-label"
-                                    for="policy-name-en"
-                                    th:text="#{ui.foundation.nameEn}"
-                                ></label>
-                                <input
-                                    id="policy-name-en"
-                                    name="nameEn"
-                                    class="form-control"
-                                    required
-                                    maxlength="160"
-                                />
-                            </div>
-                            <label class="form-check mb-3">
-                                <input
-                                    name="enabled"
-                                    type="checkbox"
-                                    class="form-check-input"
-                                />
-                                <span th:text="#{ui.foundation.enabled}"></span>
-                            </label>
-                            <label
-                                for="policy-permissions"
-                                class="form-label"
-                                th:text="#{ui.foundation.allPermissions}"
-                            ></label>
-                            <select
-                                id="policy-permissions"
-                                name="permissions"
-                                multiple
-                                size="7"
-                                class="form-select mb-3"
-                            ></select>
-                            <label
-                                for="policy-roles"
-                                class="form-label"
-                                th:text="#{ui.foundation.anyRoles}"
-                            ></label>
-                            <select
-                                id="policy-roles"
-                                name="roles"
-                                multiple
-                                size="5"
-                                class="form-select mb-3"
-                            ></select>
-                            <div class="dialog-actions">
-                                <button
-                                    id="policy-delete"
-                                    type="button"
-                                    class="button button-outline"
-                                    th:text="#{ui.foundation.delete}"
-                                ></button>
-                                <button
-                                    type="button"
-                                    class="button button-outline"
-                                    data-dialog-close
-                                    th:text="#{ui.foundation.cancel}"
-                                ></button>
-                                <button
-                                    type="submit"
-                                    class="button"
-                                    th:text="#{ui.foundation.save}"
-                                ></button>
-                            </div>
-                        </form>
-                    </fieldset>
-                </dialog>
-            </th:block>
-            <div
-                id="access-tree-labels"
-                hidden
-                th:attr="data-view-restricted=#{ui.accessTree.viewRestricted},data-menu=#{ui.accessMatrix.menu},data-action-view=#{ui.accessMatrix.VIEW},data-action-read=#{ui.accessMatrix.READ},data-action-list=#{ui.accessMatrix.LIST},data-action-detail=#{ui.accessMatrix.DETAIL},data-action-create=#{ui.accessMatrix.CREATE},data-action-update=#{ui.accessMatrix.UPDATE},data-action-delete=#{ui.accessMatrix.DELETE},data-action-assign=#{ui.accessMatrix.ASSIGN},data-action-retry=#{ui.accessMatrix.RETRY},data-action-send=#{ui.accessMatrix.SEND},data-action-write=#{ui.accessMatrix.WRITE},data-system-bundle=#{ui.accessTree.systemBundle},data-system-bundle-note=#{ui.accessTree.systemBundleNote},data-impact=#{ui.accessTree.impact},data-inactive=#{ui.accessTree.inactive},data-search=#{ui.accessTree.search},data-all=#{ui.accessTree.all},data-expand=#{ui.accessTree.expand},data-collapse=#{ui.accessTree.collapse},data-preview=#{ui.accessTree.preview},data-added=#{ui.accessTree.added},data-removed=#{ui.accessTree.removed},data-unchanged=#{ui.accessTree.unchanged},data-endpoints=#{ui.accessTree.endpoints},data-dependency=#{ui.accessTree.dependency},data-source=#{ui.accessTree.source},data-empty=#{ui.accessTree.empty},data-no-read=#{ui.accessTree.noRead},data-custom=#{ui.accessTree.custom},data-shared=#{ui.accessTree.shared},data-admin=#{ui.accessTree.admin},data-show-sources=#{ui.accessTree.showSources}"
-            ></div>
-            <div
-                id="foundation-labels"
-                th:data-capacity="#{ui.accessRoles.capacity}"
-                hidden
-                th:attr="data-delete-role=#{ui.foundation.deleteRole},data-confirm-role=#{ui.foundation.confirmRole},data-empty=#{ui.foundation.empty},data-edit=#{ui.foundation.edit},data-confirm=#{ui.foundation.confirm},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off},data-public=#{ui.accessResources.public},data-protected=#{ui.accessResources.protected},data-reserved=#{ui.accessResources.reserved},data-menu=#{ui.accessResources.menu},data-api=#{ui.accessResources.api}"
-            ></div>
-            <dialog
-                id="history-dialog"
-                class="workspace-dialog workspace-dialog-wide"
-                th:if="${adminUser}"
-                aria-labelledby="history-detail-title"
+                aria-labelledby="role-dialog-title"
             >
                 <div class="dialog-heading">
                     <h2
-                        id="history-detail-title"
+                        id="role-dialog-title"
                         class="h4"
-                        th:text="#{ui.accessHistory.detail}"
-                    ></h2>
-                    <button
-                        type="button"
-                        class="dialog-close"
-                        data-dialog-close
-                        th:attr="aria-label=#{ui.ops.close}"
-                    >
-                        ×
-                    </button>
-                </div>
-                <dl
-                    id="history-meta"
-                    class="operations-details"
-                ></dl>
-                <p
-                    id="history-delta-note"
-                    class="muted"
-                    th:text="#{ui.accessHistory.deltaNote}"
-                ></p>
-                <div class="access-history-states">
-                    <section class="access-history-state">
-                        <h3
-                            class="h6"
-                            th:text="#{ui.accessHistory.before}"
-                        ></h3>
-                        <dl
-                            id="history-before"
-                            class="operations-details"
-                        ></dl>
-                    </section>
-                    <section class="access-history-state">
-                        <h3
-                            class="h6"
-                            th:text="#{ui.accessHistory.after}"
-                        ></h3>
-                        <dl
-                            id="history-after"
-                            class="operations-details"
-                        ></dl>
-                    </section>
-                </div>
-                <div class="dialog-actions">
-                    <button
-                        type="button"
-                        class="button button-outline"
-                        data-dialog-close
-                        th:text="#{ui.ops.close}"
-                    ></button>
-                </div>
-            </dialog>
-            <div
-                id="history-labels"
-                hidden
-                th:if="${adminUser}"
-                th:attr="data-empty=#{ui.accessTree.empty},data-loading=#{ui.ops.loading},data-detail=#{ui.accessHistory.detail},data-time=#{ui.accessHistory.time},data-event=#{ui.accessHistory.event},data-target=#{ui.accessHistory.target},data-actor=#{ui.accessHistory.actor},data-trace=#{ui.accessHistory.trace},data-roles=#{ui.ops.role},data-permissions=#{ui.accessHistory.permissions},data-mapping-count=#{ui.accessHistory.mappingCount},data-version=#{ui.ops.version},data-active=#{ui.accounts.active},data-deleted=#{ui.accessHistory.deleted},data-enabled=#{ui.accessHistory.enabled},data-name-vi=#{ui.foundation.nameVi},data-name-en=#{ui.foundation.nameEn},data-policy-kind=#{ui.accessHistory.policyKind},data-policy-target=#{ui.accessHistory.policyTarget},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off}"
-            ></div>
-            <dialog
-                id="scope-dialog"
-                class="workspace-dialog"
-                th:if="${adminUser}"
-                aria-labelledby="scope-dialog-title"
-            >
-                <div class="dialog-heading">
-                    <h2
-                        id="scope-dialog-title"
-                        class="h4"
-                        th:text="#{ui.scope.edit}"
+                        th:text="#{ui.grants.roles}"
                     ></h2>
                     <button
                         type="button"
@@ -1291,53 +147,50 @@
                     </button>
                 </div>
                 <form
-                    id="scope-form"
+                    id="role-form"
                     data-validate
                 >
-                    <fieldset
-                        id="scope-form-controls"
-                        class="border-0 p-0 m-0"
-                    >
+                    <fieldset class="dialog-controls border-0 p-0 m-0">
                         <label
-                            for="scope-code"
+                            for="role-code"
                             class="form-label"
                             th:text="#{ui.foundation.code}"
                         ></label>
                         <input
-                            id="scope-code"
+                            id="role-code"
                             name="code"
                             class="form-control"
+                            pattern="[A-Z][A-Z0-9_]{1,23}"
+                            maxlength="24"
                             required
-                            maxlength="50"
-                            pattern="[A-Z][A-Z0-9_]{1,49}"
                         />
                         <label
-                            for="scope-name-vi"
+                            for="role-name-vi"
                             class="form-label"
                             th:text="#{ui.foundation.nameVi}"
                         ></label>
                         <input
-                            id="scope-name-vi"
+                            id="role-name-vi"
                             name="nameVi"
                             class="form-control"
-                            required
                             maxlength="120"
+                            required
                         />
                         <label
-                            for="scope-name-en"
+                            for="role-name-en"
                             class="form-label"
                             th:text="#{ui.foundation.nameEn}"
                         ></label>
                         <input
-                            id="scope-name-en"
+                            id="role-name-en"
                             name="nameEn"
                             class="form-control"
-                            required
                             maxlength="120"
+                            required
                         />
                         <label class="d-flex gap-2 mt-3">
                             <input
-                                id="scope-active"
+                                id="role-active"
                                 name="active"
                                 type="checkbox"
                                 class="form-check-input"
@@ -1345,7 +198,7 @@
                             <span th:text="#{ui.foundation.active}"></span>
                         </label>
                         <p
-                            id="scope-form-feedback"
+                            id="role-feedback"
                             class="feedback"
                             role="alert"
                             hidden
@@ -1367,16 +220,15 @@
                 </form>
             </dialog>
             <dialog
-                id="scope-member-dialog"
-                class="workspace-dialog"
-                th:if="${adminUser}"
-                aria-labelledby="scope-member-dialog-title"
+                id="grants-dialog"
+                class="workspace-dialog workspace-dialog-wide"
+                aria-labelledby="grants-title"
             >
                 <div class="dialog-heading">
                     <h2
-                        id="scope-member-dialog-title"
+                        id="grants-title"
                         class="h4"
-                        th:text="#{ui.scope.assign}"
+                        th:text="#{ui.grants.assign}"
                     ></h2>
                     <button
                         type="button"
@@ -1387,121 +239,83 @@
                         ×
                     </button>
                 </div>
-                <form
-                    id="scope-member-form"
-                    data-validate
-                >
+                <p
+                    id="grants-target"
+                    class="muted"
+                ></p>
+                <p th:text="#{ui.grants.note}"></p>
+                <form id="grants-form">
                     <fieldset
-                        id="scope-member-controls"
+                        id="grants-controls"
                         class="border-0 p-0 m-0"
                     >
-                        <div id="scope-user-search-fields">
+                        <div class="resource-grant-content">
                             <label
-                                for="scope-user-query"
+                                for="grants-search"
                                 class="form-label"
-                                th:text="#{ui.ops.usernamePrefix}"
+                                th:text="#{ui.grants.search}"
                             ></label>
-                            <div class="d-flex gap-2">
-                                <input
-                                    id="scope-user-query"
-                                    class="form-control"
-                                    maxlength="32"
-                                    pattern="[A-Za-z0-9]{0,32}"
-                                />
+                            <input
+                                id="grants-search"
+                                class="form-control"
+                                type="search"
+                                maxlength="160"
+                            />
+                            <p
+                                id="grants-count"
+                                role="status"
+                                aria-live="polite"
+                                class="muted"
+                            ></p>
+                            <div
+                                id="grants-tree"
+                                class="resource-grant-tree"
+                            ></div>
+                            <p
+                                id="grants-changes"
+                                class="access-tree-preview"
+                                role="status"
+                            ></p>
+                            <p
+                                id="grants-feedback"
+                                class="feedback"
+                                role="alert"
+                                hidden
+                            ></p>
+                            <div class="dialog-actions">
                                 <button
-                                    id="scope-user-search"
                                     type="button"
                                     class="button button-outline"
-                                    th:text="#{ui.ops.filter}"
+                                    data-dialog-close
+                                    th:text="#{ui.catalog.cancel}"
+                                ></button>
+                                <button
+                                    id="grants-save"
+                                    type="submit"
+                                    class="button"
+                                    th:text="#{ui.catalog.save}"
                                 ></button>
                             </div>
-                        </div>
-                        <label
-                            for="scope-user"
-                            class="form-label"
-                            th:text="#{ui.ops.username}"
-                        ></label>
-                        <select
-                            id="scope-user"
-                            name="userId"
-                            class="form-select"
-                            required
-                        ></select>
-                        <p
-                            class="muted"
-                            th:text="#{ui.scope.userHint}"
-                        ></p>
-                        <label
-                            for="scope-role-query"
-                            class="form-label"
-                            th:text="#{ui.accessRoles.search}"
-                        ></label>
-                        <input
-                            id="scope-role-query"
-                            type="search"
-                            class="form-control"
-                            maxlength="160"
-                        />
-                        <p
-                            id="scope-role-count"
-                            role="status"
-                            class="muted"
-                        ></p>
-                        <fieldset
-                            id="scope-role-options"
-                            class="border-0 p-0 m-0"
-                        >
-                            <legend
-                                class="form-label h6"
-                                th:text="#{ui.ops.role}"
-                            ></legend>
-                        </fieldset>
-                        <label class="d-flex gap-2 mt-3">
-                            <input
-                                id="scope-member-active"
-                                type="checkbox"
-                                class="form-check-input"
-                            />
-                            <span th:text="#{ui.foundation.active}"></span>
-                        </label>
-                        <p
-                            id="scope-member-feedback"
-                            class="feedback"
-                            role="alert"
-                            hidden
-                        ></p>
-                        <div class="dialog-actions">
-                            <button
-                                type="button"
-                                class="button button-outline"
-                                data-dialog-close
-                                th:text="#{ui.catalog.cancel}"
-                            ></button>
-                            <button
-                                type="submit"
-                                class="button"
-                                th:text="#{ui.catalog.save}"
-                            ></button>
                         </div>
                     </fieldset>
                 </form>
             </dialog>
+            <dialog th:replace="~{fragments/access-advanced :: scopeDialog}"></dialog>
+            <dialog th:replace="~{fragments/access-advanced :: memberDialog}"></dialog>
+            <dialog th:replace="~{fragments/access-advanced :: historyDialog}"></dialog>
+            <div th:replace="~{fragments/access-advanced :: scopeLabels}"></div>
+            <div th:replace="~{fragments/access-advanced :: historyLabels}"></div>
             <div
-                id="scope-labels"
+                id="grants-labels"
                 hidden
-                th:if="${adminUser}"
-                th:attr="data-title=#{ui.scope.members},data-edit=#{ui.scope.edit},data-assign=#{ui.scope.assign},data-empty=#{ui.foundation.empty},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off},data-loading=#{ui.ops.loading},data-conflict=#{ui.accounts.conflict},data-required=#{ui.validation.selection}"
+                th:attr="data-open-menu=#{ui.grants.openMenu},data-edit=#{ui.foundation.edit},data-assign=#{ui.grants.assign},data-delete=#{ui.foundation.deleteRole},data-confirm=#{ui.foundation.confirmRole},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off},data-empty=#{ui.foundation.empty},data-public=#{ui.grants.public},data-self=#{ui.grants.self},data-admin=#{ui.grants.admin},data-menu=#{ui.accessResources.menu},data-api=#{ui.accessResources.api},data-selected=#{ui.grants.selected},data-added=#{ui.accessTree.added},data-removed=#{ui.accessTree.removed},data-loading=#{ui.ops.loading},data-success=#{ui.accounts.success},data-conflict=#{ui.accounts.conflict},data-stale=#{ui.grants.stale},data-readonly=#{ui.grants.readonly}"
             ></div>
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
-        <script th:src="@{/assets/js/access-tree.js}"></script>
+        <script th:src="@{/assets/js/resource-grants.js}"></script>
+        <script th:src="@{/assets/js/roles.js}"></script>
         <script th:src="@{/assets/js/role-picker.js}"></script>
-        <script th:src="@{/assets/js/operations.js}"></script>
-        <script
-            th:if="${accessAllowed}"
-            th:src="@{/assets/js/access-management.js}"
-        ></script>
         <script
             th:if="${adminUser}"
             th:src="@{/assets/js/access-history.js}"

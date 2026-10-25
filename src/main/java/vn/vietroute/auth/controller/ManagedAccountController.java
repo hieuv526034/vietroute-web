@@ -7,17 +7,20 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.dto.request.ManagedAccountCreateRequest;
 import vn.vietroute.auth.dto.request.ManagedAccountSearchRequest;
 import vn.vietroute.auth.dto.request.ManagedAccountStateRequest;
+import vn.vietroute.auth.dto.request.ManagedAccountUpdateRequest;
 import vn.vietroute.auth.dto.response.ManagedAccountAccessResponse;
 import vn.vietroute.auth.dto.response.ManagedAccountResponse;
 import vn.vietroute.auth.entity.PermissionAction;
@@ -121,5 +124,38 @@ public class ManagedAccountController extends BaseController {
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> accounts.effective(id, metadata.inventory()));
+    }
+
+    @PutMapping(Routes.BY_ID)
+    @AccessFunction(group = Groups.ACCOUNTS, resource = Groups.ACCOUNT, actions = { PermissionAction.UPDATE })
+    @Operation(
+        summary = "Sửa thông tin tài khoản",
+        description = "ADMIN; tên hiển thị và version, không thay email/password; bảo vệ system/bootstrap/bản thân/ADMIN"
+    )
+    public ApiResult<ManagedAccountResponse> update(
+        @Parameter(description = "ID tài khoản") @PathVariable long id,
+        @Valid @RequestBody ManagedAccountUpdateRequest body,
+        @AuthenticationPrincipal UserPrincipal actor,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () -> accounts.update(id, body, actor));
+    }
+
+    @DeleteMapping(Routes.BY_ID)
+    @AccessFunction(group = Groups.ACCOUNTS, resource = Groups.ACCOUNT, actions = { PermissionAction.DELETE })
+    @Operation(
+        summary = "Xóa mềm tài khoản",
+        description = "ADMIN; thu hồi phiên/challenge/role/membership nguyên tử, giữ ID và lịch sử; không xóa system/bootstrap/bản thân/ADMIN"
+    )
+    public ApiResult<Void> delete(
+        @Parameter(description = "ID tài khoản") @PathVariable long id,
+        @Parameter(description = "Version hiện tại", required = true) @RequestParam long version,
+        @AuthenticationPrincipal UserPrincipal actor,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () -> {
+            accounts.delete(id, version, actor);
+            return null;
+        });
     }
 }

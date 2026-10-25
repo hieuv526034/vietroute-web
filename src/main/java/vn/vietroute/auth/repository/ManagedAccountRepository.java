@@ -34,7 +34,7 @@ public class ManagedAccountRepository extends BaseRepository {
     /** COUNT và trang dữ liệu cùng bộ lọc bind; không dùng N+1 để lấy role. */
     public PageResponse<ManagedAccountResponse> page(ManagedAccountSearchRequest page) {
         return read(connection -> {
-            String where = " FROM auth_users u WHERE u.id<>? AND lower(u.username) LIKE ?";
+            String where = " FROM auth_users u WHERE NOT u.deleted AND u.id<>? AND lower(u.username) LIKE ?";
             if (page.getRole() != null && !page.getRole().isBlank()) where +=
                 " AND EXISTS(SELECT 1 FROM auth_user_roles ur WHERE ur.user_id=u.id AND ur.role_code=?)";
             if (page.getActive() != null) where += " AND u.active=?";
@@ -151,10 +151,51 @@ public class ManagedAccountRepository extends BaseRepository {
     }
 
     /** Trạng thái và tokenVersion đổi nguyên tử; mở khóa không tự kích hoạt email chưa xác minh. */
+    public void update(Connection connection, long id, String displayName, long version, long actor)
+        throws SQLException {
+        try (
+            var query = connection.prepareStatement(
+                "UPDATE auth_users SET display_name=?,version=version+1,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND version=? AND NOT deleted"
+            )
+        ) {
+            query.setString(1, displayName);
+            query.setLong(2, actor);
+            query.setLong(3, id);
+            query.setLong(4, version);
+            if (query.executeUpdate() != 1) throw new BusinessException(ErrorCode.STALE_VERSION);
+        }
+    }
+
+    /** Giữ ID/FK cho lịch sử, bỏ dữ liệu cấp quyền hiện hành và thu hồi mọi phiên trong cùng transaction. */
+    public void delete(Connection connection, long id, long version, long actor) throws SQLException {
+        try (
+            var query = connection.prepareStatement(
+                "UPDATE auth_users SET deleted=true,active=false,token_version=token_version+1,version=version+1,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND version=? AND NOT deleted"
+            )
+        ) {
+            query.setLong(1, actor);
+            query.setLong(2, id);
+            query.setLong(3, version);
+            if (query.executeUpdate() != 1) throw new BusinessException(ErrorCode.STALE_VERSION);
+        }
+        // Xóa mapping con trước để giữ composite FK của scope; không xóa hồ sơ/lịch sử nghiệp vụ.
+        for (String sql : new String[] {
+            "DELETE FROM auth_scope_roles WHERE user_id=?",
+            "DELETE FROM auth_scope_memberships WHERE user_id=?",
+            "DELETE FROM auth_user_roles WHERE user_id=?",
+        }) {
+            try (var query = connection.prepareStatement(sql)) {
+                query.setLong(1, id);
+                query.executeUpdate();
+            }
+        }
+    }
+
+    /** Trạng thái và tokenVersion đổi nguyên tử; mở khóa không tự kích hoạt email chưa xác minh. */
     public void state(Connection connection, long id, boolean active, long version, long actor) throws SQLException {
         try (
             var query = connection.prepareStatement(
-                "UPDATE auth_users SET active=?,token_version=token_version+1,version=version+1,failed_login_attempts=0,locked_until=NULL,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND version=?"
+                "UPDATE auth_users SET active=?,token_version=token_version+1,version=version+1,failed_login_attempts=0,locked_until=NULL,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND version=? AND NOT deleted"
             )
         ) {
             query.setBoolean(1, active);

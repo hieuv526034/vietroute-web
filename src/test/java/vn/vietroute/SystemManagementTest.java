@@ -123,8 +123,14 @@ class SystemManagementTest {
                         .getResponse();
                     assertEquals(200, response.getStatus());
                     String html = response.getContentAsString();
-                    assertTrue(html.contains("data-operations="));
-                    assertTrue(html.contains("ops-controls"));
+                    assertTrue(
+                        html.contains(
+                            entry.getKey().equals(Routes.ACCESS_PAGE) ? "data-role-workspace" : "data-operations="
+                        )
+                    );
+                    assertTrue(
+                        html.contains(entry.getKey().equals(Routes.ACCESS_PAGE) ? "roles-controls" : "ops-controls")
+                    );
                     assertFalse(html.contains("th:text="));
                     assertFalse(html.contains("??ui.ops"));
                 }

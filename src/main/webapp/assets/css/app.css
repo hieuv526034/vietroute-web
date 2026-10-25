@@ -2265,6 +2265,131 @@ fieldset:disabled .button[type='submit']::before,
     overflow: auto;
     padding-right: 0.25rem;
 }
+
+/* Cây menu/API dùng checkbox và details native để thao tác được bằng bàn phím trên màn hẹp. */
+.resource-grant-tree {
+    max-height: 52dvh;
+    overflow: auto;
+    margin-block: 1rem;
+    padding: 2px;
+}
+
+.resource-grant-leaf {
+    display: flex;
+    gap: 0.8rem;
+    align-items: flex-start;
+    padding: 0.85rem;
+    border-top: 1px solid var(--line);
+    margin: 0;
+}
+
+.resource-grant-leaf > span {
+    min-width: 0;
+    flex: 1;
+}
+
+.resource-grant-leaf code,
+.resource-grant-leaf strong,
+.resource-grant-leaf small,
+.resource-inventory-table code {
+    display: block;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.resource-grant-leaf code {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+.resource-grant-leaf .form-check-input {
+    flex-shrink: 0;
+    margin-top: 0.2rem;
+}
+
+#grants-dialog {
+    width: min(1100px, calc(100vw - 24px));
+}
+
+#grants-dialog .dialog-actions {
+    background: white;
+    padding-top: 1rem;
+    flex-shrink: 0;
+}
+
+#grants-dialog[open] {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - 32px);
+    overflow: hidden;
+}
+
+#grants-form,
+.resource-grant-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#grants-form {
+    flex: 1;
+    overflow: hidden;
+}
+
+#grants-controls {
+    display: contents;
+}
+
+.resource-grant-content {
+    flex: 1;
+    overflow: hidden;
+}
+
+.resource-grant-content > :not(.resource-grant-tree) {
+    flex-shrink: 0;
+}
+
+.resource-grant-content > .form-label {
+    margin-top: 0.5rem;
+}
+
+.resource-grant-content > p {
+    margin-block: 0.5rem;
+}
+
+.resource-grant-content > .access-tree-preview {
+    padding: 0.5rem 0.75rem;
+}
+
+#grants-dialog .resource-grant-tree {
+    flex: 1 1 auto;
+    min-height: 100px;
+    max-height: none;
+}
+
+.resource-grant-leaf strong {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+@media (max-width: 575px) {
+    #grants-dialog {
+        padding: 18px;
+    }
+
+    #grants-dialog > p {
+        font-size: 0.85rem;
+    }
+
+    .resource-grant-leaf > .permission-chip {
+        display: none;
+    }
+
+    .resource-grant-leaf {
+        gap: 0.6rem;
+        padding: 0.75rem;
+    }
+}
 .access-tree-node {
     margin: 0.5rem 0;
     border: 1px solid var(--line, #dce4ee);
