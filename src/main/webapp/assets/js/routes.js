@@ -30,7 +30,9 @@
         item.value = String(value);
         return item;
     };
-    const placeLabel = (item) => `${item.code ? `${item.code} · ` : ''}${english ? item.nameEn : item.nameVi}`;
+    // Lookup công khai đã dịch trường name; điểm snapshot vẫn giữ cặp tên vi/en.
+    const placeLabel = (item) =>
+        `${item.code ? `${item.code} · ` : ''}${item.name ?? (english ? item.nameEn : item.nameVi) ?? ''}`;
     const empty = (message) => {
         const row = text('tr', ''),
             cell = text('td', message);
