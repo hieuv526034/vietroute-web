@@ -36,39 +36,6 @@
                     >
                         <div class="panel-heading catalog-heading">
                             <h2 th:text="${#messages.msg(catalogTitle)}"></h2>
-                            <div class="toolbar-actions catalog-toolbar">
-                                <select
-                                    class="form-select"
-                                    id="catalog-filter"
-                                    hidden
-                                    disabled
-                                    th:attr="aria-label=#{ui.catalogType}"
-                                >
-                                    <option
-                                        value="VEHICLE_TYPE"
-                                        th:selected="${catalogType == 'VEHICLE_TYPE'}"
-                                        th:text="#{ui.vehicleType}"
-                                    ></option>
-                                    <option
-                                        value="BOOKING_SOURCE"
-                                        th:selected="${catalogType == 'BOOKING_SOURCE'}"
-                                        th:text="#{ui.bookingSource}"
-                                    ></option>
-                                </select>
-                                <button
-                                    id="catalog-create"
-                                    class="button button-small"
-                                    type="button"
-                                    disabled
-                                    th:text="#{ui.createCatalog}"
-                                ></button>
-                                <button
-                                    id="catalog-refresh"
-                                    class="button button-outline button-small"
-                                    type="button"
-                                    th:text="#{ui.ops.refresh}"
-                                ></button>
-                            </div>
                         </div>
                         <form
                             id="catalog-search"
@@ -102,11 +69,44 @@
                                     th:text="#{ui.location.inactive}"
                                 ></option>
                             </select>
-                            <button
-                                type="submit"
-                                class="button button-outline"
-                                th:text="#{ui.search}"
-                            ></button>
+                            <div class="toolbar-actions">
+                                <button
+                                    type="submit"
+                                    class="button button-outline"
+                                    th:text="#{ui.search}"
+                                ></button>
+                                <select
+                                    class="form-select"
+                                    id="catalog-filter"
+                                    hidden
+                                    disabled
+                                    th:attr="aria-label=#{ui.catalogType}"
+                                >
+                                    <option
+                                        value="VEHICLE_TYPE"
+                                        th:selected="${catalogType == 'VEHICLE_TYPE'}"
+                                        th:text="#{ui.vehicleType}"
+                                    ></option>
+                                    <option
+                                        value="BOOKING_SOURCE"
+                                        th:selected="${catalogType == 'BOOKING_SOURCE'}"
+                                        th:text="#{ui.bookingSource}"
+                                    ></option>
+                                </select>
+                                <button
+                                    id="catalog-create"
+                                    class="button button-small"
+                                    type="button"
+                                    disabled
+                                    th:text="#{ui.createCatalog}"
+                                ></button>
+                                <button
+                                    id="catalog-refresh"
+                                    class="button button-outline button-small"
+                                    type="button"
+                                    th:text="#{ui.ops.refresh}"
+                                ></button>
+                            </div>
                         </form>
 
                         <div

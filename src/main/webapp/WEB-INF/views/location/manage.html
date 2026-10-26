@@ -66,24 +66,10 @@
                     >
                         <div class="panel-heading catalog-heading">
                             <h2 th:text="#{ui.location.locations}"></h2>
-                            <div class="toolbar-actions catalog-toolbar">
-                                <button
-                                    type="button"
-                                    class="button button-outline"
-                                    data-refresh="locations"
-                                    th:text="#{ui.ops.refresh}"
-                                ></button>
-                                <button
-                                    type="button"
-                                    class="button"
-                                    data-create="locations"
-                                    th:text="#{ui.location.create}"
-                                ></button>
-                            </div>
                         </div>
                         <form
                             id="locations-search"
-                            class="toolbar-actions mb-3"
+                            class="table-filter mb-3"
                             novalidate
                         >
                             <div class="flex-grow-1">
@@ -125,11 +111,25 @@
                                     ></option>
                                 </select>
                             </div>
-                            <button
-                                type="submit"
-                                class="button button-outline"
-                                th:text="#{ui.location.searchButton}"
-                            ></button>
+                            <div class="toolbar-actions">
+                                <button
+                                    type="submit"
+                                    class="button button-outline"
+                                    th:text="#{ui.location.searchButton}"
+                                ></button>
+                                <button
+                                    type="button"
+                                    class="button button-outline"
+                                    data-refresh="locations"
+                                    th:text="#{ui.ops.refresh}"
+                                ></button>
+                                <button
+                                    type="button"
+                                    class="button"
+                                    data-create="locations"
+                                    th:text="#{ui.location.create}"
+                                ></button>
+                            </div>
                         </form>
                         <div
                             class="table-responsive"
@@ -162,24 +162,10 @@
                     >
                         <div class="panel-heading catalog-heading">
                             <h2 th:text="#{ui.location.provinces}"></h2>
-                            <div class="toolbar-actions catalog-toolbar">
-                                <button
-                                    type="button"
-                                    class="button button-outline"
-                                    data-refresh="provinces"
-                                    th:text="#{ui.ops.refresh}"
-                                ></button>
-                                <button
-                                    type="button"
-                                    class="button"
-                                    data-create="provinces"
-                                    th:text="#{ui.location.create}"
-                                ></button>
-                            </div>
                         </div>
                         <form
                             id="provinces-search"
-                            class="toolbar-actions mb-3"
+                            class="table-filter mb-3"
                             novalidate
                         >
                             <div class="flex-grow-1">
@@ -221,11 +207,25 @@
                                     ></option>
                                 </select>
                             </div>
-                            <button
-                                type="submit"
-                                class="button button-outline"
-                                th:text="#{ui.location.searchButton}"
-                            ></button>
+                            <div class="toolbar-actions">
+                                <button
+                                    type="submit"
+                                    class="button button-outline"
+                                    th:text="#{ui.location.searchButton}"
+                                ></button>
+                                <button
+                                    type="button"
+                                    class="button button-outline"
+                                    data-refresh="provinces"
+                                    th:text="#{ui.ops.refresh}"
+                                ></button>
+                                <button
+                                    type="button"
+                                    class="button"
+                                    data-create="provinces"
+                                    th:text="#{ui.location.create}"
+                                ></button>
+                            </div>
                         </form>
                         <div
                             class="table-responsive"

@@ -41,21 +41,6 @@
                 <section class="panel">
                     <div class="panel-heading">
                         <h2 th:text="${#messages.msg('ui.fleet.title.' + fleetKind)}"></h2>
-                        <div class="toolbar-actions">
-                            <button
-                                id="fleet-create"
-                                type="button"
-                                class="button"
-                                disabled
-                                th:text="#{ui.fleet.create}"
-                            ></button>
-                            <button
-                                id="fleet-refresh"
-                                type="button"
-                                class="button button-outline"
-                                th:text="#{ui.ops.refresh}"
-                            ></button>
-                        </div>
                     </div>
                     <form
                         id="fleet-search"
@@ -90,11 +75,26 @@
                                 th:text="#{ui.location.inactive}"
                             ></option>
                         </select>
-                        <button
-                            type="submit"
-                            class="button button-outline"
-                            th:text="#{ui.search}"
-                        ></button>
+                        <div class="toolbar-actions">
+                            <button
+                                type="submit"
+                                class="button button-outline"
+                                th:text="#{ui.search}"
+                            ></button>
+                            <button
+                                id="fleet-create"
+                                type="button"
+                                class="button"
+                                disabled
+                                th:text="#{ui.fleet.create}"
+                            ></button>
+                            <button
+                                id="fleet-refresh"
+                                type="button"
+                                class="button button-outline"
+                                th:text="#{ui.ops.refresh}"
+                            ></button>
+                        </div>
                     </form>
                     <div
                         class="table-responsive"

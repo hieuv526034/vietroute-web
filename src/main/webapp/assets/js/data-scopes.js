@@ -31,6 +31,7 @@
         return `${value ? (document.documentElement.lang === 'en' ? value.nameEn : value.nameVi) : code} · ${code}`;
     };
     const scopeModal = window.VietRouteUI.modal('scope-dialog', { busy: () => busy });
+    const membersModal = window.VietRouteUI.modal('scope-members-dialog', { busy: () => busy });
     const memberModal = window.VietRouteUI.modal('scope-member-dialog', {
         busy: () => busy,
         onClose: () => {
@@ -53,13 +54,16 @@
         if (busy) return;
         busy = true;
         section.setAttribute('aria-busy', 'true');
-        ['scopes-controls', 'scope-form-controls', 'scope-member-controls'].forEach((id) => (node(id).disabled = true));
+        const controls = ['scopes-controls', 'scope-form-controls', 'scope-members-controls', 'scope-member-controls'];
+        controls.forEach((id) => (node(id).disabled = true));
         node('scope-status').textContent = labels.loading;
         const feedback = node('scope-dialog').open
             ? 'scope-form-feedback'
             : node('scope-member-dialog').open
               ? 'scope-member-feedback'
-              : 'scopes-feedback';
+              : membersModal.isOpen
+                ? 'scope-members-feedback'
+                : 'scopes-feedback';
         app.feedback('', false, feedback);
         try {
             await action();
@@ -70,9 +74,7 @@
         } finally {
             busy = false;
             section.setAttribute('aria-busy', 'false');
-            ['scopes-controls', 'scope-form-controls', 'scope-member-controls'].forEach(
-                (id) => (node(id).disabled = false),
-            );
+            controls.forEach((id) => (node(id).disabled = false));
             node('scope-status').textContent = '';
         }
     };
@@ -110,13 +112,14 @@
                 tables.actionButton(
                     labels.title + ': ' + value.code,
                     'assign',
-                    () =>
-                        perform(async () => {
-                            scope = value;
-                            node('scope-members-section').hidden = false;
-                            node('scope-members-title').textContent = `${labels.title} · ${scope.code}`;
-                            await loadMembers({ page: 0, size: memberPager.query.size });
-                        }),
+                    (trigger) => {
+                        if (busy) return;
+                        scope = value;
+                        node('scope-members-body').replaceChildren();
+                        node('scope-members-title').textContent = `${labels.title} · ${scope.code}`;
+                        membersModal.open(trigger);
+                        return perform(() => loadMembers({ page: 0, size: memberPager.query.size }));
+                    },
                     false,
                 ),
             );
@@ -153,7 +156,7 @@
             const edit = tables.actionButton(
                 labels.assign + ': ' + value.username,
                 'assign',
-                () => perform(() => openMember(value)),
+                (trigger) => perform(() => openMember(value, trigger)),
                 false,
             );
             edit.disabled = !can('ASSIGN');
@@ -200,9 +203,11 @@
         if (member) select.value = String(member.userId);
         renderRoleChoices();
     };
-    const openMember = async (value) => {
+    const openMember = async (value, trigger = document.activeElement) => {
         if (!scope) return;
         member = value;
+        node('scope-member-dialog-title').textContent =
+            `${labels.assign} · ${scope.code}${value ? ' · @' + value.username : ''}`;
         node('scope-member-form').reset();
         forms.clear(node('scope-member-form'));
         node('scope-member-active').checked = value ? value.active : true;
@@ -215,7 +220,7 @@
             node('scope-user').replaceChildren();
             renderRoleChoices();
         }
-        memberModal.open();
+        memberModal.open(trigger);
     };
     node('scope-create').addEventListener('click', () => editScope());
     node('scope-member-create').addEventListener('click', () => {

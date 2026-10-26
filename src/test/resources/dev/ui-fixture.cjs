@@ -16,6 +16,14 @@ const pages = {
     '/monitoring': 'monitoring',
     '/docs': 'docs',
     '/operations/access': 'access',
+    '/operations/access/resources': 'access-resources',
+    '/catalogs/vehicle-types': 'catalog',
+    '/operations/carriers': 'carriers',
+    '/operations/vehicles': 'vehicles',
+    '/operations/drivers': 'drivers',
+    '/operations/routes': 'routes',
+    '/operations/trips': 'trips',
+    '/operations/bookings': 'bookings',
     '/operations/accounts': 'accounts',
     '/operations/locations': 'locations',
     '/operations/jobs': 'jobs',
@@ -204,6 +212,10 @@ const page = (values, query) => {
         avatarUrl: null,
         avatarMediaId: null,
     };
+    for (const user of users) {
+        user.createdAt = profile.createdAt;
+        user.updatedAt = profile.updatedAt;
+    }
     const resources = [
         ...new Map(
             viTree.flatMap((feature) =>
@@ -211,7 +223,7 @@ const page = (values, query) => {
                     action.endpoints.map((endpoint) => [
                         endpoint.target,
                         {
-                            kind: endpoint.target.startsWith('GET /api/') ? 'ENDPOINT' : 'MENU',
+                            kind: endpoint.target.includes(' /api/') ? 'ENDPOINT' : 'MENU',
                             target: endpoint.target,
                             group: feature.code,
                             function: feature.code,
@@ -372,6 +384,13 @@ const page = (values, query) => {
             }
             if (route === '/api/v1/admin/access/tree')
                 return respond(url.searchParams.get('lang') === 'en' ? enTree : viTree);
+            // Hợp đồng đọc ACCESS24 cho preview Role; không gửi grant tới DB hoặc provider.
+            if (route === '/api/v1/admin/access/resource-catalog') return respond(resources);
+            if (/^\/api\/v1\/admin\/access\/roles\/[A-Z0-9_]+\/resources$/.test(route) && req.method === 'GET') {
+                const role = registry.find((item) => item.code === route.split('/')[6]);
+                if (!role) return respond(null, 404);
+                return respond({ version: role.version, targets: [] });
+            }
             if (route === '/api/v1/admin/access/history')
                 return respond(
                     page(

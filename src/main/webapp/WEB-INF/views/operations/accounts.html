@@ -23,20 +23,6 @@
                         th:replace="~{fragments/help :: guide('accounts-guide', #{ui.accounts.title}, ${ {'ui.help.accounts.use', 'ui.accounts.workflow', 'ui.help.accounts.activation', 'ui.help.accounts.revoke'} })}"
                     ></div>
                 </div>
-                <div class="toolbar-actions">
-                    <button
-                        id="accounts-refresh"
-                        type="button"
-                        class="button button-outline"
-                        th:text="#{ui.accounts.refresh}"
-                    ></button>
-                    <button
-                        id="accounts-create"
-                        type="button"
-                        class="button"
-                        th:text="#{ui.accounts.create}"
-                    ></button>
-                </div>
             </div>
             <div class="toolbar-actions mb-3">
                 <a
@@ -128,6 +114,18 @@
                                 type="submit"
                                 class="button button-outline"
                                 th:text="#{ui.accounts.search}"
+                            ></button>
+                            <button
+                                id="accounts-refresh"
+                                type="button"
+                                class="button button-outline"
+                                th:text="#{ui.accounts.refresh}"
+                            ></button>
+                            <button
+                                id="accounts-create"
+                                type="button"
+                                class="button"
+                                th:text="#{ui.accounts.create}"
                             ></button>
                         </div>
                     </form>
