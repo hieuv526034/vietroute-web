@@ -5,10 +5,11 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 // Chạy navigation.js thật với DOM và viewport giả; không đăng nhập, gọi API hoặc thay quyền.
-function fixture(width = 390) {
+function fixture(width = 390, requiredWidth = 600, availableWidth = 700) {
     const nodes = new Map();
     const handlers = {};
-    const state = { dialogOpen: false };
+    const state = { dialogOpen: false, requiredWidth };
+    let resizeObserver;
     const document = {
         activeElement: null,
         getElementById: (id) => nodes.get(id),
@@ -25,7 +26,7 @@ function fixture(width = 390) {
             attrs: {},
             dataset: {},
             handlers: {},
-            classList: { add() {} },
+            classList: { add() {}, remove() {}, toggle() {} },
             addEventListener(type, action) {
                 this.handlers[type] = action;
             },
@@ -54,6 +55,9 @@ function fixture(width = 390) {
     const toggle = node('navigation-toggle', header);
     toggle.dataset = { openLabel: 'Open navigation', closeLabel: 'Close navigation' };
     const home = node('home', panel);
+    panel.children = [home];
+    panel.clientWidth = availableWidth;
+    home.getBoundingClientRect = () => ({ width: state.requiredWidth });
     home.link = true;
     const primary = node('primary', panel);
     const primarySummary = node('primary-summary', primary);
@@ -76,7 +80,15 @@ function fixture(width = 390) {
         fs.readFileSync(path.resolve(__dirname, '../../../main/webapp/assets/js/navigation.js'), 'utf8'),
         {
             document,
+            ResizeObserver: class {
+                constructor(callback) { resizeObserver = callback; }
+                observe() {}
+            },
+            MutationObserver: class {
+                observe() {}
+            },
             window: {
+                getComputedStyle: () => ({ columnGap: '0px' }),
                 matchMedia(query) {
                     const boundary = /^\(max-width:\s*(\d+)px\)$/.exec(query);
                     assert.ok(boundary, 'Fixture chỉ hỗ trợ truy vấn max-width được khai báo rõ');
@@ -99,6 +111,11 @@ function fixture(width = 390) {
         outside,
         document,
         state,
+        layout(required, available) {
+            state.requiredWidth = required;
+            panel.clientWidth = available;
+            resizeObserver();
+        },
         clickToggle: () => toggle.handlers.click(),
         open(menu) {
             menu.open = true;
@@ -145,6 +162,25 @@ test('compact navigation exposes one panel with ARIA and Escape closes the subme
         assert.equal(ui.panel.hidden, true);
         assert.equal(ui.document.activeElement, ui.toggle);
     }
+});
+
+test('long desktop navigation collapses before overlapping the brand and restores links when they fit', () => {
+    const ui = fixture(1600, 950, 700);
+    assert.equal(ui.toggle.hidden, false);
+    assert.equal(ui.panel.hidden, true);
+    ui.clickToggle();
+    ui.primaryLink.focus();
+    ui.layout(950, 700);
+    assert.equal(ui.panel.hidden, false);
+    assert.equal(ui.document.activeElement, ui.primaryLink);
+    ui.layout(600, 700);
+    assert.equal(ui.toggle.hidden, true);
+    assert.equal(ui.panel.hidden, false);
+    ui.layout(950, 700);
+    assert.equal(ui.panel.hidden, true);
+    assert.equal(ui.document.activeElement, ui.toggle);
+    ui.layout(600, 700);
+    assert.equal(ui.document.activeElement, ui.home);
 });
 
 test('avatar and navigation remain separate and opening one closes the other', () => {

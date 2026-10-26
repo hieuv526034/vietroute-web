@@ -105,24 +105,26 @@
                     id="navigation-links"
                     class="nav-links"
                 >
-                    <a
-                        th:href="@{/(lang=${currentLocale})}"
-                        th:text="#{ui.home}"
-                    ></a>
-                    <a
-                        th:href="@{/carriers(lang=${currentLocale})}"
-                        th:text="#{ui.publicCarrier.title}"
-                    ></a>
-                    <a
-                        th:href="@{/journeys(lang=${currentLocale})}"
-                        th:text="#{ui.journey.search}"
-                    ></a>
+                    <a th:href="@{/(lang=${currentLocale})}">
+                        <svg th:replace="~{fragments/layout :: icon('home')}"></svg>
+                        <span th:text="#{ui.home}"></span>
+                    </a>
+                    <a th:href="@{/carriers(lang=${currentLocale})}">
+                        <svg th:replace="~{fragments/layout :: icon('carrier')}"></svg>
+                        <span th:text="#{ui.publicCarrier.title}"></span>
+                    </a>
+                    <a th:href="@{/journeys(lang=${currentLocale})}">
+                        <svg th:replace="~{fragments/layout :: icon('search')}"></svg>
+                        <span th:text="#{ui.journey.search}"></span>
+                    </a>
                     <a
                         th:if="${currentUser != null}"
                         th:href="@{/dashboard(lang=${currentLocale})}"
                         th:attr="aria-current=${currentPath == basePath + '/dashboard'} ? 'page' : null"
-                        th:text="#{ui.dashboard.title}"
-                    ></a>
+                    >
+                        <svg th:replace="~{fragments/layout :: icon('system')}"></svg>
+                        <span th:text="#{ui.dashboard.title}"></span>
+                    </a>
                     <details
                         class="operations-menu"
                         th:each="item : ${functionNavigation}"
@@ -137,8 +139,12 @@
                                 th:if="${item.path != null}"
                                 th:href="${basePath + item.path + '?lang=' + currentLocale}"
                                 th:attr="aria-current=${currentPath == (basePath + item.path)} ? 'page' : null"
-                                th:text="${item.children.isEmpty()} ? ${item.name} : #{ui.workspace.overview}"
-                            ></a>
+                            >
+                                <svg th:replace="~{fragments/layout :: icon(${item.icon})}"></svg>
+                                <span
+                                    th:text="${item.children.isEmpty()} ? ${item.name} : #{ui.workspace.overview}"
+                                ></span>
+                            </a>
                             <th:block th:insert="~{fragments/layout :: functionMenuItems(${item.children})}"></th:block>
                         </div>
                     </details>
@@ -151,14 +157,14 @@
                             <span th:text="#{ui.docs}"></span>
                         </summary>
                         <div class="operations-menu-items">
-                            <a
-                                th:href="@{/docs(lang=${currentLocale})}"
-                                th:text="#{ui.nav.swagger}"
-                            ></a>
-                            <a
-                                th:href="@{/v3/api-docs}"
-                                th:text="#{ui.nav.openapi}"
-                            ></a>
+                            <a th:href="@{/docs(lang=${currentLocale})}">
+                                <svg th:replace="~{fragments/layout :: icon('code')}"></svg>
+                                <span th:text="#{ui.nav.swagger}"></span>
+                            </a>
+                            <a th:href="@{/v3/api-docs}">
+                                <svg th:replace="~{fragments/layout :: icon('code')}"></svg>
+                                <span th:text="#{ui.nav.openapi}"></span>
+                            </a>
                         </div>
                     </details>
                     <span class="language-switch">

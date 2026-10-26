@@ -106,42 +106,6 @@
                     </table>
                 </div>
                 <nav th:replace="~{fragments/pagination :: pager('scopes', 20)}"></nav>
-                <section
-                    id="scope-members-section"
-                    hidden
-                    class="mt-4"
-                >
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                        <h3
-                            id="scope-members-title"
-                            class="h5"
-                        ></h3>
-                        <button
-                            id="scope-member-create"
-                            type="button"
-                            class="button button-outline"
-                            th:text="#{ui.scope.assign}"
-                        ></button>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table class="table align-middle">
-                            <thead>
-                                <tr>
-                                    <th th:text="#{ui.ops.username}"></th>
-                                    <th th:text="#{ui.ops.role}"></th>
-                                    <th th:text="#{ui.foundation.active}"></th>
-                                    <th
-                                        class="table-actions"
-                                        th:text="#{ui.ops.actions}"
-                                    ></th>
-                                </tr>
-                            </thead>
-                            <tbody id="scope-members-body"></tbody>
-                        </table>
-                    </div>
-                    <nav th:replace="~{fragments/pagination :: pager('scope-members', 20)}"></nav>
-                </section>
             </fieldset>
         </section>
         <section
@@ -255,6 +219,74 @@
                 <nav th:replace="~{fragments/pagination :: pager('history', 20)}"></nav>
             </fieldset>
         </section>
+        <dialog
+            id="scope-members-dialog"
+            class="workspace-dialog workspace-dialog-wide"
+            th:if="${adminUser}"
+            aria-labelledby="scope-members-title"
+            th:fragment="membersDialog"
+        >
+            <div class="dialog-heading">
+                <h2
+                    id="scope-members-title"
+                    class="h4"
+                    th:text="#{ui.scope.members}"
+                ></h2>
+                <button
+                    type="button"
+                    class="dialog-close"
+                    data-dialog-close
+                    th:attr="aria-label=#{ui.ops.close}"
+                >
+                    ×
+                </button>
+            </div>
+            <p
+                id="scope-members-feedback"
+                class="feedback"
+                role="alert"
+                hidden
+            ></p>
+            <fieldset
+                id="scope-members-controls"
+                class="dialog-controls border-0 p-0 m-0"
+            >
+                <div class="toolbar-actions mb-3">
+                    <button
+                        id="scope-member-create"
+                        type="button"
+                        class="button"
+                        th:text="#{ui.scope.assign}"
+                    ></button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th th:text="#{ui.ops.username}"></th>
+                                <th th:text="#{ui.ops.role}"></th>
+                                <th th:text="#{ui.foundation.active}"></th>
+                                <th
+                                    class="table-actions"
+                                    th:text="#{ui.ops.actions}"
+                                ></th>
+                            </tr>
+                        </thead>
+                        <tbody id="scope-members-body"></tbody>
+                    </table>
+                </div>
+                <nav th:replace="~{fragments/pagination :: pager('scope-members', 20)}"></nav>
+
+                <div class="dialog-actions">
+                    <button
+                        type="button"
+                        class="button button-outline"
+                        data-dialog-close
+                        th:text="#{ui.ops.close}"
+                    ></button>
+                </div>
+            </fieldset>
+        </dialog>
         <dialog
             id="scope-dialog"
             class="workspace-dialog"
@@ -389,7 +421,7 @@
                             class="form-label"
                             th:text="#{ui.ops.usernamePrefix}"
                         ></label>
-                        <div class="d-flex gap-2">
+                        <div class="picker-search">
                             <input
                                 id="scope-user-query"
                                 class="form-control"

@@ -30,7 +30,7 @@ Role ADMIN chỉ xem; gán role bản thân bị khóa. Modal có tên/đối t�
 
 UI25 (25/10/2026): hướng dẫn dài đặt trong cửa sổ riêng qua `fragments/help :: guide(id, title, keys)` và `help.js`, mở bằng nút Hướng dẫn sử dụng. Dùng câu hướng dẫn thao tác cho người dùng, không giải thích framework/source trên màn nghiệp vụ. Không tự bật hướng dẫn khi tải trang; modal dùng helper workspace để Escape/Đóng trả focus, nội dung dài cuộn riêng và giữ nút đóng trong viewport. Mỗi guide có ID riêng, tiêu đề/nhãn và nội dung đủ vi/en. Nhật ký giữ tab hướng dẫn hiện có. Lỗi, trạng thái dữ liệu và cảnh báo ngắn ảnh hưởng quyết định (chưa giữ chỗ, tiền thực thu/hoàn, thiết lập tài khoản và thu hồi phiên) vẫn đặt cạnh thao tác.
 
-Toolbar, bộ lọc và footer modal co/wrap theo chiều rộng thực tế; nút dài xuống dòng theo nội dung, nút đóng ở heading không bị ép thành từng ký tự. Cột thao tác vẫn 96px nhưng `row-actions` tối đa hai icon mỗi hàng, không ép ba/bốn icon vào một hàng rồi chồng lên cột kế bên. Bảng rộng cuộn trong vùng riêng; không che lỗi bằng overflow hidden trên toàn trang. Kiểm cả 320/390px và cửa sổ 768px, vi/en, không chỉ screenshot desktop. Bằng chứng và giới hạn tại mục UI25 trong [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
+UI26 (26/10/2026): input/select/button dùng chiều cao chuẩn 34px, nút nhỏ 32px; textarea vẫn theo số dòng. Toolbar gom Tra cứu/Thêm mới/Làm mới trong cùng `toolbar-actions` bên phải bộ lọc; co/wrap theo chiều rộng thực tế, không tách mỗi nút bằng margin auto. Chỉ nút trực tiếp của form đơn có margin phía trên; picker và footer dùng khoảng cách của nhóm. Nút dài được wrap trên màn hẹp, nút đóng heading không bị ép từng ký tự. `row-actions` giữ tất cả icon cùng hàng, cột tự giãn theo hàng có nhiều nút nhất; thay quy ước 96px/hai icon của UI25 theo yêu cầu mới. Bảng rộng cuộn trong vùng riêng, không che lỗi bằng overflow toàn trang. Kiểm 320/390/768px và desktop, vi/en. Trạng thái/bằng chứng ở UI26 trong [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
 
 `fragments/pagination.html` nhận prefix riêng; `table.js` cung cấp `VietRouteTable`. Dùng cho catalog/users/jobs/journal/media:
 
@@ -53,12 +53,14 @@ Chỉ update pager sau khi tải thành công; lỗi giữ trang/size đã xác 
 
 | Thành phần | Quy tắc |
 |---|---|
-| Cột thao tác | `table-actions` ở th/td, 96px, căn giữa/sticky bên phải khi cuộn ngang; nhiều nút dùng `row-actions` |
-| Nút icon | `actionButton(label, icon, handler, danger)`: SVG nội bộ 16px trong nút 32px; edit/delete/view/assign; title/aria-label dịch và có đối tượng |
+| Cột thao tác | `table-actions` ở th/td, tối thiểu 64px, tự giãn theo nội dung; căn giữa/sticky bên phải khi cuộn ngang; `row-actions` không wrap |
+| Nút icon | `actionButton(label, icon, handler, danger)`: SVG nội bộ 14px trong nút 28px; edit/delete/view/assign; title/aria-label dịch và có đối tượng |
 | Bảng nhỏ/rộng | Cuộn trong `table-responsive` có tabindex/role/aria-label, không làm tràn toàn trang hoặc ép mã xuống từng ký tự |
 | Toolbar | `table-filter`/`toolbar-actions`, nút bên phải; ít trường lọc đặt cùng hàng nút như `catalog-toolbar`, chỉ xuống dòng khi thiếu chỗ |
 | Footer modal | `dialog-actions`, Hủy trước/Lưu sau, cùng hàng bên phải; mobile được wrap |
 | Menu Hệ thống | Các mục cách nhau 6px; vùng hover/focus/mục đang chọn không chạm nhau |
+
+Header dùng `navigation.js` đo tổng chiều rộng các menu khi font/tên/tập menu thay đổi và khi resize; thu gọn thành panel nếu không vừa chỗ trống giữa logo và tài khoản, kể cả desktop trên 1399px. Mốc 1399px vẫn là ngưỡng tối thiểu thu gọn. Logo/tài khoản không bị menu phủ; các link menu có SVG nội bộ và nhãn chữ, ngôn ngữ giữ VI/EN. Giữ ARIA, Escape, click ngoài và focus khi chuyển chế độ; menu vẫn do server lọc quyền.
 
 ## 3. Validation và xử lý request
 
@@ -97,7 +99,7 @@ Trang tài khoản dùng `account-layout` cách các card 24px: hồ sơ và kh�
 
 Hồ sơ có modal sửa tên/ảnh, đổi mật khẩu và gắn email riêng. Ảnh chọn JPEG/PNG gửi qua media dùng chung, không giữ URL/token ở storage. Lỗi giữ bản nháp/ảnh đã upload; 409 cần làm mới dữ liệu có chủ đích. Mọi ảnh là public, không dùng làm giấy tờ xác minh.
 
-request-state.js gắn interceptor Axios để hiển thị thanh tải trang, spinner nút và overlay bảng, đếm đúng nhiều request đồng thời và dọn trên cả success/error. Trạng thái disabled gốc được giữ; các workspace vẫn khóa controls/tabs/modal trong mutation. Single-flight theo method/path chỉ hợp nhất mutation đang chạy, không cache payload hay tự gửi lại sau lỗi; đây không phải idempotency server. Registry/search/refresh chặn bấm lặp; UI không chứng minh server rollback khi mất mạng. Input/select được thu gọn, cột thao tác giữ 96px/icon và toolbar bên phải, reduced-motion tắt animation. Kiểm bằng response chậm/lỗi có kiểm soát; không gửi dữ liệu UI fixture tới provider/Neon.
+request-state.js gắn interceptor Axios để hiển thị thanh tải trang, spinner nút và overlay bảng, đếm đúng nhiều request đồng thời và dọn trên cả success/error. Trạng thái disabled gốc được giữ; các workspace vẫn khóa controls/tabs/modal trong mutation. Single-flight theo method/path chỉ hợp nhất mutation đang chạy, không cache payload hay tự gửi lại sau lỗi; đây không phải idempotency server. Registry/search/refresh chặn bấm lặp; UI không chứng minh server rollback khi mất mạng. Input/select được thu gọn, cột thao tác tự giãn theo nhóm icon một hàng và toolbar bên phải, reduced-motion tắt animation. Kiểm bằng response chậm/lỗi có kiểm soát; không gửi dữ liệu UI fixture tới provider/Neon.
 
 Heartbeat dùng uiSilent để không nháy loading/mờ bảng khi đọc; CSRF/quota vẫn áp dụng. Popup trên khung hẹp neo theo header để nằm trong viewport. Bằng chứng fixture có dữ liệu giả, không phải ảnh production:
 
@@ -117,13 +119,13 @@ Component access-tree.js giữ một Set cho các bản hiển thị của quy�
 
 Tab Tài nguyên UI/API có select loại + từ khóa + nút Tra cứu/Làm mới trên cùng hàng khi đủ chỗ, co xuống hàng trên khung hẹp và giữ nút bên phải. Tìm mới về trang đầu, phân trang giữ query đã áp dụng. Form/filter dùng validation/loading chung, tìm nguyên văn; backend thực hiện count/filter/paging, không lọc riêng trang dữ liệu tại browser.
 
-Nút icon thao tác 32×32: trong lúc request, spinner tuyệt đối đặt giữa, SVG chỉ ẩn bằng visibility để giữ kích thước. Không chèn spinner cạnh icon làm tràn cột thao tác. API chi tiết về mới mở form; lỗi không mở dữ liệu giả hoặc tự retry. Bộ cây có mẫu chọn quyền hệ thống, xem [hợp đồng/phạm vi](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#bộ-quyền-hệ-thống-và-quyền-db--access04).
+Nút icon thao tác 28×28: trong lúc request, spinner tuyệt đối đặt giữa, SVG chỉ ẩn bằng visibility để giữ kích thước. Không chèn spinner cạnh icon làm tràn cột thao tác. API chi tiết về mới mở form; lỗi không mở dữ liệu giả hoặc tự retry. Bộ cây có mẫu chọn quyền hệ thống, xem [hợp đồng/phạm vi](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#bộ-quyền-hệ-thống-và-quyền-db--access04).
 
 Ảnh từ HTML thật/API fixture cô lập, không phải dữ liệu production: [lọc tài nguyên](../images/access04-resources.png), [nút Sửa khi API chậm](../images/access04-loading.png).
 
 ## Khu tài khoản và ma trận gán — ACCESS05
 
-`/operations/accounts` tách quản trị danh tính khỏi registry/policy kỹ thuật. Toolbar bên phải, bộ lọc username/role/trạng thái cùng hàng khi đủ chỗ, count đúng bộ lọc và pager server. Bảng hai icon xem/gán trong cột 96px; trạng thái bật/tắt/chờ email/cần đổi mật khẩu phân biệt. Tạo và gán dùng một modal có hai chế độ; role card checkbox nhiều lựa chọn, nút chọn nhanh DRIVER/CUSTOMER, số quyền cấu hình và tóm tắt đã chọn. Dấu bắt buộc có từ khi mở; mật khẩu reset khi đóng/success, không nạp lại từ API hoặc storage. Xem quyền và xác nhận khóa/mở dùng modal riêng, giữ draft khi 403/409/timeout; không tự lấy version mới để ghi đè.
+`/operations/accounts` tách quản trị danh tính khỏi registry/policy kỹ thuật. Toolbar bên phải, bộ lọc username/role/trạng thái cùng hàng khi đủ chỗ, count đúng bộ lọc và pager server. Bảng có các icon xem/gán/sửa/xóa trong cột tự giãn; trạng thái bật/tắt/chờ email/cần đổi mật khẩu phân biệt. Tạo và gán dùng một modal có hai chế độ; role card checkbox nhiều lựa chọn, nút chọn nhanh DRIVER/CUSTOMER, số quyền cấu hình và tóm tắt đã chọn. Dấu bắt buộc có từ khi mở; mật khẩu reset khi đóng/success, không nạp lại từ API hoặc storage. Xem quyền và xác nhận khóa/mở dùng modal riêng, giữ draft khi 403/409/timeout; không tự lấy version mới để ghi đè.
 
 Màn phân quyền có nút Tạo vai trò trực tiếp và đường sang Tài khoản. Ma trận gán giữ một Set như ACCESS03, hàng menu/nhóm và cột hành động dịch vi/en, checkbox một phần, header sticky, chi tiết endpoint khi cần. Toàn bộ menu hiện có xuất hiện trước tìm kiếm; không tạo checkbox giả cho nghiệp vụ chưa có. Giữ VIEW độc lập, quyền dùng chung/WRITE cũ/ngoài registry và preview thay đổi. Vùng ma trận cuộn riêng trên mobile, footer nằm bên phải; tìm nhóm phải bao gồm con, không mất draft khi lọc.
 
@@ -135,7 +137,7 @@ Ma trận còn hiện từng mã quyền ngoài chức năng hoặc đã tắt �
 
 ## Lịch sử phân quyền — ACCESS09
 
-Tab Lịch sử phân quyền chỉ hiện với ADMIN. Mở tab mới tải API, giữ bộ lọc loại/tiền tố mã/actor khi phân trang hoặc lỗi; bảng dùng pager server và icon 32×32/cột 96px. Modal chỉ đọc actor/trace/time và hai khung trước–sau; delta có giải thích mã bị bỏ/thêm, không hiển thị như snapshot toàn bộ quyền. Tab/phím/focus theo workspace chung. Loading khóa controls, 401/403 xóa dòng cũ khỏi DOM; lỗi không tự replay thao tác ghi. Mặc định 7 ngày/mục tiêu 1000 sự kiện là cấu hình, không hứa audit bất biến.
+Tab Lịch sử phân quyền chỉ hiện với ADMIN. Mở tab mới tải API, giữ bộ lọc loại/tiền tố mã/actor khi phân trang hoặc lỗi; bảng dùng pager server và icon 28×28/cột tự giãn. Modal chỉ đọc actor/trace/time và hai khung trước–sau; delta có giải thích mã bị bỏ/thêm, không hiển thị như snapshot toàn bộ quyền. Tab/phím/focus theo workspace chung. Loading khóa controls, 401/403 xóa dòng cũ khỏi DOM; lỗi không tự replay thao tác ghi. Mặc định 7 ngày/mục tiêu 1000 sự kiện là cấu hình, không hứa audit bất biến.
 
 Kiểm UI bằng `src/test/resources/dev/RenderSystemUi.java` với hai context thật và ConfigurationEnvironment fixture riêng (DB loopback cổng 1, init/sync/worker/provider/journal tắt), xuất HTML vào target/ui-preview; Node `src/test/resources/dev/ui-fixture.cjs` chỉ nghe 127.0.0.1:18119, dữ liệu giả. Fixture không đọc .env/OS credentials hoặc gọi Neon/provider. Đây là kiểm layout/luồng browser, không thay bộ SQL/bảo mật CI. Renderer cũng xuất public webjar assets từ dependency đã có, không tải hay đóng gói tooling vào WAR.
 
@@ -149,7 +151,7 @@ Renderer hai context/locale phải không có key dịch thiếu; Node kiểm t�
 
 ## Quản trị phạm vi — SCOPE01
 
-Tab Phạm vi dữ liệu trong Phân quyền chỉ dành ADMIN. Danh sách tìm/trạng thái/phân trang server; chọn icon thành viên để xem đúng scope, thêm/sửa metadata bằng modal. Modal gán tìm prefix username (tối đa 20 kết quả, thu hẹp từ khóa nếu cần), chọn tài khoản đã có role toàn cục rồi tick các role riêng tại scope. Tên role theo locale kèm mã, tìm giữ draft, trường bắt buộc có dấu đỏ, cột icon 96px/footer bên phải. Không có checkbox giả cho endpoint business chưa triển khai.
+Tab Phạm vi dữ liệu trong Phân quyền chỉ dành ADMIN. Danh sách tìm/trạng thái/phân trang server; chọn icon thành viên mở modal danh sách đúng scope, không xổ thêm bảng dưới danh sách phạm vi. Từ modal này mở cửa sổ gán/sửa riêng, đóng trả focus về nút mở và chặn đóng cả hai khi gửi request. Thêm/sửa metadata dùng modal. Modal gán tìm prefix username (tối đa 20 kết quả, thu hẹp từ khóa nếu cần), chọn tài khoản đã có role toàn cục rồi tick các role riêng tại scope. Tên role theo locale kèm mã, tìm giữ draft, trường bắt buộc có dấu đỏ, cột icon tự giãn/footer bên phải. Không có checkbox giả cho endpoint business chưa triển khai.
 
 Tắt membership/role có version, lỗi giữ modal/draft, không tự nạp version mới hoặc replay. Loading khóa fieldset và chặn đóng modal. Đây là UI admin nền; chưa là màn nhân viên chọn nhà xe hay hành khách đặt/theo dõi chuyến. UI business sau này phải giao quyền scoped với capabilities/policy chung, không lấy quyền A để hiện nút ở B. Browser URL policy còn chặn phiên kiểm; renderer vi/en/validation/SQL không được coi là nghiệm thu trực quan đầy đủ của tab/modal scope.
 
@@ -209,7 +211,7 @@ Preview thật với account DRIVER trong DB local riêng đã đi đủ START �
 
 `/my-bookings` chỉ owner và `/operations/bookings` scoped staff dùng chung bảng/pager và modal. Tạo WEB từ hành trình, tạo PHONE qua picker có BOOKING_CREATE độc lập TRIP_READ; UI giải thích PENDING chưa giữ chỗ và chỉ một WEB active. UUID giữ trong bộ nhớ form cho lần gửi lặp, không lưu contact/token vào storage. Lỗi server/409 giữ draft/modal/key; không tự gửi lại. Chi tiết có tab thông tin/lịch sử; staff thêm thu/hoàn trực tiếp, chỉ ghi nhận thực tế, hủy không tự coi đã hoàn. Tiền thu/hoàn và trạng thái tách riêng. Nút state theo capabilities/canUpdate/version; hủy/từ chối thiếu lý do đặt focus đúng trường.
 
-Tab danh sách đón/trả trong `/driver/trips` dùng API assigned và phân trang server, chỉ CONFIRMED/COMPLETED với chặng/tên/điện thoại/số chỗ. Cập nhật tiến độ tải lại danh sách để phản ánh tự đóng/hoàn thành đơn. Bảng cuộn trong vùng riêng, cột icon 96px, form/modal giữ chuẩn workspace, vi/en và 390px (page 390/modal 352/scrollWidth 335). Bằng chứng app local với fixture giả: [lỗi WEB thứ hai giữ bản nháp](../images/booking01-draft.png), [lịch sử đơn tiếng Anh mobile](../images/booking01-mobile.png), [danh sách khách được giao](../images/booking01-passengers.png), [tìm chuyến còn 18 chỗ sau xác nhận PHONE 2 chỗ](../images/search01-results.png). Trạng thái triển khai/dữ liệu thật ghi ở tiến độ, không suy từ ảnh local.
+Tab danh sách đón/trả trong `/driver/trips` dùng API assigned và phân trang server, chỉ CONFIRMED/COMPLETED với chặng/tên/điện thoại/số chỗ. Cập nhật tiến độ tải lại danh sách để phản ánh tự đóng/hoàn thành đơn. Bảng cuộn trong vùng riêng, cột icon tự giãn, form/modal giữ chuẩn workspace, vi/en và 390px (page 390/modal 352/scrollWidth 335). Bằng chứng app local với fixture giả: [lỗi WEB thứ hai giữ bản nháp](../images/booking01-draft.png), [lịch sử đơn tiếng Anh mobile](../images/booking01-mobile.png), [danh sách khách được giao](../images/booking01-passengers.png), [tìm chuyến còn 18 chỗ sau xác nhận PHONE 2 chỗ](../images/search01-results.png). Trạng thái triển khai/dữ liệu thật ghi ở tiến độ, không suy từ ảnh local.
 
 ## Tra cứu nhà xe và lọc chuyến — DETAIL01/SEARCH02
 

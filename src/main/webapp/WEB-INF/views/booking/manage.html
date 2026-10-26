@@ -43,28 +43,6 @@
                 <section class="panel">
                     <div class="panel-heading">
                         <h2 th:text="${customerBookings} ? #{ui.booking.mine} : #{ui.booking.title}"></h2>
-                        <div class="toolbar-actions">
-                            <a
-                                th:if="${customerBookings}"
-                                class="button"
-                                th:href="@{/journeys(lang=${currentLocale})}"
-                                th:text="#{ui.booking.findTrip}"
-                            ></a>
-                            <button
-                                th:unless="${customerBookings}"
-                                id="booking-create"
-                                type="button"
-                                class="button"
-                                disabled
-                                th:text="#{ui.booking.phoneCreate}"
-                            ></button>
-                            <button
-                                id="booking-refresh"
-                                type="button"
-                                class="button button-outline"
-                                th:text="#{ui.ops.refresh}"
-                            ></button>
-                        </div>
                     </div>
                     <form
                         id="booking-search"
@@ -95,10 +73,33 @@
                                 th:text="#{'ui.booking.'+${state}}"
                             ></option>
                         </select>
-                        <button
-                            class="button button-outline"
-                            th:text="#{ui.search}"
-                        ></button>
+                        <div class="toolbar-actions">
+                            <button
+                                type="submit"
+                                class="button button-outline"
+                                th:text="#{ui.search}"
+                            ></button>
+                            <a
+                                th:if="${customerBookings}"
+                                class="button"
+                                th:href="@{/journeys(lang=${currentLocale})}"
+                                th:text="#{ui.booking.findTrip}"
+                            ></a>
+                            <button
+                                th:unless="${customerBookings}"
+                                id="booking-create"
+                                type="button"
+                                class="button"
+                                disabled
+                                th:text="#{ui.booking.phoneCreate}"
+                            ></button>
+                            <button
+                                id="booking-refresh"
+                                type="button"
+                                class="button button-outline"
+                                th:text="#{ui.ops.refresh}"
+                            ></button>
+                        </div>
                     </form>
                     <div
                         class="table-responsive"

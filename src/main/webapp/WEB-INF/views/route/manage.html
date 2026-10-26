@@ -41,21 +41,6 @@
                 <section class="panel">
                     <div class="panel-heading">
                         <h2 th:text="#{ui.route.title}"></h2>
-                        <div class="toolbar-actions">
-                            <button
-                                id="route-create"
-                                type="button"
-                                class="button"
-                                disabled
-                                th:text="#{ui.fleet.create}"
-                            ></button>
-                            <button
-                                id="route-refresh"
-                                type="button"
-                                class="button button-outline"
-                                th:text="#{ui.ops.refresh}"
-                            ></button>
-                        </div>
                     </div>
                     <form
                         id="route-search"
@@ -89,10 +74,26 @@
                                 th:text="#{ui.location.inactive}"
                             ></option>
                         </select>
-                        <button
-                            class="button button-outline"
-                            th:text="#{ui.search}"
-                        ></button>
+                        <div class="toolbar-actions">
+                            <button
+                                type="submit"
+                                class="button button-outline"
+                                th:text="#{ui.search}"
+                            ></button>
+                            <button
+                                id="route-create"
+                                type="button"
+                                class="button"
+                                disabled
+                                th:text="#{ui.fleet.create}"
+                            ></button>
+                            <button
+                                id="route-refresh"
+                                type="button"
+                                class="button button-outline"
+                                th:text="#{ui.ops.refresh}"
+                            ></button>
+                        </div>
                     </form>
                     <div
                         class="table-responsive"

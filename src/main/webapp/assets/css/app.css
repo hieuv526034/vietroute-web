@@ -109,6 +109,10 @@ button:focus-visible {
     text-decoration: none;
 }
 
+.nav-links > * {
+    flex-shrink: 0;
+}
+
 .nav-actions {
     display: flex;
     align-items: center;
@@ -158,6 +162,9 @@ button:focus-visible {
 }
 
 .nav-links > a:not(.button) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     padding: 9px 11px;
     border-radius: 8px;
     color: var(--muted);
@@ -201,14 +208,15 @@ button:focus-visible {
     white-space: normal;
     overflow-wrap: anywhere;
     text-align: center;
-    min-height: 40px;
+    min-height: 34px;
     border: 1px solid var(--green);
     border-radius: 9px;
-    padding: 9px 15px;
+    padding: 6px 12px;
     color: white;
     background: var(--green);
     font-weight: 650;
-    font-size: 14px;
+    font-size: 13px;
+    line-height: 1.5;
     text-decoration: none;
     transition:
         background 0.15s,
@@ -229,8 +237,8 @@ button:focus-visible {
 }
 
 .button-small {
-    min-height: 37px;
-    padding: 8px 15px;
+    min-height: 32px;
+    padding: 6px 12px;
     font-size: 12px;
 }
 
@@ -567,7 +575,7 @@ form label {
     display: block;
     font-size: 12px;
     font-weight: 650;
-    margin: 21px 0 8px;
+    margin: 14px 0 6px;
 }
 
 /* Dấu bắt buộc lấy từ required của control, hiện sẵn trước khi người dùng gửi form. */
@@ -581,10 +589,16 @@ form label {
 .form-select {
     border: 1px solid #d6e0d5;
     background: white;
-    padding: 8px 10px;
+    min-height: 34px;
+    padding: 6px 10px;
     border-radius: 7px;
     font-size: 13px;
+    line-height: 1.5;
     color: var(--ink);
+}
+
+.form-select {
+    padding-right: 32px;
 }
 
 .form-control:focus,
@@ -597,7 +611,7 @@ form label {
     border-color: #bf6c5c;
 }
 
-form .button {
+form > .button {
     margin-top: 24px;
 }
 
@@ -1180,131 +1194,130 @@ form .button {
     font-weight: 750;
 }
 
-/* Cùng breakpoint với navigation.js: header luôn một hàng, menu dài cuộn trong panel thay vì đẩy logo. */
-@media (max-width: 1399px) {
-    .site-nav {
-        min-height: 64px;
-        flex-wrap: wrap;
-        gap: 12px;
-    }
+/* navigation.js bật chế độ panel khi menu không vừa khoảng trống giữa logo và tài khoản. */
 
-    .site-nav.navigation-ready {
-        flex-wrap: nowrap;
-    }
+.site-nav.navigation-compact {
+    min-height: 64px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
 
-    .site-nav .brand {
-        font-size: 22px;
-    }
+.site-nav.navigation-compact.navigation-ready {
+    flex-wrap: nowrap;
+}
 
-    .nav-actions {
-        margin-left: auto;
-    }
+.site-nav.navigation-compact .brand {
+    font-size: 22px;
+}
 
-    .nav-links {
-        flex-basis: 100%;
-        order: 3;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 8px;
-        padding-block: 12px;
-    }
+.navigation-compact .nav-actions {
+    margin-left: auto;
+}
 
-    .site-nav.navigation-ready .nav-links {
-        position: absolute;
-        top: calc(100% + 8px);
-        left: 12px;
-        right: 12px;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        justify-content: stretch;
-        justify-items: stretch;
-        padding: 12px;
-        max-height: calc(100vh - 88px);
-        max-height: calc(100dvh - 88px);
-        overflow-y: auto;
-        overscroll-behavior: contain;
-        background: white;
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        box-shadow: 0 14px 36px #142d241a;
-    }
+.navigation-compact .nav-links {
+    flex-basis: 100%;
+    order: 3;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding-block: 12px;
+}
 
-    .nav-links > .operations-menu {
-        min-width: 0;
-    }
+.site-nav.navigation-compact.navigation-ready .nav-links {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 12px;
+    right: 12px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
+    justify-items: stretch;
+    padding: 12px;
+    max-height: calc(100vh - 88px);
+    max-height: calc(100dvh - 88px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 14px 36px #142d241a;
+}
 
-    .nav-links > a,
-    .nav-links .operations-menu > summary {
-        min-height: 44px;
-        padding: 12px;
-    }
+.navigation-compact .nav-links > .operations-menu {
+    min-width: 0;
+}
 
-    .nav-links .operations-menu > summary::after {
-        margin-left: auto;
-    }
+.navigation-compact .nav-links > a,
+.navigation-compact .nav-links .operations-menu > summary {
+    min-height: 44px;
+    padding: 12px;
+}
 
-    .nav-links .operations-menu-items {
-        position: static;
-        min-width: 0;
-        max-width: none;
-        margin-top: 6px;
-        padding: 8px;
-        border: 0;
-        box-shadow: none;
-        background: var(--paper);
-    }
+.navigation-compact .nav-links .operations-menu > summary::after {
+    margin-left: auto;
+}
 
-    .nav-links .language-switch {
-        justify-self: start;
-        align-self: start;
-        margin-block: 4px;
-    }
+.navigation-compact .nav-links .operations-menu-items {
+    position: static;
+    min-width: 0;
+    max-width: none;
+    margin-top: 6px;
+    padding: 8px;
+    border: 0;
+    box-shadow: none;
+    background: var(--paper);
+}
 
-    .nav-links .language-switch a {
-        min-width: 40px;
-        min-height: 36px;
-        display: grid;
-        place-items: center;
-    }
+.navigation-compact .nav-links .language-switch {
+    justify-self: start;
+    align-self: start;
+    margin-block: 4px;
+}
 
-    .nav-actions .account-menu {
-        position: static;
-    }
+.navigation-compact .nav-links .language-switch a {
+    min-width: 40px;
+    min-height: 36px;
+    display: grid;
+    place-items: center;
+}
 
-    .nav-actions .account-menu > summary {
-        width: 44px;
-        height: 44px;
-        padding: 7px;
-        gap: 0;
-        justify-content: center;
-    }
+.navigation-compact .nav-actions .account-menu {
+    position: static;
+}
 
-    .account-menu > summary::after {
-        display: none;
-    }
+.navigation-compact .nav-actions .account-menu > summary {
+    width: 44px;
+    height: 44px;
+    padding: 7px;
+    gap: 0;
+    justify-content: center;
+}
 
-    /* Giữ tên đầy đủ cho trình đọc màn hình; thanh hẹp chỉ vẽ avatar để không xuống hàng. */
-    .account-menu .header-user-name {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        margin: -1px;
-        overflow: hidden;
-        clip-path: inset(50%);
-        white-space: nowrap;
-    }
+.navigation-compact .account-menu > summary::after {
+    display: none;
+}
 
-    .nav-actions .operations-menu-items {
-        top: calc(100% + 8px);
-        right: 12px;
-        left: auto;
-        min-width: 240px;
-        max-width: calc(100vw - 24px);
-        max-height: calc(100vh - 88px);
-        max-height: calc(100dvh - 88px);
-        overflow-y: auto;
-    }
+/* Giữ tên đầy đủ cho trình đọc màn hình; thanh hẹp chỉ vẽ avatar để không xuống hàng. */
+.navigation-compact .account-menu .header-user-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.navigation-compact .nav-actions .operations-menu-items {
+    top: calc(100% + 8px);
+    right: 12px;
+    left: auto;
+    min-width: 240px;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 88px);
+    max-height: calc(100dvh - 88px);
+    overflow-y: auto;
 }
 
 @media (max-width: 575px) {
@@ -1623,8 +1636,8 @@ form .button {
 .workspace-tabs button {
     border: 0;
     border-radius: 8px;
-    padding: 11px 18px;
-    min-height: 42px;
+    padding: 8px 14px;
+    min-height: 36px;
     color: var(--muted);
     background: transparent;
     font-weight: 650;
@@ -1696,6 +1709,7 @@ body:has(dialog[open]) {
 .picker-search .button {
     flex: 0 0 auto;
     white-space: nowrap;
+    margin-top: 0;
 }
 
 .dashboard-links {
@@ -1751,7 +1765,7 @@ body:has(dialog[open]) {
     cursor: pointer;
 }
 
-.workspace-dialog form .button {
+.workspace-dialog form > .button {
     margin-top: 16px;
 }
 
@@ -1851,7 +1865,7 @@ body:has(dialog[open]) {
     }
 }
 
-/* Bảng: giữ cột thao tác gọn và không giãn theo những cột ít nội dung. */
+/* Cột thao tác tự lấy chiều rộng của hàng nhiều nút nhất; cuộn trong bảng khi thiếu chỗ. */
 .table:has(.table-actions) {
     min-width: 560px;
 }
@@ -1871,9 +1885,9 @@ body:has(dialog[open]) {
     padding-block: 10px;
 }
 .table .table-actions {
-    width: 96px;
-    min-width: 96px;
-    max-width: 96px;
+    width: 1%;
+    min-width: 64px;
+    padding-inline: 10px;
     text-align: center;
     vertical-align: middle;
     white-space: nowrap;
@@ -1887,28 +1901,27 @@ body:has(dialog[open]) {
     white-space: nowrap;
 }
 .row-actions {
-    display: flex;
+    display: inline-flex;
     justify-content: center;
     align-items: center;
-    flex-wrap: wrap;
-    width: 70px;
-    max-width: 100%;
+    flex-wrap: nowrap;
+    width: max-content;
     margin-inline: auto;
-    gap: 6px;
+    gap: 4px;
 }
 .table .icon-button,
 .operations-page .table .icon-button {
-    width: 32px;
-    min-width: 32px;
-    height: 32px;
-    min-height: 32px;
-    padding: 7px;
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    min-height: 28px;
+    padding: 6px;
     margin: 0;
     border-radius: 8px;
 }
 .icon-button svg {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     flex-shrink: 0;
     stroke-linecap: round;
     stroke-linejoin: round;
@@ -2016,37 +2029,52 @@ body:has(dialog[open]) {
 .catalog-toolbar .form-select {
     width: 180px;
     max-width: 100%;
-    min-height: 40px;
-    padding: 8px 12px;
+    min-height: 34px;
+    padding: 6px 32px 6px 10px;
     font-size: 13px;
 }
 .table-filter {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
-    gap: 16px;
+    gap: 10px;
 }
 .table-filter label {
     margin-top: 0;
 }
-.table-filter > button {
+.table-filter > button:first-of-type {
+    margin-left: auto;
+}
+
+.table-filter > .toolbar-actions {
     margin-left: auto;
 }
 
 .record-search {
-    display: grid;
-    grid-template-columns: minmax(160px, 1fr) minmax(150px, 190px) auto;
-    gap: 8px 12px;
+    gap: 8px 10px;
     margin-bottom: 18px;
 }
 
 .record-search label {
-    grid-column: 1 / -1;
+    flex-basis: 100%;
+}
+
+.record-search > .form-control {
+    flex: 1 1 200px;
+    width: auto;
+    min-width: 0;
+}
+
+.record-search > .form-select {
+    flex: 0 1 170px;
+    width: auto;
 }
 
 @media (max-width: 640px) {
-    .record-search {
-        grid-template-columns: minmax(0, 1fr);
+    .record-search > .form-control,
+    .record-search > .form-select {
+        flex-basis: 100%;
+        width: 100%;
     }
     .panel-heading .toolbar-actions,
     .toolbar-actions,
@@ -2061,6 +2089,10 @@ body:has(dialog[open]) {
     .table-filter:not(.record-search) > .button {
         flex: 1 1 140px;
         margin-left: 0;
+    }
+
+    .table-filter > .toolbar-actions {
+        flex-basis: 100%;
     }
     .picker-search,
     .trip-picker-search {
@@ -3039,7 +3071,8 @@ fieldset:disabled .button[type='submit']::before,
 .trip-picker-search .button,
 .trip-picker-paging .button {
     flex-shrink: 0;
-    padding: 8px;
+    padding: 6px 10px;
+    margin-top: 0;
 }
 .trip-picker-paging {
     justify-content: flex-end;
@@ -3053,9 +3086,9 @@ fieldset:disabled .button[type='submit']::before,
     min-width: 980px;
 }
 .trip-filters {
-    display: grid;
-    grid-template-columns: minmax(180px, 1fr) minmax(150px, 190px) minmax(160px, 200px) auto;
-    gap: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
     align-items: end;
     margin-bottom: 18px;
 }
@@ -3063,13 +3096,14 @@ fieldset:disabled .button[type='submit']::before,
     margin: 0;
     display: grid;
     gap: 6px;
+    flex: 1 1 150px;
 }
 .trip-filters > .button {
     margin: 0;
 }
 @media (max-width: 760px) {
-    .trip-filters {
-        grid-template-columns: minmax(0, 1fr);
+    .trip-filters > label {
+        flex-basis: 100%;
     }
 }
 #driver-trip-workspace .records-table {
