@@ -145,7 +145,7 @@ public class TripController extends BaseController {
     @AccessFunction(group = Groups.TRIP, actions = { PermissionAction.UPDATE })
     @Operation(
         summary = "Mở bán hoặc hủy chuyến trước khi chạy",
-        description = "DRAFT→OPEN; DRAFT/OPEN→CANCELLED, hủy bắt buộc lý do. Backend khóa trip và kiểm version/lịch"
+        description = "DRAFT→OPEN; DRAFT/OPEN→CANCELLED, hủy bắt buộc lý do. Backend khóa trip và kiểm version/lịch. Hủy đồng bộ toàn bộ đơn active và trả chỗ CONFIRMED theo chặng; thiếu lịch sử bất kỳ sẽ rollback toàn bộ."
     )
     public ApiResult<TripResponse> state(
         @Parameter(description = "ID chuyến dương") @PathVariable @Min(

@@ -15,10 +15,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Map;
@@ -48,13 +50,19 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import vn.vietroute.auth.dto.request.DriverAccountCreateRequest;
 import vn.vietroute.auth.dto.request.LoginRequest;
+import vn.vietroute.auth.dto.response.AccessChangeStateResponse;
+import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
+import vn.vietroute.auth.repository.AccessChangeRepository;
+import vn.vietroute.auth.repository.AccessRepository;
+import vn.vietroute.auth.repository.RoleResourceRepository;
 import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.security.AccessResourceSynchronizer;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.AccessResourceService;
 import vn.vietroute.auth.service.AuthService;
 import vn.vietroute.auth.service.JwtService;
+import vn.vietroute.business.booking.repository.BookingLifecycleRepository;
 import vn.vietroute.business.carrier.dto.request.CarrierSearchRequest;
 import vn.vietroute.business.carrier.service.DriverService;
 import vn.vietroute.business.carrier.service.VehicleService;
@@ -67,6 +75,8 @@ import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.application.ConfigurationEnvironment;
 import vn.vietroute.common.config.database.DatabaseInitializer;
 import vn.vietroute.common.config.web.WebConfig;
+import vn.vietroute.common.constant.AccessAuditConstants.Event;
+import vn.vietroute.common.constant.AccessAuditConstants.Target;
 import vn.vietroute.common.constant.ApplicationConstants.Business;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
@@ -88,6 +98,286 @@ class BusinessIntegrationTest {
     private MockMvc mvc;
     private final ObjectMapper json = new ObjectMapper();
     private Authentication admin;
+
+    @Test
+    void bulkRoleAssignmentCannotTradeListForDetailOrExpandLegacyProjectionAndKeepsNativeEmptyDeny() throws Exception {
+        seed();
+        long scope = Long.parseLong(sql("SELECT min(scope_id) FROM carriers"));
+        var delegate = member(scope, "BULKDELEGATE", "'ACCESS_ASSIGN','VEHICLE_READ'", "bulkdelegate");
+        grantResources(
+            "BULKDELEGATE",
+            0,
+            Set.of("PUT /api/v1/admin/access/users/{id}/roles", "GET /api/v1/admin/vehicles"),
+            admin,
+            200
+        );
+        sql(
+            "INSERT INTO auth_roles(code,name_vi,name_en) VALUES('BULKLIST','List','List'),('BULKDETAIL','Detail','Detail'),('BULKLEGACY','Legacy','Legacy'),('BULKEMPTY','Empty','Empty'); INSERT INTO auth_role_permissions(role_code,permission_code) SELECT code,'VEHICLE_READ' FROM auth_roles WHERE code IN('BULKLIST','BULKDETAIL','BULKLEGACY','BULKEMPTY'); INSERT INTO auth_role_resource_sets(role_code) VALUES('BULKLIST'),('BULKDETAIL'),('BULKEMPTY'); INSERT INTO auth_role_resources(role_code,kind,target) VALUES('BULKLIST','ENDPOINT','GET /api/v1/admin/vehicles'),('BULKDETAIL','ENDPOINT','GET /api/v1/admin/vehicles/{id}')"
+        );
+        long target = Long.parseLong(
+            sql(
+                "INSERT INTO auth_users(username,password_hash,display_name,must_change_password,email,email_verified_at) SELECT 'bulkreceiver',password_hash,'Receiver',false,'bulkreceiver@example.invalid',CURRENT_TIMESTAMP FROM auth_users WHERE id=1 RETURNING id"
+            )
+        );
+        String path = "/api/v1/admin/access/users/" + target + "/roles";
+        call(200, "PUT", path, "{\"roles\":[\"BULKLIST\"],\"version\":0}", delegate);
+        call(403, "PUT", path, "{\"roles\":[\"BULKDETAIL\"],\"version\":1}", delegate);
+        call(403, "PUT", path, "{\"roles\":[\"BULKLEGACY\"],\"version\":1}", delegate);
+        assertEquals(
+            "1:BULKLIST",
+            sql(
+                "SELECT u.version||':'||ur.role_code FROM auth_users u JOIN auth_user_roles ur ON ur.user_id=u.id WHERE u.id=" +
+                    target
+            )
+        );
+        call(200, "PUT", path, "{\"roles\":[\"BULKLIST\",\"BULKEMPTY\"],\"version\":1}", delegate);
+        assertEquals("2", sql("SELECT count(*) FROM auth_user_roles WHERE user_id=" + target));
+        sql("INSERT INTO auth_role_permissions(role_code,permission_code) VALUES('BULKEMPTY','ACCESS_DELETE')");
+        call(403, "PUT", path, "{\"roles\":[\"BULKLIST\"],\"version\":2}", delegate);
+        assertEquals("2", sql("SELECT version FROM auth_users WHERE id=" + target));
+    }
+
+    @Test
+    void roleGrantSnapshotAndMembershipHistoryStayBoundedAndBatchFailureRollsBackAllEntries() throws Exception {
+        sql(
+            "INSERT INTO auth_roles(code,name_vi,name_en) SELECT 'BULKROLE'||n,'Test','Test' FROM generate_series(1,32) n; INSERT INTO auth_role_permissions(role_code,permission_code) SELECT code,'ACCESS_READ' FROM auth_roles WHERE code LIKE 'BULKROLE%'; INSERT INTO auth_role_resource_sets(role_code) VALUES('BULKROLE1'); UPDATE auth_permissions SET active=false WHERE code='ACCESS_READ'"
+        );
+        var selected = new LinkedHashSet<Role>();
+        for (int index = 1; index <= 32; index++) selected.add(Role.valueOf("BULKROLE" + index));
+        var statements = new AtomicInteger();
+        var grants = root
+            .getBean(JdbcTransactions.class)
+            .execute(connection ->
+                root.getBean(RoleResourceRepository.class).grants(counted(connection, statements), selected)
+            );
+        assertEquals(1, statements.get());
+        assertEquals(32, grants.size());
+        assertTrue(grants.stream().allMatch(g -> g.permissions().contains(Permission.ACCESS_READ)));
+        assertTrue(
+            grants
+                .stream()
+                .filter(g -> g.role().name().equals("BULKROLE1"))
+                .allMatch(g -> g.initialized() && g.targets().isEmpty())
+        );
+        assertTrue(grants.stream().anyMatch(g -> !g.initialized()));
+        var entries = new ArrayList<AccessChangeRepository.Entry>();
+        for (int index = 1; index <= 32; index++) entries.add(
+            new AccessChangeRepository.Entry(
+                Event.SCOPE_MEMBERSHIP,
+                Target.MEMBERSHIP,
+                "BULKHISTORY" + index,
+                AccessChangeStateResponse.empty(),
+                AccessChangeStateResponse.empty()
+            )
+        );
+        var history = root.getBean(AccessChangeRepository.class);
+        statements.set(0);
+        root.getBean(JdbcTransactions.class).execute(connection -> {
+            history.appendAll(counted(connection, statements), entries, 1, null);
+            return null;
+        });
+        assertEquals(3, statements.get(), "Một batch, một advisory cleanup lock và một cleanup; không 3 x 32");
+        assertEquals("32", sql("SELECT count(*) FROM auth_access_changes WHERE target_key LIKE 'BULKHISTORY%'"));
+        sql(
+            "DELETE FROM auth_access_changes WHERE target_key LIKE 'BULKHISTORY%'; CREATE FUNCTION reject_bulk_history() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN IF NEW.target_key=''BULKHISTORY17'' THEN RAISE EXCEPTION ''bulk fixture failure''; END IF; RETURN NEW; END'; CREATE TRIGGER reject_bulk_history BEFORE INSERT ON auth_access_changes FOR EACH ROW EXECUTE FUNCTION reject_bulk_history()"
+        );
+        assertThrows(BusinessException.class, () ->
+            root.getBean(JdbcTransactions.class).execute(connection -> {
+                history.appendAll(connection, entries, 1, null);
+                return null;
+            })
+        );
+        assertEquals("0", sql("SELECT count(*) FROM auth_access_changes WHERE target_key LIKE 'BULKHISTORY%'"));
+    }
+
+    /** Đếm execute thực tế (batch là một lượt JDBC), không chỉ prepareStatement để bỏ sót execute trong for. */
+    private Connection counted(Connection connection, AtomicInteger statements) {
+        return (Connection) Proxy.newProxyInstance(
+            getClass().getClassLoader(),
+            new Class<?>[] { Connection.class },
+            (proxy, method, args) -> {
+                try {
+                    Object value = method.invoke(connection, args);
+                    if (
+                        method.getName().equals("prepareStatement") && value instanceof PreparedStatement query
+                    ) return Proxy.newProxyInstance(
+                        getClass().getClassLoader(),
+                        new Class<?>[] { PreparedStatement.class },
+                        (prepared, action, parameters) -> {
+                            if (action.getName().startsWith("execute")) statements.incrementAndGet();
+                            try {
+                                return action.invoke(query, parameters);
+                            } catch (InvocationTargetException exception) {
+                                throw exception.getCause();
+                            }
+                        }
+                    );
+                    return value;
+                } catch (InvocationTargetException exception) {
+                    throw exception.getCause();
+                }
+            }
+        );
+    }
+
+    @Test
+    void permissionValidationUsesOneQueryForWholeSetAndRejectsMissingInactiveOrDeletedCodes() throws Exception {
+        var repository = root.getBean(AccessRepository.class);
+        var permissions = new LinkedHashSet<Permission>();
+        try (
+            var connection = root.getBean(JdbcConnectionFactory.class).open();
+            var query = connection.prepareStatement("SELECT code FROM auth_permissions WHERE active")
+        ) {
+            try (var rows = query.executeQuery()) {
+                while (rows.next()) permissions.add(Permission.valueOf(rows.getString(1)));
+            }
+        }
+        var statements = new AtomicInteger();
+        root.getBean(JdbcTransactions.class).execute(connection -> {
+            repository.validateMappings(
+                counted(connection, statements),
+                Set.of(Role.ADMIN, Role.DRIVER, Role.CUSTOMER),
+                permissions
+            );
+            return null;
+        });
+        assertTrue(permissions.size() > 50);
+        assertEquals(1, statements.get());
+        for (String change : new String[] {
+            "UPDATE auth_roles SET active=false WHERE code='DRIVER'",
+            "UPDATE auth_roles SET active=false,deleted=true WHERE code='DRIVER'",
+            "UPDATE auth_permissions SET active=false WHERE code='ACCESS_READ'",
+        }) {
+            sql(change);
+            assertEquals(
+                ErrorCode.INVALID_REQUEST,
+                assertThrows(BusinessException.class, () ->
+                    root.getBean(JdbcTransactions.class).execute(connection -> {
+                        repository.validateMappings(connection, Set.of(Role.DRIVER), Set.of(Permission.ACCESS_READ));
+                        return null;
+                    })
+                ).getErrorCode()
+            );
+            sql("UPDATE auth_roles SET active=true,deleted=false WHERE code='DRIVER'");
+        }
+        assertEquals(
+            ErrorCode.INVALID_REQUEST,
+            assertThrows(BusinessException.class, () ->
+                root.getBean(JdbcTransactions.class).execute(connection -> {
+                    repository.validateMappings(connection, Set.of(Role.valueOf("MISSINGROLE")), Set.of());
+                    return null;
+                })
+            ).getErrorCode()
+        );
+    }
+
+    @Test
+    void tripCancellationSqlCountDoesNotGrowWithOneThousandPendingBookingsAndKeepsEveryHistoryAndVersion()
+        throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        var lifecycle = root.getBean(BookingLifecycleRepository.class);
+        for (int size : new int[] { 1, 1000 }) {
+            long trip = openBookingTrip(
+                fixture,
+                "BULK" + size,
+                Instant.now().plus(size == 1 ? 10 : 20, ChronoUnit.DAYS)
+            );
+            long base = call(
+                201,
+                "POST",
+                "/api/v1/admin/bookings",
+                bookingBody(trip, 1, 3, 1, UUID.randomUUID()),
+                admin
+            )
+                .path("id")
+                .asLong();
+            sql(
+                "INSERT INTO bookings(trip_id,carrier_id,scope_id,source_code,source_id,pickup_stop_id,dropoff_stop_id,pickup_order,dropoff_order,seats,unit_price,total_price,contact_name,contact_phone,request_key,status,paid_amount) SELECT b.trip_id,b.carrier_id,b.scope_id,b.source_code,b.source_id,b.pickup_stop_id,b.dropoff_stop_id,b.pickup_order,b.dropoff_order,1,b.unit_price,b.unit_price,'Bulk fixture','0000000000',gen_random_uuid(),CASE WHEN n<=1 THEN 'CONFIRMED' ELSE 'PENDING' END,CASE WHEN n<=1 THEN 100 ELSE 0 END FROM bookings b CROSS JOIN generate_series(1," +
+                    size +
+                    ") n WHERE b.id=" +
+                    base
+            );
+            sql("UPDATE trip_segments SET reserved_seats=1,version=1 WHERE trip_id=" + trip);
+            if (size == 1000) {
+                sql(
+                    "CREATE FUNCTION suppress_bulk_event() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN IF NEW.event_type=''CANCELLED'' AND NEW.booking_id=" +
+                        base +
+                        " THEN RETURN NULL; END IF; RETURN NEW; END'; CREATE TRIGGER suppress_bulk_event BEFORE INSERT ON booking_events FOR EACH ROW EXECUTE FUNCTION suppress_bulk_event()"
+                );
+                var failure = assertThrows(BusinessException.class, () ->
+                    root.getBean(JdbcTransactions.class).execute(connection -> {
+                        try (
+                            var query = connection.prepareStatement(
+                                "SELECT id FROM carrier_trips WHERE id=? FOR UPDATE"
+                            )
+                        ) {
+                            query.setLong(1, trip);
+                            try (var rows = query.executeQuery()) {
+                                rows.next();
+                            }
+                        }
+                        lifecycle.cancelTrip(connection, trip, "Suppressed event", 1);
+                        return null;
+                    })
+                );
+                assertEquals(ErrorCode.STALE_VERSION, failure.getErrorCode());
+                assertEquals(
+                    "0",
+                    sql("SELECT count(*) FROM bookings WHERE trip_id=" + trip + " AND status='CANCELLED'")
+                );
+                assertEquals(
+                    "2:2",
+                    sql("SELECT sum(reserved_seats)||':'||sum(version) FROM trip_segments WHERE trip_id=" + trip)
+                );
+                sql("DROP TRIGGER suppress_bulk_event ON booking_events; DROP FUNCTION suppress_bulk_event()");
+            }
+            var statements = new AtomicInteger();
+            root.getBean(JdbcTransactions.class).execute(connection -> {
+                try (var query = connection.prepareStatement("SELECT id FROM carrier_trips WHERE id=? FOR UPDATE")) {
+                    query.setLong(1, trip);
+                    try (var rows = query.executeQuery()) {
+                        rows.next();
+                    }
+                }
+                lifecycle.cancelTrip(counted(connection, statements), trip, "Bulk cancel", 1);
+                return null;
+            });
+            assertEquals(5, statements.get(), "Số lượt SQL không tăng theo số đơn");
+            assertEquals(
+                Integer.toString(size + 1),
+                sql(
+                    "SELECT count(*) FROM bookings WHERE trip_id=" +
+                        trip +
+                        " AND status='CANCELLED' AND version=1 AND updated_by=1"
+                )
+            );
+            assertEquals(
+                Integer.toString(size + 1),
+                sql(
+                    "SELECT count(*) FROM booking_events WHERE trip_id=" +
+                        trip +
+                        " AND event_type='CANCELLED' AND note='Bulk cancel' AND created_by=1 AND amount=0 AND from_status IN('PENDING','CONFIRMED')"
+                )
+            );
+            assertEquals(
+                "0:4",
+                sql("SELECT sum(reserved_seats)||':'||sum(version) FROM trip_segments WHERE trip_id=" + trip)
+            );
+            assertEquals(
+                "100.00:0.00",
+                sql("SELECT sum(paid_amount)||':'||sum(refunded_amount) FROM bookings WHERE trip_id=" + trip)
+            );
+            root.getBean(JdbcTransactions.class).execute(connection -> {
+                lifecycle.cancelTrip(connection, trip, "Repeat", 1);
+                return null;
+            });
+            assertEquals(
+                Integer.toString(size + 1),
+                sql("SELECT count(*) FROM booking_events WHERE trip_id=" + trip + " AND event_type='CANCELLED'")
+            );
+        }
+    }
 
     @Test
     void loginUsesTwoBusinessStatementsAndReturnsCommittedAuditVersionAndCurrentRoles() throws Exception {

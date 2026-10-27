@@ -1,9 +1,11 @@
 package vn.vietroute.auth.service;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
@@ -21,6 +23,7 @@ import vn.vietroute.auth.dto.response.UserResponse;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.entity.Role;
+import vn.vietroute.auth.repository.AccessChangeRepository.Entry;
 import vn.vietroute.auth.repository.AccessRepository;
 import vn.vietroute.auth.repository.DataScopeRepository;
 import vn.vietroute.auth.repository.UserRepository;
@@ -174,24 +177,9 @@ public class AccessService {
                 if (
                     target.getRoles().contains(Role.ADMIN) || request.getRoles().contains(Role.ADMIN)
                 ) throw new BusinessException(ErrorCode.ACCESS_DENIED);
-                Set<String> granted = SecurityContextHolder.getContext()
-                    .getAuthentication()
-                    .getAuthorities()
-                    .stream()
-                    .map(GrantedAuthority::getAuthority)
-                    .collect(Collectors.toSet());
                 Set<Role> affected = new LinkedHashSet<>(target.getRoles());
                 affected.addAll(request.getRoles());
-                for (Role assigned : affected) {
-                    resourceGrants.requireDelegable(connection, assigned, actor);
-                    if (
-                        access
-                            .role(connection, assigned)
-                            .permissions()
-                            .stream()
-                            .anyMatch(permission -> !granted.contains(permission.name()))
-                    ) throw new BusinessException(ErrorCode.ACCESS_DENIED);
-                }
+                resourceGrants.requireDelegableRoles(connection, affected, actor);
             }
             if (
                 target.isActive() &&
@@ -206,31 +194,34 @@ public class AccessService {
                 : DataScopeRepository.memberships(connection, id);
             access.replaceRoles(connection, id, request.getRoles(), request.getVersion(), actor.id());
             if (!scopedBefore.isEmpty()) {
-                var scopedAfter = DataScopeRepository.memberships(connection, id);
+                var scopedAfter = DataScopeRepository.memberships(connection, id)
+                    .stream()
+                    .collect(Collectors.toMap(ScopeMembershipResponse::scopeId, Function.identity()));
+                var membershipChanges = new ArrayList<Entry>();
                 for (var previous : scopedBefore) {
-                    var current = scopedAfter
-                        .stream()
-                        .filter(item -> item.scopeId() == previous.scopeId())
-                        .findFirst()
-                        .orElseThrow();
-                    if (!previous.roles().equals(current.roles())) changes.record(
-                        connection,
-                        Event.SCOPE_MEMBERSHIP,
-                        Target.MEMBERSHIP,
-                        previous.scopeId() + ":" + id,
-                        actor.id(),
-                        AccessChangeStateResponse.membership(
-                            previous.roles().stream().map(Role::name).collect(Collectors.toSet()),
-                            previous.active(),
-                            previous.version()
-                        ),
-                        AccessChangeStateResponse.membership(
-                            current.roles().stream().map(Role::name).collect(Collectors.toSet()),
-                            current.active(),
-                            current.version()
+                    var current = scopedAfter.get(previous.scopeId());
+                    if (current == null) throw new IllegalStateException(
+                        "Membership bị thiếu trong cùng transaction gán role"
+                    );
+                    if (!previous.roles().equals(current.roles())) membershipChanges.add(
+                        new Entry(
+                            Event.SCOPE_MEMBERSHIP,
+                            Target.MEMBERSHIP,
+                            previous.scopeId() + ":" + id,
+                            AccessChangeStateResponse.membership(
+                                previous.roles().stream().map(Role::name).collect(Collectors.toSet()),
+                                previous.active(),
+                                previous.version()
+                            ),
+                            AccessChangeStateResponse.membership(
+                                current.roles().stream().map(Role::name).collect(Collectors.toSet()),
+                                current.active(),
+                                current.version()
+                            )
                         )
                     );
                 }
+                changes.recordAll(connection, membershipChanges, actor.id());
             }
             var after = users.findById(connection, id, false);
             changes.mappings(

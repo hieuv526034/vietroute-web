@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +26,15 @@ import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 /** Lịch sử ghi trực tiếp PostgreSQL trong transaction caller; lỗi ghi làm rollback thay đổi quyền, không queue RAM. */
 @Repository
 public class AccessChangeRepository extends BaseRepository {
+
+    /** Chỉ projection whitelist của một mutation hiện tại; không phải hàng đợi lịch sử trong RAM. */
+    public record Entry(
+        Event event,
+        Target kind,
+        String key,
+        AccessChangeStateResponse before,
+        AccessChangeStateResponse after
+    ) {}
 
     private final ObjectMapper mapper;
 
@@ -47,6 +57,12 @@ public class AccessChangeRepository extends BaseRepository {
         AccessChangeStateResponse before,
         AccessChangeStateResponse after
     ) throws SQLException {
+        appendAll(connection, List.of(new Entry(event, kind, key, before, after)), actor, traceId);
+    }
+
+    /** Một batch trong transaction caller, dọn retention một lần cho cả mutation; lỗi một dòng rollback toàn bộ. */
+    public void appendAll(Connection connection, List<Entry> entries, long actor, String traceId) throws SQLException {
+        if (entries.isEmpty()) return;
         if (connection.getAutoCommit()) throw new IllegalStateException(
             "Lịch sử quyền phải nằm trong transaction thay đổi"
         );
@@ -58,16 +74,23 @@ public class AccessChangeRepository extends BaseRepository {
                 """
             )
         ) {
-            insert.setString(1, event.name());
-            insert.setString(2, kind.name());
-            insert.setString(3, key);
-            insert.setLong(4, actor);
-            insert.setString(5, traceId);
-            insert.setString(6, json(before));
-            insert.setString(7, json(after));
-            insert.setLong(8, actor);
-            insert.setLong(9, actor);
-            insert.executeUpdate();
+            for (var entry : entries) {
+                insert.setString(1, entry.event().name());
+                insert.setString(2, entry.kind().name());
+                insert.setString(3, entry.key());
+                insert.setLong(4, actor);
+                insert.setString(5, traceId);
+                insert.setString(6, json(entry.before()));
+                insert.setString(7, json(entry.after()));
+                insert.setLong(8, actor);
+                insert.setLong(9, actor);
+                insert.addBatch();
+            }
+            for (int count : insert.executeBatch())
+                if (count != 1 && count != Statement.SUCCESS_NO_INFO) throw new SQLException(
+                    "Lịch sử quyền phải ghi đủ mọi dòng của mutation",
+                    "02000"
+                );
         }
         cleanup(connection);
     }

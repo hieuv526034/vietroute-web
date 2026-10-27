@@ -89,6 +89,21 @@ public class AccessTestConfig {
         }
 
         @Override
+        public void appendAll(Connection connection, List<Entry> entries, long actor, String trace) {
+            for (var entry : entries)
+                append(
+                    connection,
+                    entry.event(),
+                    entry.kind(),
+                    entry.key(),
+                    actor,
+                    trace,
+                    entry.before(),
+                    entry.after()
+                );
+        }
+
+        @Override
         public void append(
             Connection connection,
             Event event,

@@ -128,11 +128,41 @@ public class AccessRepository extends BaseRepository {
     /** Kiểm tập mapping tồn tại/đang bật trong cùng transaction, chặn mã tự chế hoặc role đã ngừng. */
     public void validateMappings(Connection connection, Set<Role> roles, Set<Permission> permissions)
         throws SQLException {
-        for (Role role : roles) {
-            requireActive(connection, "SELECT 1 FROM auth_roles WHERE code=? AND active AND NOT deleted", role.name());
-        }
-        for (Permission permission : permissions) {
-            requireActive(connection, "SELECT 1 FROM auth_permissions WHERE code=? AND active", permission.name());
+        if (roles.isEmpty() && permissions.isEmpty()) return;
+        var roleCodes = connection.createArrayOf(
+            "text",
+            roles
+                .stream()
+                .map(Role::name)
+                .toArray(String[]::new)
+        );
+        var permissionCodes = connection.createArrayOf(
+            "text",
+            permissions
+                .stream()
+                .map(Permission::name)
+                .toArray(String[]::new)
+        );
+        // Một statement cho toàn tập; không đổi điều kiện active/tombstone hoặc tin mã client chưa có trong registry.
+        try (
+            var query = connection.prepareStatement(
+                """
+                SELECT NOT EXISTS(SELECT code FROM unnest(?::text[]) wanted(code)
+                    WHERE NOT EXISTS(SELECT 1 FROM auth_roles r WHERE r.code=wanted.code AND r.active AND NOT r.deleted))
+                  AND NOT EXISTS(SELECT code FROM unnest(?::text[]) wanted(code)
+                    WHERE NOT EXISTS(SELECT 1 FROM auth_permissions p WHERE p.code=wanted.code AND p.active))
+                """
+            )
+        ) {
+            query.setArray(1, roleCodes);
+            query.setArray(2, permissionCodes);
+            try (var row = query.executeQuery()) {
+                row.next();
+                if (!row.getBoolean(1)) throw new BusinessException(ErrorCode.INVALID_REQUEST);
+            }
+        } finally {
+            roleCodes.free();
+            permissionCodes.free();
         }
     }
 
