@@ -115,6 +115,36 @@ public class RoleResourceService {
         requireDelegable(targets(connection, role), actor);
     }
 
+    /** Kiểm toàn bộ role bị ảnh hưởng bằng một SELECT; không union quyền role khác để vượt trần target/permission của actor. */
+    public void requireDelegableRoles(Connection connection, Set<Role> assigned, UserPrincipal actor)
+        throws SQLException {
+        if (actor.roles().contains(Role.ADMIN)) return;
+        var held = SecurityContextHolder.getContext()
+            .getAuthentication()
+            .getAuthorities()
+            .stream()
+            .map(Object::toString)
+            .collect(Collectors.toSet());
+        var required = new LinkedHashSet<String>();
+        for (var grant : resources.grants(connection, assigned)) {
+            Set<String> codes = grant.permissions().stream().map(Permission::name).collect(Collectors.toSet());
+            if (!held.containsAll(codes)) throw new BusinessException(ErrorCode.ACCESS_DENIED);
+            if (grant.initialized()) required.addAll(grant.targets());
+            else definitions
+                .inventory()
+                .stream()
+                .filter(RoleResourceService::assignable)
+                .filter(item ->
+                    item.match().equals("ALL")
+                        ? codes.containsAll(item.declaredPermissions())
+                        : item.declaredPermissions().stream().anyMatch(codes::contains)
+                )
+                .map(AccessResourceResponse::target)
+                .forEach(required::add);
+        }
+        requireDelegable(required, actor);
+    }
+
     private void requireDelegable(Set<String> targets, UserPrincipal actor) {
         if (actor.roles().contains(Role.ADMIN)) return;
         var auth = SecurityContextHolder.getContext().getAuthentication();

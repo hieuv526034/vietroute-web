@@ -120,3 +120,23 @@ Test Java nằm trong src/test. Production dùng `-Pproduction` và chỉ copy s
 ## Quy ước tab và modal
 
 Trang nhiều nhóm chức năng tách tab; thêm/sửa/gán và upload dùng modal theo [component tab/modal](../03-giao-dien/QUY_UOC_UI.md). Dùng workspace.js và HTTP/CSRF/lỗi chung, giữ focus/bàn phím/ARIA, phản hồi lỗi ngay trong modal và bản nháp khi 409. Không đóng trong lúc gửi request hoặc tự retry mutation.
+
+## Rà query và ghi theo tập — PERF02
+
+Rà ngày 27/10/2026 qua các vòng for/while/stream và lời gọi JDBC trong 34 repository, 40 service, startup và worker. Đọc sâu luồng gán role/quyền, xóa tài khoản, chuyến/booking/chỗ, list/report và các vòng có SQL. Vòng đọc ResultSet, kiểm dữ liệu hoặc bind `addBatch` không tự tạo N+1; cần đếm `execute*` thực tế và các lời gọi DAO/service bên trong, không chỉ `prepareStatement`.
+
+| Luồng | Chi phí trước | Đã sửa và hợp đồng giữ lại |
+|---|---|---|
+| Kiểm mapping role/quyền | SELECT từng mã | Một SELECT với mảng tham số cho cả tập; vẫn từ chối mã thiếu/inactive/tombstone. |
+| Trần ủy quyền khi gán nhiều role | Khoảng 4–5 query mỗi role để lấy marker/target/permission | Một snapshot tập role; giữ native rỗng là deny, fallback legacy đúng nguồn, kiểm cả permission tắt và target cụ thể theo actor. |
+| Lịch sử nhiều membership khi gán role/xóa user | Mỗi record INSERT và hai bước cleanup | Một JDBC batch + một lần cleanup cho tập membership của cùng transaction; lỗi một entry rollback mutation, không queue ghi sau. Các dòng vẫn được INSERT ở PostgreSQL, batch không biến N dòng thành O(1) công việc server. |
+| Hủy chuyến | Một SELECT tải DTO/PII mọi đơn rồi khoảng 2 lượt/đơn PENDING, 4 lượt/đơn CONFIRMED | Năm lượt execute JDBC khi có CONFIRMED: khóa booking theo ID, cộng nhu cầu trả theo đoạn, khóa đoạn theo thứ tự, cập nhật đoạn, CTE CAS + history cả tập. Giữ tiền/hoàn, actor, version và số lần tăng version đoạn như trước. Không nạp DTO của toàn bộ đơn lên heap. |
+| Tài xế rời/đến điểm | Đọc toàn bộ đơn active rồi UPDATE/INSERT từng đơn phù hợp | Một CTE khóa/lọc đúng tập, UPDATE và INSERT history; so đủ số dòng, thiếu history bất kỳ rollback toàn bộ. Đến điểm trả vẫn giữ chỗ lịch sử. |
+| Xác nhận/hủy một đơn theo chặng | SELECT khóa đoạn rồi batch UPDATE từng đoạn | Giữ kiểm đủ đoạn/tồn chỗ và khóa tăng dần; một range UPDATE sau khóa, không execute từng đoạn. |
+
+Các list catalog/nhà xe/xe/tài xế/tuyến/chuyến/booking dùng count + page ở SQL, mapping ResultSet không gọi DAO theo từng dòng. Báo cáo tổng hợp một statement với CTE/cohort, vòng enum chỉ dựng cột/map response. Validate địa điểm dùng mảng; điểm tuyến/snapshot chuyến/mapping quyền đã dùng batch và giới hạn số phần tử. Giữ các refresh guard DB ở HTTP/service để thu hồi quyền tại check tiếp theo; không cache authority để giảm query.
+
+Còn các vòng có DB có chủ đích: bootstrap bốn role cố định, migration/kiểm metadata chỉ lúc startup enabled; DEMO dùng bộ JSON tĩnh có parent/identity/idempotency/collision, chỉ gọi opt-in, không nạp khi chuyển trang; worker tối đa 32 việc/lượt, mỗi claim/ACK có transaction ngắn riêng và gửi mạng ngoài transaction. Không gom các job khác nhau vào một transaction lớn chỉ để bỏ for.
+
+Tìm kiếm chứa từ khóa và tổng hợp báo cáo vẫn có thể đọc nhiều dòng bên trong một statement. Cần EXPLAIN/metrics trên phân bố dữ liệu đại diện trước khi thêm index hoặc đổi SQL; kiểm số query không chứng minh mọi query nhanh trên Neon. Không load test, seed hoặc chạy mutation production để đo. Lỗi tối ưu phải được kiểm rollback/CAS/lock order/guard/scope bằng PostgreSQL cô lập; giữ regression kích thước tập tăng mà số lượt execute không tăng. Kết quả và PR ở [tiến độ PERF02](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md#perf02--đang-kiểm-ci-rà-query-trong-vòng-lặp-và-ghi-theo-tập).
+

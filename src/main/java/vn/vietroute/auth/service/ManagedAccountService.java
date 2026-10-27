@@ -20,6 +20,7 @@ import vn.vietroute.auth.dto.response.ManagedAccountAccessResponse;
 import vn.vietroute.auth.dto.response.ManagedAccountResponse;
 import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.entity.Role;
+import vn.vietroute.auth.repository.AccessChangeRepository.Entry;
 import vn.vietroute.auth.repository.AccessRepository;
 import vn.vietroute.auth.repository.AccountRepository;
 import vn.vietroute.auth.repository.DataScopeRepository;
@@ -111,21 +112,23 @@ public class ManagedAccountService {
             var memberships = DataScopeRepository.memberships(connection, id);
             accounts.delete(connection, id, version, actor.id());
             lifecycle.invalidate(connection, id);
-            for (var membership : memberships) {
-                changes.record(
-                    connection,
-                    Event.SCOPE_MEMBERSHIP,
-                    Target.MEMBERSHIP,
-                    membership.scopeId() + ":" + id,
-                    actor.id(),
-                    AccessChangeStateResponse.membership(
-                        membership.roles().stream().map(Role::name).collect(Collectors.toSet()),
-                        membership.active(),
-                        membership.version()
-                    ),
-                    AccessChangeStateResponse.empty()
-                );
-            }
+            var membershipChanges = memberships
+                .stream()
+                .map(membership ->
+                    new Entry(
+                        Event.SCOPE_MEMBERSHIP,
+                        Target.MEMBERSHIP,
+                        membership.scopeId() + ":" + id,
+                        AccessChangeStateResponse.membership(
+                            membership.roles().stream().map(Role::name).collect(Collectors.toSet()),
+                            membership.active(),
+                            membership.version()
+                        ),
+                        AccessChangeStateResponse.empty()
+                    )
+                )
+                .toList();
+            changes.recordAll(connection, membershipChanges, actor.id());
             changes.record(
                 connection,
                 Event.ACCOUNT_DELETED,

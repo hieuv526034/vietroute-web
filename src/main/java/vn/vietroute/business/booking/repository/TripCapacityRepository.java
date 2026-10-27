@@ -47,17 +47,89 @@ public class TripCapacityRepository {
         );
         try (
             var query = connection.prepareStatement(
-                "UPDATE trip_segments SET reserved_seats=reserved_seats+?,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE trip_id=? AND segment_order=?"
+                "UPDATE trip_segments SET reserved_seats=reserved_seats+?,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE trip_id=? AND segment_order>=? AND segment_order<?"
             )
         ) {
-            for (int order : orders) {
-                query.setInt(1, reserve ? seats : -seats);
-                query.setLong(2, actor);
-                query.setLong(3, tripId);
-                query.setInt(4, order);
-                query.addBatch();
+            query.setInt(1, reserve ? seats : -seats);
+            query.setLong(2, actor);
+            query.setLong(3, tripId);
+            query.setInt(4, pickup);
+            query.setInt(5, dropoff);
+            BusinessRules.require(query.executeUpdate() == orders.size(), ErrorCode.BOOKING_INVALID);
+        }
+    }
+
+    /** Hủy trip đã khóa booking: cộng chỗ cần trả theo đoạn trước, khóa đoạn tăng dần và cập nhật một lần. */
+    public void releaseTrip(Connection connection, long tripId, long actor) throws SQLException {
+        var orders = new ArrayList<Integer>();
+        var seats = new ArrayList<Long>();
+        var changes = new ArrayList<Long>();
+        try (
+            var query = connection.prepareStatement(
+                """
+                SELECT part.segment_order,sum(b.seats),count(*) FROM bookings b
+                CROSS JOIN LATERAL generate_series(b.pickup_order,b.dropoff_order-1) part(segment_order)
+                WHERE b.trip_id=? AND b.status='CONFIRMED'
+                GROUP BY part.segment_order ORDER BY part.segment_order
+                """
+            )
+        ) {
+            query.setLong(1, tripId);
+            try (var rows = query.executeQuery()) {
+                while (rows.next()) {
+                    orders.add(rows.getInt(1));
+                    seats.add(rows.getLong(2));
+                    changes.add(rows.getLong(3));
+                }
             }
-            query.executeBatch();
+        }
+        if (orders.isEmpty()) return;
+        var orderArray = connection.createArrayOf("integer", orders.toArray(Integer[]::new));
+        var seatArray = connection.createArrayOf("bigint", seats.toArray(Long[]::new));
+        var changeArray = connection.createArrayOf("bigint", changes.toArray(Long[]::new));
+        try {
+            try (
+                var query = connection.prepareStatement(
+                    """
+                    SELECT segment_order,reserved_seats FROM trip_segments
+                    WHERE trip_id=? AND segment_order=ANY(?) ORDER BY segment_order FOR UPDATE
+                    """
+                )
+            ) {
+                query.setLong(1, tripId);
+                query.setArray(2, orderArray);
+                int count = 0;
+                try (var rows = query.executeQuery()) {
+                    while (rows.next()) {
+                        BusinessRules.require(rows.getInt(1) == orders.get(count), ErrorCode.BOOKING_INVALID);
+                        BusinessRules.require(rows.getLong(2) >= seats.get(count), ErrorCode.BOOKING_CAPACITY);
+                        count++;
+                    }
+                }
+                BusinessRules.require(count == orders.size(), ErrorCode.BOOKING_INVALID);
+            }
+            // Version vẫn tăng bằng số đơn chạm đoạn như vòng lặp cũ; chỉ giảm lượt JDBC, không đổi audit lịch sử.
+            try (
+                var query = connection.prepareStatement(
+                    """
+                    UPDATE trip_segments s SET reserved_seats=s.reserved_seats-needed.seats,
+                        version=s.version+needed.changes,updated_by=?,updated_at=CURRENT_TIMESTAMP
+                    FROM unnest(?::integer[],?::bigint[],?::bigint[]) needed(segment_order,seats,changes)
+                    WHERE s.trip_id=? AND s.segment_order=needed.segment_order
+                    """
+                )
+            ) {
+                query.setLong(1, actor);
+                query.setArray(2, orderArray);
+                query.setArray(3, seatArray);
+                query.setArray(4, changeArray);
+                query.setLong(5, tripId);
+                BusinessRules.require(query.executeUpdate() == orders.size(), ErrorCode.BOOKING_INVALID);
+            }
+        } finally {
+            orderArray.free();
+            seatArray.free();
+            changeArray.free();
         }
     }
 

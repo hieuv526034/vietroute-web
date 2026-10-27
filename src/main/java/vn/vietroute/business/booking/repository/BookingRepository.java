@@ -426,23 +426,17 @@ public class BookingRepository extends BaseRepository {
     }
 
     /** Caller đã khóa trip; lifecycle nội bộ lấy đơn active tăng ID và khóa trước segments. */
-    public List<BookingResponse> activeForTrip(Connection connection, long tripId) throws SQLException {
-        var result = new ArrayList<BookingResponse>();
+    public void lockActiveForTrip(Connection connection, long tripId) throws SQLException {
         try (
             var query = connection.prepareStatement(
-                "SELECT " +
-                    COLUMNS +
-                    ",false AS can_update" +
-                    FROM +
-                    " WHERE b.trip_id=? AND b.status IN('PENDING','CONFIRMED') ORDER BY b.id FOR UPDATE OF b"
+                "SELECT count(*) FROM (SELECT id FROM bookings WHERE trip_id=? AND status IN('PENDING','CONFIRMED') ORDER BY id FOR UPDATE) locked"
             )
         ) {
             query.setLong(1, tripId);
             try (var row = query.executeQuery()) {
-                while (row.next()) result.add(map(row, List.of()).response());
+                row.next(); // count buộc PostgreSQL khóa hết tập, không tải DTO/PII của mọi đơn lên heap.
             }
         }
-        return List.copyOf(result);
     }
 
     public record PaymentEvent(long bookingId, long actor, String kind, BigDecimal amount, String note) {}

@@ -3,6 +3,7 @@ package vn.vietroute.auth.service;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ import vn.vietroute.auth.dto.response.AccessChangeResponse;
 import vn.vietroute.auth.dto.response.AccessChangeStateResponse;
 import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.repository.AccessChangeRepository;
+import vn.vietroute.auth.repository.AccessChangeRepository.Entry;
 import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.AccessAuditConstants.Event;
@@ -43,12 +45,21 @@ public class AccessChangeService {
         AccessChangeStateResponse before,
         AccessChangeStateResponse after
     ) throws SQLException {
+        changes.append(connection, event, kind, key, actor, trace(), before, after);
+    }
+
+    /** Gom các membership của cùng mutation, không mở transaction hoặc queue ghi sau. */
+    public void recordAll(Connection connection, List<Entry> entries, long actor) throws SQLException {
+        changes.appendAll(connection, entries, actor, trace());
+    }
+
+    private String trace() {
         String trace = null;
         if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes) {
             Object value = attributes.getRequest().getAttribute(Http.TRACE_ATTRIBUTE);
             if (value instanceof String id) trace = id;
         }
-        changes.append(connection, event, kind, key, actor, trace, before, after);
+        return trace;
     }
 
     /** Lưu đầy đủ mã bị bỏ/thêm, đếm tổng mapping; không nhân bản phần không đổi của tập quyền lớn. */
