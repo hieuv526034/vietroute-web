@@ -33,6 +33,8 @@ Giám sát bổ sung: `GET /api/v1/admin/system/runtime` dùng SYSTEM_READ và e
 
 View Thymeleaf: `/`, `/login`, `/account` (đăng nhập), `/admin` (CATALOG_VIEW). Trên Tomcat deploy WAR theo tên, thêm context `/vietroute`; Docker deploy `ROOT.war` nên dùng đường dẫn ở bảng trực tiếp.
 
+PERF01: POST login thành công có `Server-Timing: auth;dur=<ms>`, chỉ tổng thời gian service xác thực, không gồm GET CSRF/mạng/journal/tải trang đích và không có trên lỗi. JSON, cookie, CSRF/quota, BCrypt cost 12 và khóa 5 lần/15 phút giữ nguyên. [Phạm vi phép đo](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md#đo-đăng-nhập-và-diễn-tập-khôi-phục--perf01).
+
 API mở rộng: quản lý `/api/v1/admin/access/**`, theo dõi/retry `/api/v1/admin/jobs/**`, readiness `/api/v1/admin/system/status`, mail queue `/api/v1/admin/mail` (202, cần Idempotency-Key). Mỗi API có authority tương ứng tại service; `/auth/me` trả permissions. Catalog CRUD dùng quyền hành động trong bảng trên. COM012/429 là quota (khác AUTH005 khóa tài khoản), COM013/503 là quá tải/Redis lỗi, COM014/413 là body lớn; MAIL001/503 là mail tắt. Đọc [hợp đồng và luồng đầy đủ](NEN_TANG_MO_RONG.md).
 
 ACCESS08: `@AccessResource`/`@AccessOperation` thay các hằng AccessRules theo từng quyền; meta-PreAuthorize chung gọi `accessGuard.operation` đọc trạng thái/mapping quyền hiện hành từ DB. HTTP AccessFunction khai báo actions để tự sinh RESOURCE_ACTION. ANY/ALL và ADMIN kèm quyền được gộp trong một SELECT; role/permission tắt, tài khoản khóa/chờ kích hoạt, tokenVersion cũ hoặc mật khẩu tạm đều không có quyền hành động. DB lỗi trả COM007/503 và dừng method, thiếu quyền trả 403. Không đổi payload/đường dẫn API. Đọc [guard chung và đăng ký quyền tự động](SCHEMA_VA_PHAN_QUYEN.md#guard-chung-theo-metadata-hàm--access08).

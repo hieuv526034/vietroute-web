@@ -87,8 +87,7 @@ public class AuthService {
                 );
                 return new LoginOutcome(null, attempts >= 5 ? ErrorCode.ACCOUNT_LOCKED : ErrorCode.INVALID_CREDENTIALS);
             }
-            users.resetFailures(connection, user.getId());
-            return new LoginOutcome(users.findById(connection, user.getId(), false), null);
+            return new LoginOutcome(users.completeLogin(connection, user.getId()), null);
         });
         if (outcome.error() != null) {
             throw new BusinessException(outcome.error());

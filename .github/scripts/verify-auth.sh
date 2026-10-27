@@ -791,4 +791,5 @@ source "$(dirname "${BASH_SOURCE[0]}")/verify-access-registry.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-access-cost.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-admin-recovery.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-pooler.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/verify-recovery.sh"
 printf 'Function permissions, durable workers, per-node quota, metrics isolation and DB/node recovery checks passed.\n'
