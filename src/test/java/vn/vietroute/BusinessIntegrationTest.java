@@ -11,7 +11,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
+import java.sql.Connection;
 import java.sql.DriverManager;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -23,6 +27,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,10 +47,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import vn.vietroute.auth.dto.request.DriverAccountCreateRequest;
+import vn.vietroute.auth.dto.request.LoginRequest;
 import vn.vietroute.auth.entity.Role;
+import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.security.AccessResourceSynchronizer;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.AccessResourceService;
+import vn.vietroute.auth.service.AuthService;
+import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.business.carrier.dto.request.CarrierSearchRequest;
 import vn.vietroute.business.carrier.service.DriverService;
 import vn.vietroute.business.carrier.service.VehicleService;
@@ -61,6 +70,9 @@ import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ApplicationConstants.Business;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
+import vn.vietroute.common.jdbc.BaseRepository.SqlWork;
+import vn.vietroute.common.jdbc.JdbcConnectionFactory;
+import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.media.service.MediaService;
 
 /** PostgreSQL thật, hai context WAR; chỉ cho phép DB test loopback, không đọc .env hoặc dùng Neon. */
@@ -76,6 +88,121 @@ class BusinessIntegrationTest {
     private MockMvc mvc;
     private final ObjectMapper json = new ObjectMapper();
     private Authentication admin;
+
+    @Test
+    void loginUsesTwoBusinessStatementsAndReturnsCommittedAuditVersionAndCurrentRoles() throws Exception {
+        sql(
+            "UPDATE auth_users SET failed_login_attempts=3,locked_until=CURRENT_TIMESTAMP-interval '1 minute' WHERE id=1"
+        );
+        long before = Long.parseLong(sql("SELECT version FROM auth_users WHERE id=1"));
+        String tokenVersion = sql("SELECT token_version FROM auth_users WHERE id=1");
+        var statements = new AtomicInteger();
+        var transactions = new JdbcTransactions(root.getBean(JdbcConnectionFactory.class)) {
+            @Override
+            public <T> T execute(SqlWork<T> work) {
+                return super.execute(connection ->
+                    work.apply(
+                        (Connection) Proxy.newProxyInstance(
+                            getClass().getClassLoader(),
+                            new Class<?>[] { Connection.class },
+                            (proxy, method, args) -> {
+                                if (method.getName().equals("prepareStatement")) statements.incrementAndGet();
+                                try {
+                                    return method.invoke(connection, args);
+                                } catch (InvocationTargetException exception) {
+                                    throw exception.getCause();
+                                }
+                            }
+                        )
+                    )
+                );
+            }
+        };
+        var auth = new AuthService(
+            root.getBean(UserRepository.class),
+            transactions,
+            root.getBean(PasswordEncoder.class),
+            root.getBean(JwtService.class),
+            Clock.systemUTC()
+        );
+        var login = new LoginRequest();
+        login.setUsername("TESTADMIN");
+        login.setPassword("TestOnly!2026Aa");
+        var response = auth.login(login);
+        assertEquals(2, statements.get(), "Chỉ SELECT FOR UPDATE và UPDATE RETURNING; schema/commit vẫn giữ nguyên");
+        assertEquals(before + 1, response.user().getVersion());
+        assertTrue(response.user().getRoles().contains(Role.ADMIN));
+        assertEquals(
+            "0:true:0",
+            sql(
+                "SELECT failed_login_attempts || ':' || (locked_until IS NULL) || ':' || updated_by FROM auth_users WHERE id=1"
+            )
+        );
+        assertEquals(tokenVersion, sql("SELECT token_version FROM auth_users WHERE id=1"));
+        assertFalse(child.getBean(ObjectMapper.class).writeValueAsString(response.user()).contains("passwordHash"));
+        assertEquals(before + 1, Long.parseLong(sql("SELECT version FROM auth_users WHERE id=1")));
+    }
+
+    @Test
+    void loginStillCommitsFiveFailuresLocksAndRollsBackAnUnsuccessfulReset() throws Exception {
+        var auth = root.getBean(AuthService.class);
+        var login = new LoginRequest();
+        login.setUsername("testadmin");
+        login.setPassword("WrongOnly!2026Aa");
+        for (int attempt = 1; attempt <= 5; attempt++) {
+            var error = assertThrows(BusinessException.class, () -> auth.login(login));
+            assertEquals(attempt == 5 ? ErrorCode.ACCOUNT_LOCKED : ErrorCode.INVALID_CREDENTIALS, error.getErrorCode());
+        }
+        login.setPassword("TestOnly!2026Aa");
+        assertEquals(
+            ErrorCode.ACCOUNT_LOCKED,
+            assertThrows(BusinessException.class, () -> auth.login(login)).getErrorCode()
+        );
+        assertEquals(
+            "5:true",
+            sql("SELECT failed_login_attempts || ':' || (locked_until>CURRENT_TIMESTAMP) FROM auth_users WHERE id=1")
+        );
+        sql("UPDATE auth_users SET locked_until=CURRENT_TIMESTAMP-interval '1 minute' WHERE id=1");
+        long before = Long.parseLong(sql("SELECT version FROM auth_users WHERE id=1"));
+        sql(
+            "CREATE FUNCTION reject_login_reset() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN IF NEW.failed_login_attempts=0 THEN RAISE EXCEPTION ''test reset failure''; END IF; RETURN NEW; END'; CREATE TRIGGER reject_login_reset BEFORE UPDATE ON auth_users FOR EACH ROW EXECUTE FUNCTION reject_login_reset()"
+        );
+        assertThrows(BusinessException.class, () -> auth.login(login));
+        assertEquals("5:" + before, sql("SELECT failed_login_attempts || ':' || version FROM auth_users WHERE id=1"));
+    }
+
+    @Test
+    void successfulLoginTimingKeepsCsrfProtectionAndIsAbsentForInvalidCredentials() throws Exception {
+        String body = "{\"username\":\"testadmin\",\"password\":\"TestOnly!2026Aa\"}";
+        var denied = mvc
+            .perform(request(HttpMethod.POST, "/api/v1/auth/login").contentType("application/json").content(body))
+            .andReturn()
+            .getResponse();
+        assertEquals(403, denied.getStatus());
+        assertEquals(null, denied.getHeader("Server-Timing"));
+        var success = mvc
+            .perform(
+                request(HttpMethod.POST, "/api/v1/auth/login")
+                    .with(csrf())
+                    .contentType("application/json")
+                    .content(body)
+            )
+            .andReturn()
+            .getResponse();
+        assertEquals(200, success.getStatus());
+        assertTrue(success.getHeader("Server-Timing").matches("auth;dur=[0-9]+"));
+        var invalid = mvc
+            .perform(
+                request(HttpMethod.POST, "/api/v1/auth/login")
+                    .with(csrf())
+                    .contentType("application/json")
+                    .content(body.replace("TestOnly!2026Aa", "WrongOnly!2026Aa"))
+            )
+            .andReturn()
+            .getResponse();
+        assertEquals(401, invalid.getStatus());
+        assertEquals(null, invalid.getHeader("Server-Timing"));
+    }
 
     @Configuration
     static class Environment {

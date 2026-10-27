@@ -484,6 +484,8 @@ public final class ApplicationConstants {
 
         public static final String REQUEST_ID = "X-Request-ID";
 
+        public static final String SERVER_TIMING = "Server-Timing";
+
         public static final String TRACE_ATTRIBUTE = "vietroute.traceId";
 
         public static final String LOCALE_HEADER = "X-Locale";

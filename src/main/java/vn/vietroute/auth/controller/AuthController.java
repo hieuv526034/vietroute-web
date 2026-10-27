@@ -69,7 +69,7 @@ public class AuthController extends BaseController {
     @PostMapping(Routes.LOGIN_ACTION)
     @Operation(
         summary = "Đăng nhập",
-        description = "JWT có hạn 30 phút. Website nhận cookie HttpOnly; API client dùng accessToken với Bearer. Sai 5 lần sẽ khóa 15 phút."
+        description = "JWT có hạn 30 phút. Website nhận cookie HttpOnly; API client dùng accessToken với Bearer. Sai 5 lần sẽ khóa 15 phút. Thành công có Server-Timing auth;dur theo mili giây, chỉ đo service xác thực, không gồm CSRF/mạng/journal/trang đích."
     )
     public ApiResult<AuthResponse> login(
         @Valid @RequestBody LoginRequest body,
@@ -78,7 +78,11 @@ public class AuthController extends BaseController {
     ) {
         // Chỉ phát cookie sau khi service xác minh mật khẩu và cập nhật số lần đăng nhập sai.
         return execute(SuccessCode.LOGIN, request, () -> {
+            long started = System.nanoTime();
             AuthResponse result = auth.login(body);
+            // Chỉ công bố tổng thời gian auth khi thành công; không tách thời gian tra username/sai mật khẩu.
+            // Không gồm CSRF, mạng, journal hoặc tải trang đích; dùng để phân biệt phần chờ backend với UI.
+            response.setHeader(Http.SERVER_TIMING, "auth;dur=" + Math.max(0, System.nanoTime() - started) / 1_000_000);
             request.setAttribute(Http.VERIFIED_USER_ATTRIBUTE, result.user().getId());
             request.setAttribute(Http.JOURNAL_USER_ATTRIBUTE, result.user().getId());
             cookies.set(request, response, result.accessToken());

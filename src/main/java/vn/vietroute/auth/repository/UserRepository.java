@@ -8,7 +8,6 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -33,6 +32,15 @@ import vn.vietroute.common.validation.StrongPasswordValidator;
 @Repository
 public class UserRepository extends BaseRepository {
 
+    private static final String ACCOUNT_COLUMNS =
+        """
+        u.id,u.username,u.display_name,u.email,u.avatar_media_id,u.email_verified_at,
+        u.activation_pending,u.password_hash,u.active,u.must_change_password,
+        u.failed_login_attempts,u.locked_until,u.token_version,u.version,
+        u.created_at,u.updated_at,u.created_by,u.updated_by,
+        (SELECT thumbnail_url FROM media_assets WHERE id=u.avatar_media_id AND status='READY') AS avatar_url
+        """ + AccountAccessSql.AUTHORITIES;
+
     public UserRepository(JdbcConnectionFactory connections) {
         super(connections);
     }
@@ -48,7 +56,7 @@ public class UserRepository extends BaseRepository {
                            u.version,u.created_at,u.updated_at,u.created_by,u.updated_by,
                            (SELECT thumbnail_url FROM media_assets WHERE id=u.avatar_media_id AND status='READY') AS avatar_url
                     """ +
-                        AccountAccessSql.ARRAYS +
+                        AccountAccessSql.AUTHORITIES +
                         " FROM auth_users u WHERE u.id=? AND NOT u.deleted"
                 )
             ) {
@@ -166,10 +174,12 @@ public class UserRepository extends BaseRepository {
         // column chỉ do các hàm nội bộ chọn id/username, tuyệt đối không nhận tên cột từ HTTP.
         try (
             PreparedStatement query = connection.prepareStatement(
-                "SELECT *, (SELECT thumbnail_url FROM media_assets WHERE id=avatar_media_id AND status='READY') AS avatar_url FROM auth_users WHERE " +
+                "SELECT " +
+                    ACCOUNT_COLUMNS +
+                    " FROM auth_users u WHERE u." +
                     column +
-                    " = ? AND NOT deleted" +
-                    (lock ? " FOR UPDATE" : "")
+                    " = ? AND NOT u.deleted" +
+                    (lock ? " FOR UPDATE OF u" : "")
             )
         ) {
             query.setObject(1, value);
@@ -177,48 +187,36 @@ public class UserRepository extends BaseRepository {
                 if (!result.next()) {
                     return null;
                 }
-                UserAccount user = UserAccount.builder()
-                    .id(result.getLong("id"))
-                    .username(result.getString("username"))
-                    .displayName(result.getString("display_name"))
-                    .email(result.getString("email"))
-                    .avatarMediaId(result.getObject("avatar_media_id", Long.class))
-                    .avatarUrl(result.getString("avatar_url"))
-                    .emailVerifiedAt(instant(result, "email_verified_at"))
-                    .activationPending(result.getBoolean("activation_pending"))
-                    .passwordHash(result.getString("password_hash"))
-                    .active(result.getBoolean("active"))
-                    .mustChangePassword(result.getBoolean("must_change_password"))
-                    .failedLoginAttempts(result.getInt("failed_login_attempts"))
-                    .lockedUntil(instant(result, "locked_until"))
-                    .tokenVersion(result.getLong("token_version"))
-                    .version(result.getLong("version"))
-                    .createdAt(instant(result, "created_at"))
-                    .updatedAt(instant(result, "updated_at"))
-                    .createdBy(result.getObject("created_by", Long.class))
-                    .updatedBy(result.getObject("updated_by", Long.class))
-                    .build();
-                user.setRoles(new LinkedHashSet<>());
-                user.setPermissions(new LinkedHashSet<>());
-                try (
-                    PreparedStatement roles = connection.prepareStatement(
-                        "SELECT r.role_code, p.permission_code FROM auth_user_roles r JOIN auth_roles ar ON ar.code=r.role_code AND ar.active AND NOT ar.deleted LEFT JOIN (auth_role_permissions rp JOIN auth_permissions ap ON ap.code=rp.permission_code AND ap.active) p ON p.role_code=r.role_code WHERE r.user_id=? ORDER BY r.role_code, p.permission_code"
-                    )
-                ) {
-                    roles.setLong(1, user.getId());
-                    try (ResultSet values = roles.executeQuery()) {
-                        while (values.next()) {
-                            user.getRoles().add(Role.valueOf(values.getString(1)));
-                            String permission = values.getString(2);
-                            if (permission != null) {
-                                user.getPermissions().add(Permission.valueOf(permission));
-                            }
-                        }
-                    }
-                }
-                return user;
+                return account(result);
             }
         }
+    }
+
+    /** Dùng cùng projection cho SELECT và UPDATE RETURNING, không query role từng lượt hoặc giữ SQL array ngoài JDBC. */
+    private static UserAccount account(ResultSet result) throws SQLException {
+        return UserAccount.builder()
+            .id(result.getLong("id"))
+            .username(result.getString("username"))
+            .displayName(result.getString("display_name"))
+            .email(result.getString("email"))
+            .avatarMediaId(result.getObject("avatar_media_id", Long.class))
+            .avatarUrl(result.getString("avatar_url"))
+            .emailVerifiedAt(instant(result, "email_verified_at"))
+            .activationPending(result.getBoolean("activation_pending"))
+            .passwordHash(result.getString("password_hash"))
+            .active(result.getBoolean("active"))
+            .mustChangePassword(result.getBoolean("must_change_password"))
+            .failedLoginAttempts(result.getInt("failed_login_attempts"))
+            .lockedUntil(instant(result, "locked_until"))
+            .tokenVersion(result.getLong("token_version"))
+            .version(result.getLong("version"))
+            .createdAt(instant(result, "created_at"))
+            .updatedAt(instant(result, "updated_at"))
+            .createdBy(result.getObject("created_by", Long.class))
+            .updatedBy(result.getObject("updated_by", Long.class))
+            .roles(AccountAccessSql.roles(result))
+            .permissions(AccountAccessSql.permissions(result))
+            .build();
     }
 
     /** Ghi bộ đếm và thời điểm khóa trong transaction login; Instant chỉ đổi Timestamp tại biên JDBC. */
@@ -237,7 +235,28 @@ public class UserRepository extends BaseRepository {
         }
     }
 
-    /** Thành công thì xóa bộ đếm/khóa cũ, dùng cùng câu update để giữ audit và version nhất quán. */
+    /** Xóa bộ đếm/khóa và trả snapshot mới trong một statement; giữ nguyên audit, version và transaction login. */
+    public UserAccount completeLogin(Connection connection, long id) throws SQLException {
+        try (
+            PreparedStatement update = connection.prepareStatement(
+                "UPDATE auth_users u SET failed_login_attempts=0,locked_until=NULL,updated_at=CURRENT_TIMESTAMP," +
+                    "updated_by=?,version=version+1 WHERE u.id=? AND NOT u.deleted RETURNING " +
+                    ACCOUNT_COLUMNS
+            )
+        ) {
+            update.setLong(1, SystemActor.ID);
+            update.setLong(2, id);
+            try (ResultSet result = update.executeQuery()) {
+                if (!result.next()) throw new SQLException(
+                    "Không còn tài khoản đã khóa trong transaction login",
+                    "02000"
+                );
+                return account(result);
+            }
+        }
+    }
+
+    /** Luồng cứu hộ chỉ xóa bộ đếm, không cần projection credential/quyền dùng để phát JWT đăng nhập. */
     public void resetFailures(Connection connection, long id) throws SQLException {
         recordFailure(connection, id, 0, null);
     }

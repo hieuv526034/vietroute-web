@@ -11,7 +11,7 @@ import vn.vietroute.auth.entity.Role;
 /** Projection dùng chung cho alias u: một snapshot SQL, không nhân bản cột user theo từng mapping role/quyền. */
 final class AccountAccessSql {
 
-    static final String ARRAYS = """
+    static final String AUTHORITIES = """
     , ARRAY(SELECT r.code FROM auth_user_roles ur
             JOIN auth_roles r ON r.code=ur.role_code AND r.active AND NOT r.deleted
             WHERE ur.user_id=u.id ORDER BY r.code) AS role_codes
@@ -20,18 +20,23 @@ final class AccountAccessSql {
             JOIN auth_role_permissions rp ON rp.role_code=r.code
             JOIN auth_permissions p ON p.code=rp.permission_code AND p.active
             WHERE ur.user_id=u.id ORDER BY p.code) AS permission_codes
-    , ARRAY(SELECT DISTINCT rr.target FROM auth_user_roles ur
-            JOIN auth_roles r ON r.code=ur.role_code AND r.active AND NOT r.deleted
-            JOIN auth_role_resources rr ON rr.role_code=r.code
-            WHERE ur.user_id=u.id ORDER BY rr.target) AS resource_targets
-    , ARRAY(SELECT DISTINCT p.code FROM auth_user_roles ur
-            JOIN auth_roles r ON r.code=ur.role_code AND r.active AND NOT r.deleted
-            JOIN auth_role_permissions rp ON rp.role_code=r.code
-            JOIN auth_permissions p ON p.code=rp.permission_code AND p.active
-            WHERE ur.user_id=u.id AND NOT EXISTS
-                (SELECT 1 FROM auth_role_resource_sets rs WHERE rs.role_code=r.code)
-            ORDER BY p.code) AS legacy_permission_codes
     """;
+
+    static final String ARRAYS =
+        AUTHORITIES +
+        """
+        , ARRAY(SELECT DISTINCT rr.target FROM auth_user_roles ur
+                JOIN auth_roles r ON r.code=ur.role_code AND r.active AND NOT r.deleted
+                JOIN auth_role_resources rr ON rr.role_code=r.code
+                WHERE ur.user_id=u.id ORDER BY rr.target) AS resource_targets
+        , ARRAY(SELECT DISTINCT p.code FROM auth_user_roles ur
+                JOIN auth_roles r ON r.code=ur.role_code AND r.active AND NOT r.deleted
+                JOIN auth_role_permissions rp ON rp.role_code=r.code
+                JOIN auth_permissions p ON p.code=rp.permission_code AND p.active
+                WHERE ur.user_id=u.id AND NOT EXISTS
+                    (SELECT 1 FROM auth_role_resource_sets rs WHERE rs.role_code=r.code)
+                ORDER BY p.code) AS legacy_permission_codes
+        """;
 
     private AccountAccessSql() {}
 

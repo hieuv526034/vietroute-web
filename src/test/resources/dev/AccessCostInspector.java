@@ -50,7 +50,7 @@ public final class AccessCostInspector {
                 null,
                 List.of()
             );
-            // Cùng dữ liệu DB: nhánh có connection dùng cho credential/transaction vẫn giữ hai SELECT; filter/me dùng một projection không hash.
+            // Cùng dữ liệu DB: cả hai đường dùng một SELECT; chỉ đường credential có password hash.
             measured.statements.set(0);
             var snapshot = users.findById(id);
             int optimized = measured.statements.get();
@@ -65,7 +65,7 @@ public final class AccessCostInspector {
                 ) throw new IllegalStateException("Projection phải giữ quyền hiện hành và bỏ credential");
             }
             int credentialPath = measured.statements.get();
-            if (optimized != 2 || credentialPath != 3) throw new IllegalStateException(
+            if (optimized != 2 || credentialPath != 2) throw new IllegalStateException(
                 "Sai số statement, gồm cả set search_path"
             );
             for (int index = 0; index < 10; index++) {
