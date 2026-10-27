@@ -11,6 +11,7 @@
 | `/operations/accounts` | User: danh tính, role và preview quyền | Thêm, sửa tên, gán role, trạng thái; xóa mềm có xác nhận |
 | `/operations/access` | Role / Phạm vi / Lịch sử (ADMIN) | CRUD role; cây Menu → API cụ thể, public/self-service chỉ đọc |
 | `/operations/access/resources` | Inventory menu/API phân trang | Chỉ đọc nguồn; gán tại màn Role |
+| `/operations/reports` | Bộ lọc ngày/nhà xe và hai tab số liệu | Chọn nhà xe qua modal tìm/phân trang riêng |
 | `/operations/configuration` | Ứng dụng / Pool / Bảo vệ request / Worker / Tính năng / Giám sát | Chỉ đọc, không chỉnh env/secret |
 | `/account`, `/media` | Một nhóm, không thêm tab thừa | Đổi mật khẩu, upload ảnh; ảnh tắt thì khóa nút mở |
 | `/operations/jobs` | Danh sách có lọc trạng thái | Chi tiết/retry theo quyền và version |
@@ -60,7 +61,7 @@ Chỉ update pager sau khi tải thành công; lỗi giữ trang/size đã xác 
 | Footer modal | `dialog-actions`, Hủy trước/Lưu sau, cùng hàng bên phải; mobile được wrap |
 | Menu Hệ thống | Các mục cách nhau 6px; vùng hover/focus/mục đang chọn không chạm nhau |
 
-Header dùng `navigation.js` đo tổng chiều rộng các menu khi font/tên/tập menu thay đổi và khi resize; thu gọn thành panel nếu không vừa chỗ trống giữa logo và tài khoản, kể cả desktop trên 1399px. Mốc 1399px vẫn là ngưỡng tối thiểu thu gọn. Logo/tài khoản không bị menu phủ; các link menu có SVG nội bộ và nhãn chữ, ngôn ngữ giữ VI/EN. Giữ ARIA, Escape, click ngoài và focus khi chuyển chế độ; menu vẫn do server lọc quyền.
+UI27 (27/10/2026): header luôn dựng dải menu ngang bằng CSS ngay từ lần vẽ đầu, không chờ JS đo rồi ẩn/đổi sang hamburger. Logo và tài khoản nằm ngoài vùng cuộn; mobile đặt dải menu ở hàng thứ hai. `navigation.js` chỉ hỗ trợ hai nút cuộn, phím Left/Right/Home/End khi focus vùng cuộn, popup và tiến trình chuyển trang. Dropdown dùng fixed, tính vị trí từ summary và giới hạn trong viewport để không bị overflow của dải menu cắt; Escape/click ngoài/Tab ra ngoài/resize giữ focus hợp lý. Không cache quyền hoặc menu trong storage và không đổi điều hướng document thành SPA để né guard server.
 
 ## 3. Validation và xử lý request
 
@@ -252,3 +253,9 @@ Các panel cùng cấp cách nhau 24px, grid dùng gap thay vì ép card sát nh
 Dashboard `/dashboard` dùng các API nghiệp vụ hiện hành, không có API tổng hợp/quyền/schema mới. Tài khoản CUSTOMER thấy tổng đơn riêng, chờ/xác nhận và 5 đơn gần đây; DRIVER thấy chuyến đang chạy, khởi hành hôm nay và mở bán được giao. ADMIN/nhân sự có REPORT_READ thấy báo cáo từ đầu tháng hiện tại tới hết tháng kế tiếp theo lịch Việt Nam; BOOKING_READ thấy số đơn chờ xử lý toàn phạm vi. Khoảng ngày chỉ áp dụng số liệu báo cáo; tiền thực thu tách khỏi giá chốt. Mỗi khối cần đúng endpoint GET trong capabilities, link cần VIEW; điều kiện role CUSTOMER/DRIVER bổ sung theo rào owner/phân công hiện hành, ADMIN không tự thành khách/tài xế.
 
 Đọc tuần tự, giới hạn danh sách 5 dòng và lấy tổng từ totalElements; không polling hoặc mutation. Lỗi một khối báo tại khối đó và giữ các khối khác; nút Làm mới khóa khi tải. Không dựng số liệu ngẫu nhiên hoặc phát vị trí. Menu chung ẩn màn owner/phân công khi thiếu đúng role nghiệp vụ; backend vẫn kiểm DB/scope/owner ở mỗi request. Ảnh nghiệm thu và CI tại [tiến độ BUSINESS05](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md#business05--đã-có-trên-main-dữ-liệu-chuẩn-breadcrumb-và-dashboard-theo-nghiệp-vụ).
+
+## Báo cáo và trạng thái chuyển trang — UI27
+
+Báo cáo có ba trường bằng nhau trên desktop, một cột trên mobile; nút Chọn nhà xe/Xem báo cáo luôn ở hàng riêng dưới bộ lọc. Chỉ Xem báo cáo áp dụng khoảng ngày và nhà xe; tìm kiếm nằm trong modal Chọn nhà xe, chỉ tải danh sách, không gọi lại API tổng hợp. Phân trang dùng fragment chung dưới bảng nhà xe, giữ bộ lọc đã submit và lựa chọn dù sang trang/tìm lại; chọn Tất cả xóa riêng carrierId. Chỉ mở modal mới tải picker để giảm một request nạp sớm. Đổi ngày/nhà xe ẩn snapshot cũ; lỗi không tự gửi lại request. Modal có vùng bảng cuộn riêng và giữ pager/footer trong viewport; fieldset disabled được giữ với wrapper flex bên trong để không cắt phần nút do layout đặc biệt của fieldset.
+
+Login giữ tài khoản/mật khẩu trong DOM hiện tại sau khi API thành công và trong lúc chờ document đích, khóa submit lặp và báo đang mở trang. Không reset form ngay khi API trả về; pagehide mới xóa dữ liệu khi document thực sự rời màn hình, pageshow từ bfcache tiếp tục xóa và giải phóng trạng thái. Không lưu credential vào storage, URL, tab hoặc log. Kiểm bằng API/document giả chậm và unit client; không dùng dữ liệu thật để chụp ảnh. Link chuyển document có thanh tiến trình ngay khi click và dọn khi pageshow; không bắt modified click, link tải file hoặc mở tab khác.

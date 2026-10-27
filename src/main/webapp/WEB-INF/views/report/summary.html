@@ -10,7 +10,7 @@
         <main
             id="report-workspace"
             class="container-xl workspace-page"
-            th:attr="data-loading=#{ui.loading},data-no-read=#{ui.accessTree.noRead},data-all=#{ui.report.all},data-inactive=#{ui.location.inactive},data-draft=#{ui.trip.DRAFT},data-open=#{ui.trip.OPEN},data-in-progress=#{ui.trip.IN_PROGRESS},data-completed=#{ui.trip.COMPLETED},data-cancelled=#{ui.trip.CANCELLED},data-pending=#{ui.booking.PENDING},data-confirmed=#{ui.booking.CONFIRMED},data-rejected=#{ui.booking.REJECTED},data-as-of=#{ui.report.asOf}"
+            th:attr="data-loading=#{ui.loading},data-no-read=#{ui.accessTree.noRead},data-all=#{ui.report.all},data-inactive=#{ui.location.inactive},data-draft=#{ui.trip.DRAFT},data-open=#{ui.trip.OPEN},data-in-progress=#{ui.trip.IN_PROGRESS},data-completed=#{ui.trip.COMPLETED},data-cancelled=#{ui.trip.CANCELLED},data-pending=#{ui.booking.PENDING},data-confirmed=#{ui.booking.CONFIRMED},data-rejected=#{ui.booking.REJECTED},data-as-of=#{ui.report.asOf},data-select=#{ui.report.selectCarrier},data-empty=#{ui.foundation.empty},data-active=#{ui.location.active}"
         >
             <div class="page-heading">
                 <p
@@ -41,21 +41,29 @@
                 >
                     <form
                         id="report-form"
-                        class="dialog-form-grid"
+                        class="report-filter"
                     >
-                        <label>
-                            <span th:text="#{ui.report.from}"></span>
+                        <div>
+                            <label
+                                for="report-from"
+                                th:text="#{ui.report.from}"
+                            ></label>
                             <input
+                                id="report-from"
                                 type="date"
                                 name="fromDate"
                                 class="form-control"
                                 required
                                 th:value="${reportFrom}"
                             />
-                        </label>
-                        <label>
-                            <span th:text="#{ui.report.to}"></span>
+                        </div>
+                        <div>
+                            <label
+                                for="report-to"
+                                th:text="#{ui.report.to}"
+                            ></label>
                             <input
+                                id="report-to"
                                 type="date"
                                 name="toDate"
                                 class="form-control"
@@ -63,54 +71,31 @@
                                 data-validation-key="dateRangeValid"
                                 th:value="${reportTo}"
                             />
-                        </label>
-                        <label>
-                            <span th:text="#{ui.report.carrier}"></span>
-                            <select
-                                id="report-carrier"
-                                name="carrierId"
-                                class="form-select"
-                            >
-                                <option
-                                    value=""
-                                    th:text="#{ui.report.all}"
-                                ></option>
-                            </select>
-                        </label>
-                        <div class="picker-toolbar">
+                        </div>
+                        <div>
                             <label
-                                for="report-query"
-                                th:text="#{ui.fleet.search}"
+                                for="report-carrier-name"
+                                th:text="#{ui.report.carrier}"
                             ></label>
                             <input
-                                id="report-query"
+                                id="report-carrier-name"
                                 class="form-control"
-                                maxlength="160"
+                                readonly
+                                th:value="#{ui.report.all}"
                             />
-                            <button
-                                id="report-pick-search"
-                                type="button"
-                                class="button button-outline"
-                                th:text="#{ui.search}"
-                            ></button>
-                            <button
-                                id="report-pick-prev"
-                                type="button"
-                                class="button button-outline"
-                                th:text="#{ui.mediaPrevious}"
-                            ></button>
-                            <span
-                                id="report-pick-count"
-                                aria-live="polite"
-                            ></span>
-                            <button
-                                id="report-pick-next"
-                                type="button"
-                                class="button button-outline"
-                                th:text="#{ui.mediaNext}"
-                            ></button>
+                            <input
+                                id="report-carrier"
+                                type="hidden"
+                                name="carrierId"
+                            />
                         </div>
-                        <div class="toolbar-actions">
+                        <div class="toolbar-actions report-actions">
+                            <button
+                                id="report-carrier-open"
+                                type="button"
+                                class="button button-outline"
+                                th:text="#{ui.report.chooseCarrier}"
+                            ></button>
                             <button
                                 type="submit"
                                 class="button"
@@ -243,6 +228,97 @@
                     </dl>
                 </section>
             </div>
+            <dialog
+                id="report-carrier-dialog"
+                class="workspace-dialog workspace-dialog-wide"
+                aria-labelledby="report-carrier-title"
+            >
+                <div class="dialog-heading">
+                    <h2
+                        id="report-carrier-title"
+                        th:text="#{ui.report.chooseCarrier}"
+                    ></h2>
+                    <button
+                        type="button"
+                        class="dialog-close"
+                        data-dialog-close
+                        th:attr="aria-label=#{ui.ops.close}"
+                    >
+                        ×
+                    </button>
+                </div>
+                <p
+                    id="report-picker-feedback"
+                    class="feedback"
+                    role="alert"
+                    hidden
+                ></p>
+                <fieldset
+                    id="report-picker-controls"
+                    class="dialog-controls"
+                >
+                    <div class="report-picker-content">
+                        <form
+                            id="report-carrier-search"
+                            class="table-filter record-search"
+                        >
+                            <label
+                                for="report-query"
+                                th:text="#{ui.report.searchCarriers}"
+                            ></label>
+                            <input
+                                id="report-query"
+                                class="form-control"
+                                type="search"
+                                maxlength="160"
+                            />
+                            <div class="toolbar-actions">
+                                <button
+                                    type="submit"
+                                    class="button button-outline"
+                                    th:text="#{ui.search}"
+                                ></button>
+                                <button
+                                    id="report-carrier-all"
+                                    type="button"
+                                    class="button button-outline"
+                                    th:text="#{ui.report.all}"
+                                ></button>
+                            </div>
+                        </form>
+                        <div
+                            class="table-responsive"
+                            tabindex="0"
+                            role="region"
+                            th:attr="aria-label=#{ui.table.scroll}"
+                        >
+                            <table class="table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th th:text="#{ui.code}"></th>
+                                        <th th:text="#{ui.name}"></th>
+                                        <th th:text="#{ui.location.state}"></th>
+                                        <th
+                                            class="table-actions"
+                                            th:text="#{ui.ops.actions}"
+                                        ></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="report-carriers-body"></tbody>
+                            </table>
+                        </div>
+                        <nav th:replace="~{fragments/pagination :: pager('report-carriers', 10)}"></nav>
+                        <div class="dialog-actions">
+                            <button
+                                type="button"
+                                class="button button-outline"
+                                data-dialog-close
+                                th:text="#{ui.ops.close}"
+                            ></button>
+                        </div>
+                    </div>
+                </fieldset>
+            </dialog>
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>

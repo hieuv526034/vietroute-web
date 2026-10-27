@@ -9,6 +9,8 @@ const parse = async (file) => JSON.parse(await fs.readFile(path.join(preview, fi
 const pages = {
     '/': 'home',
     '/login': 'login',
+    '/dashboard': 'dashboard',
+    '/operations/reports': 'reports',
     '/account': 'account',
     '/account-access': 'lifecycle',
     '/admin': 'admin',
@@ -318,6 +320,42 @@ const page = (values, query) => {
                 readFailure = 0;
                 return respond(null, status);
             }
+            // Báo cáo chỉ dùng dữ liệu tổng hợp giả, không truy cập cơ sở dữ liệu hoặc provider.
+            if (route === '/api/v1/admin/reports/carriers') {
+                const english = url.searchParams.get('lang') === 'en' || req.headers['x-locale'] === 'en';
+                const items = Array.from({ length: 24 }, (_, i) => ({
+                    id: 701 + i,
+                    code: 'FIXR' + String(i + 1).padStart(3, '0'),
+                    name: (english ? 'Fixture carrier ' : 'Nhà xe thử ') + (i + 1),
+                    active: true,
+                }));
+                const query = (url.searchParams.get('query') || '').toLowerCase();
+                return respond(
+                    page(
+                        items.filter((x) => (x.code + ' ' + x.name).toLowerCase().includes(query)),
+                        url.searchParams,
+                    ),
+                );
+            }
+            if (route === '/api/v1/admin/reports')
+                return respond({
+                    fromDate: url.searchParams.get('fromDate'),
+                    toDate: url.searchParams.get('toDate'),
+                    asOf: now(),
+                    tripCount: 8,
+                    bookingCount: 10,
+                    confirmedSeats: 6,
+                    confirmedValue: 4500000,
+                    paidAmount: 0,
+                    refundedAmount: 0,
+                    netAmount: 0,
+                    refundOutstanding: 0,
+                    trips: [{ status: 'OPEN', count: 8 }],
+                    bookings: [
+                        { status: 'CONFIRMED', count: 6 },
+                        { status: 'PENDING', count: 4 },
+                    ],
+                });
             if (route === '/api/v1/auth/me') return respond(profile);
             if (route === '/api/v1/auth/login' && req.method === 'POST') {
                 await body(req); // Bỏ thông tin đăng nhập fixture, không ghi mật khẩu vào log/trạng thái.

@@ -76,6 +76,8 @@ public final class RenderSystemUi {
                 { "routes", "/operations/routes" },
                 { "trips", "/operations/trips" },
                 { "bookings", "/operations/bookings" },
+                { "reports", "/operations/reports" },
+                { "dashboard", "/dashboard" },
                 { "admin", "/admin" },
                 { "configuration", "/operations/configuration" },
                 { "media", "/media" },

@@ -11,35 +11,45 @@
         path = '/api/v1/admin/reports',
         tabs = window.VietRouteUI.tabs(node('report-results'));
     let busy = false,
-        page = 0,
-        hasNext = false,
+        query = '',
         allowed = false;
     const text = (tag, value) => {
         const element = document.createElement(tag);
         element.textContent = String(value ?? '');
         return element;
     };
-    const option = (value, label) => {
-        const element = text('option', label);
-        element.value = value;
-        return element;
-    };
+    const carrierModal = window.VietRouteUI.modal('report-carrier-dialog', { busy: () => busy });
+    const carrierPager = window.VietRouteTable.pager('report-carriers', {
+        busy: () => busy,
+        onChange: (page) => perform(() => findCarriers(page)),
+    });
     const sync = () => {
         node('report-controls').disabled = busy || !allowed;
-        node('report-pick-prev').disabled = busy || !allowed || page === 0;
-        node('report-pick-next').disabled = busy || !allowed || !hasNext;
+        node('report-picker-controls').disabled = busy || !allowed;
+    };
+    const invalidate = () => {
+        node('report-results').hidden = true;
+        node('report-snapshot').textContent = '';
+    };
+    const selectCarrier = (carrier) => {
+        node('report-carrier').value = carrier ? String(carrier.id) : '';
+        node('report-carrier-name').value = carrier ? carrier.code + ' · ' + carrier.name : labels.all;
+        invalidate();
+        carrierModal.close();
     };
     const perform = async (action) => {
         if (busy) return;
         busy = true;
         root.setAttribute('aria-busy', 'true');
         node('report-status').textContent = labels.loading;
-        feedback('', false, 'report-feedback');
+        const feedbackId = carrierModal.isOpen ? 'report-picker-feedback' : 'report-feedback';
+        feedback('', false, feedbackId);
         sync();
         try {
             await action();
         } catch (error) {
-            failure(error, 'report-feedback');
+            if ([401, 403].includes(error.response?.status)) node('report-carriers-body').replaceChildren();
+            failure(error, feedbackId);
         } finally {
             busy = false;
             root.setAttribute('aria-busy', 'false');
@@ -47,25 +57,40 @@
             sync();
         }
     };
-    const findCarriers = async (requestedPage = 0) => {
-        const result = (
-                await api.get(`${path}/carriers`, {
-                    params: { query: node('report-query').value.trim(), page: requestedPage, size: 10 },
-                    timeout: 10000,
-                })
-            ).data.data,
-            select = node('report-carrier'),
-            current = select.selectedOptions[0],
-            options = result.content.map((item) =>
-                option(String(item.id), `${item.code} · ${item.name}${item.active ? '' : ` · ${labels.inactive}`}`),
+    // Danh sách nhà xe chỉ tải khi người dùng mở picker; phân trang không áp dụng lại số liệu báo cáo.
+    const findCarriers = async (requested = carrierPager.query) => {
+        const result = await window.VietRouteTable.readPage(
+            async (page) =>
+                (await api.get(path + '/carriers', { params: { ...page, query }, timeout: 10000 })).data.data,
+            requested,
+        );
+        const body = node('report-carriers-body');
+        body.replaceChildren();
+        for (const carrier of result.content) {
+            const row = document.createElement('tr');
+            row.append(
+                text('td', carrier.code),
+                text('td', carrier.name),
+                text('td', carrier.active ? labels.active : labels.inactive),
             );
-        if (current?.value && !result.content.some((item) => String(item.id) === current.value))
-            options.unshift(option(current.value, current.textContent));
-        select.replaceChildren(option('', labels.all), ...options);
-        if (current?.value) select.value = current.value;
-        page = result.page;
-        hasNext = result.hasNext;
-        node('report-pick-count').textContent = `${result.totalElements ? page + 1 : 0} / ${result.totalPages}`;
+            const actions = text('td', '');
+            actions.className = 'table-actions';
+            actions.append(
+                window.VietRouteTable.actionButton(labels.select + ': ' + carrier.name, 'assign', () =>
+                    selectCarrier(carrier),
+                ),
+            );
+            row.append(actions);
+            body.append(row);
+        }
+        if (!result.content.length) {
+            const row = document.createElement('tr'),
+                cell = text('td', labels.empty);
+            cell.colSpan = 4;
+            row.append(cell);
+            body.append(row);
+        }
+        carrierPager.update(result);
     };
     const load = async () => {
         // Ẩn snapshot cũ ngay khi đổi điều kiện để lỗi không gắn số cũ với khoảng ngày mới.
@@ -109,15 +134,23 @@
         if (allowed && window.VietRouteForms.validate(form)) void perform(load);
     });
     for (const name of ['fromDate', 'toDate'])
-        form.elements[name].addEventListener('input', () => window.VietRouteForms.clear(form));
-    node('report-pick-search').addEventListener('click', () => perform(() => findCarriers()));
-    node('report-pick-prev').addEventListener('click', () => perform(() => findCarriers(page - 1)));
-    node('report-pick-next').addEventListener('click', () => perform(() => findCarriers(page + 1)));
-    node('report-query').addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            void perform(() => findCarriers());
-        }
+        form.elements[name].addEventListener('input', () => {
+            window.VietRouteForms.clear(form);
+            invalidate();
+        });
+    node('report-carrier-open').addEventListener('click', (event) => {
+        if (busy || !allowed) return;
+        carrierModal.open(event.currentTarget);
+        void perform(() => findCarriers());
+    });
+    node('report-carrier-all').addEventListener('click', () => {
+        if (!busy) selectCarrier(null);
+    });
+    node('report-carrier-search').addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (busy || !allowed || !window.VietRouteForms.validate(event.currentTarget)) return;
+        query = node('report-query').value.trim();
+        void perform(() => findCarriers({ page: 0, size: carrierPager.query.size }));
     });
     void perform(async () => {
         const capability = await window.VietRouteAccess.load('REPORT');
@@ -126,7 +159,6 @@
             feedback(labels.noRead, false, 'report-feedback');
             return;
         }
-        await findCarriers();
         await load();
         tabs.select('report-operations');
     });
