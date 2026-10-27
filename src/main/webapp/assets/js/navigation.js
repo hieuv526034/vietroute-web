@@ -1,108 +1,114 @@
-/* Thu gọn theo chỗ trống thực tế và viewport; quyền/menu vẫn do server quyết định. */
+/* Dải menu cuộn ngang có sẵn từ HTML/CSS; JS chỉ hỗ trợ cuộn, popup, focus và trạng thái chuyển trang. */
 (() => {
     'use strict';
     const header = document.querySelector('.site-nav');
-    const toggle = document.getElementById('navigation-toggle');
-    const panel = document.getElementById('navigation-links');
-    if (!header || !toggle || !panel) return;
-
-    const compact = window.matchMedia('(max-width: 1399px)');
+    const strip = document.getElementById('navigation-links');
+    if (!header || !strip) return;
+    const previous = header.querySelector('[data-nav-scroll="previous"]');
+    const next = header.querySelector('[data-nav-scroll="next"]');
     const menus = Array.from(header.querySelectorAll('.operations-menu'));
-    let expanded = false;
-    let isCompact = compact.matches;
-
-    const closeMenus = (except, within = header) => {
+    const closeMenus = (except, restoreFocus = false) => {
         for (const menu of menus) {
-            if (menu !== except && within.contains(menu)) menu.open = false;
+            if (menu === except) continue;
+            const focused = restoreFocus && menu.open && menu.contains(document.activeElement);
+            menu.open = false;
+            if (focused) menu.querySelector('summary').focus();
         }
     };
-    const render = () => {
-        toggle.hidden = !isCompact;
-        panel.hidden = isCompact && !expanded;
-        toggle.setAttribute('aria-expanded', String(isCompact && expanded));
-        toggle.setAttribute('aria-label', expanded ? toggle.dataset.closeLabel : toggle.dataset.openLabel);
+    const syncScroll = () => {
+        const overflow = strip.scrollWidth > strip.clientWidth + 1;
+        previous.hidden = next.hidden = !overflow;
+        previous.disabled = strip.scrollLeft <= 1;
+        next.disabled = strip.scrollLeft + strip.clientWidth >= strip.scrollWidth - 1;
     };
-    const collapse = (restoreFocus = false) => {
-        expanded = false;
-        closeMenus(null, panel);
-        render();
-        if (restoreFocus && isCompact) toggle.focus();
+    const move = (direction) => {
+        closeMenus(null, true);
+        strip.scrollBy({ left: direction * Math.max(160, strip.clientWidth * 0.75), behavior: 'auto' });
     };
-
-    // Đo một hàng tự nhiên, kể cả khi panel đang ẩn; không phụ thuộc số menu hoặc độ dài bản dịch.
-    const fit = () => {
-        const focusInPanel = panel.contains(document.activeElement);
-        const focusOnToggle = document.activeElement === toggle;
-        const previous = isCompact;
-        header.classList.remove('navigation-compact');
-        toggle.hidden = true;
-        panel.hidden = false;
-        const gap = parseFloat(window.getComputedStyle(panel).columnGap) || 0;
-        const items = Array.from(panel.children).filter((item) => !item.hidden);
-        const required =
-            items.reduce((width, item) => width + item.getBoundingClientRect().width, 0) +
-            Math.max(0, items.length - 1) * gap;
-        isCompact = compact.matches || required > panel.clientWidth;
-        header.classList.toggle('navigation-compact', isCompact);
-        if (previous !== isCompact) {
-            closeMenus();
-            collapse(isCompact && focusInPanel);
-            if (!isCompact && focusOnToggle) panel.querySelector('a,summary,button')?.focus();
-        } else {
-            render();
-        }
-    };
-
-    header.classList.add('navigation-ready');
-    fit();
-    toggle.addEventListener('click', () => {
-        if (expanded) {
-            collapse(true);
-        } else {
-            closeMenus();
-            expanded = true;
-            render();
-            panel.querySelector('a,summary,button')?.focus();
-        }
+    previous.addEventListener('click', () => move(-1));
+    next.addEventListener('click', () => move(1));
+    strip.addEventListener('scroll', () => {
+        closeMenus(null, true);
+        syncScroll();
     });
-    // Tài khoản luôn nằm trên thanh đầu; khi mở avatar thì đóng bảng điều hướng và ngược lại.
-    for (const menu of menus) {
+    strip.addEventListener('keydown', (event) => {
+        if (event.target !== strip || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        if (event.key === 'Home' || event.key === 'End')
+            strip.scrollTo({ left: event.key === 'Home' ? 0 : strip.scrollWidth });
+        else move(event.key === 'ArrowLeft' ? -1 : 1);
+    });
+    // Popup fixed thoát khỏi vùng overflow của dải cuộn; luôn neo trong viewport, không đè logo khi đóng.
+    const position = (menu) => {
+        const summary = menu.querySelector('summary').getBoundingClientRect();
+        const popup = menu.querySelector('.operations-menu-items');
+        const top = Math.min(summary.bottom + 8, window.innerHeight - 80);
+        popup.style.setProperty('--menu-top', `${Math.max(8, top)}px`);
+        const width = popup.getBoundingClientRect().width;
+        popup.style.setProperty(
+            '--menu-left',
+            `${Math.max(12, Math.min(summary.left, window.innerWidth - width - 12))}px`,
+        );
+    };
+    for (const menu of menus)
         menu.addEventListener('toggle', () => {
-            if (!menu.open) return;
-            closeMenus(menu);
-            if (isCompact && !panel.contains(menu)) collapse();
+            if (menu.open) {
+                closeMenus(menu);
+                position(menu);
+            }
         });
-    }
+    const progress = document.createElement('div');
+    progress.className = 'page-navigation-progress';
+    progress.hidden = true;
+    progress.setAttribute('role', 'status');
+    progress.setAttribute('aria-label', document.querySelector('meta[name="app-loading"]')?.content || '');
+    document.body.append(progress);
     document.addEventListener('click', (event) => {
-        for (const menu of menus) {
-            if (!menu.contains(event.target)) menu.open = false;
-        }
-        if (!header.contains(event.target) || (panel.contains(event.target) && event.target.closest('a[href]'))) {
-            collapse();
-        }
+        for (const menu of menus) if (!menu.contains(event.target)) menu.open = false;
+        const link = event.target.closest('a[href]');
+        if (
+            !link ||
+            event.defaultPrevented ||
+            event.button !== 0 ||
+            event.ctrlKey ||
+            event.metaKey ||
+            event.shiftKey ||
+            event.altKey ||
+            link.hasAttribute('download') ||
+            (link.target && link.target !== '_self')
+        )
+            return;
+        const url = new URL(link.href, window.location.href);
+        if (
+            url.origin !== window.location.origin ||
+            (url.pathname === window.location.pathname && url.search === window.location.search && url.hash)
+        )
+            return;
+        if (header.contains(link)) closeMenus();
+        progress.hidden = false;
     });
     document.addEventListener('keydown', (event) => {
-        // Dialog có cơ chế Escape/busy riêng; không giành bàn phím của modal đang nhập liệu.
         if (event.key !== 'Escape' || event.defaultPrevented || document.querySelector('dialog[open]')) return;
         const opened = menus.find((menu) => menu.open);
         if (opened) {
             opened.open = false;
             opened.querySelector('summary').focus();
             event.preventDefault();
-        } else if (isCompact && expanded) {
-            collapse(true);
-            event.preventDefault();
         }
     });
-    // Đây là disclosure, không phải modal: Tab ra nội dung sẽ đóng menu, không khóa focus hoặc cuộn trang.
     document.addEventListener('focusin', (event) => {
-        if (!header.contains(event.target)) {
-            closeMenus();
-            collapse();
-        }
+        if (!header.contains(event.target)) closeMenus();
     });
-    compact.addEventListener('change', fit);
-    new ResizeObserver(fit).observe(header);
-    new MutationObserver(fit).observe(header, { childList: true, characterData: true, subtree: true });
-    document.fonts?.ready.then(fit);
+    window.addEventListener('pageshow', () => {
+        progress.hidden = true;
+        closeMenus();
+        syncScroll();
+    });
+    window.addEventListener('resize', () => {
+        closeMenus(null, true);
+        syncScroll();
+    });
+    new ResizeObserver(syncScroll).observe(strip);
+    document.fonts?.ready.then(syncScroll);
+    syncScroll();
 })();

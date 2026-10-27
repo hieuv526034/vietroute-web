@@ -99,8 +99,12 @@ button:focus-visible {
     display: flex;
     align-items: center;
     flex-wrap: nowrap;
-    justify-content: flex-end;
+    justify-content: flex-start;
     gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    overscroll-behavior-x: contain;
+    padding-block: 6px;
     font-size: 13px;
     font-weight: 600;
 }
@@ -125,42 +129,6 @@ button:focus-visible {
     white-space: nowrap;
 }
 
-.navigation-toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    padding: 10px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: white;
-    color: var(--green);
-    cursor: pointer;
-}
-
-.navigation-toggle:hover {
-    background: var(--mint);
-}
-
-.navigation-toggle span {
-    display: flex;
-}
-
-.navigation-toggle .ui-icon {
-    width: 20px;
-    height: 20px;
-}
-
-.navigation-toggle-close,
-.navigation-toggle[aria-expanded='true'] .navigation-toggle-open {
-    display: none !important;
-}
-
-.navigation-toggle[aria-expanded='true'] .navigation-toggle-close {
-    display: flex !important;
-}
-
 .nav-links > a:not(.button) {
     display: flex;
     align-items: center;
@@ -174,6 +142,98 @@ button:focus-visible {
 .nav-links > a[aria-current='page'] {
     color: var(--green);
     background: var(--mint);
+}
+
+/* Header luôn có một dải cuộn ngay từ CSS, không đo rồi đổi sang bố cục khác sau khi tải. */
+.nav-scroll-shell {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+.nav-scroll-button {
+    flex: 0 0 28px;
+    width: 28px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    color: var(--green);
+    background: white;
+    font-size: 22px;
+    cursor: pointer;
+}
+.nav-scroll-button:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+.site-nav .operations-menu-items {
+    position: fixed;
+    top: var(--menu-top, 72px);
+    left: var(--menu-left, 12px);
+    right: auto;
+    width: max-content;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - var(--menu-top, 72px) - 12px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+.site-nav .operations-menu > summary {
+    font-size: 13px;
+}
+.page-navigation-progress {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 100;
+    height: 3px;
+    background: var(--green);
+    animation: page-navigation-pulse 1s ease-in-out infinite alternate;
+}
+@keyframes page-navigation-pulse {
+    from {
+        opacity: 0.4;
+    }
+    to {
+        opacity: 1;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .page-navigation-progress {
+        animation: none;
+    }
+}
+@media (max-width: 767px) {
+    .site-nav {
+        flex-wrap: wrap;
+        gap: 6px 12px;
+        padding-block: 8px;
+        min-height: 64px;
+    }
+    .site-nav .brand {
+        font-size: 22px;
+    }
+    .nav-scroll-shell {
+        order: 3;
+        flex-basis: 100%;
+    }
+    .nav-actions {
+        margin-left: auto;
+    }
+    .account-menu > summary {
+        padding: 6px;
+    }
+    .account-menu .header-user-name {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+    .account-menu > summary::after {
+        display: none;
+    }
 }
 
 .language-switch {
@@ -1192,132 +1252,6 @@ form > .button {
 
 .operations-menu-items a[aria-current='page'] {
     font-weight: 750;
-}
-
-/* navigation.js bật chế độ panel khi menu không vừa khoảng trống giữa logo và tài khoản. */
-
-.site-nav.navigation-compact {
-    min-height: 64px;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
-.site-nav.navigation-compact.navigation-ready {
-    flex-wrap: nowrap;
-}
-
-.site-nav.navigation-compact .brand {
-    font-size: 22px;
-}
-
-.navigation-compact .nav-actions {
-    margin-left: auto;
-}
-
-.navigation-compact .nav-links {
-    flex-basis: 100%;
-    order: 3;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    padding-block: 12px;
-}
-
-.site-nav.navigation-compact.navigation-ready .nav-links {
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 12px;
-    right: 12px;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    justify-content: stretch;
-    justify-items: stretch;
-    padding: 12px;
-    max-height: calc(100vh - 88px);
-    max-height: calc(100dvh - 88px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    background: white;
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    box-shadow: 0 14px 36px #142d241a;
-}
-
-.navigation-compact .nav-links > .operations-menu {
-    min-width: 0;
-}
-
-.navigation-compact .nav-links > a,
-.navigation-compact .nav-links .operations-menu > summary {
-    min-height: 44px;
-    padding: 12px;
-}
-
-.navigation-compact .nav-links .operations-menu > summary::after {
-    margin-left: auto;
-}
-
-.navigation-compact .nav-links .operations-menu-items {
-    position: static;
-    min-width: 0;
-    max-width: none;
-    margin-top: 6px;
-    padding: 8px;
-    border: 0;
-    box-shadow: none;
-    background: var(--paper);
-}
-
-.navigation-compact .nav-links .language-switch {
-    justify-self: start;
-    align-self: start;
-    margin-block: 4px;
-}
-
-.navigation-compact .nav-links .language-switch a {
-    min-width: 40px;
-    min-height: 36px;
-    display: grid;
-    place-items: center;
-}
-
-.navigation-compact .nav-actions .account-menu {
-    position: static;
-}
-
-.navigation-compact .nav-actions .account-menu > summary {
-    width: 44px;
-    height: 44px;
-    padding: 7px;
-    gap: 0;
-    justify-content: center;
-}
-
-.navigation-compact .account-menu > summary::after {
-    display: none;
-}
-
-/* Giữ tên đầy đủ cho trình đọc màn hình; thanh hẹp chỉ vẽ avatar để không xuống hàng. */
-.navigation-compact .account-menu .header-user-name {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-}
-
-.navigation-compact .nav-actions .operations-menu-items {
-    top: calc(100% + 8px);
-    right: 12px;
-    left: auto;
-    min-width: 240px;
-    max-width: calc(100vw - 24px);
-    max-height: calc(100vh - 88px);
-    max-height: calc(100dvh - 88px);
-    overflow-y: auto;
 }
 
 @media (max-width: 575px) {
@@ -3197,32 +3131,54 @@ fieldset:disabled .button[type='submit']::before,
     gap: 1.5rem;
 }
 
+/* Báo cáo có các trường đều nhau; mọi nút áp dụng nằm ở một hàng riêng phía dưới. */
 #report-form {
+    display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
 }
-
-@media (max-width: 760px) {
-    #report-form {
-        grid-template-columns: 1fr;
-    }
+#report-form > div {
+    min-width: 0;
 }
-
+#report-form label {
+    margin: 0 0 6px;
+}
+#report-form .report-actions {
+    grid-column: 1 / -1;
+}
 #report-workspace .form-help {
     font-size: 13px;
 }
-#report-workspace .picker-toolbar {
+#report-carrier-dialog[open] {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-    grid-column: 1 / -1;
+    flex-direction: column;
+    overflow: hidden;
 }
-#report-workspace .picker-toolbar input {
-    flex: 1 1 200px;
-    width: auto;
+#report-carrier-dialog .dialog-heading,
+#report-carrier-dialog .feedback,
+.report-picker-content > :not(.table-responsive) {
+    flex-shrink: 0;
 }
-#report-workspace .toolbar-actions {
-    grid-column: 1 / -1;
+#report-picker-controls {
+    display: contents;
+}
+.report-picker-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+#report-picker-controls .table-responsive {
+    flex: 1 1 auto;
+    min-height: 80px;
+    overflow: auto;
+}
+@media (max-width: 760px) {
+    #report-form {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 .tracking-panel {

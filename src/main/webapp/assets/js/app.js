@@ -120,7 +120,6 @@
 
     bindForm('login-form', async (body, form) => {
         const response = await mutate('/api/v1/auth/login', body);
-        form.reset();
         const user = response.data.data.user;
         const button = form.querySelector('button[type="submit"]');
         form.dataset.navigating = 'true';
@@ -137,6 +136,8 @@
     if (loginForm) {
         const button = loginForm.querySelector('button[type="submit"]');
         const idleLabel = button.textContent;
+        // Giữ dữ liệu đang hiển thị trong lúc server mở trang đích; chỉ xóa khi document thực sự rời màn hình.
+        window.addEventListener('pagehide', () => loginForm.reset());
         // Back/forward cache có thể khôi phục document cũ; không giữ mật khẩu hoặc khóa nút vĩnh viễn.
         window.addEventListener('pageshow', (event) => {
             if (!event.persisted) return;

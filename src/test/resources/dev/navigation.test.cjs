@@ -1,244 +1,262 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const path = require('node:path');
 const vm = require('node:vm');
 
-// Chạy navigation.js thật với DOM và viewport giả; không đăng nhập, gọi API hoặc thay quyền.
-function fixture(width = 390, requiredWidth = 600, availableWidth = 700) {
-    const nodes = new Map();
-    const handlers = {};
-    const state = { dialogOpen: false, requiredWidth };
-    let resizeObserver;
+// Header thật chạy với kích thước/DOM giả; không mạng, không lưu menu hay quyền vào storage.
+function fixture({ width = 390, available = 240, content = 900 } = {}) {
+    const handlers = {},
+        events = {},
+        nodes = new Map();
+    const state = { dialogOpen: false };
     const document = {
         activeElement: null,
         getElementById: (id) => nodes.get(id),
-        querySelector: (selector) => (selector === '.site-nav' ? header : state.dialogOpen ? {} : null),
-        addEventListener(type, action) {
-            handlers[type] = action;
+        querySelector: (selector) =>
+            selector === '.site-nav'
+                ? header
+                : selector.startsWith('meta')
+                  ? { content: 'Loading page' }
+                  : state.dialogOpen
+                    ? {}
+                    : null,
+        addEventListener(type, fn) {
+            handlers[type] = fn;
+        },
+        createElement: () => node('progress'),
+        body: {
+            append(item) {
+                state.progress = item;
+            },
         },
     };
     function node(id, parent) {
         const result = {
+            id,
             parent,
             hidden: false,
+            disabled: false,
             open: false,
             attrs: {},
-            dataset: {},
             handlers: {},
-            classList: { add() {}, remove() {}, toggle() {} },
-            addEventListener(type, action) {
-                this.handlers[type] = action;
+            style: {
+                values: {},
+                setProperty(key, value) {
+                    this.values[key] = value;
+                },
             },
-            setAttribute(name, value) {
-                this.attrs[name] = value;
+            addEventListener(type, fn) {
+                this.handlers[type] = fn;
+            },
+            setAttribute(key, value) {
+                this.attrs[key] = value;
+            },
+            hasAttribute(key) {
+                return key in this.attrs;
             },
             contains(other) {
-                for (let current = other; current; current = current.parent) {
-                    if (current === this) return true;
-                }
+                for (let x = other; x; x = x.parent) if (x === this) return true;
                 return false;
+            },
+            closest(selector) {
+                return selector === 'a[href]' && this.href ? this : null;
             },
             focus() {
                 document.activeElement = this;
                 handlers.focusin?.({ target: this });
             },
-            closest(selector) {
-                return selector === 'a[href]' && this.link ? this : null;
+            getBoundingClientRect() {
+                return { left: width - 80, bottom: 64, width: 240 };
             },
         };
         nodes.set(id, result);
         return result;
     }
-    const header = node('header');
-    const panel = node('navigation-links', header);
-    const toggle = node('navigation-toggle', header);
-    toggle.dataset = { openLabel: 'Open navigation', closeLabel: 'Close navigation' };
-    const home = node('home', panel);
-    panel.children = [home];
-    panel.clientWidth = availableWidth;
-    home.getBoundingClientRect = () => ({ width: state.requiredWidth });
-    home.link = true;
-    const primary = node('primary', panel);
-    const primarySummary = node('primary-summary', primary);
-    const primaryLink = node('primary-link', primary);
-    primaryLink.link = true;
-    const account = node('account', header);
-    const accountSummary = node('account-summary', account);
-    const outside = node('outside');
+    const header = node('header'),
+        strip = node('navigation-links', header),
+        previous = node('previous', header),
+        next = node('next', header);
+    const primary = node('primary', strip),
+        account = node('account', header),
+        outside = node('outside');
+    const link = node('link', primary);
+    link.href = 'https://fixture.test/operations/reports?lang=vi';
+    const summary = node('summary', primary),
+        popup = node('popup', primary),
+        accountSummary = node('account-summary', account),
+        accountPopup = node('account-popup', account);
+    header.querySelector = (selector) => (selector.includes('previous') ? previous : next);
     header.querySelectorAll = () => [primary, account];
-    panel.querySelector = () => home;
-    primary.querySelector = () => primarySummary;
-    account.querySelector = () => accountSummary;
-    const media = {
-        matches: false,
-        addEventListener(type, action) {
-            this.change = action;
+    primary.querySelector = (selector) => (selector === 'summary' ? summary : popup);
+    account.querySelector = (selector) => (selector === 'summary' ? accountSummary : accountPopup);
+    strip.clientWidth = available;
+    strip.scrollWidth = content;
+    strip.scrollLeft = 0;
+    strip.scrollTo = ({ left }) => {
+        strip.scrollLeft = Math.max(0, Math.min(left, strip.scrollWidth - strip.clientWidth));
+        strip.handlers.scroll();
+    };
+    strip.scrollBy = ({ left }) => strip.scrollTo({ left: strip.scrollLeft + left });
+    const window = {
+        innerWidth: width,
+        innerHeight: 844,
+        location: {
+            href: 'https://fixture.test/operations/accounts?lang=vi',
+            origin: 'https://fixture.test',
+            pathname: '/operations/accounts',
+            search: '?lang=vi',
+        },
+        addEventListener(type, fn) {
+            events[type] = fn;
         },
     };
-    vm.runInNewContext(
-        fs.readFileSync(path.resolve(__dirname, '../../../main/webapp/assets/js/navigation.js'), 'utf8'),
-        {
-            document,
-            ResizeObserver: class {
-                constructor(callback) { resizeObserver = callback; }
-                observe() {}
-            },
-            MutationObserver: class {
-                observe() {}
-            },
-            window: {
-                getComputedStyle: () => ({ columnGap: '0px' }),
-                matchMedia(query) {
-                    const boundary = /^\(max-width:\s*(\d+)px\)$/.exec(query);
-                    assert.ok(boundary, 'Fixture chỉ hỗ trợ truy vấn max-width được khai báo rõ');
-                    media.boundary = Number(boundary[1]);
-                    media.matches = width <= media.boundary;
-                    return media;
-                },
-            },
-        },
-    );
-    return {
-        panel,
-        toggle,
-        home,
-        primary,
-        primarySummary,
-        primaryLink,
-        account,
-        accountSummary,
-        outside,
+    let resized;
+    vm.runInNewContext(fs.readFileSync('src/main/webapp/assets/js/navigation.js', 'utf8'), {
         document,
-        state,
-        layout(required, available) {
-            state.requiredWidth = required;
-            panel.clientWidth = available;
-            resizeObserver();
+        window,
+        URL,
+        ResizeObserver: class {
+            constructor(fn) {
+                resized = fn;
+            }
+            observe() {}
         },
-        clickToggle: () => toggle.handlers.click(),
+    });
+    return {
+        strip,
+        previous,
+        next,
+        primary,
+        account,
+        outside,
+        summary,
+        popup,
+        link,
+        state,
+        document,
+        events,
         open(menu) {
             menu.open = true;
             menu.handlers.toggle();
         },
-        click: (target) => handlers.click({ target }),
+        click(target, extra = {}) {
+            handlers.click({ target, button: 0, ...extra });
+        },
+        key(key, target = strip) {
+            const e = {
+                key,
+                target,
+                preventDefault() {
+                    this.defaultPrevented = true;
+                },
+            };
+            (target === strip ? strip.handlers : handlers).keydown(e);
+            return e;
+        },
         escape() {
-            const event = {
+            const e = {
                 key: 'Escape',
                 preventDefault() {
                     this.defaultPrevented = true;
                 },
             };
-            handlers.keydown(event);
-            return event;
+            handlers.keydown(e);
+            return e;
         },
-        resize(nextWidth) {
-            const compact = nextWidth <= media.boundary;
-            if (media.matches !== compact) {
-                media.matches = compact;
-                media.change();
-            }
+        resize(size) {
+            strip.clientWidth = size;
+            resized();
+            events.resize();
         },
     };
 }
 
-test('compact navigation exposes one panel with ARIA and Escape closes the submenu before the panel', () => {
-    for (const width of [320, 390, 768, 1199, 1280, 1399]) {
-        const ui = fixture(width);
-        assert.equal(ui.panel.hidden, true);
-        assert.equal(ui.toggle.hidden, false);
-        assert.equal(ui.toggle.attrs['aria-expanded'], 'false');
-        ui.clickToggle();
-        assert.equal(ui.panel.hidden, false);
-        assert.equal(ui.toggle.attrs['aria-expanded'], 'true');
-        assert.equal(ui.toggle.attrs['aria-label'], 'Close navigation');
-        assert.equal(ui.document.activeElement, ui.home);
-        ui.open(ui.primary);
-        assert.equal(ui.escape().defaultPrevented, true);
-        assert.equal(ui.primary.open, false);
-        assert.equal(ui.panel.hidden, false);
-        assert.equal(ui.document.activeElement, ui.primarySummary);
-        ui.escape();
-        assert.equal(ui.panel.hidden, true);
-        assert.equal(ui.document.activeElement, ui.toggle);
+test('Header luôn hiện cùng dải cuộn ở mobile/desktop, chỉ thêm nút cuộn khi thiếu chỗ', () => {
+    for (const width of [320, 390, 768, 1280, 1600]) {
+        const ui = fixture({ width });
+        assert.equal(ui.strip.hidden, false);
+        assert.equal(ui.previous.hidden, false);
+        assert.equal(ui.previous.disabled, true);
+        assert.equal(ui.next.disabled, false);
+        ui.resize(1000);
+        assert.equal(ui.strip.hidden, false);
+        assert.equal(ui.previous.hidden, true);
+        assert.equal(ui.next.hidden, true);
     }
 });
-
-test('long desktop navigation collapses before overlapping the brand and restores links when they fit', () => {
-    const ui = fixture(1600, 950, 700);
-    assert.equal(ui.toggle.hidden, false);
-    assert.equal(ui.panel.hidden, true);
-    ui.clickToggle();
-    ui.primaryLink.focus();
-    ui.layout(950, 700);
-    assert.equal(ui.panel.hidden, false);
-    assert.equal(ui.document.activeElement, ui.primaryLink);
-    ui.layout(600, 700);
-    assert.equal(ui.toggle.hidden, true);
-    assert.equal(ui.panel.hidden, false);
-    ui.layout(950, 700);
-    assert.equal(ui.panel.hidden, true);
-    assert.equal(ui.document.activeElement, ui.toggle);
-    ui.layout(600, 700);
-    assert.equal(ui.document.activeElement, ui.home);
-});
-
-test('avatar and navigation remain separate and opening one closes the other', () => {
+test('Nút cuộn và bàn phím đi được hai chiều, không bắt phím của link/menu con', () => {
     const ui = fixture();
-    ui.clickToggle();
+    ui.next.handlers.click();
+    assert.ok(ui.strip.scrollLeft > 0);
+    ui.key('End');
+    assert.equal(ui.next.disabled, true);
+    ui.key('Home');
+    assert.equal(ui.previous.disabled, true);
+    ui.key('ArrowRight');
+    assert.ok(ui.strip.scrollLeft > 0);
+    ui.previous.handlers.click();
+    assert.equal(ui.strip.scrollLeft, 0);
+    const e = {
+        key: 'ArrowRight',
+        target: ui.link,
+        preventDefault() {
+            throw Error('Không giành phím link');
+        },
+    };
+    ui.strip.handlers.keydown(e);
+});
+test('Popup không bị cắt bởi vùng cuộn, neo trong viewport và mỗi lần chỉ mở một menu', () => {
+    const ui = fixture();
     ui.open(ui.primary);
+    assert.equal(ui.popup.style.values['--menu-left'], '138px');
+    assert.equal(ui.popup.style.values['--menu-top'], '72px');
     ui.open(ui.account);
-    assert.equal(ui.account.open, true);
     assert.equal(ui.primary.open, false);
-    assert.equal(ui.panel.hidden, true);
+    ui.open(ui.primary);
+    assert.equal(ui.account.open, false);
     ui.escape();
-    assert.equal(ui.account.open, false);
-    assert.equal(ui.document.activeElement, ui.accountSummary);
-    ui.open(ui.account);
-    ui.clickToggle();
-    assert.equal(ui.account.open, false);
-    assert.equal(ui.panel.hidden, false);
-});
-
-test('click outside, selecting a link and Tab leaving the header dismiss navigation without trapping focus', () => {
-    const ui = fixture();
-    ui.clickToggle();
+    assert.equal(ui.primary.open, false);
+    assert.equal(ui.document.activeElement, ui.summary);
+    ui.open(ui.primary);
     ui.click(ui.outside);
-    assert.equal(ui.panel.hidden, true);
-    ui.clickToggle();
-    ui.open(ui.primary);
-    ui.click(ui.primaryLink);
-    assert.equal(ui.panel.hidden, true);
     assert.equal(ui.primary.open, false);
-    ui.clickToggle();
-    ui.outside.focus();
-    assert.equal(ui.panel.hidden, true);
-    assert.equal(ui.document.activeElement, ui.outside);
 });
-
-test('resizing restores desktop links and never leaves focus inside a hidden control', () => {
-    const ui = fixture(1400);
-    assert.equal(ui.panel.hidden, false);
-    assert.equal(ui.toggle.hidden, true);
-    ui.primaryLink.focus();
-    ui.open(ui.primary);
-    ui.resize(390);
-    assert.equal(ui.panel.hidden, true);
-    assert.equal(ui.primary.open, false);
-    assert.equal(ui.document.activeElement, ui.toggle);
-    ui.resize(1400);
-    assert.equal(ui.toggle.hidden, true);
-    assert.equal(ui.panel.hidden, false);
-    assert.equal(ui.document.activeElement, ui.home);
-});
-
-test('header does not consume Escape from a dialog with its own busy guard', () => {
+test('Tab ra ngoài, scroll và resize đóng popup; Escape của modal vẫn được giữ riêng', () => {
     const ui = fixture();
-    ui.clickToggle();
+    ui.open(ui.primary);
+    ui.outside.focus();
+    assert.equal(ui.primary.open, false);
+    ui.open(ui.primary);
+    ui.strip.scrollBy({ left: 100 });
+    assert.equal(ui.primary.open, false);
+    ui.open(ui.primary);
+    ui.resize(300);
+    assert.equal(ui.primary.open, false);
+    ui.open(ui.primary);
     ui.state.dialogOpen = true;
     assert.equal(ui.escape().defaultPrevented, undefined);
-    assert.equal(ui.panel.hidden, false);
-    ui.state.dialogOpen = false;
-    ui.escape();
-    assert.equal(ui.panel.hidden, true);
+    assert.equal(ui.primary.open, true);
+});
+test('Chuyển trang thường hiện tiến trình ngay, bfcache dọn trạng thái; không bắt link mở tab mới/tải file/hash', () => {
+    const ui = fixture();
+    ui.click(ui.link);
+    assert.equal(ui.state.progress.hidden, false);
+    ui.events.pageshow();
+    assert.equal(ui.state.progress.hidden, true);
+    ui.click(ui.link, { ctrlKey: true });
+    assert.equal(ui.state.progress.hidden, true);
+    ui.link.target = '_blank';
+    ui.click(ui.link);
+    assert.equal(ui.state.progress.hidden, true);
+    ui.link.target = '';
+    ui.link.attrs.download = '';
+    ui.click(ui.link);
+    assert.equal(ui.state.progress.hidden, true);
+    delete ui.link.attrs.download;
+    ui.link.href = 'https://external.test/';
+    ui.click(ui.link);
+    assert.equal(ui.state.progress.hidden, true);
+    ui.link.href = 'https://fixture.test/operations/accounts?lang=vi#anchor';
+    ui.click(ui.link);
+    assert.equal(ui.state.progress.hidden, true);
 });
