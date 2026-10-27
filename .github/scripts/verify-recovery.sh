@@ -22,7 +22,11 @@ SELECT format('SELECT %L || ''|'' || last_value || ''|'' || is_called FROM %I.%I
 FROM pg_sequences WHERE schemaname NOT IN ('pg_catalog','information_schema')
 ORDER BY schemaname,sequencename
 \gexec
-SELECT 'constraint|' || n.nspname || '.' || c.relname || '|' || k.conname || '|' || k.convalidated || '|' || pg_get_constraintdef(k.oid)
+SQL
+}
+recovery_constraints() {
+  docker exec -i vietroute-db-ci psql -X -U vietroute_ci -d "$1" -v ON_ERROR_STOP=1 -At <<'SQL'
+SELECT n.nspname || '.' || c.relname || '|' || k.conname || '|' || k.convalidated || '|' || pg_get_constraintdef(k.oid)
 FROM pg_constraint k JOIN pg_class c ON c.oid=k.conrelid JOIN pg_namespace n ON n.oid=c.relnamespace
 WHERE n.nspname NOT IN ('pg_catalog','information_schema')
 ORDER BY n.nspname,c.relname,k.conname;
@@ -30,10 +34,18 @@ SQL
 }
 recovery_manifest vietroute_ci > "$work/recovery-before.txt"
 docker exec vietroute-db-ci pg_dump -U vietroute_ci -d vietroute_ci --format=custom --file=/tmp/vietroute-recovery-ci.dump
+docker exec vietroute-db-ci pg_dump -U vietroute_ci -d vietroute_ci --format=custom --schema-only --file=/tmp/vietroute-recovery-schema-ci.dump
 docker exec vietroute-db-ci createdb -U vietroute_ci vietroute_recovery_ci
+docker exec vietroute-db-ci createdb -U vietroute_ci vietroute_recovery_schema_ci
 docker exec vietroute-db-ci pg_restore -U vietroute_ci --dbname=vietroute_recovery_ci --exit-on-error /tmp/vietroute-recovery-ci.dump
+docker exec vietroute-db-ci pg_restore -U vietroute_ci --dbname=vietroute_recovery_schema_ci --exit-on-error /tmp/vietroute-recovery-schema-ci.dump
 recovery_manifest vietroute_recovery_ci > "$work/recovery-after.txt"
 cmp --silent "$work/recovery-before.txt" "$work/recovery-after.txt"
+# PostgreSQL có thể chuẩn hóa AND/cast ARRAY khi parse lại CHECK. DB tham chiếu chỉ schema cũng đi qua
+# parser restore như DB dữ liệu, để so đầy đủ định nghĩa ràng buộc mà không bỏ/regex nới lỏng biểu thức.
+recovery_constraints vietroute_recovery_schema_ci > "$work/recovery-constraints-reference.txt"
+recovery_constraints vietroute_recovery_ci > "$work/recovery-constraints-restored.txt"
+cmp --silent "$work/recovery-constraints-reference.txt" "$work/recovery-constraints-restored.txt"
 # Manifest gồm toàn bộ dòng, history/checksum/hash và sequence/FK; không in giá trị hoặc dump thành artifact.
 recovery_sql() { docker exec -e PGOPTIONS=-csearch_path=vietroute vietroute-db-ci psql -X -U vietroute_ci -d vietroute_recovery_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
 [[ "$(recovery_sql 'SELECT count(*) FROM vietroute_schema_history')" == 22 ]]
