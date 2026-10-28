@@ -39,6 +39,8 @@
         controls.forEach((item) => {
             item.disabled = true;
         });
+        roleModal.focus();
+        grantModal.focus();
         const feedback = node('grants-dialog').open
             ? 'grants-feedback'
             : node('role-dialog').open
@@ -48,15 +50,24 @@
         try {
             await work();
         } catch (error) {
-            app.failure(error, feedback);
-            if (error.response?.status === 409) node(feedback).append(text('p', labels.conflict));
+            const target = node('grants-dialog').open
+                ? 'grants-feedback'
+                : node('role-dialog').open
+                  ? 'role-feedback'
+                  : feedback;
+            app.failure(error, target);
+            if (target === 'grants-feedback' && !state) node('grants-tree').replaceChildren();
+            if (error.response?.status === 409) node(target).append(text('p', labels.conflict));
         } finally {
             busy = false;
             root.removeAttribute('aria-busy');
             controls.forEach((item) => {
                 item.disabled = false;
             });
+            node('grants-save').disabled = !state;
             node('roles-status').textContent = '';
+            roleModal.focus();
+            grantModal.focus();
         }
     };
     const pager = table.pager('roles', { busy: () => busy, onChange: (params) => perform(() => load(params)) });
@@ -153,19 +164,33 @@
             update,
         );
     const openGrants = async (role, opener) => {
-        const result = await get(`/roles/${encodeURIComponent(role.code)}/resources`);
         grantRole = role;
+        state = undefined;
+        node('grants-tree').replaceChildren(text('p', labels.loading));
+        node('grants-count').textContent = '';
+        node('grants-changes').textContent = '';
+        node('grants-target').textContent = `${role.nameVi} · ${role.code}`;
+        node('grants-search').value = '';
+        node('grants-save').hidden = role.builtIn || !can('PUT', '/roles/{role}/resources');
+        node('grants-save').disabled = true;
+        app.feedback('', false, 'grants-feedback');
+        grantModal.open(opener);
+        // Metadata chỉ dùng trong modal; mỗi lần mở lấy lại snapshot, lỗi giữ modal và chặn lưu tập chưa tải.
+        let result;
+        [features, inventory, result] = await window.VietRouteRequests.allReads([
+            get('/tree'),
+            get('/resource-catalog'),
+            get(`/roles/${encodeURIComponent(role.code)}/resources`),
+        ]);
         version = result.version;
         state = window.VietRouteResourceGrants.model(result.targets, [...allowed]);
         node('grants-target').textContent =
             `${role.nameVi} · ${role.code} · v${version}${role.builtIn ? ' · ' + labels.readonly : ''}`;
-        node('grants-search').value = '';
-        node('grants-save').hidden = role.builtIn || !can('PUT', '/roles/{role}/resources');
-        app.feedback('', false, 'grants-feedback');
         render();
-        grantModal.open(opener);
     };
-    node('grants-search').addEventListener('input', render);
+    node('grants-search').addEventListener('input', () => {
+        if (state) render();
+    });
     node('role-create').addEventListener('click', () => edit());
     node('roles-refresh').addEventListener('click', () => void perform(() => load()));
     node('roles-search').addEventListener('submit', (event) => {
@@ -210,8 +235,6 @@
         const capabilities = (await app.api.get('/api/v1/auth/capabilities')).data.data;
         allowed = new Set(capabilities.flatMap((item) => item.targets));
         node('role-create').hidden = !can('POST', '/registry/{kind}/{code}');
-        if (can('GET', '/resource-catalog'))
-            [features, inventory] = await Promise.all([get('/tree'), get('/resource-catalog')]);
         await load();
     });
 })();

@@ -13,6 +13,14 @@ import vn.vietroute.common.jdbc.JdbcTable;
         @JdbcIndex(name = "idx_trips_vehicle_schedule", columns = { "vehicle_id", "departure_at", "end_at" }),
         @JdbcIndex(name = "idx_trips_driver_schedule", columns = { "driver_id", "departure_at", "end_at" }),
         @JdbcIndex(name = "idx_trips_driver_user", columns = { "driver_user_id", "status", "departure_at" }),
+        @JdbcIndex(
+            name = "idx_trips_report_departure",
+            columns = { "departure_at", "carrier_id", "id", "scope_id", "status" }
+        ),
+        @JdbcIndex(
+            name = "idx_trips_report_carrier_date",
+            columns = { "carrier_id", "departure_at", "id", "scope_id", "status" }
+        ),
         @JdbcIndex(name = "idx_trips_route", columns = { "route_id" }),
         @JdbcIndex(name = "idx_trips_created_by", columns = { "created_by" }),
         @JdbcIndex(name = "idx_trips_updated_by", columns = { "updated_by" }),

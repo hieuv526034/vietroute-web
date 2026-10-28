@@ -27,7 +27,9 @@
     let busy = false,
         me,
         roles = [],
-        features = [],
+        editorReady = false,
+        rolesLoaded = false,
+        roleFilterLoading = false,
         applied = { username: '', role: '', active: '' },
         editing,
         selected,
@@ -52,6 +54,7 @@
         root.querySelectorAll('[data-account-controls]').forEach((item) => {
             item.disabled = true;
         });
+        for (const dialog of [editModal, detailModal, stateModal, nameModal]) dialog.focus();
         node('accounts-create').disabled = true;
         node('accounts-refresh').disabled = true;
         node('accounts-status').textContent = labels.loading;
@@ -63,6 +66,7 @@
             const feedback = modalFeedback();
             const id = feedback ? `account-${feedback}-feedback` : 'form-feedback';
             app.failure(error, id);
+            if (feedback === 'edit' && !editorReady) node('account-role-count').textContent = '';
             if (error.response?.status === 409)
                 node(id).append(document.createElement('br'), text('span', labels.conflict));
         } finally {
@@ -72,9 +76,11 @@
             root.querySelectorAll('[data-account-controls]').forEach((item) => {
                 item.disabled = false;
             });
-            node('accounts-create').disabled = !(can('CREATE') && me.permissions.includes('ACCESS_ASSIGN'));
+            node('accounts-create').disabled = !(can('CREATE') && me?.permissions?.includes('ACCESS_ASSIGN'));
+            node('account-save').disabled = !editorReady;
             node('accounts-refresh').disabled = false;
             node('accounts-status').textContent = '';
+            for (const dialog of [editModal, detailModal, stateModal, nameModal]) dialog.focus();
         }
     };
     const editModal = window.VietRouteUI.modal('account-edit-dialog', {
@@ -84,6 +90,7 @@
             forms.clear(node('account-edit-form'));
             node('new-account-password').value = '';
             editing = undefined;
+            editorReady = false;
         },
     });
     const detailModal = window.VietRouteUI.modal('account-detail-dialog', { busy: () => busy });
@@ -204,6 +211,7 @@
     const openEditor = (user) => {
         if (busy) return;
         editing = user;
+        editorReady = false;
         const form = node('account-edit-form');
         form.reset();
         forms.clear(form);
@@ -220,9 +228,18 @@
             });
         node('account-save').textContent = create ? labels.create : labels.save;
         node('account-grant-note').hidden = create;
-        renderRoles(user?.roles || (roles.some((role) => role.role === 'CUSTOMER' && role.active) ? ['CUSTOMER'] : []));
+        node('account-role-options').replaceChildren();
+        node('account-role-count').textContent = labels.loading;
+        node('account-role-summary').textContent = '';
         app.feedback('', false, 'account-edit-feedback');
         editModal.open();
+        void perform(async () => {
+            await loadRoleMetadata();
+            renderRoles(
+                user?.roles || (roles.some((role) => role.role === 'CUSTOMER' && role.active) ? ['CUSTOMER'] : []),
+            );
+            editorReady = true;
+        });
     };
     let nameTarget;
     const nameModal = window.VietRouteUI.modal('account-name-dialog', { busy: () => busy });
@@ -248,7 +265,18 @@
     });
     // API trả capabilities thật: tên chức năng lấy từ tree source, không suy quyền từ role hoặc checkbox trên client.
     const show = async (user) => {
-        const result = await get(`${base}/${user.id}/access`);
+        selected = undefined;
+        node('account-detail-target').textContent = `${user.displayName} · @${user.username}`;
+        node('account-detail-summary').replaceChildren(text('p', labels.loading));
+        node('account-effective').replaceChildren();
+        node('account-state-open').hidden = true;
+        node('account-protection').textContent = '';
+        app.feedback('', false, 'account-detail-feedback');
+        detailModal.open();
+        const [result, features] = await window.VietRouteRequests.allReads([
+            get(`${base}/${user.id}/access`),
+            get(`${access}/tree`),
+        ]);
         selected = result.user;
         node('account-detail-target').textContent =
             `${selected.displayName} · @${selected.username} · v${selected.version}`;
@@ -299,7 +327,6 @@
         node('account-state-open').textContent = selected.active ? labels.disable : labels.enable;
         node('account-protection').textContent = protectedAccount ? labels.fixed : '';
         app.feedback('', false, 'account-detail-feedback');
-        detailModal.open();
     };
     node('accounts-create').addEventListener('click', () => openEditor());
     for (const [id, role] of [
@@ -328,7 +355,7 @@
     node('account-edit-form').addEventListener('submit', (event) => {
         event.preventDefault();
         const form = event.currentTarget;
-        if (busy || !forms.validate(form)) return;
+        if (busy || !editorReady || !forms.validate(form)) return;
         const values = Object.fromEntries(new FormData(form));
         const body = editing
             ? { roles: selection(), version: editing.version }
@@ -370,15 +397,14 @@
                 await load();
             }),
     );
-    void perform(async () => {
-        me = await get('/api/v1/auth/me');
-        capabilities = (await get('/api/v1/auth/capabilities')).flatMap((item) => item.targets);
-        let registry;
-        [roles, features, registry] = await Promise.all([
+    // Bộ lọc và modal cần role; bảng chỉ cần me/capabilities. Không để metadata chặn lần tải bảng đầu tiên.
+    const loadRoleMetadata = async () => {
+        const [currentRoles, registry] = await window.VietRouteRequests.allReads([
             get(`${access}/roles`),
-            get(`${access}/tree`),
             get(`${access}/registry/roles`),
         ]);
+        roles = currentRoles;
+        rolesLoaded = true;
         roleNames = new Map(
             registry.map((role) => [role.code, document.documentElement.lang === 'en' ? role.nameEn : role.nameVi]),
         );
@@ -390,18 +416,42 @@
             node(id).disabled = !available;
             if (!available) node(id).title = labels.off;
         }
-        node('account-role-filter').append(
-            ...roles.map((role) =>
-                option(
-                    role.role,
-                    (roleNames.get(role.role) || role.role) +
-                        ' (' +
-                        role.role +
-                        ')' +
-                        (role.active ? '' : ' · ' + labels.off),
-                ),
-            ),
-        );
+        const filter = node('account-role-filter'),
+            previous = filter.value;
+        filter.querySelectorAll('option[data-role-choice]').forEach((item) => item.remove());
+        const options = roles.map((role) => {
+            const item = option(
+                role.role,
+                (roleNames.get(role.role) || role.role) +
+                    ' (' +
+                    role.role +
+                    ')' +
+                    (role.active ? '' : ' · ' + labels.off),
+            );
+            item.dataset.roleChoice = role.role;
+            return item;
+        });
+        filter.append(...options);
+        filter.value = previous;
+    };
+    node('account-role-filter').addEventListener('focus', async () => {
+        if (rolesLoaded || roleFilterLoading || busy) return;
+        roleFilterLoading = true;
+        try {
+            await perform(loadRoleMetadata);
+        } finally {
+            // Trả focus sau fieldset disabled; guard vẫn bật khi focus event chạy nên không tự retry nếu đọc lỗi.
+            node('account-role-filter').focus();
+            roleFilterLoading = false;
+        }
+    });
+    void perform(async () => {
+        let accessSnapshot;
+        [me, accessSnapshot] = await window.VietRouteRequests.allReads([
+            get('/api/v1/auth/me'),
+            get('/api/v1/auth/capabilities'),
+        ]);
+        capabilities = accessSnapshot.flatMap((item) => item.targets);
         await load();
     });
 })();

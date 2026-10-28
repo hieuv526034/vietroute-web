@@ -23,11 +23,13 @@ public class PublicCarrierRepository {
 
     /** Từ khóa nguyên văn và phân trang ổn định name/id được xử lý hoàn toàn trong PostgreSQL. */
     public PageResponse<Published> page(Connection connection, PublicCarrierSearchRequest body) throws SQLException {
-        String where = FROM + " AND strpos(lower(concat_ws(' ',c.code,c.name,c.phone)),?)>0";
+        String where = FROM + " AND lower(c.code || ' ' || c.name || ' ' || c.phone) LIKE ? ESCAPE '!'";
         String text = body.getQuery() == null ? "" : body.getQuery().strip().toLowerCase(Locale.ROOT);
+        // LIKE tương thích index trigram; escape để %, _ và ! vẫn là ký tự nguyên văn như strpos trước đây.
+        String pattern = "%" + text.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
         long total;
         try (var query = connection.prepareStatement("SELECT count(*)" + where)) {
-            query.setString(1, text);
+            query.setString(1, pattern);
             try (var row = query.executeQuery()) {
                 row.next();
                 total = row.getLong(1);
@@ -39,7 +41,7 @@ public class PublicCarrierRepository {
                 "SELECT " + COLUMNS + where + " ORDER BY c.name,c.id LIMIT ? OFFSET ?"
             )
         ) {
-            query.setString(1, text);
+            query.setString(1, pattern);
             query.setInt(2, body.getSize());
             query.setLong(3, body.offset());
             try (var row = query.executeQuery()) {

@@ -30,12 +30,13 @@ public class ReportRepository {
         String filter =
             " FROM carriers owner WHERE " +
             DataScopeGuard.visibleSql() +
-            " AND strpos(lower(concat_ws(' ',owner.code,owner.name)),?)>0";
+            " AND lower(owner.code || ' ' || owner.name) LIKE ? ESCAPE '!'";
         String text = body.getQuery() == null ? "" : body.getQuery().strip().toLowerCase(Locale.ROOT);
+        String pattern = "%" + text.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
         long total;
         try (var query = connection.prepareStatement("SELECT count(*)" + filter)) {
             int at = DataScopeGuard.bindVisible(query, 1, Groups.REPORT, PermissionAction.READ);
-            query.setString(at, text);
+            query.setString(at, pattern);
             try (var row = query.executeQuery()) {
                 row.next();
                 total = row.getLong(1);
@@ -50,7 +51,7 @@ public class ReportRepository {
             )
         ) {
             int at = DataScopeGuard.bindVisible(query, 1, Groups.REPORT, PermissionAction.READ);
-            query.setString(at++, text);
+            query.setString(at++, pattern);
             query.setInt(at++, body.getSize());
             query.setLong(at, body.offset());
             try (var row = query.executeQuery()) {

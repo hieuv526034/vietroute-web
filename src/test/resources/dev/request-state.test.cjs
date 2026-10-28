@@ -1,6 +1,20 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { singleFlight } = require('../../../main/webapp/assets/js/request-state.js');
+const { singleFlight, allReads } = require('../../../main/webapp/assets/js/request-state.js');
+
+test('Nhóm metadata lỗi sớm vẫn đợi request còn lại trước khi cho mở khóa controls', async () => {
+    let release, finished = false;
+    const slow = new Promise((resolve) => { release = resolve; });
+    const failure = Error('503');
+    const result = allReads([Promise.reject(failure), slow]);
+    const checked = assert.rejects(result, (error) => error === failure).then(() => { finished = true; });
+    await new Promise(setImmediate);
+    assert.equal(finished, false);
+    release('remaining response');
+    await checked;
+    assert.equal(finished, true);
+    assert.deepEqual(await allReads([Promise.resolve('first'), Promise.resolve('second')]), ['first', 'second']);
+});
 
 test('Bấm lưu lặp trong lúc HTTP đang chạy chỉ thực hiện một mutation', async () => {
     const run = singleFlight();

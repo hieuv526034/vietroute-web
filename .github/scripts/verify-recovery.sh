@@ -48,7 +48,7 @@ recovery_constraints vietroute_recovery_ci > "$work/recovery-constraints-restore
 cmp --silent "$work/recovery-constraints-reference.txt" "$work/recovery-constraints-restored.txt"
 # Manifest gồm toàn bộ dòng, history/checksum/hash và sequence/FK; không in giá trị hoặc dump thành artifact.
 recovery_sql() { docker exec -e PGOPTIONS=-csearch_path=vietroute vietroute-db-ci psql -X -U vietroute_ci -d vietroute_recovery_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(recovery_sql 'SELECT count(*) FROM vietroute_schema_history')" == 22 ]]
+[[ "$(recovery_sql 'SELECT count(*) FROM vietroute_schema_history')" == 23 ]]
 recovery_sql "SELECT password_hash FROM auth_users WHERE username='admin'" > "$work/recovery-hash-before"
 start_app vietroute-recovery-ci 18083 vietroute_recovery_ci
 base=http://127.0.0.1:18083
@@ -64,4 +64,4 @@ call 200 GET /dashboard '' cookie
 call 200 GET /api/v1/admin/access/registry/roles/page '' bearer
 recovery_sql "SELECT password_hash FROM auth_users WHERE username='admin'" > "$work/recovery-hash-after"
 cmp --silent "$work/recovery-hash-before" "$work/recovery-hash-after"
-printf 'CI recovery passed: all table data, sequences and constraints matched; 22 migrations and restored auth/page/API passed; elapsed=%ss. Not production RPO/RTO or scheduled backup.\n' "$((SECONDS-recovery_started))"
+printf 'CI recovery passed: all table data, sequences and constraints matched; 23 migrations and restored auth/page/API passed; elapsed=%ss. Not production RPO/RTO or scheduled backup.\n' "$((SECONDS-recovery_started))"

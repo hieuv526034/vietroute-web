@@ -13,15 +13,21 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -64,10 +70,16 @@ import vn.vietroute.auth.service.AuthService;
 import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.business.booking.repository.BookingLifecycleRepository;
 import vn.vietroute.business.carrier.dto.request.CarrierSearchRequest;
+import vn.vietroute.business.carrier.dto.request.PublicCarrierSearchRequest;
+import vn.vietroute.business.carrier.repository.PublicCarrierRepository;
 import vn.vietroute.business.carrier.service.DriverService;
 import vn.vietroute.business.carrier.service.VehicleService;
+import vn.vietroute.business.catalog.dto.request.CatalogSearchRequest;
+import vn.vietroute.business.catalog.repository.CatalogRepository;
 import vn.vietroute.business.catalog.service.BookingSourceCatalogService;
+import vn.vietroute.business.report.dto.request.ReportCarrierSearchRequest;
 import vn.vietroute.business.report.dto.request.ReportSearchRequest;
+import vn.vietroute.business.report.repository.ReportRepository;
 import vn.vietroute.business.report.service.ReportService;
 import vn.vietroute.business.tracking.dto.request.TrackingStartRequest;
 import vn.vietroute.business.tracking.service.DriverTrackingService;
@@ -78,12 +90,15 @@ import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.AccessAuditConstants.Event;
 import vn.vietroute.common.constant.AccessAuditConstants.Target;
 import vn.vietroute.common.constant.ApplicationConstants.Business;
+import vn.vietroute.common.constant.ApplicationConstants.CatalogType;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.BaseRepository.SqlWork;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.media.service.MediaService;
+import vn.vietroute.support.PooledReadProbe;
+import vn.vietroute.support.SqlPlanProbe;
 
 /** PostgreSQL thật, hai context WAR; chỉ cho phép DB test loopback, không đọc .env hoặc dùng Neon. */
 @EnabledIfSystemProperty(
@@ -98,6 +113,346 @@ class BusinessIntegrationTest {
     private MockMvc mvc;
     private final ObjectMapper json = new ObjectMapper();
     private Authentication admin;
+
+    @Test
+    void searchIndexMigrationUsesExistingExtensionNamespaceWithoutChangingSearchPathOrMappings() throws Exception {
+        String extensionSchema = "perf03_ext_" + UUID.randomUUID().toString().replace("-", "");
+        String mappings = sql("SELECT count(*) FROM auth_role_permissions");
+        sql("CREATE SCHEMA " + extensionSchema + "; ALTER EXTENSION pg_trgm SET SCHEMA " + extensionSchema);
+        try {
+            sql(
+                "DROP INDEX idx_trips_report_departure,idx_trips_report_carrier_date,idx_carriers_search_contact,idx_carriers_search_name,idx_catalog_search_text; DELETE FROM vietroute_schema_history WHERE version='V023__search_and_report_indexes.sql'"
+            );
+            root.getBean(DatabaseInitializer.class).afterPropertiesSet();
+            assertEquals(
+                extensionSchema,
+                sql(
+                    "SELECT n.nspname FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace WHERE e.extname='pg_trgm'"
+                )
+            );
+            assertEquals(
+                "3",
+                sql(
+                    "SELECT count(*) FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid JOIN pg_namespace cn ON cn.oid=c.relnamespace JOIN pg_opclass o ON o.oid=ANY(i.indclass) JOIN pg_namespace ns ON ns.oid=o.opcnamespace WHERE cn.nspname=current_schema() AND c.relname IN('idx_carriers_search_contact','idx_carriers_search_name','idx_catalog_search_text') AND ns.nspname='" +
+                        extensionSchema +
+                        "'"
+                )
+            );
+            assertEquals(mappings, sql("SELECT count(*) FROM auth_role_permissions"));
+            assertEquals("23", sql("SELECT count(*) FROM vietroute_schema_history"));
+            try (
+                var connection = root.getBean(JdbcConnectionFactory.class).open();
+                var query = connection.prepareStatement("SHOW search_path");
+                var row = query.executeQuery()
+            ) {
+                assertTrue(row.next());
+                assertFalse(row.getString(1).contains(extensionSchema));
+                assertFalse(row.getString(1).contains("public"));
+            }
+        } finally {
+            sql("ALTER EXTENSION pg_trgm SET SCHEMA " + schema + "; DROP SCHEMA " + extensionSchema);
+        }
+    }
+
+    @Test
+    void searchIndexesPreserveLiteralWildcardsVietnameseAndScope() throws Exception {
+        seed();
+        sql("UPDATE carriers SET name='Nhà xe đà nẵng 50%_!\\ literal' WHERE code='DEMOMIENNAM'");
+        for (String term : new String[] { "đà nẵng", "%_!\\", "demomiennam Nhà" }) {
+            var search = new PublicCarrierSearchRequest();
+            search.setQuery(term);
+            assertEquals(
+                1,
+                root
+                    .getBean(JdbcTransactions.class)
+                    .execute(connection -> root.getBean(PublicCarrierRepository.class).page(connection, search))
+                    .totalElements()
+            );
+            var report = new ReportCarrierSearchRequest();
+            report.setQuery(term);
+            SecurityContextHolder.getContext().setAuthentication(admin);
+            assertEquals(
+                1,
+                root
+                    .getBean(JdbcTransactions.class)
+                    .execute(connection -> root.getBean(ReportRepository.class).carriers(connection, report))
+                    .totalElements()
+            );
+        }
+        var search = new PublicCarrierSearchRequest();
+        search.setQuery("%");
+        sql(
+            "UPDATE auth_data_scopes SET active=false WHERE id=(SELECT scope_id FROM carriers WHERE code='DEMOMIENNAM')"
+        );
+        assertEquals(
+            0,
+            root
+                .getBean(JdbcTransactions.class)
+                .execute(connection -> root.getBean(PublicCarrierRepository.class).page(connection, search))
+                .totalElements()
+        );
+    }
+
+    @Test
+    void performancePlansUseMeasuredSearchAndReportIndexesOnRepresentativeFixture() throws Exception {
+        seed();
+        var first = tripFixture(false);
+        var second = tripFixture(true);
+        long trip = openBookingTrip(first, "PERFBASE", Instant.now().plus(10, ChronoUnit.DAYS));
+        long other = openBookingTrip(second, "PERFOTHER", Instant.now().plus(10, ChronoUnit.DAYS));
+        long booking = call(201, "POST", "/api/v1/admin/bookings", bookingBody(trip, 1, 3, 1, UUID.randomUUID()), admin)
+            .path("id")
+            .asLong();
+        try (var input = getClass().getResourceAsStream("/fixtures/performance.sql")) {
+            sql(
+                new String(input.readAllBytes(), StandardCharsets.UTF_8)
+                    .replace(":otherTrip", Long.toString(other))
+                    .replace(":trip", Long.toString(trip))
+                    .replace(":booking", Long.toString(booking))
+            );
+        }
+        assertEquals("30000", sql("SELECT count(*) FROM carrier_trips WHERE code LIKE 'PERF03T%'"));
+        assertEquals(
+            "90000",
+            sql("SELECT count(*) FROM bookings b JOIN carrier_trips t ON t.id=b.trip_id WHERE t.code LIKE 'PERF03T%'")
+        );
+        SecurityContextHolder.getContext().setAuthentication(admin);
+        try (var connection = root.getBean(JdbcConnectionFactory.class).open()) {
+            var reports = root.getBean(ReportRepository.class);
+            var publicSearch = new PublicCarrierSearchRequest();
+            publicSearch.setQuery("needlexyz");
+            var picker = new ReportCarrierSearchRequest();
+            picker.setQuery("needlexyz");
+            var catalog = new CatalogSearchRequest();
+            catalog.setQuery("needlexyz");
+            var report = new ReportSearchRequest();
+            report.setFromDate(LocalDate.of(2027, 2, 10));
+            report.setToDate(report.getFromDate());
+            Map<String, List<SqlPlanProbe.Select>> queries = new LinkedHashMap<>();
+            queries.put("report.all", SqlPlanProbe.capture(connection, observed -> reports.summary(observed, report)));
+            report.setCarrierId(first.carrier());
+            queries.put(
+                "report.carrier",
+                SqlPlanProbe.capture(connection, observed -> reports.summary(observed, report))
+            );
+            queries.put(
+                "search.public",
+                SqlPlanProbe.capture(connection, observed ->
+                    root.getBean(PublicCarrierRepository.class).page(observed, publicSearch)
+                )
+            );
+            queries.put(
+                "search.reportPicker",
+                SqlPlanProbe.capture(connection, observed -> reports.carriers(observed, picker))
+            );
+            queries.put(
+                "search.catalog",
+                SqlPlanProbe.capture(connection, observed ->
+                    root.getBean(CatalogRepository.class).search(observed, CatalogType.VEHICLE_TYPE, catalog)
+                )
+            );
+            Map<String, List<JsonNode>> baseline = new LinkedHashMap<>();
+            var point = connection.setSavepoint();
+            try (var query = connection.createStatement()) {
+                query.execute(
+                    "DROP INDEX idx_trips_report_departure,idx_trips_report_carrier_date,idx_carriers_search_contact,idx_carriers_search_name,idx_catalog_search_text"
+                );
+            }
+            for (var entry : queries.entrySet()) {
+                var plans = new ArrayList<JsonNode>();
+                for (var query : entry.getValue()) plans.add(query.explain(connection));
+                baseline.put(entry.getKey(), plans);
+            }
+            connection.rollback(point);
+            try (var query = connection.createStatement()) {
+                query.execute("ANALYZE carriers; ANALYZE catalog_items; ANALYZE carrier_trips");
+            }
+            var used = new LinkedHashSet<String>();
+            for (var entry : queries.entrySet()) {
+                int index = 0;
+                for (var query : entry.getValue()) {
+                    var before = baseline.get(entry.getKey()).get(index++);
+                    var after = query.explain(connection);
+                    used.addAll(SqlPlanProbe.indexes(after));
+                    Files.writeString(
+                        Path.of("target", "perf03-plan-" + entry.getKey() + index + ".json"),
+                        after.toPrettyString()
+                    );
+                    System.out.println(
+                        "PERF03_PLAN " +
+                            json.writeValueAsString(
+                                Map.of(
+                                    "query",
+                                    entry.getKey() + index,
+                                    "before",
+                                    SqlPlanProbe.summary(before),
+                                    "after",
+                                    SqlPlanProbe.summary(after)
+                                )
+                            )
+                    );
+                    assertTrue(
+                        SqlPlanProbe.indexes(after)
+                            .stream()
+                            .anyMatch(name -> name.contains("_search_") || name.startsWith("idx_trips_report_")),
+                        "Planner phải chọn index mới cho fixture chọn lọc"
+                    );
+                }
+            }
+            assertTrue(
+                used.containsAll(
+                    Set.of("idx_carriers_search_contact", "idx_carriers_search_name", "idx_catalog_search_text")
+                )
+            );
+        }
+        var report = new ReportSearchRequest();
+        report.setFromDate(LocalDate.of(2027, 2, 1));
+        report.setToDate(LocalDate.of(2027, 2, 28));
+        var search = new PublicCarrierSearchRequest();
+        search.setQuery("needlexyz");
+        PooledReadProbe.run(
+            System.getProperty("business.test.database"),
+            System.getProperty("business.test.user", "ciadmin"),
+            schema,
+            admin,
+            connection -> {
+                assertTrue(root.getBean(ReportRepository.class).summary(connection, report).tripCount() > 0);
+                assertEquals(20, root.getBean(PublicCarrierRepository.class).page(connection, search).totalElements());
+                return null;
+            }
+        );
+    }
+
+    @Test
+    void largeCancellationAggregatesOverlappingConfirmedSegmentsAndMeasuresLockHold() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        long trip = call(
+            201,
+            "POST",
+            "/api/v1/admin/trips",
+            tripBody(fixture, "PERFCANCEL", Instant.now().plus(10, ChronoUnit.DAYS)).replace(
+                "\"capacity\":10",
+                "\"capacity\":29"
+            ),
+            admin
+        )
+            .path("id")
+            .asLong();
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/trips/" + trip + "/state",
+            "{\"status\":\"OPEN\",\"version\":0,\"note\":\"\"}",
+            admin
+        );
+        long base = call(201, "POST", "/api/v1/admin/bookings", bookingBody(trip, 1, 3, 1, UUID.randomUUID()), admin)
+            .path("id")
+            .asLong();
+        sql(
+            "INSERT INTO bookings(trip_id,carrier_id,scope_id,source_code,source_id,pickup_stop_id,dropoff_stop_id,pickup_order,dropoff_order,seats,unit_price,total_price,contact_name,contact_phone,request_key,status,paid_amount) SELECT b.trip_id,b.carrier_id,b.scope_id,'PHONE',b.source_id,p.id,d.id,p.stop_order,d.stop_order,CASE WHEN n BETWEEN 9 AND 24 THEN 2 ELSE 1 END,d.cumulative_fare-p.cumulative_fare,(d.cumulative_fare-p.cumulative_fare)*CASE WHEN n BETWEEN 9 AND 24 THEN 2 ELSE 1 END,'Bulk fixture','0000000000',gen_random_uuid(),CASE WHEN n<=24 THEN 'CONFIRMED' ELSE 'PENDING' END,CASE WHEN n<=24 THEN 100 ELSE 0 END FROM bookings b CROSS JOIN generate_series(1,5000) n JOIN trip_stops p ON p.trip_id=b.trip_id AND p.stop_order=CASE WHEN n BETWEEN 17 AND 24 THEN 2 ELSE 1 END JOIN trip_stops d ON d.trip_id=b.trip_id AND d.stop_order=CASE WHEN n BETWEEN 9 AND 16 THEN 2 ELSE 3 END WHERE b.id=" +
+                base
+        );
+        sql("UPDATE trip_segments SET reserved_seats=24,version=16 WHERE trip_id=" + trip);
+        var factory = root.getBean(JdbcConnectionFactory.class);
+        var executor = Executors.newSingleThreadExecutor();
+        var attempted = new CountDownLatch(1);
+        var statements = new AtomicInteger();
+        try (var blocker = factory.open()) {
+            try (var query = blocker.prepareStatement("SELECT id FROM carrier_trips WHERE id=? FOR UPDATE")) {
+                query.setLong(1, trip);
+                try (var row = query.executeQuery()) {
+                    assertTrue(row.next());
+                }
+            }
+            var cancellation = executor.submit(() -> {
+                try (var connection = factory.open()) {
+                    try {
+                        long waiting = System.nanoTime();
+                        attempted.countDown();
+                        try (
+                            var query = connection.prepareStatement(
+                                "SELECT id FROM carrier_trips WHERE id=? FOR UPDATE"
+                            )
+                        ) {
+                            query.setLong(1, trip);
+                            try (var row = query.executeQuery()) {
+                                assertTrue(row.next());
+                            }
+                        }
+                        long acquired = System.nanoTime();
+                        root.getBean(BookingLifecycleRepository.class).cancelTrip(
+                            counted(connection, statements),
+                            trip,
+                            "Load cancellation",
+                            1
+                        );
+                        connection.commit();
+                        return Map.of(
+                            "controlledWaitMs",
+                            (acquired - waiting) / 1_000_000d,
+                            "lockHeldThroughCommitMs",
+                            (System.nanoTime() - acquired) / 1_000_000d,
+                            "bookings",
+                            5001,
+                            "confirmed",
+                            24,
+                            "jdbcExecutes",
+                            statements.get()
+                        );
+                    } catch (Exception | Error failure) {
+                        connection.rollback();
+                        throw failure;
+                    }
+                }
+            });
+            assertTrue(attempted.await(5, TimeUnit.SECONDS));
+            // Tạo tranh khóa có kiểm soát; không lấy 100ms chặn chủ động làm latency xử lý nghiệp vụ.
+            Thread.sleep(100);
+            assertFalse(cancellation.isDone());
+            blocker.commit();
+            System.out.println("PERF03_CANCEL " + json.writeValueAsString(cancellation.get(15, TimeUnit.SECONDS)));
+        } finally {
+            executor.shutdownNow();
+        }
+        assertEquals(5, statements.get());
+        assertEquals(
+            "5001",
+            sql(
+                "SELECT count(*) FROM bookings WHERE trip_id=" +
+                    trip +
+                    " AND status='CANCELLED' AND version=1 AND updated_by=1"
+            )
+        );
+        assertEquals(
+            "5001",
+            sql(
+                "SELECT count(*) FROM booking_events WHERE trip_id=" +
+                    trip +
+                    " AND event_type='CANCELLED' AND created_by=1"
+            )
+        );
+        assertEquals(
+            "0:64",
+            sql("SELECT sum(reserved_seats)||':'||sum(version) FROM trip_segments WHERE trip_id=" + trip)
+        );
+        assertEquals(
+            "2400.00:0.00",
+            sql("SELECT sum(paid_amount)||':'||sum(refunded_amount) FROM bookings WHERE trip_id=" + trip)
+        );
+        root.getBean(JdbcTransactions.class).execute(connection -> {
+            root.getBean(BookingLifecycleRepository.class).cancelTrip(connection, trip, "Repeated", 1);
+            return null;
+        });
+        assertEquals(
+            "0:64",
+            sql("SELECT sum(reserved_seats)||':'||sum(version) FROM trip_segments WHERE trip_id=" + trip)
+        );
+        assertEquals(
+            "5001",
+            sql("SELECT count(*) FROM booking_events WHERE trip_id=" + trip + " AND event_type='CANCELLED'")
+        );
+    }
 
     @Test
     void bulkRoleAssignmentCannotTradeListForDetailOrExpandLegacyProjectionAndKeepsNativeEmptyDeny() throws Exception {
@@ -1746,7 +2101,7 @@ class BusinessIntegrationTest {
             "DROP TABLE auth_role_resources; DROP TABLE auth_role_resource_sets; ALTER TABLE auth_users DROP CONSTRAINT ck_auth_users_deleted; ALTER TABLE auth_users DROP COLUMN deleted; DELETE FROM vietroute_schema_history WHERE version='V022__role_resource_grants.sql'"
         );
         root.getBean(DatabaseInitializer.class).afterPropertiesSet();
-        assertEquals("22", sql("SELECT count(*) FROM vietroute_schema_history"));
+        assertEquals("23", sql("SELECT count(*) FROM vietroute_schema_history"));
         assertEquals(hash, sql("SELECT md5(password_hash) FROM auth_users WHERE id=1"));
         assertEquals("0", sql("SELECT permission_version FROM auth_roles WHERE code='UPGRADENATIVE'"));
         assertEquals("3", sql("SELECT count(*) FROM auth_role_permissions WHERE role_code='UPGRADENATIVE'"));
