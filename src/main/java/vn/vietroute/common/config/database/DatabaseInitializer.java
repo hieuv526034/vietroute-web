@@ -112,6 +112,7 @@ public class DatabaseInitializer implements InitializingBean {
         migrate(connection, "V020__bookings_and_events.sql");
         migrate(connection, "V021__trip_location_sharing.sql");
         migrate(connection, "V022__role_resource_grants.sql");
+        migrate(connection, "V023__search_and_report_indexes.sql");
         JdbcSchemaValidator.verify(
             connection,
             UserAccount.class,

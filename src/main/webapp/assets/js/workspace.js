@@ -76,6 +76,16 @@
         const close = () => {
             if (!busy() && dialog.open) dialog.close();
         };
+        // Khóa fieldset có thể làm browser đưa focus ra body. Giữ tại tiêu đề, không cướp focus đang ở trong modal.
+        const focus = () => {
+            if (dialog.open && !dialog.contains(document.activeElement)) {
+                const heading = dialog.querySelector('h2');
+                if (heading) {
+                    heading.tabIndex = -1;
+                    heading.focus();
+                }
+            }
+        };
         dialog.querySelectorAll('[data-dialog-close]').forEach((button) => button.addEventListener('click', close));
         dialog.addEventListener('cancel', (event) => {
             if (busy()) event.preventDefault();
@@ -89,9 +99,11 @@
                 if (!dialog.open) {
                     opener = trigger;
                     dialog.showModal();
+                    focus();
                 }
             },
             close,
+            focus,
             get isOpen() {
                 return dialog.open;
             },

@@ -27,32 +27,36 @@ public class CatalogRepository extends BaseRepository {
 
     /** Count và trang theo loại cố định; có thể xem/bật lại mục ngừng dùng, không làm đổi lookup public. */
     public PageResponse<CatalogItem> search(CatalogType type, CatalogSearchRequest page) {
-        return read(connection -> {
-            String filter =
-                " WHERE type=? AND (?::boolean IS NULL OR active=?) AND lower(concat_ws(' ',code,name_vi,name_en)) LIKE ? ESCAPE '\\'";
-            long total;
-            try (var query = connection.prepareStatement("SELECT count(*) FROM catalog_items" + filter)) {
-                bindSearch(query, type, page);
-                try (var row = query.executeQuery()) {
-                    row.next();
-                    total = row.getLong(1);
-                }
+        return read(connection -> search(connection, type, page));
+    }
+
+    /** Biến thể dùng connection transaction caller; cùng SQL/bind với luồng đọc độc lập. */
+    public PageResponse<CatalogItem> search(Connection connection, CatalogType type, CatalogSearchRequest page)
+        throws SQLException {
+        String filter =
+            " WHERE type=? AND (?::boolean IS NULL OR active=?) AND lower(code || ' ' || name_vi || ' ' || name_en) LIKE ? ESCAPE '\\'";
+        long total;
+        try (var query = connection.prepareStatement("SELECT count(*) FROM catalog_items" + filter)) {
+            bindSearch(query, type, page);
+            try (var row = query.executeQuery()) {
+                row.next();
+                total = row.getLong(1);
             }
-            var content = new ArrayList<CatalogItem>();
-            try (
-                var query = connection.prepareStatement(
-                    "SELECT * FROM catalog_items" + filter + " ORDER BY sort_order,id LIMIT ? OFFSET ?"
-                )
-            ) {
-                bindSearch(query, type, page);
-                query.setInt(5, page.getSize());
-                query.setLong(6, page.offset());
-                try (var rows = query.executeQuery()) {
-                    while (rows.next()) content.add(map(rows));
-                }
+        }
+        var content = new ArrayList<CatalogItem>();
+        try (
+            var query = connection.prepareStatement(
+                "SELECT * FROM catalog_items" + filter + " ORDER BY sort_order,id LIMIT ? OFFSET ?"
+            )
+        ) {
+            bindSearch(query, type, page);
+            query.setInt(5, page.getSize());
+            query.setLong(6, page.offset());
+            try (var rows = query.executeQuery()) {
+                while (rows.next()) content.add(map(rows));
             }
-            return PageResponse.of(content, page, total);
-        });
+        }
+        return PageResponse.of(content, page, total);
     }
 
     private void bindSearch(PreparedStatement query, CatalogType type, CatalogSearchRequest page) throws SQLException {

@@ -16,6 +16,13 @@
             return result;
         };
     };
+    // Metadata độc lập phải kết thúc hết trước khi mở khóa controls; một lỗi sớm không bỏ request còn đang chạy.
+    const allReads = async (requests) => {
+        const results = await Promise.allSettled(requests);
+        const failure = results.find((item) => item.status === 'rejected');
+        if (failure) throw failure.reason;
+        return results.map((item) => item.value);
+    };
     const attach = (api) => {
         const progress = document.createElement('div');
         progress.className = 'request-progress';
@@ -95,5 +102,5 @@
         );
         return () => trigger;
     };
-    return Object.freeze({ singleFlight, attach });
+    return Object.freeze({ singleFlight, allReads, attach });
 });

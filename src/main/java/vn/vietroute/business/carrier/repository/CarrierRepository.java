@@ -178,6 +178,10 @@ public class CarrierRepository extends BaseRepository {
         PermissionAction action,
         RowMapper<T> mapper
     ) throws SQLException {
+        String searchText =
+            kind == Kind.CARRIER
+                ? "lower(owner.code || ' ' || owner.name || ' ' || owner.phone)"
+                : "lower(concat_ws(' '," + kind.search + "))";
         String filter =
             " FROM " +
             kind.from +
@@ -185,9 +189,9 @@ public class CarrierRepository extends BaseRepository {
             DataScopeGuard.visibleSql() +
             " AND (?::boolean IS NULL OR " +
             kind.alias +
-            ".active=?) AND (?::bigint IS NULL OR owner.id=?) AND lower(concat_ws(' '," +
-            kind.search +
-            ")) LIKE ? ESCAPE '\\'";
+            ".active=?) AND (?::bigint IS NULL OR owner.id=?) AND " +
+            searchText +
+            " LIKE ? ESCAPE '\\'";
         long total;
         try (var query = connection.prepareStatement("SELECT count(*)" + filter)) {
             bindSearch(query, 1, page, resource, action);
