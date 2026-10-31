@@ -1,5 +1,11 @@
 # Giám sát và vận hành VietRoute
 
+## Tích hợp dev và phát hành production
+
+Từ 31/10/2026, `dev` là nhánh tích hợp; không build image production hoặc deploy Render cho PR/push dev. CI dev kiểm formatter/Node/Java unit-MVC/docs; test DB phù hợp chạy riêng trên PostgreSQL cô lập. Chỉ khi chủ dự án yêu cầu mới mở PR dev → main để chạy Production Docker/PostgreSQL/HTTP/recovery, merge sau khi check đạt; Render giữ main + checksPass. Dispatch production trên nhánh khác bị bỏ qua. Quy trình và giới hạn cưỡng chế nằm ở [CONTRIBUTING](../../CONTRIBUTING.md#tích-hợp-dev-và-phát-hành-main-từ-31102026). Không coi code trên dev là đang chạy trên Render, không thay settings dịch vụ hoặc dùng deploy hook từ nhánh phát triển.
+
+PostgreSQL/Neon vẫn là runtime hiện hành. Chuẩn bị Oracle theo [DB01](../02-phat-trien/QUY_UOC_PHAT_TRIEN.md#hướng-hỗ-trợ-nhiều-hệ-db--db01), chưa đổi URL/driver/migration production. Có adapter cấu hình chưa chứng minh nghiệp vụ hoạt động trên hệ DB khác.
+
 Bổ sung UI quản lý job/retry, quyền và snapshot cấu hình không nhạy cảm tại [Quản trị hệ thống](QUAN_TRI_HE_THONG.md). Cấu hình chỉ đọc; thông tin runtime/collector/receiver bên dưới vẫn là các trách nhiệm riêng.
 
 Cập nhật 22/10/2026. Không cần Kafka/Redis. Source cung cấp instrument, trang xem, dashboard và alert mẫu; việc nhận cảnh báo thật cần collector/receiver bên ngoài được cấu hình và thử nghiệm. Không tự tạo tài khoản, mua dịch vụ hoặc gửi thông báo thật trong build.

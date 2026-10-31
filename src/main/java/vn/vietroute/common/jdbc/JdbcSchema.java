@@ -1,60 +1,42 @@
 package vn.vietroute.common.jdbc;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import vn.vietroute.common.constant.ApplicationConstants.Env;
-import vn.vietroute.common.constant.ApplicationConstants.Regex;
+import vn.vietroute.common.jdbc.dialect.JdbcDialect;
 
-/** Schema ứng dụng từ cấu hình; không có biến static toàn cục hoặc tên schema trong repository/entity. */
+/** Schema ứng dụng từ cấu hình; adapter giữ các quy tắc riêng của hệ DB. */
 public final class JdbcSchema {
 
     private final String name;
 
+    private final JdbcDialect dialect;
+
+    /** Tương thích các caller PostgreSQL hiện hành, không suy đoán hệ DB từ connection đang mượn. */
     public JdbcSchema(String name) {
-        validate(name);
+        this(name, JdbcDialect.postgresql());
+    }
+
+    public JdbcSchema(String name, JdbcDialect dialect) {
+        dialect.validateSchema(name);
         this.name = name;
+        this.dialect = dialect;
     }
 
     public String name() {
         return name;
     }
 
-    /** Identifier được whitelist rồi quote, kể cả tên trùng keyword PostgreSQL. */
+    /** Identifier được adapter validate trước khi quote; dùng cho metadata/migration hiện hành. */
     public String quoted() {
         return "\"" + name + "\"";
     }
 
     public static void validate(String name) {
-        if (
-            name == null ||
-            !name.matches(Regex.SCHEMA) ||
-            name.startsWith("pg_") ||
-            name.equals("public") ||
-            name.equals("information_schema")
-        ) {
-            throw new IllegalStateException(
-                Env.DB_SCHEMA.key() + " must be a private lowercase PostgreSQL identifier (1-63 characters)"
-            );
-        }
+        JdbcDialect.postgresql().validateSchema(name);
     }
 
-    /**
-     * Đặt path LOCAL trong transaction hiện hành; không tin currentSchema hoặc trạng thái backend trước.
-     * Không có public/$user fallback; pg_temp ở cuối để bảng tạm không che bảng ứng dụng.
-     * pg_catalog được PostgreSQL ưu tiên ngầm trước path để bảo vệ hàm/kiểu hệ thống.
-     */
+    /** Chọn schema trong cùng transaction với SQL nghiệp vụ, không đổi autocommit/commit của caller. */
     public void select(Connection connection) throws SQLException {
-        if (connection.getAutoCommit()) {
-            throw new SQLException("Chọn schema cần transaction chứa cả truy vấn nghiệp vụ", "25000");
-        }
-        try (
-            PreparedStatement statement = connection.prepareStatement(
-                "SELECT pg_catalog.set_config('search_path', ?, true)"
-            )
-        ) {
-            statement.setString(1, quoted() + ", pg_temp");
-            statement.execute();
-        }
+        dialect.selectSchema(connection, name);
     }
 }

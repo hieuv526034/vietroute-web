@@ -2,11 +2,12 @@ name: Monitoring configuration
 
 on:
   pull_request:
+    branches: [dev, main]
     paths:
       - 'ops/monitoring/**'
       - '.github/workflows/monitoring.yml'
   push:
-    branches: [main]
+    branches: [dev, main]
     paths:
       - 'ops/monitoring/**'
       - '.github/workflows/monitoring.yml'

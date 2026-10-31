@@ -93,30 +93,6 @@ button:focus-visible {
     margin-left: -7px;
 }
 
-.nav-links {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-    gap: 6px;
-    overflow-x: auto;
-    scrollbar-width: thin;
-    overscroll-behavior-x: contain;
-    padding-block: 6px;
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.nav-links a {
-    text-decoration: none;
-}
-
-.nav-links > * {
-    flex-shrink: 0;
-}
-
 .nav-actions {
     display: flex;
     align-items: center;
@@ -124,49 +100,101 @@ button:focus-visible {
     flex-shrink: 0;
 }
 
-.nav-links > a,
 .operations-menu > summary {
     white-space: nowrap;
 }
 
-.nav-links > a:not(.button) {
+.navigation-panel a:not(.button) {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 9px 11px;
     border-radius: 8px;
     color: var(--muted);
+    text-decoration: none;
+    overflow-wrap: anywhere;
 }
 
-.nav-links > a:not(.button):hover,
-.nav-links > a[aria-current='page'] {
+.navigation-panel a:not(.button):hover,
+.navigation-panel a[aria-current='page'] {
     color: var(--green);
     background: var(--mint);
 }
 
-/* Header luôn có một dải cuộn ngay từ CSS, không đo rồi đổi sang bố cục khác sau khi tải. */
-.nav-scroll-shell {
+/* Details đóng sẵn từ HTML: menu dài không tràn header hoặc lóe lên trong lúc đổi trang. */
+.navigation-trigger {
     display: flex;
     align-items: center;
-    gap: 4px;
-    flex: 1;
+    gap: 8px;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: white;
+    font-weight: 650;
+    font-size: 14px;
+    list-style: none;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.navigation-trigger::-webkit-details-marker {
+    display: none;
+}
+.navigation-menu[open] > .navigation-trigger,
+.navigation-trigger:hover {
+    color: var(--green);
+    background: var(--mint);
+}
+.navigation-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 12px;
+    right: 12px;
+    max-height: calc(100dvh - 96px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 20px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: white;
+    box-shadow: 0 16px 48px #142d2426;
+}
+.navigation-menu:not([open]) > .navigation-panel {
+    display: none;
+}
+.navigation-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+    gap: 18px;
+}
+.navigation-group {
     min-width: 0;
 }
-.nav-scroll-button {
-    flex: 0 0 28px;
-    width: 28px;
-    height: 32px;
-    padding: 0;
-    border: 1px solid var(--line);
-    border-radius: 7px;
-    color: var(--green);
-    background: white;
-    font-size: 22px;
-    cursor: pointer;
+.navigation-group h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 8px;
+    padding: 0 10px 10px;
+    border-bottom: 1px solid var(--line);
+    font-size: 14px;
+    font-weight: 750;
 }
-.nav-scroll-button:disabled {
-    opacity: 0.35;
-    cursor: default;
+.navigation-group-links {
+    display: grid;
+    gap: 4px;
+}
+.navigation-panel .ui-icon {
+    flex-shrink: 0;
+}
+.navigation-footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
 }
 .site-nav .operations-menu-items {
     position: fixed;
@@ -205,7 +233,6 @@ button:focus-visible {
 }
 @media (max-width: 767px) {
     .site-nav {
-        flex-wrap: wrap;
         gap: 6px 12px;
         padding-block: 8px;
         min-height: 64px;
@@ -213,11 +240,11 @@ button:focus-visible {
     .site-nav .brand {
         font-size: 22px;
     }
-    .nav-scroll-shell {
-        order: 3;
-        flex-basis: 100%;
+    .navigation-panel {
+        padding: 14px;
     }
     .nav-actions {
+        gap: 6px;
         margin-left: auto;
     }
     .account-menu > summary {
@@ -233,6 +260,25 @@ button:focus-visible {
     }
     .account-menu > summary::after {
         display: none;
+    }
+}
+
+@media (max-width: 375px) {
+    .site-nav {
+        gap: 6px;
+    }
+    .site-nav .brand {
+        font-size: 20px;
+        gap: 6px;
+    }
+    .site-nav .brand-symbol {
+        width: 30px;
+        height: 32px;
+    }
+    .navigation-trigger {
+        padding: 8px;
+        gap: 6px;
+        font-size: 13px;
     }
 }
 

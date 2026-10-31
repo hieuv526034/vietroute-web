@@ -30,8 +30,8 @@ Ba thành viên còn lại dùng tên hiển thị và email của chính mình 
 Ví dụ thành viên phụ trách tracking làm màn hình theo dõi:
 
 ```powershell
-git switch main
-git pull --ff-only origin main
+git switch dev
+git pull --ff-only origin dev
 git switch -c hieuv526034/tracking-trip-progress
 # Code và kiểm tra chức năng của mình.
 npm ci
@@ -46,11 +46,19 @@ git push -u origin hieuv526034/tracking-trip-progress
 
 Lệnh `git add` trên minh họa các thư mục sẽ được tạo khi có chức năng; chỉ thêm đường dẫn đã tồn tại và đúng thay đổi của mình. CSS/JS/SQL/tài liệu liên quan cũng được thêm rõ ràng. Không thêm `target/`, mật khẩu hoặc file IDE.
 
-Sau đó mở Pull request vào `main`, mô tả Issue, chức năng, cách kiểm tra và hình ảnh nếu có giao diện. Một thành viên khác review. Chỉ merge khi build và luồng liên quan chạy được. Nhánh theo mẫu `<người-phụ-trách>/<chức-năng>`, dùng đúng tiền tố trong `docs/05-ke-hoach/PHAN_CONG.md`, không dùng `codex/`. Không commit source trực tiếp lên `main`. Nhánh nên gắn với chức năng nhỏ, không giữ một nhánh khổng lồ suốt 2 tuần.
+Sau đó mở Pull request vào `dev`, mô tả Issue, chức năng, cách kiểm tra và hình ảnh nếu có giao diện. Một thành viên khác review. Chỉ merge khi kiểm tra và luồng liên quan đạt; không tự nhận review AI là nghiệm thu thành viên. Nhánh theo mẫu `<người-phụ-trách>/<chức-năng>`, dùng đúng tiền tố trong `docs/05-ke-hoach/PHAN_CONG.md`, không dùng `codex/`. Không commit source trực tiếp lên `dev`/`main`. Nhánh nên gắn với chức năng nhỏ, không giữ một nhánh khổng lồ suốt 2 tuần.
 
 `npm ci` chỉ cần khi cài môi trường hoặc lockfile thay đổi. Format chạy ở máy phát triển; Docker/Render không cài npm. Giữ khoảng cách giữa field/method/khối nghiệp vụ; tên lớp dùng `DTO` viết hoa, các thời điểm Java dùng `Instant`, theo quy ước trong `docs/02-phat-trien/QUY_UOC_PHAT_TRIEN.md`.
 
-Nếu `git pull --ff-only` báo lịch sử khác nhau, dừng và đọc tình trạng; không dùng force push hoặc reset để bỏ thay đổi chưa hiểu. Trước khi bắt đầu chức năng mới, lấy `main` mới nhất.
+Nếu `git pull --ff-only` báo lịch sử khác nhau, dừng và đọc tình trạng; không dùng force push hoặc reset để bỏ thay đổi chưa hiểu. Trước khi bắt đầu chức năng mới, lấy `dev` mới nhất.
+
+### Tích hợp dev và phát hành main (từ 31/10/2026)
+
+Nhánh mặc định/tích hợp là `dev`. Tất cả nhánh chức năng và cập nhật Dependabot tạo PR vào `dev`; đổi đích PR đang mở không có nghĩa đã duyệt/merge nội dung cũ. Không merge hàng loạt nhánh cũ hoặc nâng major tự động. CI dev chạy formatter, Node, Java unit/MVC và docs; kiểm PostgreSQL cô lập phù hợp thay đổi ở local. Không build image production hoặc deploy Render trong nhịp tích hợp này.
+
+Chỉ khi chủ dự án yêu cầu phát hành mới tạo PR **`dev` → `main`**, chạy Production Docker (Java/PostgreSQL, image/Tomcat, HTTP/recovery), review diff toàn đợt và merge sau khi check đạt. Workflow production chỉ nhận PR vào main từ dev, push main và dispatch trên main. Quyền chạy workflow/merge của người có quyền GitHub vẫn cần ruleset/quản trị nếu muốn cưỡng chế; workflow không đọc được sự đồng ý trong hội thoại. Không tự mở PR phát hành hoặc dispatch production dựa vào ủy quyền cũ. Render giữ `branch: main` và `autoDeployTrigger: checksPass`; không đổi sang dev. Lượt này không sửa settings Render hoặc deploy.
+
+Lọc `branches` của sự kiện PR xét nhánh đích theo [GitHub Actions](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request); `target-branch: dev` chỉ rõ đích cập nhật phiên bản theo [Dependabot](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#target-branch). Cơ chế Render bám nhánh đã liên kết và đợi check theo [Deploys](https://render.com/docs/deploys).
 
 ### Viết commit và PR bằng tiếng Việt
 
@@ -86,7 +94,7 @@ Nhóm ưu tiên **Create a merge commit** cho PR. Commit gốc giữ nguyên tá
 
 Squash/rebase có thể dùng khi cả nhóm hiểu rõ ảnh hưởng, nhưng không dùng để so sánh số commit thô giữa thành viên. Merge commit là lựa chọn dễ theo dõi nhất cho đồ án cần trình bày lịch sử đóng góp.
 
-Commit trên nhánh chức năng đã có tác giả, nhưng để được tính vào một số thống kê Contributors/contribution graph, commit thường cần có mặt trên nhánh mặc định `main` và đáp ứng điều kiện email/tài khoản của GitHub. Dữ liệu thống kê có thể cập nhật chậm. Thành viên được mời vào repo mà chưa thực hiện công việc sẽ chưa tự có commit.
+Commit trên nhánh chức năng đã có tác giả, nhưng để được tính vào một số thống kê Contributors/contribution graph, commit thường cần có mặt trên nhánh mặc định (hiện là `dev`) và đáp ứng điều kiện email/tài khoản của GitHub. Dữ liệu thống kê có thể cập nhật chậm. Thành viên được mời vào repo mà chưa thực hiện công việc sẽ chưa tự có commit.
 
 ## 5. Ghi nhận theo phân công
 
@@ -102,8 +110,8 @@ Các lệnh kiểm tra tại repository:
 
 ```powershell
 git log --all --format="%h | %an <%ae> | %s"
-git shortlog -sne main
-git log --author="hieuv526034@gmail.com" --oneline main
+git shortlog -sne dev
+git log --author="hieuv526034@gmail.com" --oneline dev
 ```
 
 Số commit hoặc số dòng không đồng nghĩa khối lượng/chất lượng. Một commit đầu tiên tạo khung chung không phải bằng chứng một người đã hoàn thành mọi module.

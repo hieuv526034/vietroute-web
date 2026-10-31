@@ -17,9 +17,46 @@ import vn.vietroute.common.config.database.DatabaseConfig;
 import vn.vietroute.common.config.database.DatabaseSettings;
 import vn.vietroute.common.config.monitoring.MonitoringConfig;
 import vn.vietroute.common.jdbc.JdbcSchema;
+import vn.vietroute.common.jdbc.dialect.JdbcDialect;
 
 /** Kiểm tra cấu hình lỗi dừng sớm và pool tạo lười; không truy cập database thật. */
 class ConfigurationTest {
+
+    @Test
+    void unsupportedDatabaseFailsBeforePoolWithoutLeakingConnectionDetails() {
+        for (String url : new String[] {
+            "jdbc:oracle:thin:private-user/private-password@private-host:1521/private-service",
+            "jdbc:mysql://private-host/private-database?password=private-password",
+        }) {
+            var error = assertThrows(IllegalStateException.class, () ->
+                new DatabaseSettings(Map.of("VIETROUTE_DB_URL", url)::get, false)
+            );
+            assertFalse(error.getMessage().contains("private-"));
+            assertTrue(error.getMessage().contains("VIETROUTE_DB_URL"));
+            if (url.startsWith("jdbc:oracle:")) {
+                assertTrue(error.getMessage().contains("Oracle"));
+                assertTrue(error.getMessage().contains("migration"));
+            }
+        }
+    }
+
+    @Test
+    void dialectKeepsBusinessAndObservationConnectionOptionsIndependent() {
+        var dialect = JdbcDialect.forUrl("jdbc:postgresql://127.0.0.1:1/isolated_test");
+        assertEquals("org.postgresql.Driver", dialect.driverClassName());
+        var business = dialect.connectionProperties(15, 30, "vietroute-web", true);
+        var observation = dialect.connectionProperties(2, 2, "vietroute-api-journal", false);
+        assertEquals(15, business.get("connectTimeout"));
+        assertEquals(30, business.get("socketTimeout"));
+        assertEquals(true, business.get("tcpKeepAlive"));
+        assertEquals(2, observation.get("connectTimeout"));
+        assertEquals(2, observation.get("socketTimeout"));
+        assertEquals("vietroute-api-journal", observation.get("ApplicationName"));
+        assertFalse(observation.containsKey("tcpKeepAlive"));
+        business.put("socketTimeout", 99);
+        assertEquals(2, observation.get("socketTimeout"));
+        assertEquals(30, dialect.connectionProperties(15, 30, "vietroute-web", true).get("socketTimeout"));
+    }
 
     @Test
     void bootstrapEmailComesFromConfigurationAndRejectsInvalidValues() {

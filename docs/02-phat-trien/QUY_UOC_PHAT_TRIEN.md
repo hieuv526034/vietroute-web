@@ -105,13 +105,32 @@ Production cần secret JWT cố định, không sinh lại mỗi lần restart.
 
 Swagger UI ở `/docs`; tài liệu OpenAPI JSON ở `/v3/api-docs`. @Operation mô tả endpoint, @Schema mô tả request/response/audit và ví dụ; hợp đồng API mới phải xuất hiện trong OpenAPI trước khi bàn giao. Thư viện UI được đóng gói bằng WebJars để không phụ thuộc CDN: Bootstrap, Axios và Swagger UI. Thymeleaf render layout chung, component thông báo, locale switch và form đăng nhập/đổi mật khẩu.
 
+## Hướng hỗ trợ nhiều hệ DB — DB01
+
+Quyết định 31/10/2026: giữ Spring MVC/JDBC và hợp đồng service/API; chuẩn bị Oracle qua adapter theo hệ DB, không chuyển sang ORM hoặc thay tất cả SQL bằng chuỗi replace. Hiện chỉ **PostgreSQL** được hỗ trợ và nghiệm thu. Oracle chưa có driver trong WAR, migration, SQL repository hoặc môi trường kiểm thử. URL Oracle bị từ chối trước tạo pool với lỗi nêu phần thiếu, không in URL/user/password. Một lần chạy ứng dụng dùng một hệ DB; chưa có routing nhiều datasource hoặc đồng bộ PostgreSQL↔Oracle.
+
+`common.jdbc.dialect.JdbcDialect` là ranh giới đầu tiên: chọn adapter từ URL, tên driver, thuộc tính timeout/application name và chọn schema. `PostgreSqlDialect` phục vụ cả pool nghiệp vụ và pool quan sát, giữ nguyên giới hạn/timeout, không mở kết nối khi tạo settings. `JdbcSchema` nhận adapter; PostgreSQL vẫn transaction trước LOCAL search_path với pg_temp cuối, rollback/commit của caller, không fallback public. Không thêm cờ Oracle cho phép đi tiếp khi repository vẫn là PostgreSQL. Adapter này **chưa phải bộ dịch SQL**.
+
+Các đợt tiếp theo, theo thứ tự phụ thuộc:
+
+| Đợt | Phạm vi cần triển khai/kiểm |
+|---|---|
+| DB02 | Chốt phiên bản Oracle/edition và môi trường test riêng; JDBC driver tương thích Java 17/21, schema/user/quyền DDL, pool/timeout và metadata. Không nhận credential trong Git/chat. |
+| DB03 | Migration riêng theo vendor và history/checksum/khóa khởi tạo. Giữ V001–V023 PostgreSQL byte-for-byte; không chạy chúng trên Oracle hoặc sửa history để giả đã chuyển DB. DDL/seed/audit/sequence/Instant/NUMERIC phải có quy tắc tương đương. |
+| DB04 | Tách SQL repository theo module, bắt đầu catalog/location, tiếp auth/access/scope, rồi trip/booking/jobs/monitoring. Dùng interface/adapter ở nơi SQL khác; service giữ transaction/quyền, không rải if Oracle vào từng phương thức nghiệp vụ. |
+| DB05 | Chạy cùng ca hợp đồng trên từng DB thật cô lập: quyền trực tiếp/hai context/token revocation, CAS, rollback history, race giữ/trả chỗ, lock order, paging/count/literal search/vi-en và kế hoạch query/index. Chỉ bật Oracle sau khi ca này đạt. |
+
+Điểm phụ thuộc đã thấy trong source: LOCAL search_path/pg_catalog; advisory lock; ON CONFLICT; RETURNING/CTE ghi theo tập; mảng JDBC/array_agg/ANY, JSONB, ép kiểu `::`, FILTER/LATERAL; LIMIT/OFFSET; SKIP LOCKED; hàm PL/pgSQL activity; metadata/SQLState/index GIN pg_trgm. Không hạ regression số query của PERF02/PERF03 hoặc giữ khóa bằng for query/save để có bản Oracle dễ viết. Index tìm chứa từ khóa phải chọn theo plan mỗi DB, không giả GIN có bản tương đương tự động.
+
+Khác biệt chuỗi rỗng/null, boolean, timestamp/timezone, khóa và DDL cần kiểm theo phiên bản Oracle thực tế. Ví dụ [Oracle 19c coi chuỗi dài 0 là null](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/Nulls.html), nên các cột NOT NULL/default chuỗi rỗng hiện hành phải thiết kế lại có chủ đích. Thuộc tính timeout ở adapter PostgreSQL theo [pgJDBC](https://jdbc.postgresql.org/documentation/use/), không chép tên/đơn vị sang driver Oracle. Chưa đổi database Render/Neon, chưa migration dữ liệu thật và chưa chứng nhận Oracle qua mock/H2.
+
 ## Git và kiểm tra
 
 Ảnh công khai dùng adapter Cloudinary và lõi dùng chung `common/media`, public controller mỏng tại `common/media/controller`; không lưu file bền vững trên Render hoặc đưa secret vào UI. Chạy IDE bằng profile local và cấu hình Run chia sẻ, production vẫn WAR. Đọc [Cloudinary và IntelliJ](../01-bat-dau/CHAY_LOCAL_VA_CLOUDINARY.md) trước khi tích hợp mediaId hoặc đổi cấu hình chạy.
 
 Hạ tầng/common/auth/schema và tích hợp khó hiện do hieuv526034 thực hiện, commit dưới định danh Git đã cấu hình. Bảng phân công chỉ là người phụ trách công việc tương lai; không tạo commit rỗng hoặc gán tác giả cho người chưa thực hiện. Mỗi phần code có PR và bằng chứng nghiệm thu.
 
-Nhánh theo mẫu `<người-phụ-trách>/<mã-việc-hoặc-chức-năng>` trong `PHAN_CONG.md`, không dùng tiền tố `codex/`. Người thực hiện commit trên nhánh được giao, tạo PR vào `main`, kiểm tra và review trước khi merge. Nhánh `main` chỉ nhận thay đổi qua PR. Dùng merge commit để giữ tác giả và ranh giới phần việc.
+Nhánh theo mẫu `<người-phụ-trách>/<mã-việc-hoặc-chức-năng>` từ `dev` trong `PHAN_CONG.md`, không dùng tiền tố `codex/`. Người thực hiện commit trên nhánh được giao, tạo PR vào `dev`, kiểm tra và review trước khi merge. Chỉ mở/merge PR `dev` → `main` và chạy production CI/deploy khi chủ dự án yêu cầu phát hành; quy trình hiện hành ở [CONTRIBUTING](../../CONTRIBUTING.md#tích-hợp-dev-và-phát-hành-main-từ-31102026). Không commit source trực tiếp lên hai nhánh chung. Dùng merge commit để giữ tác giả và ranh giới phần việc.
 
 Tiêu đề và nội dung commit mới, merge commit và PR viết bằng tiếng Việt có dấu. Nêu rõ phần thay đổi, lý do và kết quả kiểm tra thực tế; giữ nguyên định danh kỹ thuật. Mẫu và hướng dẫn nằm trong [quy ước đóng góp](../../CONTRIBUTING.md#viết-commit-và-pr-bằng-tiếng-việt).
 

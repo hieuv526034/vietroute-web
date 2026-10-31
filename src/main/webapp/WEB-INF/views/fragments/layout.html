@@ -101,128 +101,122 @@
                     VietRoute
                     <span class="brand-dot">.</span>
                 </a>
-                <div class="nav-scroll-shell">
-                    <button
-                        type="button"
-                        class="nav-scroll-button"
-                        data-nav-scroll="previous"
-                        th:attr="aria-label=#{ui.nav.previous}"
-                        hidden
-                    >
-                        <span aria-hidden="true">‹</span>
-                    </button>
-                    <div
-                        id="navigation-links"
-                        class="nav-links"
-                        tabindex="0"
-                        role="region"
-                        th:attr="aria-label=#{ui.nav.scroll}"
-                    >
-                        <a th:href="@{/(lang=${currentLocale})}">
-                            <svg th:replace="~{fragments/layout :: icon('home')}"></svg>
-                            <span th:text="#{ui.home}"></span>
-                        </a>
-                        <a th:href="@{/carriers(lang=${currentLocale})}">
-                            <svg th:replace="~{fragments/layout :: icon('carrier')}"></svg>
-                            <span th:text="#{ui.publicCarrier.title}"></span>
-                        </a>
-                        <a th:href="@{/journeys(lang=${currentLocale})}">
-                            <svg th:replace="~{fragments/layout :: icon('search')}"></svg>
-                            <span th:text="#{ui.journey.search}"></span>
-                        </a>
-                        <a
-                            th:if="${currentUser != null}"
-                            th:href="@{/dashboard(lang=${currentLocale})}"
-                            th:attr="aria-current=${currentPath == basePath + '/dashboard'} ? 'page' : null"
-                        >
-                            <svg th:replace="~{fragments/layout :: icon('system')}"></svg>
-                            <span th:text="#{ui.dashboard.title}"></span>
-                        </a>
-                        <details
-                            class="operations-menu"
-                            th:each="item : ${functionNavigation}"
-                            th:classappend="${item.active} ? 'is-current'"
-                        >
-                            <summary>
-                                <svg th:replace="~{fragments/layout :: icon(${item.icon})}"></svg>
-                                <span th:text="${item.name}"></span>
-                            </summary>
-                            <div class="operations-menu-items">
-                                <a
-                                    th:if="${item.path != null}"
-                                    th:href="${basePath + item.path + '?lang=' + currentLocale}"
-                                    th:attr="aria-current=${currentPath == (basePath + item.path)} ? 'page' : null"
-                                >
-                                    <svg th:replace="~{fragments/layout :: icon(${item.icon})}"></svg>
-                                    <span
-                                        th:text="${item.children.isEmpty()} ? ${item.name} : #{ui.workspace.overview}"
-                                    ></span>
-                                </a>
-                                <th:block
-                                    th:insert="~{fragments/layout :: functionMenuItems(${item.children})}"
-                                ></th:block>
-                            </div>
-                        </details>
-                        <details
-                            class="operations-menu"
-                            th:classappend="${navigation.docs} ? 'is-current'"
-                        >
-                            <summary>
-                                <svg th:replace="~{fragments/layout :: icon('code')}"></svg>
-                                <span th:text="#{ui.docs}"></span>
-                            </summary>
-                            <div class="operations-menu-items">
-                                <a th:href="@{/docs(lang=${currentLocale})}">
-                                    <svg th:replace="~{fragments/layout :: icon('code')}"></svg>
-                                    <span th:text="#{ui.nav.swagger}"></span>
-                                </a>
-                                <a th:href="@{/v3/api-docs}">
-                                    <svg th:replace="~{fragments/layout :: icon('code')}"></svg>
-                                    <span th:text="#{ui.nav.openapi}"></span>
-                                </a>
-                            </div>
-                        </details>
-                        <span class="language-switch">
-                            <a
-                                th:href="${currentPath + '?lang=vi'}"
-                                th:classappend="${currentLocale == 'vi'} ? 'selected'"
-                                lang="vi"
-                            >
-                                VI
-                            </a>
-                            <a
-                                th:href="${currentPath + '?lang=en'}"
-                                th:classappend="${currentLocale == 'en'} ? 'selected'"
-                                lang="en"
-                            >
-                                EN
-                            </a>
-                        </span>
-                        <a
-                            class="button button-small button-outline"
-                            th:if="${currentUser == null}"
-                            th:href="@{/account-access(lang=${currentLocale},view='register')}"
-                            th:text="#{ui.accountFlow.register}"
-                        ></a>
-                        <a
-                            class="button button-small"
-                            th:if="${currentUser == null}"
-                            th:href="@{/login(lang=${currentLocale})}"
-                            th:text="#{ui.login}"
-                        ></a>
-                    </div>
-
-                    <button
-                        type="button"
-                        class="nav-scroll-button"
-                        data-nav-scroll="next"
-                        th:attr="aria-label=#{ui.nav.next}"
-                        hidden
-                    >
-                        <span aria-hidden="true">›</span>
-                    </button>
-                </div>
                 <div class="nav-actions">
+                    <details class="navigation-menu">
+                        <summary
+                            class="navigation-trigger"
+                            aria-controls="navigation-links"
+                        >
+                            <svg th:replace="~{fragments/layout :: icon('menu')}"></svg>
+                            <span th:text="#{ui.nav.functions}"></span>
+                        </summary>
+                        <div
+                            id="navigation-links"
+                            class="navigation-panel"
+                            role="region"
+                            th:attr="aria-label=#{ui.navigation}"
+                        >
+                            <div class="navigation-grid">
+                                <section class="navigation-group">
+                                    <h2 th:text="#{ui.nav.explore}"></h2>
+                                    <a th:href="@{/(lang=${currentLocale})}">
+                                        <svg th:replace="~{fragments/layout :: icon('home')}"></svg>
+                                        <span th:text="#{ui.home}"></span>
+                                    </a>
+                                    <a th:href="@{/carriers(lang=${currentLocale})}">
+                                        <svg th:replace="~{fragments/layout :: icon('carrier')}"></svg>
+                                        <span th:text="#{ui.publicCarrier.title}"></span>
+                                    </a>
+                                    <a th:href="@{/journeys(lang=${currentLocale})}">
+                                        <svg th:replace="~{fragments/layout :: icon('search')}"></svg>
+                                        <span th:text="#{ui.journey.search}"></span>
+                                    </a>
+                                    <a
+                                        th:if="${currentUser != null}"
+                                        th:href="@{/dashboard(lang=${currentLocale})}"
+                                        th:attr="aria-current=${currentPath == basePath + '/dashboard'} ? 'page' : null"
+                                    >
+                                        <svg th:replace="~{fragments/layout :: icon('system')}"></svg>
+                                        <span th:text="#{ui.dashboard.title}"></span>
+                                    </a>
+                                </section>
+                                <section
+                                    class="navigation-group"
+                                    th:each="item : ${functionNavigation}"
+                                    th:classappend="${item.active} ? 'is-current'"
+                                >
+                                    <h2>
+                                        <svg th:replace="~{fragments/layout :: icon(${item.icon})}"></svg>
+                                        <span th:text="${item.name}"></span>
+                                    </h2>
+                                    <div class="navigation-group-links">
+                                        <a
+                                            th:if="${item.path != null}"
+                                            th:href="${basePath + item.path + '?lang=' + currentLocale}"
+                                            th:attr="aria-current=${currentPath == (basePath + item.path)} ? 'page' : null"
+                                        >
+                                            <svg th:replace="~{fragments/layout :: icon(${item.icon})}"></svg>
+                                            <span
+                                                th:text="${item.children.isEmpty()} ? ${item.name} : #{ui.workspace.overview}"
+                                            ></span>
+                                        </a>
+                                        <th:block
+                                            th:insert="~{fragments/layout :: functionMenuItems(${item.children})}"
+                                        ></th:block>
+                                    </div>
+                                </section>
+                                <section
+                                    class="navigation-group"
+                                    th:classappend="${navigation.docs} ? 'is-current'"
+                                >
+                                    <h2>
+                                        <svg th:replace="~{fragments/layout :: icon('code')}"></svg>
+                                        <span th:text="#{ui.docs}"></span>
+                                    </h2>
+                                    <div class="navigation-group-links">
+                                        <a th:href="@{/docs(lang=${currentLocale})}">
+                                            <svg th:replace="~{fragments/layout :: icon('code')}"></svg>
+                                            <span th:text="#{ui.nav.swagger}"></span>
+                                        </a>
+                                        <a th:href="@{/v3/api-docs}">
+                                            <svg th:replace="~{fragments/layout :: icon('code')}"></svg>
+                                            <span th:text="#{ui.nav.openapi}"></span>
+                                        </a>
+                                    </div>
+                                </section>
+                            </div>
+                            <div class="navigation-footer">
+                                <span class="language-switch">
+                                    <a
+                                        th:href="${currentPath + '?lang=vi'}"
+                                        th:classappend="${currentLocale == 'vi'} ? 'selected'"
+                                        lang="vi"
+                                    >
+                                        VI
+                                    </a>
+                                    <a
+                                        th:href="${currentPath + '?lang=en'}"
+                                        th:classappend="${currentLocale == 'en'} ? 'selected'"
+                                        lang="en"
+                                    >
+                                        EN
+                                    </a>
+                                </span>
+                                <a
+                                    class="button button-small button-outline"
+                                    th:if="${currentUser == null}"
+                                    th:href="@{/account-access(lang=${currentLocale},view='register')}"
+                                    th:text="#{ui.accountFlow.register}"
+                                ></a>
+                                <a
+                                    class="button button-small"
+                                    th:if="${currentUser == null}"
+                                    th:href="@{/login(lang=${currentLocale})}"
+                                    th:text="#{ui.login}"
+                                ></a>
+                            </div>
+                        </div>
+                    </details>
                     <details
                         class="operations-menu account-menu"
                         th:if="${currentUser != null}"

@@ -43,12 +43,12 @@ Tuyến đi và về là hai bản ghi riêng. Mọi người viết UI Thymelea
 
 Nhánh có sẵn `bangpham.it/trip-booking` thuộc `BangPhamIT`; `bangpham.it` là nhãn nhánh cũ, không phải username GitHub. Nhánh mới của Bang dùng tiền tố `BangPhamIT/`; các thành viên còn lại dùng username trong bảng thông tin. Ba nhánh nghiệp vụ được chuẩn bị từ cùng commit nền tảng đã kiểm tra, chưa thể hiện thành viên đã viết code. Nhánh `hieuv526034/neon-render-cicd` giữ lịch sử phần CI đã merge.
 
-Mọi thay đổi đi từ nhánh phụ trách → PR → CI/review → merge commit vào `main`. Không dùng nhánh `codex/`, không commit source trực tiếp lên `main`. Sau khi base được merge, cập nhật `main` vào nhánh chuẩn bị trước khi code. Với mục nhỏ tiếp theo, tạo nhánh mới từ `main` mới nhất theo mẫu `<tiền-tố-thành-viên>/<mã-việc>-<mô-tả>` rồi tạo PR riêng; không dồn toàn bộ nghiệp vụ vào một PR lớn.
+Từ 31/10/2026 mọi thay đổi đi từ nhánh phụ trách → PR → CI/review → merge commit vào `dev`. Không dùng nhánh `codex/`, không commit source trực tiếp lên `dev`/`main`. Nhánh mới lấy từ `dev` mới nhất theo mẫu `<tiền-tố-thành-viên>/<mã-việc>-<mô-tả>`. Với nhánh chuẩn bị cũ, đọc diff và cập nhật dev trước khi code; không tự merge mọi nhánh cũ. Chỉ đưa `dev` lên `main` để chạy CI production/deploy khi chủ dự án yêu cầu phát hành, theo [CONTRIBUTING](../../CONTRIBUTING.md#tích-hợp-dev-và-phát-hành-main-từ-31102026).
 
 ```powershell
 git fetch origin
 git switch bangpham.it/trip-booking
-git merge origin/main
+git merge origin/dev
 # Chỉ bắt đầu phần việc khi các API/schema phụ thuộc đã sẵn sàng.
 ```
 
@@ -84,6 +84,6 @@ Yêu cầu ngày 23/10: ưu tiên hoàn thiện nền tảng trước nghiệp v
 
 ## Tiếp nhận nghiệp vụ sau BUSINESS04
 
-Theo yêu cầu chủ dự án ngày 25/10/2026, hieuv526034 đã tiếp tục triển khai các module còn thiếu theo chuỗi PR được ghi trong tiến độ. Phạm vi chủ trì dự kiến trong bảng bên trên vẫn dùng để phân chia nghiên cứu/nghiệm thu; không phải căn cứ đổi tác giả source hoặc tạo commit thay BangPhamIT/anhhoang104/hiencoi250404-design. Thành viên bắt đầu từ main đã merge, đọc module của mình và ca kiểm tương ứng, nhận một thay đổi cụ thể rồi commit bằng đúng username/email của bản thân. Không viết lại CRUD/tồn chỗ/chuyến/booking chỉ để có bản triển khai thứ hai.
+Theo yêu cầu chủ dự án ngày 25/10/2026, hieuv526034 đã tiếp tục triển khai các module còn thiếu theo chuỗi PR được ghi trong tiến độ. Phạm vi chủ trì dự kiến trong bảng bên trên vẫn dùng để phân chia nghiên cứu/nghiệm thu; không phải căn cứ đổi tác giả source hoặc tạo commit thay BangPhamIT/anhhoang104/hiencoi250404-design. Thành viên bắt đầu từ dev đã merge, đọc module của mình và ca kiểm tương ứng, nhận một thay đổi cụ thể rồi commit bằng đúng username/email của bản thân. Không viết lại CRUD/tồn chỗ/chuyến/booking chỉ để có bản triển khai thứ hai.
 
 Điểm đọc khi nghiên cứu: Anh theo carrier/catalog/location và AUTH03 ở auth; Bang theo trip/booking/report và transaction chặng; Hien theo route/journey/carrier public/My bookings; Hieu giữ tích hợp auth/scope/tracking/CI. Mỗi người cần trình bày được request → controller → service guard → transaction/SQL → DTO → UI, bảng liên quan, ít nhất một ca lỗi scope/version và một ca rollback/race của phần mình. PR thực tế, kết quả kiểm và việc nhận tiếp ở [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md), không suy từ bảng phân công là đã có đóng góp cá nhân.

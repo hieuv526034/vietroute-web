@@ -15,6 +15,7 @@ on:
       - '.github/workflows/build.yml'
       - '.github/scripts/**'
   pull_request:
+    branches: [main]
     paths: *build-paths
   workflow_dispatch:
 
@@ -27,10 +28,16 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
     name: Build and check production container
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - name: Require promotion from dev for production pull requests
+        if: github.event_name == 'pull_request' && (github.head_ref != 'dev' || github.event.pull_request.head.repo.full_name != github.repository)
+        run: |
+          echo 'Production chỉ nhận PR từ dev sau yêu cầu phát hành của chủ dự án.' >&2
+          exit 1
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
