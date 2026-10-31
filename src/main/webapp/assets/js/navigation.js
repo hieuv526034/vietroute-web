@@ -1,62 +1,36 @@
-/* Dải menu cuộn ngang có sẵn từ HTML/CSS; JS chỉ hỗ trợ cuộn, popup, focus và trạng thái chuyển trang. */
+/* Menu đóng sẵn từ HTML; JS quản lý đóng/mở, focus và tiến trình chuyển trang. */
 (() => {
     'use strict';
     const header = document.querySelector('.site-nav');
-    const strip = document.getElementById('navigation-links');
-    if (!header || !strip) return;
-    const previous = header.querySelector('[data-nav-scroll="previous"]');
-    const next = header.querySelector('[data-nav-scroll="next"]');
-    const menus = Array.from(header.querySelectorAll('.operations-menu'));
-    const closeMenus = (except, restoreFocus = false) => {
+    if (!header) return;
+    const menus = Array.from(header.querySelectorAll('.navigation-menu, .account-menu'));
+    const closeMenus = (except) => {
         for (const menu of menus) {
             if (menu === except) continue;
-            const focused = restoreFocus && menu.open && menu.contains(document.activeElement);
             menu.open = false;
-            if (focused) menu.querySelector('summary').focus();
         }
     };
-    const syncScroll = () => {
-        const overflow = strip.scrollWidth > strip.clientWidth + 1;
-        previous.hidden = next.hidden = !overflow;
-        previous.disabled = strip.scrollLeft <= 1;
-        next.disabled = strip.scrollLeft + strip.clientWidth >= strip.scrollWidth - 1;
-    };
-    const move = (direction) => {
-        closeMenus(null, true);
-        strip.scrollBy({ left: direction * Math.max(160, strip.clientWidth * 0.75), behavior: 'auto' });
-    };
-    previous.addEventListener('click', () => move(-1));
-    next.addEventListener('click', () => move(1));
-    strip.addEventListener('scroll', () => {
-        closeMenus(null, true);
-        syncScroll();
-    });
-    strip.addEventListener('keydown', (event) => {
-        if (event.target !== strip || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-        event.preventDefault();
-        if (event.key === 'Home' || event.key === 'End')
-            strip.scrollTo({ left: event.key === 'Home' ? 0 : strip.scrollWidth });
-        else move(event.key === 'ArrowLeft' ? -1 : 1);
-    });
-    // Popup fixed thoát khỏi vùng overflow của dải cuộn; luôn neo trong viewport, không đè logo khi đóng.
-    const position = (menu) => {
+    // Bảng chức năng dùng vị trí theo header; popup tài khoản nhỏ vẫn neo vào viewport.
+    const positionAccount = (menu) => {
+        if (!menu.classList.contains('account-menu')) return;
         const summary = menu.querySelector('summary').getBoundingClientRect();
         const popup = menu.querySelector('.operations-menu-items');
-        const top = Math.min(summary.bottom + 8, window.innerHeight - 80);
-        popup.style.setProperty('--menu-top', `${Math.max(8, top)}px`);
+        const top = Math.max(8, Math.min(summary.bottom + 8, window.innerHeight - 80));
+        popup.style.setProperty('--menu-top', `${top}px`);
         const width = popup.getBoundingClientRect().width;
         popup.style.setProperty(
             '--menu-left',
             `${Math.max(12, Math.min(summary.left, window.innerWidth - width - 12))}px`,
         );
     };
-    for (const menu of menus)
+    for (const menu of menus) {
         menu.addEventListener('toggle', () => {
             if (menu.open) {
                 closeMenus(menu);
-                position(menu);
+                positionAccount(menu);
             }
         });
+    }
     const progress = document.createElement('div');
     progress.className = 'page-navigation-progress';
     progress.hidden = true;
@@ -97,18 +71,14 @@
         }
     });
     document.addEventListener('focusin', (event) => {
-        if (!header.contains(event.target)) closeMenus();
+        for (const menu of menus) if (!menu.contains(event.target)) menu.open = false;
     });
-    window.addEventListener('pageshow', () => {
+    window.addEventListener('pageshow', (event) => {
         progress.hidden = true;
-        closeMenus();
-        syncScroll();
+        // Trang mới đã đóng sẵn trong HTML; không đóng lại menu người dùng vừa mở lúc tài nguyên còn tải.
+        if (event.persisted) closeMenus();
     });
     window.addEventListener('resize', () => {
-        closeMenus(null, true);
-        syncScroll();
+        for (const menu of menus) if (menu.open) positionAccount(menu);
     });
-    new ResizeObserver(syncScroll).observe(strip);
-    document.fonts?.ready.then(syncScroll);
-    syncScroll();
 })();

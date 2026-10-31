@@ -10,7 +10,7 @@ Phần hoàn thiện ngày 23/10 có UI quản trị job/quyền và xem cấu h
 
 ## 1. Hệ thống gồm những gì
 
-VietRoute là một ứng dụng Java đóng gói WAR: Spring MVC 6 + Spring Security, Thymeleaf + Bootstrap/Axios, JDBC thuần và PostgreSQL. Docker chạy Java 21/Tomcat 10.1; IntelliJ dùng launcher trong `src/dev/java`. Không có Spring Boot, ORM, Kafka hoặc Redis bắt buộc. Redis adapter cũ chỉ là tùy chọn tương thích, không bật trong cấu hình hiện tại.
+VietRoute là một ứng dụng Java đóng gói WAR: Spring MVC 6 + Spring Security, Thymeleaf + Bootstrap/Axios, JDBC thuần và PostgreSQL. Docker chạy Java 21/Tomcat 10.1; IntelliJ dùng launcher trong `src/dev/java`. Không có Spring Boot, ORM, Kafka hoặc Redis bắt buộc. Redis adapter cũ chỉ là tùy chọn tương thích, không bật trong cấu hình hiện tại. Từ 31/10/2026 phát triển/tích hợp trên dev, phát hành main theo yêu cầu chủ dự án tại [quy trình Git](../../CONTRIBUTING.md#tích-hợp-dev-và-phát-hành-main-từ-31102026). Hướng nhiều hệ DB/Oracle đang ở bước tách adapter cấu hình, chưa hỗ trợ runtime Oracle; đọc [DB01](../02-phat-trien/QUY_UOC_PHAT_TRIEN.md#hướng-hỗ-trợ-nhiều-hệ-db--db01).
 
 ```mermaid
 flowchart LR

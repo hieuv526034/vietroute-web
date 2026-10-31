@@ -55,7 +55,7 @@ public class DatabaseConfig {
         HikariDataSource pool = new HikariDataSource();
         pool.setPoolName("vietroute-jdbc");
         pool.setMetricsTrackerFactory(new MicrometerMetricsTrackerFactory(registry));
-        pool.setDriverClassName("org.postgresql.Driver");
+        pool.setDriverClassName(settings.getDialect().driverClassName());
         pool.setJdbcUrl(settings.getUrl());
         pool.setUsername(settings.getUsername());
         pool.setPassword(settings.getPassword());
@@ -67,17 +67,23 @@ public class DatabaseConfig {
         pool.setMaxLifetime(600000);
         pool.setKeepaliveTime(0);
         pool.setInitializationFailTimeout(-1);
-        pool.addDataSourceProperty("connectTimeout", settings.getConnectTimeoutSeconds());
-        pool.addDataSourceProperty("socketTimeout", settings.getSocketTimeoutSeconds());
-        pool.addDataSourceProperty("tcpKeepAlive", true);
-        pool.addDataSourceProperty("ApplicationName", "vietroute-web");
+        pool.setDataSourceProperties(
+            settings
+                .getDialect()
+                .connectionProperties(
+                    settings.getConnectTimeoutSeconds(),
+                    settings.getSocketTimeoutSeconds(),
+                    "vietroute-web",
+                    true
+                )
+        );
         return pool;
     }
 
     /** Đóng gói tên schema đã validate; không dùng schema từ dữ liệu HTTP. */
     @Bean
     public JdbcSchema jdbcSchema(DatabaseSettings settings) {
-        return new JdbcSchema(settings.getSchema());
+        return new JdbcSchema(settings.getSchema(), settings.getDialect());
     }
 
     /** Mỗi connection mượn từ pool được đặt lại search_path để tránh dùng nhầm schema. */

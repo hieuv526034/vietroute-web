@@ -11,7 +11,7 @@
 | 3 | Chuyên đề theo [mục lục](../README.md), code/PR của phần đang sửa | Hợp đồng, quyết định/lý do và giới hạn thật tại đúng commit |
 | 4 | [Git/PR](../../CONTRIBUTING.md), [format](../01-bat-dau/FORMAT_INTELLIJ.md) | Nhánh đúng người, kiểm tra và commit/PR tiếng Việt |
 
-AI nêu ngắn gọn phần đã đọc, mục tiêu/mã việc, phần tái sử dụng/còn thiếu, nhánh/người thực hiện và cách kiểm trước khi sửa. Đây là xác nhận hiểu ngữ cảnh, không thêm vòng xin phép cho việc người dùng đã yêu cầu. Khi docs khác code, đối chiếu mốc/PR rồi cập nhật đúng nguồn; không tự ghi đè thay đổi có sẵn của người khác.
+AI nêu ngắn gọn phần đã đọc, mục tiêu/mã việc, phần tái sử dụng/còn thiếu, nhánh/người thực hiện và cách kiểm trước khi sửa. Đây là xác nhận hiểu ngữ cảnh, không thêm vòng xin phép cho việc người dùng đã yêu cầu. Khi docs khác code, đối chiếu mốc/PR rồi cập nhật đúng nguồn; không tự ghi đè thay đổi có sẵn của người khác. Từ 31/10/2026 tích hợp vào `dev`; chỉ phát hành `dev` → `main` khi có yêu cầu mới của chủ dự án theo [quy trình Git](../../CONTRIBUTING.md#tích-hợp-dev-và-phát-hành-main-từ-31102026). Không tiếp tục cơ chế tự merge main/deploy từ các lượt trước.
 
 ## 2. Điểm đọc cho từng AI
 
@@ -80,6 +80,6 @@ Kiểm tra đã chạy / chưa chạy / giới hạn:
 Bước tiếp theo cụ thể:
 ```
 
-Commit/push đúng nhánh trước khi rời máy; chưa đủ kiểm tra thì giữ draft. Chỉ ghi Đã có trên main khi có merge thật. Không sao chép toàn bộ quy tắc/backlog/log chat thành file memory mới, không đổi tác giả commit theo kế hoạch.
+Commit/push đúng nhánh trước khi rời máy; chưa đủ kiểm tra thì giữ draft. Ghi đúng Đã có trên dev hoặc Đã có trên main theo merge thật; tích hợp dev chưa phải deploy. Không sao chép toàn bộ quy tắc/backlog/log chat thành file memory mới, không đổi tác giả commit theo kế hoạch.
 
 Nguồn cơ chế AI đã đối chiếu ngày 23/10/2026: [Codex](https://learn.chatgpt.com/docs/agent-configuration/agents-md), [Copilot](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions), [Cursor](https://cursor.com/docs/rules), [Claude](https://code.claude.com/docs/en/memory), [Gemini](https://geminicli.com/docs/cli/gemini-md/). Repo không tự cài/bật các công cụ trên máy thành viên.

@@ -17,7 +17,7 @@ public final class ApiJournalDatabase implements AutoCloseable {
     public ApiJournalDatabase(DatabaseSettings settings, JdbcSchema schema) {
         pool = new HikariDataSource();
         pool.setPoolName("vietroute-api-journal");
-        pool.setDriverClassName("org.postgresql.Driver");
+        pool.setDriverClassName(settings.getDialect().driverClassName());
         pool.setJdbcUrl(settings.getUrl());
         pool.setUsername(settings.getUsername());
         pool.setPassword(settings.getPassword());
@@ -31,9 +31,7 @@ public final class ApiJournalDatabase implements AutoCloseable {
         pool.setMaxLifetime(600000);
         pool.setKeepaliveTime(0);
         pool.setInitializationFailTimeout(-1);
-        pool.addDataSourceProperty("connectTimeout", 2);
-        pool.addDataSourceProperty("socketTimeout", 2);
-        pool.addDataSourceProperty("ApplicationName", "vietroute-api-journal");
+        pool.setDataSourceProperties(settings.getDialect().connectionProperties(2, 2, "vietroute-api-journal", false));
         connections = new JdbcConnectionFactory(pool, schema);
     }
 

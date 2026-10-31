@@ -1,5 +1,19 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
+## UI28 / DEV01 / DB01 — Menu dạng bảng, tích hợp dev và chuẩn bị nhiều hệ DB
+
+Ngày 31/10/2026, hieuv526034, nhánh `hieuv526034/ui28-menu-dev-va-database`, base main `4a9c8b4`. Theo yêu cầu mới, mọi thay đổi tiếp theo tích hợp qua PR vào dev; chỉ khi chủ dự án yêu cầu phát hành mới đưa dev lên main để chạy CI production/deploy. Đã tạo dev từ đúng main `4a9c8b4`; source lượt này đang chờ PR/CI vào dev, **chưa có trên main/Render**. Không merge hàng loạt nội dung các nhánh cũ; đổi base PR chỉ thay đích tích hợp.
+
+Header thay dải cuộn ngang bằng nút Menu native mở bảng nhóm chức năng, tự xếp cột; đóng sẵn từ HTML, logo/tài khoản giữ ở thanh đầu. Menu dài chỉ cuộn dọc trong bảng có giới hạn viewport. Giữ lọc quyền/locale/icon/link hiện tại từ server; Enter/Tab/Escape/click ngoài và menu tài khoản dùng được, Escape trả focus, bfcache dọn trạng thái; pageshow đầu không đóng menu vừa mở khi tài nguyên còn tải. Browser fixture HTML Thymeleaf thật, dữ liệu giả: 320/390/768px và desktop, vi/en, không lỗi console; phát hiện và sửa avatar bị ép ở 320px (sau sửa page=305px trong viewport320 có scrollbar). [Desktop](../images/ui28-menu-desktop.png), [mobile](../images/ui28-menu-mobile.png); không dùng credential thật. Hợp đồng hiện hành ở [UI](../03-giao-dien/QUY_UOC_UI.md).
+
+CI dev thêm Java unit/MVC không DB ngoài, giữ formatter/Node/docs, không tạo image production. Production Docker chỉ PR đích main từ dev, push main hoặc dispatch trên main; giữ nguyên render.yaml main + checksPass và path filters. Dependabot target dev; AGENTS/CONTRIBUTING/phân công/quy trình AI đã cập nhật. Nhánh mặc định và base tám PR đang mở sẽ đổi sang dev sau khi PR nguồn được tích hợp; không tự merge PR cũ, đặc biệt các nâng major. Workflow không thay branch protection hoặc chứng minh ý muốn phát hành của người có quyền GitHub.
+
+DB01 tách `JdbcDialect`/`PostgreSqlDialect` để chọn driver, thuộc tính timeout/pool và schema cho cả nghiệp vụ/quan sát. Giữ PostgreSQL LOCAL search_path/transaction/pg_temp cuối và timeout/pool cũ. Oracle/DB khác bị từ chối trước mở pool, lỗi không in URL/credential; chưa thêm driver Oracle, chưa dịch SQL hoặc migration. [Lộ trình DB02–DB05 và điểm phụ thuộc](../02-phat-trien/QUY_UOC_PHAT_TRIEN.md#hướng-hỗ-trợ-nhiều-hệ-db--db01). Không đổi Neon/Render hoặc checksum V001–V023.
+
+Local `npm ci`, format/format:check, rules 506 Java/docs đạt; Node 74/74; full Maven verify **223/223**, gồm **57 PostgreSQL/hai context**, không skip, trên PostgreSQL17 test loopback15449. Hai ca mới kiểm fail-fast DB chưa hỗ trợ/không rò cấu hình và thuộc tính hai pool độc lập; regression schema/rollback/quyền/race/index cũ đạt. npm ci lần đầu lỗi DNS sandbox, chạy lại đúng lockfile đạt; formatter Java trong sandbox bị chậm, đã dừng đúng process của task và chạy lại công cụ khóa ngoài sandbox đạt, không sửa rule. Chưa chạy Docker/production CI/Render theo cơ chế mới, chưa có Oracle để kiểm. Giữ nguyên thư mục chưa theo dõi `docs/xxx-tai-lieu-thi/` của người dùng.
+
+Bước tiếp theo: chốt PR/CI dev, xác nhận default/base PR và main không đổi; khi được yêu cầu Oracle tiếp tục DB02 với phiên bản/edition và DB test riêng. Review/nghiệm thu thành viên và các giới hạn production/provider/backup trước đây vẫn còn.
+
 ## PERF03 — Đã có trên main: metadata theo nhu cầu, index, tải cô lập và review độc lập
 
 Ngày 28/10/2026, hieuv526034, nhánh `hieuv526034/perf03-ui-index-va-tai`, base main `c601fdb`, [PR #142](https://github.com/hieuv526034/vietroute-web/pull/142), head `7ea3605`, merge main `2747553`. Chủ dự án chọn tiếp các mục 1/3/4/5 trong danh sách bàn giao PERF02: giảm metadata nạp trước bảng, thêm index theo plan, kiểm tải staging/pool/khóa và review độc lập. Tiếp tục hoãn provider, backup/PITR và receiver; không dùng Neon để seed/đo tải/kiểm ghi.

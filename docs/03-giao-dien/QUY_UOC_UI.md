@@ -61,7 +61,7 @@ Chỉ update pager sau khi tải thành công; lỗi giữ trang/size đã xác 
 | Footer modal | `dialog-actions`, Hủy trước/Lưu sau, cùng hàng bên phải; mobile được wrap |
 | Menu Hệ thống | Các mục cách nhau 6px; vùng hover/focus/mục đang chọn không chạm nhau |
 
-UI27 (27/10/2026): header luôn dựng dải menu ngang bằng CSS ngay từ lần vẽ đầu, không chờ JS đo rồi ẩn/đổi sang hamburger. Logo và tài khoản nằm ngoài vùng cuộn; mobile đặt dải menu ở hàng thứ hai. `navigation.js` chỉ hỗ trợ hai nút cuộn, phím Left/Right/Home/End khi focus vùng cuộn, popup và tiến trình chuyển trang. Dropdown dùng fixed, tính vị trí từ summary và giới hạn trong viewport để không bị overflow của dải menu cắt; Escape/click ngoài/Tab ra ngoài/resize giữ focus hợp lý. Không cache quyền hoặc menu trong storage và không đổi điều hướng document thành SPA để né guard server.
+UI28 (31/10/2026) thay dải cuộn của UI27: mọi kích thước dùng nút Menu mở bảng chức năng dưới header. `details/summary` native đóng ngay trong HTML, dùng được khi không có JS; không đo chiều rộng để đổi layout hoặc hiện toàn bộ menu lúc chuyển trang. Bảng chia nhóm Khám phá/chức năng theo registry/Tài liệu, tự xếp cột theo chỗ, cao giới hạn trong viewport và chỉ cuộn dọc khi quá nhiều mục. Logo và tài khoản ở thanh đầu. `navigation.js` đóng menu khác/click ngoài/Tab ra ngoài/Escape, Escape trả focus nút mở, pageshow dọn trạng thái; giữ menu khi resize và cập nhật vị trí popup tài khoản. Summary giữ ngữ nghĩa disclosure native, links dùng Tab thông thường; không gán role menu/menuitem khi chưa có cơ chế phím tương ứng. Quyền/locale/icon/active link tiếp tục từ server. Không cache menu/quyền hoặc đổi document navigation thành SPA.
 
 ## 3. Validation và xử lý request
 
@@ -94,7 +94,7 @@ Browser dùng HTML Thymeleaf thật + API fixture riêng: tab bàn phím, modal/
 
 Header tách Hệ thống (danh mục/ảnh/journal/giám sát/job/cấu hình), Phân quyền (role/quyền/user/policy/danh bạ), API (Swagger/OpenAPI) và menu tên/avatar cá nhân. Các mục theo quyền DB/policy, không chỉ theo role mặc định; quản trị phân quyền/journal vẫn cần ADMIN. Khách có đăng nhập/đăng ký; Home thêm quên mật khẩu/xác minh email. Người đã xác thực vào login/account-access được chuyển về workspace/account; header không hiện nút login. Logout dùng POST+CSRF rồi về Home. Menu hỗ trợ một menu mở, Escape/click ngoài/focus; không gộp logout với link public.
 
-UIRESP01: từ 1200px header hiển thị menu ngang; dưới 1200px thanh đầu cao 64px giữ logo, avatar và nút điều hướng 44px, không wrap. Menu chính mở trong panel có chiều cao giới hạn theo viewport và cuộn riêng; submenu thành accordion trong panel, avatar mở menu riêng. `navigation.js` quản lý `hidden`/`aria-expanded`, nhãn vi/en, trả focus khi Escape/resize; Tab ra ngoài hoặc click ngoài đóng menu, không khóa focus/scroll như modal. Không có JavaScript thì các liên kết vẫn hiện để sử dụng. Quyền hiển thị tiếp tục do server lọc; đổi cách trình bày không thêm quyền.
+UIRESP01 là mốc bố cục cũ; hành vi header hiện hành theo UI28 bên trên. Menu chính và popup tài khoản không khóa focus/scroll như modal; quyền hiển thị vẫn do server lọc.
 
 Trang tài khoản dùng `account-layout` cách các card 24px: hồ sơ và khôi phục bootstrap cạnh nhau khi đủ rộng, về một cột dưới 901px. Thông tin trong `dl` chia hai cột, một cột trên điện thoại; nút hồ sơ có footer riêng, khôi phục có tiêu đề/icon và vùng thao tác riêng. Không lặp `id`, không gộp form/modal hoặc thay điều kiện chỉ bootstrap mới thấy cứu hộ.
 

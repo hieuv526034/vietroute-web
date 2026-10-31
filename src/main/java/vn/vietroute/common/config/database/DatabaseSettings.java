@@ -8,11 +8,14 @@ import lombok.Getter;
 import vn.vietroute.common.config.application.ConfigValues;
 import vn.vietroute.common.constant.ApplicationConstants.DatabaseProperties;
 import vn.vietroute.common.constant.ApplicationConstants.Env;
-import vn.vietroute.common.jdbc.JdbcSchema;
+import vn.vietroute.common.jdbc.dialect.JdbcDialect;
 
 /** Cấu hình JDBC/pool có giới hạn; không tạo toString để tránh ghi credentials ra log. */
 @Getter
 public final class DatabaseSettings {
+
+    /** Adapter được chọn theo JDBC URL; hệ DB chưa có triển khai bị từ chối trước khi mở pool. */
+    private final JdbcDialect dialect;
 
     /** JDBC PostgreSQL URL; nhận từ môi trường, production không được dùng localhost dự phòng. */
     private final String url;
@@ -42,12 +45,13 @@ public final class DatabaseSettings {
         Properties defaults = defaults();
         ConfigValues values = new ConfigValues(source);
         url = values.text(Env.DB_URL, defaults.getProperty(DatabaseProperties.URL, ""));
+        dialect = JdbcDialect.forUrl(url);
         username = values.text(Env.DB_USER, defaults.getProperty(DatabaseProperties.USERNAME, ""));
         password = values.text(Env.DB_PASSWORD, "");
         schema = values.text(Env.DB_SCHEMA, defaults.getProperty(DatabaseProperties.SCHEMA, ""));
         // Schema là identifier do người vận hành cấu hình, không lấy từ HTTP hoặc ghép tùy ý vào SQL.
-        JdbcSchema.validate(schema);
-        if (!url.startsWith("jdbc:postgresql://") || username.isBlank()) {
+        dialect.validateSchema(schema);
+        if (username.isBlank()) {
             throw new IllegalStateException(Env.DB_URL.key() + "/" + Env.DB_USER.key() + " are invalid");
         }
         // Production không được âm thầm dùng localhost/default khi thiếu Environment trên Render.
