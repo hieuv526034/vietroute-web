@@ -6,7 +6,7 @@ Phần nền tảng bên dưới giữ phạm vi/mốc lịch sử trước BUSI
 
 ## Báo cáo sản phẩm theo mẫu Công nghệ Java
 
-Ngày 31/10/2026, chủ dự án chỉ định mẫu Word `docs/xxx-tai-lieu-thi/Mau_BTL_Cong_nghe_Java.docx` làm format cho tài liệu sản phẩm VietRoute. Giữ bản mẫu nguyên trạng; SHA-256 khi đọc là `bd8fc0707ebadb9373d988f28bc7d4b036542f6bb8a662191228f410ca5089c6`. Mẫu nằm trong thư mục local do chủ dự án cung cấp, chưa theo Git; không dùng một đường dẫn máy cá nhân làm nguồn thay thế khi bàn giao. Đây là báo cáo bài tập lớn học phần Công nghệ Java, khác với hướng dẫn vận hành/API hiện có.
+Ngày 31/10/2026, chủ dự án chỉ định [mẫu Word Công nghệ Java](../xxx-tai-lieu-thi/Mau_BTL_Cong_nghe_Java.docx) làm format cho tài liệu sản phẩm VietRoute và yêu cầu lưu file mẫu gốc trong Git để dùng chung khi đổi máy. Giữ nguyên byte của bản mẫu; SHA-256 là `bd8fc0707ebadb9373d988f28bc7d4b036542f6bb8a662191228f410ca5089c6`. Mẫu theo repository tại `docs/xxx-tai-lieu-thi/`, không dùng đường dẫn máy cá nhân làm nguồn thay thế khi bàn giao. Đây là báo cáo bài tập lớn học phần Công nghệ Java, khác với hướng dẫn vận hành/API hiện có.
 
 Chủ dự án đã xác nhận: **chỉ đọc mẫu và chốt cấu trúc trước, hoàn thiện ứng dụng rồi mới soạn tài liệu**. Báo cáo thuộc **Nhóm 10**, gồm bốn thành viên đã xác định tại [phân công](PHAN_CONG.md#thông-tin-thành-viên): `anhhoang104`, `BangPhamIT`, `hiencoi250404-design`, `hieuv526034`. **Lớp, khóa và giảng viên để trống**, bổ sung sau theo thông tin chủ dự án cung cấp. Họ tên/MSSV dùng dữ liệu đã được xác nhận khi soạn; không suy từ username hoặc tự tạo danh tính. Không bắt đầu viết báo cáo Word hoàn chỉnh chỉ từ việc ghi nhận thông tin này.
 
