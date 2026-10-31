@@ -8,6 +8,8 @@ Phần nền tảng bên dưới giữ phạm vi/mốc lịch sử trước BUSI
 
 Ngày 31/10/2026, chủ dự án chỉ định mẫu Word `docs/xxx-tai-lieu-thi/Mau_BTL_Cong_nghe_Java.docx` làm format cho tài liệu sản phẩm VietRoute. Giữ bản mẫu nguyên trạng; SHA-256 khi đọc là `bd8fc0707ebadb9373d988f28bc7d4b036542f6bb8a662191228f410ca5089c6`. Mẫu nằm trong thư mục local do chủ dự án cung cấp, chưa theo Git; không dùng một đường dẫn máy cá nhân làm nguồn thay thế khi bàn giao. Đây là báo cáo bài tập lớn học phần Công nghệ Java, khác với hướng dẫn vận hành/API hiện có.
 
+Chủ dự án đã xác nhận: **chỉ đọc mẫu và chốt cấu trúc trước, hoàn thiện ứng dụng rồi mới soạn tài liệu**. Báo cáo thuộc **Nhóm 10**, gồm bốn thành viên đã xác định tại [phân công](PHAN_CONG.md#thông-tin-thành-viên): `anhhoang104`, `BangPhamIT`, `hiencoi250404-design`, `hieuv526034`. **Lớp, khóa và giảng viên để trống**, bổ sung sau theo thông tin chủ dự án cung cấp. Họ tên/MSSV dùng dữ liệu đã được xác nhận khi soạn; không suy từ username hoặc tự tạo danh tính. Không bắt đầu viết báo cáo Word hoàn chỉnh chỉ từ việc ghi nhận thông tin này.
+
 ### Cấu trúc giữ từ mẫu
 
 | Phần | Nội dung áp dụng cho VietRoute |
@@ -29,7 +31,7 @@ Hướng dẫn viết trong mẫu yêu cầu A4 dọc; lề trên 2,5 cm, dướ
 
 Thiết lập section hiện lưu trong file khác hướng dẫn chữ: khoảng 20,99 × 29,66 cm, trên 2,50 cm/dưới 3,00 cm/trái 2,50 cm/phải 2,00 cm. Khi tạo bản nộp, áp dụng yêu cầu định dạng ghi trong mẫu ở đoạn trên và ghi nhận thay đổi này; không sao chép nhầm các lề đang lệch. Bản mẫu có sáu section, TOC/PAGEREF/SEQ và PAGE trong footer; cần giữ cơ chế mục lục/đánh số, kiểm lại section bắt đầu số trang sau phần bìa. Không suy số trang thật từ metadata DOCX.
 
-Thay toàn bộ ví dụ quản lý sinh viên/Student/ArrayList và tên Nguyễn Văn A/B/C bằng mô tả VietRoute đúng source. Bỏ các chỉ dẫn “xóa khi in”, bảng quy cách trình bày, textbox hướng dẫn bìa và hình minh họa thuộc đề tài mẫu khỏi bản nộp; giữ cấu trúc bìa, bảng thông tin, heading và số trang có chủ đích. Không gán UI Swing/JavaFX hoặc ORM cho sản phẩm Spring MVC/Thymeleaf/JDBC. File mẫu không chứa tên/MSSV/lớp/khóa/số nhóm thật của bốn thành viên; chỉ điền khi chủ dự án cung cấp, không suy họ tên từ GitHub username.
+Thay toàn bộ ví dụ quản lý sinh viên/Student/ArrayList và tên Nguyễn Văn A/B/C bằng mô tả VietRoute đúng source. Bỏ các chỉ dẫn “xóa khi in”, bảng quy cách trình bày, textbox hướng dẫn bìa và hình minh họa thuộc đề tài mẫu khỏi bản nộp; giữ cấu trúc bìa, bảng thông tin, heading và số trang có chủ đích. Không gán UI Swing/JavaFX hoặc ORM cho sản phẩm Spring MVC/Thymeleaf/JDBC. Khi soạn, dùng số nhóm và quy tắc điền thông tin đã chốt ở đầu mục này; không lấy tên/MSSV minh họa trong mẫu làm dữ liệu thật.
 
 ### Nguồn nội dung và điều kiện chốt
 
