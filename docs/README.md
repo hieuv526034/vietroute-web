@@ -22,7 +22,7 @@ Dùng AI hoặc chuyển máy: đọc thêm **[AI và bàn giao](06-ai-va-ban-gi
 | [02-phat-trien](02-phat-trien/) | Viết API/service/SQL, schema/quyền/audit, constants, job/mail | Luồng request → API → quy ước; chuyên đề mở theo task |
 | [03-giao-dien](03-giao-dien/) | Làm bảng, phân trang, tab, modal và validation | [Quy ước UI](03-giao-dien/QUY_UOC_UI.md) |
 | [04-van-hanh](04-van-hanh/) | Dùng màn hệ thống, debug traceId, giám sát hoặc deploy | [Quản trị](04-van-hanh/QUAN_TRI_HE_THONG.md); có lỗi đọc [nhật ký API](04-van-hanh/NHAT_KY_API_VA_DEBUG.md) |
-| [05-ke-hoach](05-ke-hoach/) | Nhận việc, xem đặc tả, trạng thái và nghiệm thu | Tiến độ → phân công → đặc tả/ca nghiệm thu |
+| [05-ke-hoach](05-ke-hoach/) | Nhận việc, xem đặc tả, trạng thái và nghiệm thu | Tiến độ → phân công → đặc tả/ca nghiệm thu; [format báo cáo sản phẩm theo mẫu Java](05-ke-hoach/NGHIEM_THU_NEN_TANG.md#báo-cáo-sản-phẩm-theo-mẫu-công-nghệ-java) |
 | [06-ai-va-ban-giao](06-ai-va-ban-giao/) | Tiếp tục task bằng AI hoặc đổi máy/người làm | Một hướng dẫn AI và bàn giao dùng chung |
 | [99-luu-tru](99-luu-tru/) | Tra quyết định/rà soát cũ | Chỉ đọc khi cần lịch sử; không chạy lại hướng dẫn khởi tạo repo |
 
