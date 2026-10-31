@@ -1,5 +1,13 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
+## DOC01 — Đã đọc mẫu và chốt khung báo cáo sản phẩm
+
+Ngày 31/10/2026, hieuv526034, nhánh `hieuv526034/docs01-bao-cao-san-pham`, base dev `d8338e8`. Chủ dự án chỉ định file Word sẵn có trong `docs/xxx-tai-lieu-thi/` làm format cho tài liệu sản phẩm. Đã đọc toàn bộ paragraph, bảy bảng, sáu section, style, textbox bìa, footer và TOC/PAGEREF/SEQ/PAGE; mẫu giữ nguyên SHA-256 `bd8fc0707ebadb9373d988f28bc7d4b036542f6bb8a662191228f410ca5089c6`. Chốt cấu trúc ba chương, quy cách trình bày, phần hướng dẫn/ví dụ phải thay và nguồn đối chiếu VietRoute tại [quy ước báo cáo](NGHIEM_THU_NEN_TANG.md#báo-cáo-sản-phẩm-theo-mẫu-công-nghệ-java); không tạo Markdown riêng trong thư mục mẫu.
+
+Phát hiện lề thật trong section khác chỉ dẫn chữ; quy ước ghi rõ dùng lề theo yêu cầu trong mẫu khi soạn. Chưa tạo báo cáo Word sản phẩm hoàn chỉnh; cần chốt thời điểm soạn và thông tin bìa (nhóm/họ tên/MSSV/lớp/khóa, thông tin giảng viên nếu yêu cầu). Đã hỏi chủ dự án, chưa có câu trả lời tại mốc ghi nhận. Không tự dựng danh tính/điểm/chữ ký hoặc phân bổ đóng góp chỉ từ bảng kế hoạch. Chưa có nghiệm thu hình thức từng trang: `render_docx.py` không kết xuất được do môi trường Windows thiếu LibreOffice; đã đọc log nguyên nhân, không dùng phần mềm khác để giả kết quả kiểm. Bản mẫu vẫn là file local chưa theo Git, chưa upload/commit nội dung gốc.
+
+Phạm vi lượt này là đọc mẫu và lưu quy ước để dùng khi soạn; không đổi source/schema/Render. Kiểm quy tắc, link tài liệu và diff theo PR dev; chưa chạy lại Java/Node vì không đổi code. Bước sau: nhận thông tin bìa/phạm vi, soạn `Bao_cao_san_pham_VietRoute.docx` theo ba chương, bổ sung sơ đồ/ảnh có căn cứ, cập nhật fields và kiểm kết xuất toàn bộ trang trước bàn giao. Không đưa dev lên main khi chưa có yêu cầu phát hành.
+
 ## UI28 / DEV01 / DB01 — Đã có trên dev: menu dạng bảng và nền nhiều hệ DB
 
 Ngày 31/10/2026, hieuv526034, nhánh `hieuv526034/ui28-menu-dev-va-database`, base main `4a9c8b4`, [PR #144](https://github.com/hieuv526034/vietroute-web/pull/144), source `fd25acf`/head `f117898`, merge dev `f6a8413`. Theo yêu cầu mới, mọi thay đổi tiếp theo tích hợp qua PR vào dev; chỉ khi chủ dự án yêu cầu phát hành mới đưa dev lên main để chạy CI production/deploy. Đã tạo dev từ đúng main `4a9c8b4`; source lượt này **đã có trên dev, chưa có trên main/Render**. Không merge hàng loạt nội dung các nhánh cũ; đổi base PR chỉ thay đích tích hợp.
