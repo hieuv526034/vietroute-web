@@ -10,7 +10,7 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.method.HandlerMethod;
-import vn.vietroute.auth.dto.response.AccessResourceResponse;
+import vn.vietroute.auth.dto.record.resource.AccessResourceResponse;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.annotation.AccessFunction;

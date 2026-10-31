@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import vn.vietroute.auth.dto.request.LoginRequest;
+import vn.vietroute.auth.dto.request.session.LoginRequest;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.constant.ErrorCode;

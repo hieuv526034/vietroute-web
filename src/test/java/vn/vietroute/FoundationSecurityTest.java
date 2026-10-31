@@ -31,7 +31,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import vn.vietroute.auth.dto.request.RolePermissionsRequest;
+import vn.vietroute.auth.dto.request.access.RolePermissionsRequest;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.UserPrincipal;

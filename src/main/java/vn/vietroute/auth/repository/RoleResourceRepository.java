@@ -7,7 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import org.springframework.stereotype.Repository;
-import vn.vietroute.auth.dto.response.AccessResourceResponse;
+import vn.vietroute.auth.dto.record.resource.AccessResourceResponse;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.common.constant.ErrorCode;

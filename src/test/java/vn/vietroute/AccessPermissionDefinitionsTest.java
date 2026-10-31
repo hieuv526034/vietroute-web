@@ -9,7 +9,7 @@ import java.util.ListResourceBundle;
 import java.util.ResourceBundle;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
-import vn.vietroute.auth.dto.response.AccessResourceResponse;
+import vn.vietroute.auth.dto.record.resource.AccessResourceResponse;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.security.AccessPermissionDefinitions;
 

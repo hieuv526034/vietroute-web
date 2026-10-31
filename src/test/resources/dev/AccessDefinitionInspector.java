@@ -3,7 +3,7 @@ import java.util.List;
 import java.util.Set;
 import org.postgresql.ds.PGSimpleDataSource;
 import vn.vietroute.auth.config.AccessSettings;
-import vn.vietroute.auth.dto.response.AccessResourceResponse;
+import vn.vietroute.auth.dto.record.resource.AccessResourceResponse;
 import vn.vietroute.auth.repository.AccessFeatureRepository;
 import vn.vietroute.auth.repository.AccessRegistryRepository;
 import vn.vietroute.auth.security.AccessPermissionDefinitions;

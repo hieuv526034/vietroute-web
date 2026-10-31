@@ -7,7 +7,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
-import vn.vietroute.auth.dto.response.AccessPolicyResponse;
+import vn.vietroute.auth.dto.record.policy.AccessPolicyResponse;
 import vn.vietroute.auth.service.AccessManagementService;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ErrorCode;

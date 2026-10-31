@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import org.springframework.context.MessageSource;
-import vn.vietroute.auth.dto.response.NavigationItemResponse;
+import vn.vietroute.auth.dto.record.capability.NavigationItemResponse;
 import vn.vietroute.common.constant.AccessConstants.Functions;
 
 /** Cùng định nghĩa cây cho header và màn gán; thêm function không phải viết lại if role tại header. */

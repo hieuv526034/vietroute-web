@@ -8,7 +8,7 @@ import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.function.Supplier;
 import org.springframework.stereotype.Repository;
-import vn.vietroute.auth.dto.response.AccessChangeStateResponse;
+import vn.vietroute.auth.dto.record.history.AccessChangeStateResponse;
 import vn.vietroute.auth.entity.Permission;
 
 /** Khôi phục dữ liệu bootstrap trong transaction của caller; không có quyền bỏ qua DB tại runtime. */

@@ -10,7 +10,7 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
-import vn.vietroute.auth.dto.response.AccessResourceResponse;
+import vn.vietroute.auth.dto.record.resource.AccessResourceResponse;
 import vn.vietroute.auth.service.AccessResourceService;
 import vn.vietroute.common.config.application.AppSettings;
 

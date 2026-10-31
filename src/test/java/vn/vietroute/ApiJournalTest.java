@@ -31,7 +31,7 @@ import org.springframework.mock.web.MockServletContext;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import vn.vietroute.auth.dto.request.LoginRequest;
+import vn.vietroute.auth.dto.request.session.LoginRequest;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;

@@ -27,8 +27,9 @@ vn.vietroute
   auth/
     config/        Spring Security và JWT
     controller/    API auth và trang đăng nhập/tài khoản
-    dto/request/   LoginRequest, ChangePasswordRequest
-    dto/response/  AuthResponse, UserResponse
+    dto/request/   Class request theo nhóm session/lifecycle/account/access/scope
+    dto/response/  Class response theo nhóm account
+    dto/record/    DTO Java record theo nhóm chức năng, giữ hậu tố Request/Response
     entity/        UserAccount, Role
     repository/    SQL tài khoản/quyền
     service/       Đăng nhập, đổi mật khẩu, thu hồi token và seed
@@ -44,6 +45,39 @@ vn.vietroute
 Controller chỉ nhận/validate input và gọi service. Service giữ transaction và quy tắc nghiệp vụ; repository dùng PreparedStatement/ResultSet. Entity không trả thẳng ra API; response thực hiện mapping rõ ràng, không kéo password hash hoặc token version ra client. Không tạo generic CRUD bỏ qua quyền và tenant.
 
 API auth/nghiệp vụ kế thừa `BaseController`, dùng `execute(...)` có try/catch chung và `ApiExceptionMapper`. Advice dùng cùng mapper cho lỗi trước controller. Đọc [luồng xử lý và cách học base](LUONG_XU_LY_BASE.md) trước khi thêm module.
+
+### Quy hoạch auth DTO theo chức năng
+
+AUTHDTO01 (31/10/2026) tổ chức `auth.dto` theo loại khai báo và trách nhiệm. DTO khai báo Java `record` nằm trong `dto.record.<nhóm>`; DTO khai báo `class` ở `dto.request.<nhóm>` hoặc `dto.response.<nhóm>`. Tên lớp giữ hậu tố Request/Response để nhận ra chiều dữ liệu mà không cần thêm tầng thư mục trùng nghĩa. Không đổi class thành record để khớp thư mục: request có binding/setter/kế thừa vẫn là class; `UserResponse` tiếp tục kế thừa `BaseResponse`.
+
+```text
+auth/dto/
+  request/
+    session/      LoginRequest, ChangePasswordRequest
+    lifecycle/    ActivationRequest, BindEmailRequest, EmailRequest, RegisterRequest, ResetPasswordRequest
+    account/      Cấp/tra cứu tài khoản, tra user và UserRolesRequest
+    access/       Lọc lịch sử/registry/tài nguyên và RolePermissionsRequest
+    scope/        ScopeMemberSearchRequest
+  response/
+    account/      UserResponse
+  record/
+    account/      DTO tài khoản quản trị, preview, tùy chọn, hồ sơ và tài xế
+    session/      AuthResponse, CsrfResponse
+    recovery/     AdminRecoveryRequest, AdminRecoveryResponse
+    scope/        Phạm vi, membership và quyền trong phạm vi
+    resource/     Cây chức năng, action, endpoint và target Menu/API
+    registry/     Mã role/quyền, trang registry và mô tả permission
+    role/         RolePermissionsResponse, RoleResourcesRequest, RoleResourcesResponse
+    policy/       AccessPolicyRequest, AccessPolicyResponse
+    history/      AccessChangeResponse, AccessChangeStateResponse
+    capability/   Capabilities, nguồn quyền hiệu lực và cây menu đã lọc
+```
+
+Phạm vi này có 54 DTO: 36 record, 17 class request và một class response, mỗi nhóm tối đa tám file. Không để DTO trực tiếp trong gốc request/response/record; nhóm có tên theo nghiệp vụ, không tạo generic `misc`/`other`. DTO trong record giữ validation/Jackson/Swagger/constructor/factory hiện hành; JSON/URL/quyền và schema DB không đổi theo tên package Java. Khi thêm loại mới, chọn nhóm theo trách nhiệm, không trả entity/credential ra API.
+
+Record ngoài `auth.dto` được phân loại theo vai trò sở hữu: `UserPrincipal`, `AccessOperationMetadata`, `ResourceEntitlements` là mô hình security; `AccessPolicy`/`AuthorizationState` là mô hình dữ liệu auth; record lồng private/nested trong service/repository giữ nội bộ luồng. Không chuyển chúng thành DTO HTTP chỉ vì dùng cú pháp record hoặc thêm `@Schema` để hợp thức hóa. Nếu thật sự tách một DTO dùng chung thì quy hoạch riêng theo hợp đồng, không tạo bản sao compatibility ở package cũ.
+
+Sau khi lấy source đổi package, dừng server rồi Maven clean/Reload Maven/Rebuild Project trước Run để xóa class cũ. Khi kiểm refactor, dùng build sạch, kiểm import/helper Java dưới `src/test/resources/dev`, binding request kế thừa và OpenAPI/JSON trước–sau. Cấu trúc API package nội bộ không phải cam kết binary compatibility cho caller Java ngoài repo.
 
 ## Hợp đồng API và locale
 

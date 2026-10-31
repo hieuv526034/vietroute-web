@@ -7,7 +7,7 @@ import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.Set;
 import org.springframework.stereotype.Component;
-import vn.vietroute.auth.dto.response.AccessResourceResponse;
+import vn.vietroute.auth.dto.record.resource.AccessResourceResponse;
 import vn.vietroute.auth.entity.Permission;
 
 /** Danh bạ khai báo của node, không chứa authority user. Dùng chung cho sync và bảo vệ registry kể cả khi tắt ghi startup. */

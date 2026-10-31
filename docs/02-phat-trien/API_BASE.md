@@ -1,5 +1,7 @@
 # Hợp đồng API nền tảng
 
+AUTHDTO01: Java DTO auth đã chia theo nhóm và chuyển DTO dạng record vào `auth.dto.record.<nhóm>`; class request/response ở nhóm tương ứng. Giữ tên type, JSON, validation, schema OpenAPI, URL và quyền hiện hành. Tra [sơ đồ package DTO](QUY_UOC_PHAT_TRIEN.md#quy-hoạch-auth-dto-theo-chức-năng) khi tìm class/import; không giữ lớp trùng ở package cũ.
+
 ## ACCESS24 — Tài nguyên cụ thể và quản trị User
 
 - GET `/api/v1/admin/access/resource-catalog`: inventory source hiện tại, ACCESS_READ; public/self-service chỉ xem, không cấp quyền từ cờ DB.

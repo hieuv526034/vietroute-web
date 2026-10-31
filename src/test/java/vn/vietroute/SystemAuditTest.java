@@ -25,7 +25,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import vn.vietroute.auth.dto.request.LoginRequest;
+import vn.vietroute.auth.dto.request.session.LoginRequest;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
 import vn.vietroute.auth.repository.UserRepository;

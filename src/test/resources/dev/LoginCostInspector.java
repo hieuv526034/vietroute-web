@@ -5,7 +5,7 @@ import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Map;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import vn.vietroute.auth.dto.request.LoginRequest;
+import vn.vietroute.auth.dto.request.session.LoginRequest;
 import vn.vietroute.auth.repository.UserRepository;
 import vn.vietroute.auth.service.AuthService;
 import vn.vietroute.auth.service.JwtService;
