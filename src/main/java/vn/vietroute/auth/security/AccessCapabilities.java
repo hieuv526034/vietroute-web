@@ -5,9 +5,9 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import org.springframework.security.core.Authentication;
-import vn.vietroute.auth.dto.response.AccessCapabilityResponse;
-import vn.vietroute.auth.dto.response.AccessPolicyResponse;
-import vn.vietroute.auth.dto.response.AccessResourceResponse;
+import vn.vietroute.auth.dto.record.capability.AccessCapabilityResponse;
+import vn.vietroute.auth.dto.record.policy.AccessPolicyResponse;
+import vn.vietroute.auth.dto.record.resource.AccessResourceResponse;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.service.AccessManagementService;
 
