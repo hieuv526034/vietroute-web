@@ -20,7 +20,7 @@ import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.dto.response.UserDTO;
+import vn.vietroute.auth.dto.UserDTO;
 import vn.vietroute.auth.entity.User;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;

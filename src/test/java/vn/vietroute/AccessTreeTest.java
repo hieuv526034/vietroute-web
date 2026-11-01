@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
-import vn.vietroute.auth.dto.response.FunctionDTO;
+import vn.vietroute.auth.dto.FunctionDTO;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.support.NativeSecurityFixture;
 

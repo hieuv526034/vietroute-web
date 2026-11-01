@@ -1,5 +1,13 @@
 # Tiến độ và kế hoạch triển khai của nhóm VietRoute
 
+## AUTHDTO02 — Chuyển DTO auth về package gốc và theo dõi cấu hình local
+
+Ngày 01/11/2026, hieuv526034, nhánh `hieuv526034/authdb02-quy-hoach-tam-bang`, đối chiếu commit bàn giao `96fd065`. Chủ dự án yêu cầu UserDTO/RoleDTO/FunctionDTO ở trực tiếp `vn.vietroute.auth.dto`, không trong response; request/search vẫn theo tên trách nhiệm. Đã chuyển ba file, cập nhật 29 file Java dùng/declaration, xóa thư mục response rỗng; auth giữ đúng40 class. Không thay logic, schema hoặc payload JSON. Quy tắc hiện hành đã cập nhật tại AGENTS, quy ước và API base.
+
+Chủ dự án cho phép commit chính `.env` ở gốc để chuyển máy; `.gitignore` chỉ mở ngoại lệ cho file này, các `.env.*` khác vẫn ignore. Giữ nguyên nội dung file hiện có, không in/chép giá trị vào docs/chat/log; Docker allowlist vẫn loại `.env`, WAR và Maven test không tự đọc file. File hiện có key placeholder/chưa điền, không nhận việc commit là đã đủ credentials hoặc kết nối môi trường đích. Chỉ có thể lấy lại từ máy khác sau khi commit đã được push/clone đúng nhánh.
+
+Kiểm tra đã đạt: npm ci/format/format:check, rules/docs/diff; `mvnw clean verify` build WAR thành công, **153 test Java/H2/MVC/Swagger đạt**, 66 ca PostgreSQL bỏ qua có chủ đích vì chỉ đổi package, không dùng DB hoặc đọc `.env` trong test. Đối chiếu Java trước/sau sau khi loại import/package/whitespace giữ nguyên nội dung logic; source và bytecode auth khớp40, ba DTO ở package mới, không class response cũ trong WAR. `.env` đã stage, nội dung giữ nguyên và WAR không chứa file này. Không dùng kết quả PostgreSQL219 của AUTHDB04 làm bằng chứng lượt này. Source sẵn sàng commit trên nhánh thành viên; push/PR còn phụ thuộc đăng nhập GitHub, chưa có bằng chứng remote; không merge dev/main/deploy.
+
 ## AUTHDB04 — Đã hoàn thiện source auth 40 class, chờ tích hợp dev
 
 Mã/người/nhánh: AUTHDB04, hieuv526034, `hieuv526034/authdb02-quy-hoach-tam-bang`; đối chiếu HEAD trước task `2dfb25d`, chưa merge dev/main/deploy. Không ghi Neon; toàn bộ test PostgreSQL dùng loopback15459 và schema ngẫu nhiên trong DB test riêng. Quyết định/cấu trúc chính ở [quy ước AUTHDB04](../02-phat-trien/QUY_UOC_PHAT_TRIEN.md#authdb04--auth-gọn-40-class-tám-bảng-01112026), schema/API cùng cụm tài liệu.

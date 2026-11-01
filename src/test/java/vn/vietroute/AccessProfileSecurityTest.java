@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.context.SecurityContextHolder;
-import vn.vietroute.auth.dto.response.UserDTO;
+import vn.vietroute.auth.dto.UserDTO;
 import vn.vietroute.auth.entity.User;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.support.NativeSecurityFixture;

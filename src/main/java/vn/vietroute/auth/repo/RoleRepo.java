@@ -13,7 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
-import vn.vietroute.auth.dto.response.FunctionDTO;
+import vn.vietroute.auth.dto.FunctionDTO;
 import vn.vietroute.auth.dto.search.RoleSearch;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.common.base.JpaRepositorySupport;

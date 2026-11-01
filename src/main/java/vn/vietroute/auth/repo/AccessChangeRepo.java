@@ -14,7 +14,7 @@ import java.util.Set;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-import vn.vietroute.auth.dto.response.RoleDTO;
+import vn.vietroute.auth.dto.RoleDTO;
 import vn.vietroute.auth.entity.AccessChange;
 import vn.vietroute.common.base.JpaRepositorySupport;
 import vn.vietroute.common.constant.ApplicationConstants.Http;

@@ -28,7 +28,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import vn.vietroute.auth.dto.response.UserDTO;
+import vn.vietroute.auth.dto.UserDTO;
 import vn.vietroute.auth.dto.search.UserSearch;
 import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.auth.security.EndpointAccess;

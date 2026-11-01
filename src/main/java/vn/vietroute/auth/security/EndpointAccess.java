@@ -23,7 +23,7 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
-import vn.vietroute.auth.dto.response.FunctionDTO;
+import vn.vietroute.auth.dto.FunctionDTO;
 import vn.vietroute.auth.entity.User;
 import vn.vietroute.auth.initializer.AuthInitializer;
 import vn.vietroute.auth.repo.UserRepo;

@@ -19,7 +19,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Repository;
-import vn.vietroute.auth.dto.response.UserDTO;
+import vn.vietroute.auth.dto.UserDTO;
 import vn.vietroute.auth.dto.search.UserSearch;
 import vn.vietroute.auth.entity.User;
 import vn.vietroute.common.base.JpaRepositorySupport;

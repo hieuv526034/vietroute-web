@@ -12,14 +12,14 @@ Theo xác nhận của chủ dự án, giới hạn 30–40 class tính **toàn 
 | controller/api | UserAPI, RoleAPI, FunctionAPI | 3 |
 | controller | UserPageController | 1 |
 | dto/request | UserRequest, RoleRequest, FunctionRequest | 3 |
-| dto/response | UserDTO, RoleDTO, FunctionDTO | 3 |
+| dto | UserDTO, RoleDTO, FunctionDTO | 3 |
 | dto/search | UserSearch, RoleSearch, FunctionSearch | 3 |
 | config | SecurityConfig, SecurityInitializer | 2 |
 | security | UserPrincipal, EndpointAccess, JwtAuthenticationFilter, AuthCookies | 4 |
 | initializer | AuthInitializer | 1 |
 | **Tổng** | Mỗi file một class top-level, không giấu class DTO/ID bên trong | **40** |
 
-- Mỗi class dưới 1000 dòng. Không dùng `var` trong source production. Không record trong auth. Search chỉ ở dto/search và tên `*Search`, không `*SearchRequest`; không chia thêm package feature. Nếu có package nhiều từ, dùng dấu gạch dưới. Initializer ngang cấp service. Không tạo API/service riêng cho bảng nối, challenge hoặc history khi không có hành vi công khai cần thiết.
+- Mỗi class dưới 1000 dòng. Không dùng `var` trong source production. Không record trong auth. UserDTO/RoleDTO/FunctionDTO nằm trực tiếp trong auth.dto theo xác nhận mới 01/11/2026; không đặt class hậu tố DTO vào dto.response. Request ở dto/request, Search chỉ ở dto/search và tên `*Search`, không `*SearchRequest`; không chia thêm package feature. Nếu có package nhiều từ, dùng dấu gạch dưới. Initializer ngang cấp service. Không tạo API/service riêng cho bảng nối, challenge hoặc history khi không có hành vi công khai cần thiết.
 - Tám entity JPA đủ cột, Instant/audit/version; không hậu tố Entity, không schema cứng. V026 thêm identity kỹ thuật duy nhất cho bốn bảng nối/challenge để tránh bốn class composite ID; PK/FK ghép của DB vẫn giữ nguyên. Giữ V001–V025, dừng node cũ trước nâng cấp. CRUD dùng Spring Data SimpleJpaRepository qua repo cụ thể theo tên bảng; JDBC trong chính repo cho aggregate, batch và atomic SQL. Không thêm Spring Boot.
 - Ba request tái sử dụng cho các thao tác trên cùng tài nguyên; các field bắt buộc theo endpoint được nêu tại @Operation và kiểm trong service. Field password WRITE_ONLY, không toString; response là whitelist, không entity/hash/tokenVersion. Swagger xuất path/query/header/body và @Schema, có phân trang DB. Không query/save mỗi phần tử; vòng lặp chỉ bind batch hoặc xử lý dữ liệu đã tải.
 - Giữ đăng nhập/JWT 30 phút/BCrypt/CSRF/quota, khóa 5 lần sai trong 15 phút, đổi mật khẩu tránh hash hiện tại và hai hash trước, profile/avatar, CRUD User/Role/Function, gán role/function/endpoint, phạm vi nhà xe và lịch sử mutation nguyên tử. Đổi mật khẩu và logout thu hồi tokenVersion; sau đổi mật khẩu cần đăng nhập lại.
@@ -78,10 +78,12 @@ vn.vietroute
     config/        Spring Security và JWT
     controller/    API auth và trang đăng nhập/tài khoản
     dto/request/   Class request theo nhóm chức năng, có validation/Schema
-    dto/response/  Class response theo nhóm chức năng, projection whitelist
-    entity/        UserAccount, Role
+    dto/           UserDTO, RoleDTO, FunctionDTO: dữ liệu tài nguyên/projection whitelist
+    dto/search/    UserSearch, RoleSearch, FunctionSearch: query/phân trang
+    entity/        Tám class JPA theo bảng, bắt đầu User/Role/Function
     repo/          SQL tài khoản/vai trò/chức năng/quyền
-    service/       Đăng nhập, đổi mật khẩu, thu hồi token và seed
+    service/       UserService, RoleService, FunctionService, JwtService
+    initializer/   AuthInitializer: khởi tạo theo JSON/env khi bật cờ
     security/      Principal, filter JWT, lỗi bảo mật
   business/
     catalog/       controller, dto/request, dto/response, entity, repository, service
@@ -97,7 +99,7 @@ API auth/nghiệp vụ kế thừa `BaseController`, dùng `execute(...)` có tr
 
 ### Quy hoạch auth DTO theo chức năng
 
-Cấu trúc hiện hành nằm trong [AUTHDB04](#authdb04--auth-gọn-40-class-tám-bảng-01112026). Chỉ có dto/request, dto/response và dto/search, mỗi nhóm ba class theo User/Role/Function. Source cũ đã gộp phải clean build/restart, không để bytecode cũ trong WAR.
+Cấu trúc hiện hành nằm trong [AUTHDB04](#authdb04--auth-gọn-40-class-tám-bảng-01112026). Ba DTO nằm trực tiếp ở auth.dto; dto/request và dto/search mỗi nhóm ba class theo User/Role/Function. Thư mục dto/response đã bỏ theo xác nhận mới 01/11/2026. Source cũ đã gộp phải clean build/restart, không để bytecode cũ trong WAR.
 
 ## Hợp đồng API và locale
 
@@ -151,7 +153,7 @@ JWT HS256 có issuer, audience, subject, jti, thời hạn và tokenVersion. M�
 
 Cookie auth dùng CSRF cho request thay đổi dữ liệu; Axios tự gửi X-XSRF-TOKEN sau khi lấy `/api/v1/auth/csrf`. Request dùng Authorization Bearer không phụ thuộc cookie được miễn CSRF. Đăng nhập sai có đếm và khóa tạm thời. Mật khẩu hash BCrypt; không log mật khẩu hoặc JWT.
 
-`VIETROUTE_DB_INIT_ENABLED=true` bật migration và seed lúc app khởi động. Migration có checksum/history và khóa transaction PostgreSQL để chống hai instance khởi tạo đồng thời. Chỉ tạo admin nếu chưa tồn tại; không reset mật khẩu đã đổi. Username/password bootstrap, JWT secret lấy từ môi trường; password ban đầu của chủ dự án lưu ở `.env` local, không nằm trong Git. Seed vai trò và danh mục hệ thống; không tự tạo nhà xe/chuyến/giá giả.
+`VIETROUTE_DB_INIT_ENABLED=true` bật migration và seed lúc app khởi động. Migration có checksum/history và khóa transaction PostgreSQL để chống hai instance khởi tạo đồng thời. Chỉ tạo admin nếu chưa tồn tại; không reset mật khẩu đã đổi. Username/password bootstrap, JWT secret lấy từ môi trường; password ban đầu của chủ dự án lưu ở `.env` local. Theo yêu cầu 01/11/2026, chính file `.env` ở gốc được commit để chuyển máy; giữ Docker/WAR loại file đó, không đưa giá trị vào log/docs/chat. Seed vai trò và danh mục hệ thống; không tự tạo nhà xe/chuyến/giá giả.
 
 Production cần secret JWT cố định, không sinh lại mỗi lần restart. Bootstrap được bật trên Render và tắt trong smoke web không DB; CI tích hợp dùng PostgreSQL tạm riêng, tuyệt đối không dùng Neon production.
 

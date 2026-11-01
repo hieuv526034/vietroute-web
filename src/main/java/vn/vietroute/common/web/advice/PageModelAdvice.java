@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerMapping;
-import vn.vietroute.auth.dto.response.FunctionDTO;
+import vn.vietroute.auth.dto.FunctionDTO;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.FunctionService;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;

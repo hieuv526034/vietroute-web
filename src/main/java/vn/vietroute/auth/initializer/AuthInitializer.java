@@ -14,7 +14,7 @@ import java.util.Set;
 import lombok.Getter;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-import vn.vietroute.auth.dto.response.FunctionDTO;
+import vn.vietroute.auth.dto.FunctionDTO;
 import vn.vietroute.auth.entity.User;
 import vn.vietroute.auth.repo.RoleRepo;
 import vn.vietroute.auth.repo.UserRepo;

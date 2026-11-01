@@ -2,7 +2,7 @@
 
 ## AUTHDB04 — Hợp đồng hiện hành
 
-Theo yêu cầu 01/11/2026, toàn bộ auth còn 40 class và tám bảng, cắt chức năng phụ. Cấu trúc/lý do/luồng và phần đã lược bỏ nằm tại [AUTHDB04 trong quy ước phát triển](QUY_UOC_PHAT_TRIEN.md#authdb04--auth-gọn-40-class-tám-bảng-01112026); bằng chứng kiểm tại [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md). Các mốc AUTHDB02/03, ACCESS và lifecycle bên dưới là lịch sử khi khác hợp đồng này.
+Theo yêu cầu 01/11/2026, toàn bộ auth còn 40 class và tám bảng, cắt chức năng phụ. UserDTO/RoleDTO/FunctionDTO ở trực tiếp auth.dto; request/search ở dto/request và dto/search, không còn dto/response. Cấu trúc/lý do/luồng và phần đã lược bỏ nằm tại [AUTHDB04 trong quy ước phát triển](QUY_UOC_PHAT_TRIEN.md#authdb04--auth-gọn-40-class-tám-bảng-01112026); bằng chứng kiểm tại [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md). Các mốc AUTHDB02/03, ACCESS và lifecycle bên dưới là lịch sử khi khác hợp đồng này.
 
 
 | API chính | Payload/hành vi hiện hành |
@@ -57,7 +57,7 @@ Body không nhận actor, public flag, handler hoặc operation_codes. Target đ
 Đăng nhập/đăng ký/email/reset, CRUD tài khoản/profile/avatar, gán global/scoped role và bootstrap recovery giữ URL hiện có. Tài khoản API cấp vẫn cần đổi mật khẩu/xác minh; ngoại lệ startup chỉ gồm bootstrap riêng và ba danh tính mặc định đã được chủ dự án xác nhận. Nút init dữ liệu dùng /api/v1/admin/demo như adapter URL cũ, dữ liệu không còn nhãn DEMO; không tạo account qua API seed. Startup BUSINESS_INIT_ENABLED mới thêm hai tuyến nền và gắn account init một lần; không tự công bố chuyến.
 
 
-AUTHDB02 thay AUTHDTO01: auth chỉ dùng class DTO trong `auth.dto.request.<nhóm>` và `auth.dto.response.<nhóm>`, không Java record. Tra [sơ đồ package DTO](QUY_UOC_PHAT_TRIEN.md#quy-hoạch-auth-dto-theo-chức-năng) khi tìm class/import; không giữ lớp trùng ở package cũ.
+AUTHDTO02 điều chỉnh cách bố trí DTO ngày 01/11/2026: UserDTO/RoleDTO/FunctionDTO nằm trực tiếp trong `auth.dto`; các class Request ở `auth.dto.request`, Search ở `auth.dto.search`, không Java record trong auth. Tra [sơ đồ package DTO](QUY_UOC_PHAT_TRIEN.md#quy-hoạch-auth-dto-theo-chức-năng) khi tìm class/import; không giữ lớp trùng ở package cũ.
 
 ## ACCESS24 — Tài nguyên cụ thể và quản trị User
 

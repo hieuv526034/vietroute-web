@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.context.MessageSource;
-import vn.vietroute.auth.dto.response.FunctionDTO;
+import vn.vietroute.auth.dto.FunctionDTO;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 
 /** Breadcrumb từ cây menu đã lọc quyền; không dựng URL từ query hoặc cho nhóm trỏ tới trang bị cấm. */

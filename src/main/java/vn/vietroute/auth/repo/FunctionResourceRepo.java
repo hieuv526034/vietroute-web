@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.stereotype.Repository;
-import vn.vietroute.auth.dto.response.FunctionDTO;
+import vn.vietroute.auth.dto.FunctionDTO;
 import vn.vietroute.auth.entity.FunctionResource;
 import vn.vietroute.common.base.JpaRepositorySupport;
 import vn.vietroute.common.jdbc.JdbcTransactions;

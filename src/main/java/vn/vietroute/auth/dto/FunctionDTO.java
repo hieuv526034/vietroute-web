@@ -1,4 +1,4 @@
-package vn.vietroute.auth.dto.response;
+package vn.vietroute.auth.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
