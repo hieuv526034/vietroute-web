@@ -2,7 +2,7 @@
 
 ## Đọc code theo luồng request
 
-Đọc theo thứ tự: [RootConfig](../../src/main/java/vn/vietroute/common/config/RootConfig.java) → SecurityConfig/JwtAuthenticationFilter → WebConfig/EndpointAccess → controller/api → service → repo → DTO/envelope. [Schema auth](SCHEMA_VA_PHAN_QUYEN.md#luồng-xác-thực-và-kiểm-endpoint) là hợp đồng hiện hành; không học theo class AccessFunction/Permission/AccessGuard đã xóa. Auth có 40 class, ba DTO trực tiếp ở auth.dto, request/search riêng; các module business đang có vẫn dùng repository JDBC.
+Đọc theo thứ tự: [RootConfig](../../src/main/java/vn/vietroute/common/config/RootConfig.java) → SecurityConfig/JwtAuthenticationFilter → WebConfig/EndpointAccess → controller/api → service → repo → DTO/envelope. [Schema auth](SCHEMA_VA_PHAN_QUYEN.md#luồng-xác-thực-và-kiểm-endpoint) là hợp đồng hiện hành; không học theo class AccessFunction/Permission/AccessGuard đã xóa. Auth có 40 class, ba DTO trực tiếp ở auth.dto, request/search riêng; business cũng dùng JPA CRUD đơn giản và repo JDBC cho query/khóa phức tạp theo BUSINESSDB01.
 
 ```mermaid
 sequenceDiagram
@@ -46,7 +46,7 @@ Sau SQL atomic tăng version, phải refresh entity đang managed trước khi s
 
 Auth có tám @Entity/@Table ánh xạ đầy đủ @Column, @Id/@Version theo model, không schema cứng và không hậu tố Entity. User kế thừa BaseEntity; các entity khác khai báo rõ cột theo bảng, không ép kế thừa khi định danh khác. Mapping/challenge có identity kỹ thuật từ V026, PK/FK ghép của DB vẫn giữ. Entity không sinh schema tự động; migrations là nguồn DDL.
 
-@JdbcTable/@JdbcIndex dùng kiểm metadata DB, không thay JPA annotations và không tự tạo index. Các entity business JDBC tiếp tục dùng metadata của chúng. Timestamp JDBC chỉ chuyển tại repo; hợp đồng entity/DTO/service dùng Instant, audit actor hệ thống0.
+@JdbcTable/@JdbcIndex dùng kiểm metadata DB, không thay JPA annotations và không tự tạo index. 16 entity business cũng ánh xạ JPA đủ cột; metadata JDBC/index và DDL giữ theo migration. Timestamp JDBC chỉ chuyển tại repo; hợp đồng entity/DTO/service dùng Instant, audit actor hệ thống0.
 
 ## Import, callback và cách viết dễ học
 

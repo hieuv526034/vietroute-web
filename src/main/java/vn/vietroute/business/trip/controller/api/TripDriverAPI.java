@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,9 +15,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.booking.dto.response.DriverPassengerResponse;
-import vn.vietroute.business.trip.dto.request.DriverProgressRequest;
-import vn.vietroute.business.trip.dto.request.TripSearchRequest;
+import vn.vietroute.business.trip.dto.request.TripRequest;
 import vn.vietroute.business.trip.dto.response.TripResponse;
+import vn.vietroute.business.trip.dto.search.TripSearch;
 import vn.vietroute.business.trip.service.DriverTripService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageRequest;
@@ -24,6 +25,7 @@ import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
+import vn.vietroute.common.validation.RequestGroups;
 import vn.vietroute.common.web.response.ApiResponses;
 import vn.vietroute.common.web.response.ApiResult;
 
@@ -58,10 +60,10 @@ public class TripDriverAPI extends BaseController {
     @GetMapping(Routes.DRIVER_TRIPS)
     @Operation(
         summary = "Chuyến được giao cho tài xế",
-        description = "DRIVER_TRIP_READ và global/scoped DRIVER hiện hành, lọc/count/page trên SQL theo chính driverUserId; không trả DRAFT"
+        description = "Grant GET API tài xế và phân công/global/scoped role hiện hành, lọc/count/page trên SQL theo chính driverUserId; không trả DRAFT"
     )
     public ApiResult<PageResponse<TripResponse>> page(
-        @Valid @ModelAttribute TripSearchRequest search,
+        @Valid @ModelAttribute TripSearch search,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
@@ -94,7 +96,7 @@ public class TripDriverAPI extends BaseController {
             value = 1,
             message = "{validation.invalid}"
         ) long id,
-        @Valid @RequestBody DriverProgressRequest body,
+        @Validated(RequestGroups.Progress.class) @RequestBody TripRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {

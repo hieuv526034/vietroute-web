@@ -47,7 +47,6 @@ import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.web.openapi.OpenApiInputs.Description;
-import vn.vietroute.common.web.openapi.OpenApiInputs.Description;
 import vn.vietroute.common.web.response.ApiResponse;
 import vn.vietroute.common.web.response.ApiResult;
 import vn.vietroute.common.web.routing.WebRoutePolicy;
@@ -150,7 +149,7 @@ public class OpenApiAPI {
                             OpenApiModels.jsonBody(
                                 operation,
                                 parameter.getAnnotation(RequestBody.class).required(),
-                                schema(parameterType, api)
+                                OpenApiInputs.requestSchema(parameter, parameterClass, schema(parameterType, api), api)
                             );
                         } else if (
                             parameter.isAnnotationPresent(PathVariable.class) ||

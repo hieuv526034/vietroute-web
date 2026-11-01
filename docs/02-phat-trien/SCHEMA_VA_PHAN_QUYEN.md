@@ -75,7 +75,7 @@ Global role replacement giữ mapping không đổi, thu hồi scoped role khôn
 
 ## JPA, JDBC, audit và lịch sử
 
-JpaConfig lắp SchemaDataSource → JpaTransactionManager và TransactionAwareDataSourceProxy cho JDBC; EntityManager dùng SharedEntityManagerCreator. Hibernate chỉ scan auth.entity, không tự tạo/sửa schema, không Open Session in View. DTO dựng khi dữ liệu cần thiết còn trong transaction.
+JpaConfig lắp SchemaDataSource → JpaTransactionManager và TransactionAwareDataSourceProxy cho JDBC; EntityManager dùng SharedEntityManagerCreator. Hibernate scan auth.entity và các entity business, không tự tạo/sửa schema, không Open Session in View. DTO dựng khi dữ liệu cần thiết còn trong transaction.
 
 Service dùng JdbcTransactions.execute: khi có Spring transaction thì tham gia, nếu cần thì tạo transaction qua manager; mọi repo dùng cùng datasource/connection. JDBC callback không tự commit hoặc bật autocommit. CRUD saveAndFlush, mapping batch và append history cùng thành công hoặc cùng rollback; SQL atomic đổi version cần refresh entity trước save tiếp. Không gọi provider mạng khi đang giữ khóa tài khoản/role.
 

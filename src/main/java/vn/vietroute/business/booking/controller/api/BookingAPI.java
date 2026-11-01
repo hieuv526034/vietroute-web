@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,19 +16,18 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.business.booking.dto.request.BookingCreateRequest;
-import vn.vietroute.business.booking.dto.request.BookingPaymentRequest;
-import vn.vietroute.business.booking.dto.request.BookingSearchRequest;
-import vn.vietroute.business.booking.dto.request.BookingStateRequest;
-import vn.vietroute.business.booking.dto.request.BookingTripSearchRequest;
+import vn.vietroute.business.booking.dto.request.BookingRequest;
 import vn.vietroute.business.booking.dto.response.BookingResponse;
 import vn.vietroute.business.booking.dto.response.BookingTripChoiceResponse;
-import vn.vietroute.business.booking.service.StaffBookingService;
+import vn.vietroute.business.booking.dto.search.BookingSearch;
+import vn.vietroute.business.booking.dto.search.BookingTripSearch;
+import vn.vietroute.business.booking.service.BookingService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
+import vn.vietroute.common.validation.RequestGroups;
 import vn.vietroute.common.web.response.ApiResponses;
 import vn.vietroute.common.web.response.ApiResult;
 
@@ -35,9 +35,9 @@ import vn.vietroute.common.web.response.ApiResult;
 @RestController
 public class BookingAPI extends BaseController {
 
-    private final StaffBookingService service;
+    private final BookingService service;
 
-    public BookingAPI(StaffBookingService service, ApiResponses responses, ApiExceptionMapper errors) {
+    public BookingAPI(BookingService service, ApiResponses responses, ApiExceptionMapper errors) {
         super(responses, errors);
         this.service = service;
     }
@@ -45,10 +45,10 @@ public class BookingAPI extends BaseController {
     @GetMapping(Routes.ADMIN_BOOKINGS + Routes.BOOKING_TRIPS)
     @Operation(
         summary = "Chọn chuyến nhận đặt PHONE",
-        description = "BOOKING_CREATE scoped, query/page/size ở DB; không cần TRIP_READ"
+        description = "BOOKING_CREATE scoped, query/page/size ở DB; không cần grant GET danh sách chuyến riêng"
     )
     public ApiResult<PageResponse<BookingTripChoiceResponse>> choices(
-        @Valid @ModelAttribute BookingTripSearchRequest query,
+        @Valid @ModelAttribute BookingTripSearch query,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> service.choices(query));
@@ -60,14 +60,17 @@ public class BookingAPI extends BaseController {
         description = "query/tripId/status/page/size lọc trước COUNT/LIMIT ở PostgreSQL; không nhận customerId"
     )
     public ApiResult<PageResponse<BookingResponse>> page(
-        @Valid @ModelAttribute BookingSearchRequest search,
+        @Valid @ModelAttribute BookingSearch search,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> service.page(search));
     }
 
     @GetMapping(Routes.ADMIN_BOOKINGS + Routes.BY_ID)
-    @Operation(summary = "Chi tiết đơn và lịch sử", description = "ID ngoài scope trả 404; READ độc lập VIEW")
+    @Operation(
+        summary = "Chi tiết đơn và lịch sử",
+        description = "ID ngoài scope trả 404; GET dữ liệu độc lập GET menu"
+    )
     public ApiResult<BookingResponse> find(
         @Parameter(description = "ID đơn dương") @PathVariable @Min(
             value = 1,
@@ -84,7 +87,7 @@ public class BookingAPI extends BaseController {
         description = "PENDING không giữ chỗ, chụp giá theo cặp stop của trip, kiểm số chỗ mọi đoạn và UUID chống tạo trùng"
     )
     public ApiResult<BookingResponse> create(
-        @Valid @RequestBody BookingCreateRequest body,
+        @Validated(RequestGroups.Create.class) @RequestBody BookingRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
@@ -101,7 +104,7 @@ public class BookingAPI extends BaseController {
             value = 1,
             message = "{validation.invalid}"
         ) long id,
-        @Valid @RequestBody BookingStateRequest body,
+        @Validated(RequestGroups.State.class) @RequestBody BookingRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
@@ -118,10 +121,69 @@ public class BookingAPI extends BaseController {
             value = 1,
             message = "{validation.invalid}"
         ) long id,
-        @Valid @RequestBody BookingPaymentRequest body,
+        @Validated(RequestGroups.Payment.class) @RequestBody BookingRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> service.payment(id, body, actor));
+    }
+
+    @GetMapping(Routes.MY_BOOKINGS)
+    @Operation(
+        summary = "Tra đơn của chính khách hàng",
+        description = "query/tripId/status/page/size lọc trước COUNT/LIMIT ở PostgreSQL; không nhận customerId"
+    )
+    public ApiResult<PageResponse<BookingResponse>> customerPage(
+        @Valid @ModelAttribute BookingSearch search,
+        @AuthenticationPrincipal UserPrincipal actor,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () -> service.customerPage(search, actor));
+    }
+
+    @GetMapping(Routes.MY_BOOKINGS + Routes.BY_ID)
+    @Operation(
+        summary = "Chi tiết đơn và lịch sử",
+        description = "ID ngoài owner trả 404; GET dữ liệu độc lập GET menu"
+    )
+    public ApiResult<BookingResponse> customerFind(
+        @Parameter(description = "ID đơn dương") @PathVariable @Min(
+            value = 1,
+            message = "{validation.invalid}"
+        ) long id,
+        @AuthenticationPrincipal UserPrincipal actor,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () -> service.customerFind(id, actor));
+    }
+
+    @PostMapping(Routes.MY_BOOKINGS)
+    @Operation(
+        summary = "Gửi yêu cầu đặt WEB",
+        description = "PENDING không giữ chỗ, chụp giá theo cặp stop của trip, kiểm số chỗ mọi đoạn và UUID chống tạo trùng"
+    )
+    public ApiResult<BookingResponse> customerCreate(
+        @Validated(RequestGroups.Create.class) @RequestBody BookingRequest body,
+        @AuthenticationPrincipal UserPrincipal actor,
+        HttpServletRequest request
+    ) {
+        return execute(HttpStatus.CREATED, SuccessCode.CREATED, request, () -> service.customerCreate(body, actor));
+    }
+
+    @PutMapping(Routes.MY_BOOKINGS + Routes.BOOKING_STATE)
+    @Operation(
+        summary = "Hủy đơn của chính khách hàng",
+        description = "Khóa trip → booking → segments; version bắt buộc, history và số chỗ cùng transaction"
+    )
+    public ApiResult<BookingResponse> customerState(
+        @Parameter(description = "ID đơn dương") @PathVariable @Min(
+            value = 1,
+            message = "{validation.invalid}"
+        ) long id,
+        @Validated(RequestGroups.State.class) @RequestBody BookingRequest body,
+        @AuthenticationPrincipal UserPrincipal actor,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () -> service.customerState(id, body, actor));
     }
 }

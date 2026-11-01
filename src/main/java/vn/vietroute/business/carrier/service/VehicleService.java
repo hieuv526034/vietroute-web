@@ -3,14 +3,13 @@ package vn.vietroute.business.carrier.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.business.carrier.dto.request.CarrierSearchRequest;
-import vn.vietroute.business.carrier.dto.request.VehicleCreateRequest;
-import vn.vietroute.business.carrier.dto.request.VehicleUpdateRequest;
+import vn.vietroute.business.carrier.dto.request.VehicleRequest;
 import vn.vietroute.business.carrier.dto.response.CarrierChoiceResponse;
 import vn.vietroute.business.carrier.dto.response.VehicleResponse;
+import vn.vietroute.business.carrier.dto.search.CarrierSearch;
 import vn.vietroute.business.carrier.entity.Carrier;
 import vn.vietroute.business.carrier.entity.Vehicle;
-import vn.vietroute.business.carrier.repository.CarrierRepository;
+import vn.vietroute.business.carrier.repo.CarrierRepo;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.jdbc.JdbcTransactions;
@@ -23,7 +22,7 @@ import vn.vietroute.common.validation.BusinessRules;
 public class VehicleService {
 
     /** Picker cần đúng quyền tạo và scope con, chỉ trả trường phục vụ lựa chọn nhà xe active. */
-    public PageResponse<CarrierChoiceResponse> carriers(CarrierSearchRequest page) {
+    public PageResponse<CarrierChoiceResponse> carriers(CarrierSearch page) {
         page.setActive(true);
         PageResponse<Carrier> result = carriers.choices(page);
         return new PageResponse<>(
@@ -37,11 +36,11 @@ public class VehicleService {
         );
     }
 
-    private final CarrierRepository carriers;
+    private final CarrierRepo carriers;
     private final JdbcTransactions transactions;
     private final MediaService media;
 
-    public PageResponse<VehicleResponse> page(CarrierSearchRequest page) {
+    public PageResponse<VehicleResponse> page(CarrierSearch page) {
         PageResponse<Vehicle> result = carriers.vehicles(page);
         return new PageResponse<>(
             result.content().stream().map(VehicleResponse::from).toList(),
@@ -59,7 +58,7 @@ public class VehicleService {
     }
 
     /** Khóa cha active và loại xe trước insert; scope suy ra từ carrier đã được guard trên cùng connection. */
-    public VehicleResponse create(VehicleCreateRequest body, UserPrincipal actor) {
+    public VehicleResponse create(VehicleRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
             if (body.getPhotoMediaId() != null) media.requireReference(connection, body.getPhotoMediaId(), actor);
@@ -72,7 +71,7 @@ public class VehicleService {
     }
 
     /** Giữ carrier/scope/code; cho ngừng sử dụng cả khi nhà xe đã khóa, không xóa lịch sử. */
-    public VehicleResponse update(long id, VehicleUpdateRequest body, UserPrincipal actor) {
+    public VehicleResponse update(long id, VehicleRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
             if (body.getPhotoMediaId() != null) media.requireReference(connection, body.getPhotoMediaId(), actor);

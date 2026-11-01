@@ -6,10 +6,10 @@ import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RestController;
-import vn.vietroute.business.report.dto.request.ReportCarrierSearchRequest;
-import vn.vietroute.business.report.dto.request.ReportSearchRequest;
 import vn.vietroute.business.report.dto.response.ReportCarrierResponse;
 import vn.vietroute.business.report.dto.response.ReportSummaryResponse;
+import vn.vietroute.business.report.dto.search.ReportCarrierSearch;
+import vn.vietroute.business.report.dto.search.ReportSearch;
 import vn.vietroute.business.report.service.ReportService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageResponse;
@@ -19,7 +19,7 @@ import vn.vietroute.common.exception.ApiExceptionMapper;
 import vn.vietroute.common.web.response.ApiResponses;
 import vn.vietroute.common.web.response.ApiResult;
 
-/** HTTP báo cáo không xuất chi tiết hành khách hoặc credential; quyền READ độc lập VIEW. */
+/** HTTP báo cáo không xuất chi tiết hành khách hoặc credential; quyền GET dữ liệu độc lập GET menu. */
 @RestController
 public class ReportAPI extends BaseController {
 
@@ -36,7 +36,7 @@ public class ReportAPI extends BaseController {
         description = "REPORT_READ scoped; fromDate/toDate theo ngày khởi hành Việt Nam, tối đa 366 ngày. Tiền là số hiện hành của đơn thuộc nhóm chuyến, không phải cashflow theo ngày thu."
     )
     public ApiResult<ReportSummaryResponse> summary(
-        @Valid @ModelAttribute ReportSearchRequest query,
+        @Valid @ModelAttribute ReportSearch query,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> service.summary(query));
@@ -48,7 +48,7 @@ public class ReportAPI extends BaseController {
         description = "REPORT_READ scoped; query/page/size lọc trước COUNT/LIMIT, không phụ thuộc CARRIER_READ"
     )
     public ApiResult<PageResponse<ReportCarrierResponse>> carriers(
-        @Valid @ModelAttribute ReportCarrierSearchRequest query,
+        @Valid @ModelAttribute ReportCarrierSearch query,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> service.carriers(query));

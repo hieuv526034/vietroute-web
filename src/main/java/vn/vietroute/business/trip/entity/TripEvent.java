@@ -1,9 +1,29 @@
 package vn.vietroute.business.trip.entity;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
+import java.time.Instant;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import vn.vietroute.common.jdbc.JdbcIndex;
 import vn.vietroute.common.jdbc.JdbcTable;
 
-/** Lịch sử vận hành ghi trong transaction của chuyến, không sửa sự kiện cũ. */
+/** Entity đầy đủ cột trip_events; migration giữ DDL/index, repo giữ query và transaction do service quản lý. */
+@Entity
+@Table(
+    name = "trip_events",
+    indexes = {
+        @Index(name = "trip_events_pkey", columnList = "id", unique = true),
+        @Index(name = "idx_trip_events_trip", columnList = "trip_id, id"),
+        @Index(name = "idx_trip_events_created_by", columnList = "created_by"),
+    }
+)
 @JdbcTable(
     name = "trip_events",
     primaryKey = { "id" },
@@ -13,7 +33,37 @@ import vn.vietroute.common.jdbc.JdbcTable;
         @JdbcIndex(name = "idx_trip_events_created_by", columns = { "created_by" }),
     }
 )
-public final class TripEvent {
+@Getter
+@Setter
+@NoArgsConstructor
+public class TripEvent {
 
-    private TripEvent() {}
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", nullable = false)
+    private long id;
+
+    @Column(name = "trip_id", nullable = false)
+    private long tripId;
+
+    @Column(name = "carrier_id", nullable = false)
+    private long carrierId;
+
+    @Column(name = "scope_id", nullable = false)
+    private long scopeId;
+
+    @Column(name = "stop_order")
+    private Integer stopOrder;
+
+    @Column(name = "event_type", nullable = false, length = 30)
+    private String eventType;
+
+    @Column(name = "note", nullable = false, length = 2000)
+    private String note;
+
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
+
+    @Column(name = "created_by", nullable = false)
+    private long createdBy;
 }

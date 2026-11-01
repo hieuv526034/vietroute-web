@@ -8,14 +8,13 @@ import vn.vietroute.auth.dto.UserDTO;
 import vn.vietroute.auth.dto.request.UserRequest;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.UserService;
-import vn.vietroute.business.carrier.dto.request.CarrierSearchRequest;
-import vn.vietroute.business.carrier.dto.request.DriverCreateRequest;
-import vn.vietroute.business.carrier.dto.request.DriverUpdateRequest;
+import vn.vietroute.business.carrier.dto.request.DriverRequest;
 import vn.vietroute.business.carrier.dto.response.CarrierChoiceResponse;
 import vn.vietroute.business.carrier.dto.response.DriverResponse;
+import vn.vietroute.business.carrier.dto.search.CarrierSearch;
 import vn.vietroute.business.carrier.entity.Carrier;
 import vn.vietroute.business.carrier.entity.Driver;
-import vn.vietroute.business.carrier.repository.CarrierRepository;
+import vn.vietroute.business.carrier.repo.CarrierRepo;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.jdbc.JdbcTransactions;
@@ -27,7 +26,7 @@ import vn.vietroute.common.validation.BusinessRules;
 public class DriverService {
 
     /** Picker cần đúng quyền tạo và scope con, chỉ trả trường phục vụ lựa chọn nhà xe active. */
-    public PageResponse<CarrierChoiceResponse> carriers(CarrierSearchRequest page) {
+    public PageResponse<CarrierChoiceResponse> carriers(CarrierSearch page) {
         page.setActive(true);
         PageResponse<Carrier> result = carriers.choices(page);
         return new PageResponse<>(
@@ -41,7 +40,7 @@ public class DriverService {
         );
     }
 
-    private final CarrierRepository carriers;
+    private final CarrierRepo carriers;
     private final JdbcTransactions transactions;
     private final UserService provisioner;
 
@@ -74,7 +73,7 @@ public class DriverService {
         });
     }
 
-    public PageResponse<DriverResponse> page(CarrierSearchRequest page) {
+    public PageResponse<DriverResponse> page(CarrierSearch page) {
         PageResponse<Driver> result = carriers.drivers(page);
         return new PageResponse<>(
             result.content().stream().map(DriverResponse::from).toList(),
@@ -92,7 +91,7 @@ public class DriverService {
     }
 
     /** Tạo hồ sơ chưa liên kết không cấp account hay bỏ bước xác minh email; scope lấy từ nhà xe server đã kiểm. */
-    public DriverResponse create(DriverCreateRequest body, UserPrincipal actor) {
+    public DriverResponse create(DriverRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
             Carrier parent = carriers.carrier(connection, body.getCarrierId(), true);
@@ -104,7 +103,7 @@ public class DriverService {
     }
 
     /** Khóa cha trước con; không đổi carrier và không cấp role/membership qua form hồ sơ. */
-    public DriverResponse update(long id, DriverUpdateRequest body, UserPrincipal actor) {
+    public DriverResponse update(long id, DriverRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
             Driver snapshot = carriers.driver(connection, id, false);

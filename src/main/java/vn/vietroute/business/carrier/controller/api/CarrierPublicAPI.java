@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
-import vn.vietroute.business.carrier.dto.request.PublicCarrierSearchRequest;
 import vn.vietroute.business.carrier.dto.response.PublicCarrierResponse;
+import vn.vietroute.business.carrier.dto.search.PublicCarrierSearch;
 import vn.vietroute.business.carrier.service.PublicCarrierService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageResponse;
@@ -37,7 +37,7 @@ public class CarrierPublicAPI extends BaseController {
         description = "Chỉ nhà xe/scope active, query/page/size tại DB; không scope/nhân sự/audit"
     )
     public ApiResult<PageResponse<PublicCarrierResponse>> page(
-        @Valid @ModelAttribute PublicCarrierSearchRequest query,
+        @Valid @ModelAttribute PublicCarrierSearch query,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> service.page(query));

@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,17 +18,17 @@ import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.dto.UserDTO;
 import vn.vietroute.auth.dto.request.UserRequest;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.business.carrier.dto.request.CarrierSearchRequest;
-import vn.vietroute.business.carrier.dto.request.DriverCreateRequest;
-import vn.vietroute.business.carrier.dto.request.DriverUpdateRequest;
+import vn.vietroute.business.carrier.dto.request.DriverRequest;
 import vn.vietroute.business.carrier.dto.response.CarrierChoiceResponse;
 import vn.vietroute.business.carrier.dto.response.DriverResponse;
+import vn.vietroute.business.carrier.dto.search.CarrierSearch;
 import vn.vietroute.business.carrier.service.DriverService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
+import vn.vietroute.common.validation.RequestGroups;
 import vn.vietroute.common.web.response.ApiResponses;
 import vn.vietroute.common.web.response.ApiResult;
 
@@ -41,7 +42,7 @@ public class DriverAPI extends BaseController {
         description = "Projection ID/mã/tên của nhà xe active trong scope có CREATE; tìm/phân trang server."
     )
     public ApiResult<PageResponse<CarrierChoiceResponse>> carriers(
-        @Valid @ModelAttribute CarrierSearchRequest page,
+        @Valid @ModelAttribute CarrierSearch page,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> service.carriers(page));
@@ -77,7 +78,7 @@ public class DriverAPI extends BaseController {
         description = "Tìm/lọc trạng thái/phân trang trên PostgreSQL; count và bản ghi cùng điều kiện scope. Không lấy quyền từ carrierId client."
     )
     public ApiResult<PageResponse<DriverResponse>> page(
-        @Valid @ModelAttribute CarrierSearchRequest page,
+        @Valid @ModelAttribute CarrierSearch page,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> service.page(page));
@@ -104,7 +105,7 @@ public class DriverAPI extends BaseController {
         description = "Actor/scope/audit do server xác định. Cha phải active và thuộc phạm vi; FK và UNIQUE chốt dữ liệu."
     )
     public ApiResult<DriverResponse> create(
-        @Valid @RequestBody DriverCreateRequest body,
+        @Validated(RequestGroups.Create.class) @RequestBody DriverRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
@@ -121,7 +122,7 @@ public class DriverAPI extends BaseController {
             value = 1,
             message = "{validation.invalid}"
         ) long id,
-        @Valid @RequestBody DriverUpdateRequest body,
+        @Validated(RequestGroups.Update.class) @RequestBody DriverRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {

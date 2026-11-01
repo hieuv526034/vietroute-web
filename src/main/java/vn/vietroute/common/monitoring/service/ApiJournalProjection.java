@@ -7,9 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import vn.vietroute.business.catalog.dto.request.CatalogCreateRequest;
-import vn.vietroute.business.catalog.dto.request.CatalogDeleteRequest;
-import vn.vietroute.business.catalog.dto.request.CatalogUpdateRequest;
+import vn.vietroute.business.catalog.dto.request.CatalogRequest;
 import vn.vietroute.business.catalog.dto.response.CatalogResponse;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
@@ -26,13 +24,7 @@ public class ApiJournalProjection {
 
     private final ObjectMapper mapper;
 
-    private static final Set<Class<?>> REQUEST_TYPES = Set.of(
-        CatalogCreateRequest.class,
-        CatalogUpdateRequest.class,
-        CatalogDeleteRequest.class,
-
-        RetryJobRequest.class
-    );
+    private static final Set<Class<?>> REQUEST_TYPES = Set.of(CatalogRequest.class, RetryJobRequest.class);
     private static final Set<String> NUMBERS = Set.of(
         "id",
         "sortOrder",
@@ -53,7 +45,10 @@ public class ApiJournalProjection {
     /** Không capture auth/mail/media/access response/PII, kể cả tên field không giống secret. */
     public String request(Object value) {
         if (value == null || !supports(value.getClass())) return "{\"capture\":\"BODY_OMITTED\"}";
-        return encode(project(mapper.valueToTree(value)));
+        ObjectNode fields = mapper.valueToTree(value);
+        // Gộp DTO không tự mở thêm field capture; active trước đây chỉ được ghi trong response.
+        if (value instanceof CatalogRequest) fields.remove("active");
+        return encode(project(fields));
     }
 
     public String response(ApiResponse<?> response, String path) {

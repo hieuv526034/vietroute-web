@@ -12,7 +12,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.Column;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.metamodel.EntityType;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
@@ -21,6 +25,7 @@ import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -81,23 +86,22 @@ import vn.vietroute.auth.security.EndpointAccess;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.auth.service.UserService;
-import vn.vietroute.business.booking.repository.BookingLifecycleRepository;
-import vn.vietroute.business.carrier.dto.request.CarrierSearchRequest;
-import vn.vietroute.business.carrier.dto.request.PublicCarrierSearchRequest;
-import vn.vietroute.business.carrier.repository.PublicCarrierRepository;
+import vn.vietroute.business.booking.repo.BookingRepo;
+import vn.vietroute.business.carrier.dto.search.CarrierSearch;
+import vn.vietroute.business.carrier.dto.search.PublicCarrierSearch;
+import vn.vietroute.business.carrier.repo.CarrierRepo;
 import vn.vietroute.business.carrier.service.DriverService;
 import vn.vietroute.business.carrier.service.VehicleService;
-import vn.vietroute.business.catalog.dto.request.CatalogSearchRequest;
-import vn.vietroute.business.catalog.repository.CatalogRepository;
-import vn.vietroute.business.catalog.service.BookingSourceCatalogService;
-import vn.vietroute.business.demo.repository.DemoSeedRepository;
-import vn.vietroute.business.demo.repository.InitialRouteRepository;
-import vn.vietroute.business.report.dto.request.ReportCarrierSearchRequest;
-import vn.vietroute.business.report.dto.request.ReportSearchRequest;
-import vn.vietroute.business.report.repository.ReportRepository;
+import vn.vietroute.business.catalog.dto.search.CatalogSearch;
+import vn.vietroute.business.catalog.repo.CatalogRepo;
+import vn.vietroute.business.catalog.service.CatalogService;
+import vn.vietroute.business.demo.repo.DemoSeedRepo;
+import vn.vietroute.business.report.dto.search.ReportCarrierSearch;
+import vn.vietroute.business.report.dto.search.ReportSearch;
+import vn.vietroute.business.report.repo.ReportRepo;
 import vn.vietroute.business.report.service.ReportService;
-import vn.vietroute.business.tracking.dto.request.TrackingStartRequest;
-import vn.vietroute.business.tracking.service.DriverTrackingService;
+import vn.vietroute.business.tracking.dto.request.TrackingRequest;
+import vn.vietroute.business.tracking.service.TrackingService;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.application.ConfigurationEnvironment;
@@ -186,27 +190,27 @@ class BusinessIntegrationTest {
         seed();
         sql("UPDATE carriers SET name='Nhà xe đà nẵng 50%_!\\ literal' WHERE code='VRMIENNAM'");
         for (String term : new String[] { "đà nẵng", "%_!\\", "vrmiennam Nhà" }) {
-            var search = new PublicCarrierSearchRequest();
+            var search = new PublicCarrierSearch();
             search.setQuery(term);
             assertEquals(
                 1,
                 root
                     .getBean(JdbcTransactions.class)
-                    .execute(connection -> root.getBean(PublicCarrierRepository.class).page(connection, search))
+                    .execute(connection -> root.getBean(CarrierRepo.class).page(connection, search))
                     .totalElements()
             );
-            var report = new ReportCarrierSearchRequest();
+            var report = new ReportCarrierSearch();
             report.setQuery(term);
             approve(admin, "GET /api/v1/admin/reports/carriers");
             assertEquals(
                 1,
                 root
                     .getBean(JdbcTransactions.class)
-                    .execute(connection -> root.getBean(ReportRepository.class).carriers(connection, report))
+                    .execute(connection -> root.getBean(ReportRepo.class).carriers(connection, report))
                     .totalElements()
             );
         }
-        var search = new PublicCarrierSearchRequest();
+        var search = new PublicCarrierSearch();
         search.setQuery("%");
         sql(
             "UPDATE carriers SET scope_active=false WHERE scope_id=(SELECT scope_id FROM carriers WHERE code='VRMIENNAM')"
@@ -215,7 +219,7 @@ class BusinessIntegrationTest {
             0,
             root
                 .getBean(JdbcTransactions.class)
-                .execute(connection -> root.getBean(PublicCarrierRepository.class).page(connection, search))
+                .execute(connection -> root.getBean(CarrierRepo.class).page(connection, search))
                 .totalElements()
         );
     }
@@ -245,14 +249,14 @@ class BusinessIntegrationTest {
         );
         approve(admin, "GET /api/v1/admin/reports/carriers");
         try (var connection = root.getBean(JdbcConnectionFactory.class).open()) {
-            var reports = root.getBean(ReportRepository.class);
-            var publicSearch = new PublicCarrierSearchRequest();
+            var reports = root.getBean(ReportRepo.class);
+            var publicSearch = new PublicCarrierSearch();
             publicSearch.setQuery("needlexyz");
-            var picker = new ReportCarrierSearchRequest();
+            var picker = new ReportCarrierSearch();
             picker.setQuery("needlexyz");
-            var catalog = new CatalogSearchRequest();
+            var catalog = new CatalogSearch();
             catalog.setQuery("needlexyz");
-            var report = new ReportSearchRequest();
+            var report = new ReportSearch();
             report.setFromDate(LocalDate.of(2027, 2, 10));
             report.setToDate(report.getFromDate());
             Map<String, List<SqlPlanProbe.Select>> queries = new LinkedHashMap<>();
@@ -265,7 +269,7 @@ class BusinessIntegrationTest {
             queries.put(
                 "search.public",
                 SqlPlanProbe.capture(connection, observed ->
-                    root.getBean(PublicCarrierRepository.class).page(observed, publicSearch)
+                    root.getBean(CarrierRepo.class).page(observed, publicSearch)
                 )
             );
             queries.put(
@@ -275,7 +279,7 @@ class BusinessIntegrationTest {
             queries.put(
                 "search.catalog",
                 SqlPlanProbe.capture(connection, observed ->
-                    root.getBean(CatalogRepository.class).search(observed, CatalogType.VEHICLE_TYPE, catalog)
+                    root.getBean(CatalogRepo.class).search(observed, CatalogType.VEHICLE_TYPE, catalog)
                 )
             );
             Map<String, List<JsonNode>> baseline = new LinkedHashMap<>();
@@ -332,10 +336,10 @@ class BusinessIntegrationTest {
                 )
             );
         }
-        var report = new ReportSearchRequest();
+        var report = new ReportSearch();
         report.setFromDate(LocalDate.of(2027, 2, 1));
         report.setToDate(LocalDate.of(2027, 2, 28));
-        var search = new PublicCarrierSearchRequest();
+        var search = new PublicCarrierSearch();
         search.setQuery("needlexyz");
         PooledReadProbe.run(
             System.getProperty("business.test.database"),
@@ -343,8 +347,8 @@ class BusinessIntegrationTest {
             schema,
             admin,
             connection -> {
-                assertTrue(root.getBean(ReportRepository.class).summary(connection, report).tripCount() > 0);
-                assertEquals(20, root.getBean(PublicCarrierRepository.class).page(connection, search).totalElements());
+                assertTrue(root.getBean(ReportRepo.class).summary(connection, report).getTripCount() > 0);
+                assertEquals(20, root.getBean(CarrierRepo.class).page(connection, search).totalElements());
                 return null;
             }
         );
@@ -408,7 +412,7 @@ class BusinessIntegrationTest {
                             }
                         }
                         long acquired = System.nanoTime();
-                        root.getBean(BookingLifecycleRepository.class).cancelTrip(
+                        root.getBean(BookingRepo.class).cancelTrip(
                             counted(connection, statements),
                             trip,
                             "Load cancellation",
@@ -468,7 +472,7 @@ class BusinessIntegrationTest {
             sql("SELECT sum(paid_amount)||':'||sum(refunded_amount) FROM bookings WHERE trip_id=" + trip)
         );
         root.getBean(JdbcTransactions.class).execute(connection -> {
-            root.getBean(BookingLifecycleRepository.class).cancelTrip(connection, trip, "Repeated", 1);
+            root.getBean(BookingRepo.class).cancelTrip(connection, trip, "Repeated", 1);
             return null;
         });
         assertEquals(
@@ -608,7 +612,7 @@ class BusinessIntegrationTest {
         throws Exception {
         seed();
         var fixture = tripFixture(false);
-        var lifecycle = root.getBean(BookingLifecycleRepository.class);
+        BookingRepo bookings = root.getBean(BookingRepo.class);
         for (int size : new int[] { 1, 1000 }) {
             long trip = openBookingTrip(
                 fixture,
@@ -649,7 +653,7 @@ class BusinessIntegrationTest {
                                 rows.next();
                             }
                         }
-                        lifecycle.cancelTrip(connection, trip, "Suppressed event", 1);
+                        bookings.cancelTrip(connection, trip, "Suppressed event", 1);
                         return null;
                     })
                 );
@@ -672,7 +676,7 @@ class BusinessIntegrationTest {
                         rows.next();
                     }
                 }
-                lifecycle.cancelTrip(counted(connection, statements), trip, "Bulk cancel", 1);
+                bookings.cancelTrip(counted(connection, statements), trip, "Bulk cancel", 1);
                 return null;
             });
             assertEquals(5, statements.get(), "Số lượt SQL không tăng theo số đơn");
@@ -701,7 +705,7 @@ class BusinessIntegrationTest {
                 sql("SELECT sum(paid_amount)||':'||sum(refunded_amount) FROM bookings WHERE trip_id=" + trip)
             );
             root.getBean(JdbcTransactions.class).execute(connection -> {
-                lifecycle.cancelTrip(connection, trip, "Repeat", 1);
+                bookings.cancelTrip(connection, trip, "Repeat", 1);
                 return null;
             });
             assertEquals(
@@ -1022,8 +1026,8 @@ class BusinessIntegrationTest {
         var tx = root.getBean(JdbcTransactions.class);
         tx.execute(connection -> {
             defaults.initialize(connection);
-            root.getBean(DemoSeedRepository.class).seed(connection, 0);
-            root.getBean(InitialRouteRepository.class).seed(connection);
+            root.getBean(DemoSeedRepo.class).seed(connection, 0);
+            root.getBean(DemoSeedRepo.class).seedRoutes(connection);
             root.getBean(UserRepo.class).assignInitialScopes(connection);
             root.getBean(AuthInitializer.class).synchronize(root.getBean(EndpointAccess.class).all());
             return null;
@@ -1061,8 +1065,8 @@ class BusinessIntegrationTest {
         );
         tx.execute(connection -> {
             defaults.initialize(connection);
-            root.getBean(DemoSeedRepository.class).seed(connection, 0);
-            root.getBean(InitialRouteRepository.class).seed(connection);
+            root.getBean(DemoSeedRepo.class).seed(connection, 0);
+            root.getBean(DemoSeedRepo.class).seedRoutes(connection);
             root.getBean(UserRepo.class).assignInitialScopes(connection);
             root.getBean(AuthInitializer.class).synchronize(root.getBean(EndpointAccess.class).all());
             return null;
@@ -1593,10 +1597,10 @@ class BusinessIntegrationTest {
         );
         call(403, "POST", path + "/start", "{\"tripVersion\":1}", driver);
         SecurityContextHolder.getContext().setAuthentication(driver);
+        TrackingRequest startRequest = new TrackingRequest();
+        startRequest.setTripVersion(1L);
         assertThrows(BusinessException.class, () ->
-            root
-                .getBean(DriverTrackingService.class)
-                .start(trip, new TrackingStartRequest(1L), (UserPrincipal) driver.getPrincipal())
+            root.getBean(TrackingService.class).start(trip, startRequest, (UserPrincipal) driver.getPrincipal())
         );
     }
 
@@ -1888,9 +1892,7 @@ class BusinessIntegrationTest {
         );
         call(403, "GET", path, null, reporter);
         SecurityContextHolder.getContext().setAuthentication(reporter);
-        assertThrows(BusinessException.class, () ->
-            root.getBean(ReportService.class).summary(new ReportSearchRequest())
-        );
+        assertThrows(BusinessException.class, () -> root.getBean(ReportService.class).summary(new ReportSearch()));
         call(200, "GET", "/operations/reports", null, reporter);
     }
 
@@ -2323,11 +2325,9 @@ class BusinessIntegrationTest {
         call(403, "GET", "/api/v1/admin/vehicles", null, view);
         call(403, "GET", "/catalogs/booking-sources", null, view);
         SecurityContextHolder.getContext().setAuthentication(view);
+        assertThrows(BusinessException.class, () -> root.getBean(VehicleService.class).page(new CarrierSearch()));
         assertThrows(BusinessException.class, () ->
-            root.getBean(VehicleService.class).page(new CarrierSearchRequest())
-        );
-        assertThrows(BusinessException.class, () ->
-            root.getBean(BookingSourceCatalogService.class).find(1, Locale.ROOT)
+            root.getBean(CatalogService.class).find(CatalogType.BOOKING_SOURCE, 1, Locale.ROOT)
         );
         var read = member(scope, "TYPEONLY", "'VEHICLE_TYPE_READ'", "testtypereader");
         call(200, "GET", "/api/v1/admin/vehicle-types", null, read);
@@ -2554,6 +2554,84 @@ class BusinessIntegrationTest {
     }
 
     @Test
+    void sharedRequestsKeepCreateUpdateValidationAndImmutableParentIdentity() throws Exception {
+        // Fixture giới hạn hai scope; tạo đúng hai cha, không seed thêm scope không dùng.
+        String carrierBody =
+            "{\"code\":\"SHAREDCARRIER\",\"name\":\"Nhà xe request chung\",\"phone\":\"0901234567\",\"description\":\"\"}";
+        long carrier = call(201, "POST", "/api/v1/admin/carriers", carrierBody, admin).path("id").asLong();
+        String carrierUpdate = "{\"name\":\"Tên mới\",\"phone\":\"0901234567\",\"description\":\"\"}";
+        call(400, "PUT", "/api/v1/admin/carriers/" + carrier, carrierUpdate, admin);
+        call(400, "POST", "/api/v1/admin/carriers", carrierUpdate, admin);
+        call(200, "PUT", "/api/v1/admin/carriers/" + carrier, carrierBody.replace("}", ",\"version\":0}"), admin);
+        call(
+            400,
+            "PUT",
+            "/api/v1/admin/carriers/" + carrier,
+            carrierBody.replace("SHAREDCARRIER", "OTHERIDENTITY").replace("}", ",\"version\":1}"),
+            admin
+        );
+        assertEquals("SHAREDCARRIER", sql("SELECT code FROM carriers WHERE id=" + carrier));
+        assertEquals("1", sql("SELECT version FROM carriers WHERE id=" + carrier));
+
+        long otherCarrier = call(
+            201,
+            "POST",
+            "/api/v1/admin/carriers",
+            carrierBody.replace("SHAREDCARRIER", "OTHERCARRIER"),
+            admin
+        )
+            .path("id")
+            .asLong();
+        long vehicleType = Long.parseLong(
+            sql("SELECT min(id) FROM catalog_items WHERE type='VEHICLE_TYPE' AND active")
+        );
+        String vehicleBody =
+            "{\"carrierId\":" +
+            carrier +
+            ",\"code\":\"SHAREDVEHICLE\",\"plateNumber\":\"97A-123.45\",\"vehicleTypeId\":" +
+            vehicleType +
+            ",\"capacity\":20}";
+        long vehicle = call(201, "POST", "/api/v1/admin/vehicles", vehicleBody, admin).path("id").asLong();
+        call(
+            400,
+            "PUT",
+            "/api/v1/admin/vehicles/" + vehicle,
+            vehicleBody
+                .replace("\"carrierId\":" + carrier, "\"carrierId\":" + otherCarrier)
+                .replace("}", ",\"version\":0}"),
+            admin
+        );
+        assertEquals(Long.toString(carrier), sql("SELECT carrier_id FROM carrier_vehicles WHERE id=" + vehicle));
+
+        String provinceBody = "{\"code\":\"SHAREDPROVINCE\",\"nameVi\":\"Tỉnh kiểm thử\",\"nameEn\":\"Test province\"}";
+        long province = call(201, "POST", "/api/v1/admin/provinces", provinceBody, admin).path("id").asLong();
+        long otherProvince = call(
+            201,
+            "POST",
+            "/api/v1/admin/provinces",
+            provinceBody.replace("SHAREDPROVINCE", "OTHERPROVINCE"),
+            admin
+        )
+            .path("id")
+            .asLong();
+        String locationBody =
+            "{\"code\":\"SHAREDLOCATION\",\"provinceId\":" +
+            province +
+            ",\"nameVi\":\"Điểm kiểm thử\",\"nameEn\":\"Test place\",\"address\":\"Địa chỉ kiểm thử\",\"latitude\":10.1,\"longitude\":106.2}";
+        long location = call(201, "POST", "/api/v1/admin/locations", locationBody, admin).path("id").asLong();
+        call(
+            400,
+            "PUT",
+            "/api/v1/admin/locations/" + location,
+            locationBody
+                .replace("\"provinceId\":" + province, "\"provinceId\":" + otherProvince)
+                .replace("}", ",\"version\":0}"),
+            admin
+        );
+        assertEquals(Long.toString(province), sql("SELECT province_id FROM location_places WHERE id=" + location));
+    }
+
+    @Test
     void allEightJpaModelsMapEveryRealColumnIncludingGeneratedScopeKeys() throws Exception {
         var models = List.of(
             User.class,
@@ -2587,6 +2665,59 @@ class BusinessIntegrationTest {
                     }
                     assertEquals(actual, mapped, table);
                 }
+            }
+        }
+    }
+
+    @Test
+    void businessJpaModelsCoverRealColumnsGeneratedValuesAndCompositeKeys() throws Exception {
+        List<Class<?>> models = root
+            .getBean(EntityManagerFactory.class)
+            .getMetamodel()
+            .getEntities()
+            .stream()
+            .filter(model -> model.getJavaType().getName().startsWith("vn.vietroute.business."))
+            .<Class<?>>map(EntityType::getJavaType)
+            .toList();
+        assertEquals(16, models.size());
+        try (Connection connection = root.getBean(JdbcConnectionFactory.class).open()) {
+            for (Class<?> model : models) {
+                String table = model.getAnnotation(Table.class).name();
+                Map<String, Column> mapped = new LinkedHashMap<>();
+                Set<String> ids = new LinkedHashSet<>();
+                for (Class<?> type = model; type != Object.class; type = type.getSuperclass()) {
+                    for (Field field : type.getDeclaredFields()) {
+                        Column column = field.getAnnotation(Column.class);
+                        if (column == null) continue;
+                        mapped.put(column.name(), column);
+                        if (field.isAnnotationPresent(Id.class)) ids.add(column.name());
+                    }
+                }
+                Set<String> columns = new LinkedHashSet<>();
+                try (
+                    PreparedStatement query = connection.prepareStatement(
+                        "SELECT column_name,is_generated FROM information_schema.columns WHERE table_schema=current_schema() AND table_name=?"
+                    )
+                ) {
+                    query.setString(1, table);
+                    try (ResultSet rows = query.executeQuery()) {
+                        while (rows.next()) {
+                            String name = rows.getString(1);
+                            columns.add(name);
+                            if ("ALWAYS".equals(rows.getString(2))) {
+                                assertTrue(mapped.containsKey(name), table + "." + name);
+                                assertFalse(mapped.get(name).insertable(), table + "." + name);
+                                assertFalse(mapped.get(name).updatable(), table + "." + name);
+                            }
+                        }
+                    }
+                }
+                assertEquals(columns, mapped.keySet(), table);
+                Set<String> keys = new LinkedHashSet<>();
+                try (ResultSet rows = connection.getMetaData().getPrimaryKeys(null, connection.getSchema(), table)) {
+                    while (rows.next()) keys.add(rows.getString("COLUMN_NAME"));
+                }
+                assertEquals(keys, ids, table + " primary key");
             }
         }
     }

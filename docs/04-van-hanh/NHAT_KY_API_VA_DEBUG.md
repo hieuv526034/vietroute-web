@@ -45,7 +45,7 @@ Collection có URL môi trường đang xem, không có script/secret/cookie. UR
 
 Không ghi raw HTTP body hoặc buffer response. Không ghi Authorization/cookie/header, IP, URL thô, query không được cho phép, file, mail, password, JWT hoặc dữ liệu danh tính. Không lưu secret vào tab/storage.
 
-Request chỉ projection DTO có trong danh sách tường minh: tạo/sửa/xóa danh mục, gán quyền role/gán role user, retry job. Chỉ giữ số, boolean và enum; mã/tên tự do bị thay bằng `[REDACTED]`. Field/DTO mới mặc định bị bỏ. JSON không parse được không có snapshot payload. Unknown body chỉ ghi trạng thái đã bỏ.
+Request chỉ projection DTO trong whitelist hiện hành: CatalogRequest dùng chung cho tạo/sửa/xóa danh mục và RetryJobRequest. Auth/access và các request business khác bị bỏ. Chỉ giữ field số/boolean/enum đã duyệt; mã/tên tự do bị thay bằng `[REDACTED]`. BUSINESSDB02 gộp request không tự mở capture field active mới của CatalogRequest. Field/DTO mới mặc định bị bỏ. JSON không parse được không có snapshot payload; unknown body chỉ ghi trạng thái đã bỏ.
 
 Response giữ `success`, `code`, `messageKey`, `locale`, field/code/messageKey của tối đa 10 lỗi validation. Không giữ message/args có thể chứa dữ liệu nhập. Data danh mục chỉ giữ projection an toàn, danh sách công khai tối đa 3 item; data auth/access/mail/media/job/runtime và DTO khác bị bỏ. Mỗi snapshot giới hạn 4096 ký tự, quá giới hạn được thay bằng trạng thái đã bỏ. Số byte thực tế phụ thuộc encoding/overhead JVM; đây là giới hạn chuỗi, không phải số đo RAM benchmark.
 

@@ -24,8 +24,11 @@ import vn.vietroute.common.jdbc.JdbcTransactions;
 @Repository
 public class AccessChangeRepo extends JpaRepositorySupport<AccessChange, Long> {
 
-    private static final String INSERT =
-        "INSERT INTO auth_access_changes(event_type,target_kind,target_key,actor_id,trace_id,before_state,after_state,created_by,updated_by) VALUES(?,?,?,?,?,?::jsonb,?::jsonb,?,?)";
+    private static final String INSERT = """
+    INSERT INTO auth_access_changes(event_type, target_kind, target_key, actor_id, trace_id,
+        before_state, after_state, created_by, updated_by)
+    VALUES (?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?, ?)
+    """;
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
@@ -123,7 +126,21 @@ public class AccessChangeRepo extends JpaRepositorySupport<AccessChange, Long> {
             }
             try (
                 PreparedStatement query = connection.prepareStatement(
-                    "DELETE FROM auth_access_changes WHERE id IN(SELECT id FROM auth_access_changes WHERE created_at<CURRENT_TIMESTAMP-INTERVAL '7 days' OR id<(SELECT COALESCE(max(id),0)-1000 FROM auth_access_changes) ORDER BY id LIMIT 200)"
+                    """
+                    DELETE
+                    FROM auth_access_changes
+                    WHERE id IN (
+                        SELECT id
+                        FROM auth_access_changes
+                        WHERE created_at < CURRENT_TIMESTAMP - INTERVAL '7 days'
+                            OR id < (
+                                SELECT COALESCE(max(id), 0) - 1000
+                                FROM auth_access_changes
+                            )
+                        ORDER BY id
+                        LIMIT 200
+                    )
+                    """
                 )
             ) {
                 return query.executeUpdate();

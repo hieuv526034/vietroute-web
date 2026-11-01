@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,16 +16,16 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.business.carrier.dto.request.CarrierCreateRequest;
-import vn.vietroute.business.carrier.dto.request.CarrierSearchRequest;
-import vn.vietroute.business.carrier.dto.request.CarrierUpdateRequest;
+import vn.vietroute.business.carrier.dto.request.CarrierRequest;
 import vn.vietroute.business.carrier.dto.response.CarrierResponse;
+import vn.vietroute.business.carrier.dto.search.CarrierSearch;
 import vn.vietroute.business.carrier.service.CarrierService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
+import vn.vietroute.common.validation.RequestGroups;
 import vn.vietroute.common.web.response.ApiResponses;
 import vn.vietroute.common.web.response.ApiResult;
 
@@ -45,7 +46,7 @@ public class CarrierAPI extends BaseController {
         description = "Tìm/lọc trạng thái/phân trang trên PostgreSQL; count và bản ghi cùng điều kiện scope. Không lấy quyền từ carrierId client."
     )
     public ApiResult<PageResponse<CarrierResponse>> page(
-        @Valid @ModelAttribute CarrierSearchRequest page,
+        @Valid @ModelAttribute CarrierSearch page,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> service.page(page));
@@ -72,7 +73,7 @@ public class CarrierAPI extends BaseController {
         description = "Actor/scope/audit do server xác định. Chỉ ADMIN; scope và nhà xe tạo nguyên tử."
     )
     public ApiResult<CarrierResponse> create(
-        @Valid @RequestBody CarrierCreateRequest body,
+        @Validated(RequestGroups.Create.class) @RequestBody CarrierRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
@@ -89,7 +90,7 @@ public class CarrierAPI extends BaseController {
             value = 1,
             message = "{validation.invalid}"
         ) long id,
-        @Valid @RequestBody CarrierUpdateRequest body,
+        @Validated(RequestGroups.Update.class) @RequestBody CarrierRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {

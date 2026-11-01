@@ -9,11 +9,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
-import vn.vietroute.business.journey.dto.request.JourneyQuoteRequest;
-import vn.vietroute.business.journey.dto.request.JourneySearchRequest;
 import vn.vietroute.business.journey.dto.response.JourneyMatchResponse;
 import vn.vietroute.business.journey.dto.response.JourneyQuoteResponse;
 import vn.vietroute.business.journey.dto.response.JourneyResponse;
+import vn.vietroute.business.journey.dto.search.JourneyQuoteSearch;
+import vn.vietroute.business.journey.dto.search.JourneySearch;
 import vn.vietroute.business.journey.service.JourneyService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageResponse;
@@ -44,7 +44,7 @@ public class TripSearchAPI extends BaseController {
             value = 1,
             message = "{validation.invalid}"
         ) long id,
-        @Valid @ModelAttribute JourneyQuoteRequest query,
+        @Valid @ModelAttribute JourneyQuoteSearch query,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> service.quote(id, query));
@@ -56,7 +56,7 @@ public class TripSearchAPI extends BaseController {
         description = "Ngày tại pickup Việt Nam, hướng tăng, chưa rời điểm đón, MIN chỗ toàn range. OPEN chưa quá giờ hoặc IN_PROGRESS, nhà xe/scope active"
     )
     public ApiResult<PageResponse<JourneyMatchResponse>> search(
-        @Valid @ModelAttribute JourneySearchRequest query,
+        @Valid @ModelAttribute JourneySearch query,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> service.search(query));

@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -18,11 +19,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.business.catalog.dto.request.CatalogCreateRequest;
-import vn.vietroute.business.catalog.dto.request.CatalogDeleteRequest;
-import vn.vietroute.business.catalog.dto.request.CatalogLookupRequest;
-import vn.vietroute.business.catalog.dto.request.CatalogUpdateRequest;
+import vn.vietroute.business.catalog.dto.request.CatalogRequest;
 import vn.vietroute.business.catalog.dto.response.CatalogResponse;
+import vn.vietroute.business.catalog.dto.search.CatalogLookupSearch;
+import vn.vietroute.business.catalog.dto.search.CatalogSearch;
 import vn.vietroute.business.catalog.service.CatalogService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageResponse;
@@ -30,6 +30,7 @@ import vn.vietroute.common.constant.ApplicationConstants.CatalogType;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
+import vn.vietroute.common.validation.RequestGroups;
 import vn.vietroute.common.web.response.ApiResponses;
 import vn.vietroute.common.web.response.ApiResult;
 
@@ -52,7 +53,7 @@ public class CatalogItemAPI extends BaseController {
     )
     public ApiResult<PageResponse<CatalogResponse>> page(
         @Parameter(description = "Nhóm danh mục cần tra cứu", example = "VEHICLE_TYPE") @PathVariable CatalogType type,
-        @Valid @ModelAttribute CatalogLookupRequest page,
+        @Valid @ModelAttribute CatalogLookupSearch page,
         HttpServletRequest request
     ) {
         // @Valid kiểm tra phân trang trước; service/repository chỉ đọc danh mục đang hoạt động.
@@ -62,11 +63,11 @@ public class CatalogItemAPI extends BaseController {
     @PostMapping(Routes.ADMIN_CATALOGS)
     @Operation(
         summary = "Tạo mục danh mục",
-        description = "Yêu cầu CATALOG_CREATE (hoặc CATALOG_WRITE tương thích). Server tự sinh mã nếu null; tên vi/en bắt buộc; code trùng trả 409; audit lấy từ principal."
+        description = "Cần grant POST đúng endpoint trong DB. Server tự sinh mã nếu null; tên vi/en bắt buộc; code trùng trả 409; audit lấy từ principal."
     )
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResult<CatalogResponse> create(
-        @Valid @RequestBody CatalogCreateRequest body,
+        @Validated(RequestGroups.Create.class) @RequestBody CatalogRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
@@ -79,7 +80,7 @@ public class CatalogItemAPI extends BaseController {
     @GetMapping(Routes.ADMIN_CATALOG_BY_ID)
     @Operation(
         summary = "Đọc danh mục quản trị",
-        description = "Yêu cầu CATALOG_READ; xem cả bản đã xóa mềm, không thay đổi API tra cứu công khai"
+        description = "Cần grant GET đúng endpoint trong DB; xem cả bản đã xóa mềm, không thay đổi API tra cứu công khai"
     )
     public ApiResult<CatalogResponse> find(
         @Parameter(description = "ID danh mục, số nguyên dương", example = "1") @PathVariable @Min(
@@ -94,14 +95,14 @@ public class CatalogItemAPI extends BaseController {
     @PutMapping(Routes.ADMIN_CATALOG_BY_ID)
     @Operation(
         summary = "Sửa danh mục",
-        description = "Yêu cầu CATALOG_UPDATE (hoặc CATALOG_WRITE tương thích); version cũ trả COM008/409"
+        description = "Cần grant PUT đúng endpoint trong DB; version cũ trả COM008/409"
     )
     public ApiResult<CatalogResponse> update(
         @Parameter(description = "ID danh mục, số nguyên dương", example = "1") @PathVariable @Min(
             value = 1,
             message = "{validation.invalid}"
         ) long id,
-        @Valid @RequestBody CatalogUpdateRequest body,
+        @Validated(RequestGroups.Update.class) @RequestBody CatalogRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
@@ -111,17 +112,150 @@ public class CatalogItemAPI extends BaseController {
     @DeleteMapping(Routes.ADMIN_CATALOG_BY_ID)
     @Operation(
         summary = "Xóa mềm danh mục",
-        description = "Yêu cầu CATALOG_DELETE, body chứa version; WRITE không có quyền xóa. Bản đã xóa biến mất khỏi tra cứu công khai, audit vẫn giữ."
+        description = "Cần grant DELETE đúng endpoint và body chứa version. Bản đã xóa biến mất khỏi tra cứu công khai, audit vẫn giữ."
     )
     public ApiResult<CatalogResponse> delete(
         @Parameter(description = "ID danh mục, số nguyên dương", example = "1") @PathVariable @Min(
             value = 1,
             message = "{validation.invalid}"
         ) long id,
-        @Valid @RequestBody CatalogDeleteRequest body,
+        @Validated(RequestGroups.Delete.class) @RequestBody CatalogRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> catalogs.delete(id, body.getVersion(), actor, locale(request)));
+    }
+
+    @GetMapping(Routes.ADMIN_VEHICLE_TYPES)
+    @Operation(summary = "Danh sách loại xe", description = "Cần grant GET đúng endpoint trong DB; phân trang server.")
+    public ApiResult<PageResponse<CatalogResponse>> listVehicleType(
+        @Valid @ModelAttribute CatalogSearch page,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () -> catalogs.page(CatalogType.VEHICLE_TYPE, page, locale(request)));
+    }
+
+    @GetMapping(Routes.ADMIN_VEHICLE_TYPES + Routes.BY_ID)
+    @Operation(
+        summary = "Chi tiết loại xe",
+        description = "ID thuộc loại khác trả 404; GET menu không cấp GET dữ liệu."
+    )
+    public ApiResult<CatalogResponse> findVehicleType(
+        @Parameter(description = "ID danh mục dương") @PathVariable @Min(1) long id,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () -> catalogs.find(CatalogType.VEHICLE_TYPE, id, locale(request)));
+    }
+
+    @PostMapping(Routes.ADMIN_VEHICLE_TYPES)
+    @Operation(
+        summary = "Tạo loại xe",
+        description = "Type phải khớp tài nguyên server; actor/audit không nhận từ client."
+    )
+    public ApiResult<CatalogResponse> createVehicleType(
+        @Validated(RequestGroups.Create.class) @RequestBody CatalogRequest body,
+        @AuthenticationPrincipal UserPrincipal actor,
+        HttpServletRequest request
+    ) {
+        return execute(HttpStatus.CREATED, SuccessCode.CREATED, request, () ->
+            catalogs.create(CatalogType.VEHICLE_TYPE, body, actor, locale(request))
+        );
+    }
+
+    @PutMapping(Routes.ADMIN_VEHICLE_TYPES + Routes.BY_ID)
+    @Operation(
+        summary = "Sửa loại xe",
+        description = "Giữ code/type; kiểm version trong transaction, xung đột trả 409."
+    )
+    public ApiResult<CatalogResponse> updateVehicleType(
+        @Parameter(description = "ID danh mục dương") @PathVariable @Min(1) long id,
+        @Validated(RequestGroups.Update.class) @RequestBody CatalogRequest body,
+        @AuthenticationPrincipal UserPrincipal actor,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () ->
+            catalogs.update(CatalogType.VEHICLE_TYPE, id, body, actor, locale(request))
+        );
+    }
+
+    @DeleteMapping(Routes.ADMIN_VEHICLE_TYPES + Routes.BY_ID)
+    @Operation(summary = "Ngừng dùng loại xe", description = "Xóa mềm, giữ tham chiếu; WRITE không cấp DELETE.")
+    public ApiResult<CatalogResponse> deleteVehicleType(
+        @Parameter(description = "ID danh mục dương") @PathVariable @Min(1) long id,
+        @Validated(RequestGroups.Delete.class) @RequestBody CatalogRequest body,
+        @AuthenticationPrincipal UserPrincipal actor,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () ->
+            catalogs.delete(CatalogType.VEHICLE_TYPE, id, body.getVersion(), actor, locale(request))
+        );
+    }
+
+    @GetMapping(Routes.ADMIN_BOOKING_SOURCES)
+    @Operation(
+        summary = "Danh sách nguồn đặt chỗ",
+        description = "Cần grant GET đúng endpoint trong DB; phân trang server."
+    )
+    public ApiResult<PageResponse<CatalogResponse>> listBookingSource(
+        @Valid @ModelAttribute CatalogSearch page,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () -> catalogs.page(CatalogType.BOOKING_SOURCE, page, locale(request)));
+    }
+
+    @GetMapping(Routes.ADMIN_BOOKING_SOURCES + Routes.BY_ID)
+    @Operation(
+        summary = "Chi tiết nguồn đặt chỗ",
+        description = "ID thuộc loại khác trả 404; GET menu không cấp GET dữ liệu."
+    )
+    public ApiResult<CatalogResponse> findBookingSource(
+        @Parameter(description = "ID danh mục dương") @PathVariable @Min(1) long id,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () -> catalogs.find(CatalogType.BOOKING_SOURCE, id, locale(request)));
+    }
+
+    @PostMapping(Routes.ADMIN_BOOKING_SOURCES)
+    @Operation(
+        summary = "Tạo nguồn đặt chỗ",
+        description = "Type phải khớp tài nguyên server; actor/audit không nhận từ client."
+    )
+    public ApiResult<CatalogResponse> createBookingSource(
+        @Validated(RequestGroups.Create.class) @RequestBody CatalogRequest body,
+        @AuthenticationPrincipal UserPrincipal actor,
+        HttpServletRequest request
+    ) {
+        return execute(HttpStatus.CREATED, SuccessCode.CREATED, request, () ->
+            catalogs.create(CatalogType.BOOKING_SOURCE, body, actor, locale(request))
+        );
+    }
+
+    @PutMapping(Routes.ADMIN_BOOKING_SOURCES + Routes.BY_ID)
+    @Operation(
+        summary = "Sửa nguồn đặt chỗ",
+        description = "Giữ code/type; kiểm version trong transaction, xung đột trả 409."
+    )
+    public ApiResult<CatalogResponse> updateBookingSource(
+        @Parameter(description = "ID danh mục dương") @PathVariable @Min(1) long id,
+        @Validated(RequestGroups.Update.class) @RequestBody CatalogRequest body,
+        @AuthenticationPrincipal UserPrincipal actor,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () ->
+            catalogs.update(CatalogType.BOOKING_SOURCE, id, body, actor, locale(request))
+        );
+    }
+
+    @DeleteMapping(Routes.ADMIN_BOOKING_SOURCES + Routes.BY_ID)
+    @Operation(summary = "Ngừng dùng nguồn đặt chỗ", description = "Xóa mềm, giữ tham chiếu; WRITE không cấp DELETE.")
+    public ApiResult<CatalogResponse> deleteBookingSource(
+        @Parameter(description = "ID danh mục dương") @PathVariable @Min(1) long id,
+        @Validated(RequestGroups.Delete.class) @RequestBody CatalogRequest body,
+        @AuthenticationPrincipal UserPrincipal actor,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () ->
+            catalogs.delete(CatalogType.BOOKING_SOURCE, id, body.getVersion(), actor, locale(request))
+        );
     }
 }

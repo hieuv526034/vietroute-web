@@ -1,0 +1,384 @@
+package vn.vietroute.business.tracking.repo;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.springframework.stereotype.Repository;
+import vn.vietroute.auth.repo.UserRoleRepo;
+import vn.vietroute.business.tracking.dto.request.TrackingRequest;
+import vn.vietroute.business.tracking.dto.response.TrackingPointResponse;
+import vn.vietroute.business.tracking.dto.response.TrackingResponse;
+import vn.vietroute.business.trip.dto.response.TripResponse;
+import vn.vietroute.common.config.integration.TrackingSettings;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
+import vn.vietroute.common.constant.ErrorCode;
+import vn.vietroute.common.exception.BusinessException;
+
+/** Vị trí ghi thẳng DB; caller luôn giữ guard và khóa trip, không đọc metadata consent qua API public. */
+@Repository
+public class TrackingRepo {
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @EqualsAndHashCode
+    public static class State {
+
+        private UUID key;
+
+        private boolean sharing;
+
+        private long driverUserId;
+
+        private Instant startedAt;
+
+        private TrackingPointResponse latest;
+    }
+
+    /** Caller đã khóa trip; không khóa ngược state → trip. */
+    public State state(Connection connection, long tripId) throws SQLException {
+        try (PreparedStatement query = connection.prepareStatement("SELECT * FROM trip_tracking WHERE trip_id=?")) {
+            query.setLong(1, tripId);
+            try (ResultSet row = query.executeQuery()) {
+                return row.next()
+                    ? new State(
+                          row.getObject("session_key", UUID.class),
+                          row.getBoolean("sharing"),
+                          row.getLong("driver_user_id"),
+                          row.getTimestamp("started_at").toInstant(),
+                          point(row)
+                      )
+                    : null;
+            }
+        }
+    }
+
+    /** Bật lại luôn cấp nonce mới, xóa snapshot cũ; không tái công bố mẫu của lần consent hoặc tài xế trước. */
+    public void start(Connection connection, TripResponse trip, UUID key, Instant now, long actor) throws SQLException {
+        try (
+            PreparedStatement query = connection.prepareStatement(
+                """
+                INSERT INTO trip_tracking(trip_id, carrier_id, scope_id, driver_user_id, session_key, sharing,
+                    started_at, created_by, updated_by)
+                VALUES (?, ?, ?, ?, ?, true, ?, ?, ?)
+                ON CONFLICT (trip_id)
+                DO UPDATE
+                SET driver_user_id = EXCLUDED.driver_user_id, session_key = EXCLUDED.session_key, sharing = true,
+                    started_at = EXCLUDED.started_at, latitude = NULL, longitude = NULL, accuracy = NULL,
+                    measured_at = NULL, received_at = NULL, updated_by = EXCLUDED.updated_by,
+                        updated_at = CURRENT_TIMESTAMP,
+                    version = trip_tracking.version + 1
+                """
+            )
+        ) {
+            query.setLong(1, trip.getId());
+            query.setLong(2, trip.getCarrierId());
+            query.setLong(3, trip.getScopeId());
+            query.setLong(4, actor);
+            query.setObject(5, key);
+            query.setObject(6, now.atOffset(ZoneOffset.UTC));
+            query.setLong(7, actor);
+            query.setLong(8, actor);
+            query.executeUpdate();
+        }
+    }
+
+    /** Dừng/đóng chuyến xóa tọa độ snapshot trong cùng transaction; history chỉ còn phục vụ retention nội bộ. */
+    public void stop(Connection connection, long tripId, long actor) throws SQLException {
+        try (
+            PreparedStatement query = connection.prepareStatement(
+                """
+                UPDATE trip_tracking
+                SET sharing = false, latitude = NULL, longitude = NULL, accuracy = NULL, measured_at = NULL,
+                    received_at = NULL, updated_by = ?, updated_at = CURRENT_TIMESTAMP, version = version + 1
+                WHERE trip_id = ? AND sharing
+                """
+            )
+        ) {
+            query.setLong(1, actor);
+            query.setLong(2, tripId);
+            query.executeUpdate();
+        }
+    }
+
+    /** Snapshot và mẫu lịch sử cùng transaction, tần suất/nonce đã được service kiểm dưới khóa trip. */
+    public void sample(Connection connection, TripResponse trip, TrackingRequest body, Instant now, long actor)
+        throws SQLException {
+        prune(connection, trip.getId(), now);
+        try (
+            PreparedStatement query = connection.prepareStatement(
+                """
+                UPDATE trip_tracking
+                SET latitude = ?, longitude = ?, accuracy = ?, measured_at = ?, received_at = ?, updated_by = ?,
+                    updated_at = CURRENT_TIMESTAMP, version = version + 1
+                WHERE trip_id = ? AND session_key = ? AND sharing AND driver_user_id = ?
+                """
+            )
+        ) {
+            query.setBigDecimal(1, body.getLatitude());
+            query.setBigDecimal(2, body.getLongitude());
+            query.setBigDecimal(3, body.getAccuracy());
+            query.setObject(4, body.getMeasuredAt().atOffset(ZoneOffset.UTC));
+            query.setObject(5, now.atOffset(ZoneOffset.UTC));
+            query.setLong(6, actor);
+            query.setLong(7, trip.getId());
+            query.setObject(8, body.getSessionKey());
+            query.setLong(9, actor);
+            if (query.executeUpdate() != 1) throw new BusinessException(ErrorCode.TRACKING_SESSION);
+        }
+        try (
+            PreparedStatement query = connection.prepareStatement(
+                """
+                INSERT INTO trip_locations(trip_id, carrier_id, scope_id, driver_user_id, session_key, source,
+                    latitude, longitude, accuracy, measured_at, received_at, created_by, updated_by)
+                VALUES (?, ?, ?, ?, ?, 'BROWSER', ?, ?, ?, ?, ?, ?, ?)
+                """
+            )
+        ) {
+            query.setLong(1, trip.getId());
+            query.setLong(2, trip.getCarrierId());
+            query.setLong(3, trip.getScopeId());
+            query.setLong(4, actor);
+            query.setObject(5, body.getSessionKey());
+            query.setBigDecimal(6, body.getLatitude());
+            query.setBigDecimal(7, body.getLongitude());
+            query.setBigDecimal(8, body.getAccuracy());
+            query.setObject(9, body.getMeasuredAt().atOffset(ZoneOffset.UTC));
+            query.setObject(10, now.atOffset(ZoneOffset.UTC));
+            query.setLong(11, actor);
+            query.setLong(12, actor);
+            query.executeUpdate();
+        }
+    }
+
+    /** Khóa SHARE trên trip giữ snapshot/trace nhất quán với bật/tắt/cập nhật, không cho GET hồi sinh consent. */
+    public TrackingResponse view(
+        Connection connection,
+        long tripId,
+        boolean scoped,
+        Long bookingId,
+        Long customerId,
+        boolean enabled,
+        Instant now
+    ) throws SQLException {
+        String driverEligible = """
+        EXISTS (
+            SELECT 1
+            FROM carrier_drivers cd
+            JOIN auth_users du ON du.id = cd.user_id AND du.active AND NOT du.deleted
+                AND NOT du.activation_pending
+                AND NOT du.must_change_password
+                AND du.email_verified_at IS NOT NULL
+            JOIN auth_user_roles ur ON ur.user_id = du.id AND ur.scope_id = 0 AND ur.active
+            JOIN auth_roles rr ON rr.code = ur.role_code AND rr.active AND NOT rr.deleted
+            JOIN auth_role_functions rf ON rf.role_code = rr.code
+            JOIN auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
+            JOIN auth_function_resources fr ON fr.function_code = f.code
+            WHERE cd.id = t.driver_id AND cd.carrier_id = t.carrier_id AND cd.scope_id = t.scope_id
+                AND cd.active
+                AND cd.user_id = t.driver_user_id
+                AND fr.target = ?
+                AND (rr.all_scopes
+                OR EXISTS (
+                    SELECT 1
+                    FROM auth_user_roles sr
+                    WHERE sr.user_id = du.id AND sr.role_code = rr.code AND sr.scope_id = t.scope_id
+                        AND sr.active
+                ))
+        )
+        """;
+        String sql = """
+        SELECT t.status, t.driver_user_id AS assigned_user, %s AS eligible, %s AS driver_eligible
+        FROM carrier_trips t
+        JOIN carriers owner ON owner.id = t.carrier_id AND owner.scope_id = t.scope_id
+        JOIN (
+            SELECT scope_id AS id, scope_code AS code, scope_name_vi AS name_vi, scope_name_en AS name_en,
+                scope_active AS active, scope_version AS version, updated_at, updated_by
+            FROM carriers
+        ) ds ON ds.id = t.scope_id
+            AND ds.active
+        WHERE t.id = ?
+        %s
+        FOR SHARE OF t
+        """.formatted(
+            bookingId == null
+                ? "true"
+                : """
+                  EXISTS (
+                      SELECT 1
+                      FROM bookings b
+                      WHERE b.id = ? AND b.trip_id = t.id AND b.customer_id = ?
+                          AND b.status = 'CONFIRMED'
+                  )
+                  """,
+            driverEligible,
+            !scoped ? "" : " AND " + UserRoleRepo.visibleSql()
+        );
+        String status;
+        long assigned;
+        boolean eligible;
+        boolean driverReady;
+        try (PreparedStatement query = connection.prepareStatement(sql)) {
+            int at = 1;
+            if (bookingId != null) {
+                query.setLong(at++, bookingId);
+                query.setLong(at++, customerId);
+            }
+            query.setString(at++, "POST " + Routes.DRIVER_TRIPS + Routes.TRIP_TRACKING_SAMPLES);
+            query.setLong(at++, tripId);
+            if (scoped) UserRoleRepo.bindVisible(query, at);
+            try (ResultSet row = query.executeQuery()) {
+                if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
+                status = row.getString("status");
+                assigned = row.getLong("assigned_user");
+                eligible = row.getBoolean("eligible");
+                driverReady = row.getBoolean("driver_eligible");
+            }
+        }
+        if (!enabled) return empty("DISABLED", now, null);
+        if (status.equals("COMPLETED") || status.equals("CANCELLED") || status.equals("DRAFT")) return empty(
+            "CLOSED",
+            now,
+            null
+        );
+        if (!eligible) return empty("UNAVAILABLE", now, null);
+        if (!driverReady) return empty("OFF", now, null);
+        State state = state(connection, tripId);
+        if (state == null || !state.isSharing() || state.getDriverUserId() != assigned) return empty("OFF", now, null);
+        Instant latest = state.getLatest() == null ? state.getStartedAt() : state.getLatest().getReceivedAt();
+        if (now.isAfter(latest.plusSeconds(TrackingSettings.LEASE_SECONDS))) return empty(
+            "STALE",
+            now,
+            state.getLatest() == null ? null : latest
+        );
+        if (state.getLatest() == null) return empty("WAITING", now, null);
+        ArrayList<TrackingPointResponse> points = new ArrayList<TrackingPointResponse>();
+        try (
+            PreparedStatement query = connection.prepareStatement(
+                """
+                SELECT latitude, longitude, accuracy, measured_at, received_at
+                FROM trip_locations
+                WHERE trip_id = ? AND session_key = ? AND received_at >= ?
+                ORDER BY id DESC
+                LIMIT 100
+                """
+            )
+        ) {
+            query.setLong(1, tripId);
+            query.setObject(2, state.getKey());
+            query.setObject(3, now.minusSeconds(TrackingSettings.RETENTION_DAYS * 86400L).atOffset(ZoneOffset.UTC));
+            try (ResultSet row = query.executeQuery()) {
+                while (row.next()) points.add(point(row));
+            }
+        }
+        return new TrackingResponse(
+            now.isAfter(latest.plusSeconds(TrackingSettings.STALE_SECONDS)) ? "STALE" : "LIVE",
+            "UNCONFIGURED",
+            now,
+            latest,
+            state.getLatest(),
+            List.copyOf(points)
+        );
+    }
+
+    private static TrackingResponse empty(String status, Instant now, Instant lastReceived) {
+        return new TrackingResponse(status, "UNCONFIGURED", now, lastReceived, null, List.of());
+    }
+
+    private static TrackingPointResponse point(ResultSet row) throws SQLException {
+        Timestamp measured = row.getTimestamp("measured_at");
+        return measured == null
+            ? null
+            : new TrackingPointResponse(
+                  row.getBigDecimal("latitude"),
+                  row.getBigDecimal("longitude"),
+                  row.getBigDecimal("accuracy"),
+                  measured.toInstant(),
+                  row.getTimestamp("received_at").toInstant()
+              );
+    }
+
+    /** Cắt trace theo trip trước INSERT; cleanup chung theo lô có advisory lock, không chờ node khác hoặc giữ hàng đợi RAM. */
+    private void prune(Connection connection, long tripId, Instant now) throws SQLException {
+        try (
+            PreparedStatement query = connection.prepareStatement(
+                """
+                DELETE
+                FROM trip_locations
+                WHERE id IN (
+                    SELECT id
+                    FROM trip_locations
+                    WHERE trip_id = ?
+                    ORDER BY id DESC OFFSET ?
+                    LIMIT ?
+                )
+                """
+            )
+        ) {
+            query.setLong(1, tripId);
+            query.setInt(2, TrackingSettings.TRIP_CAPACITY - 1);
+            query.setInt(3, TrackingSettings.CLEANUP_BATCH);
+            query.executeUpdate();
+        }
+        try (
+            PreparedStatement query = connection.prepareStatement("SELECT pg_try_advisory_xact_lock(781205622)");
+            ResultSet row = query.executeQuery()
+        ) {
+            row.next();
+            if (!row.getBoolean(1)) return;
+        }
+        try (
+            PreparedStatement query = connection.prepareStatement(
+                """
+                DELETE
+                FROM trip_locations
+                WHERE id IN (
+                    SELECT id
+                    FROM trip_locations
+                    WHERE received_at < ?
+                    ORDER BY received_at, id
+                    LIMIT ?
+                )
+                """
+            )
+        ) {
+            query.setObject(1, now.minusSeconds(TrackingSettings.RETENTION_DAYS * 86400L).atOffset(ZoneOffset.UTC));
+            query.setInt(2, TrackingSettings.CLEANUP_BATCH);
+            query.executeUpdate();
+        }
+        try (
+            PreparedStatement query = connection.prepareStatement(
+                """
+                DELETE
+                FROM trip_locations
+                WHERE id IN (
+                    SELECT id
+                    FROM trip_locations
+                    ORDER BY received_at, id
+                    LIMIT LEAST(?, GREATEST(0, (
+                        SELECT count(*)
+                        FROM trip_locations
+                    ) - ?))
+                )
+                """
+            )
+        ) {
+            query.setInt(1, TrackingSettings.CLEANUP_BATCH);
+            query.setInt(2, TrackingSettings.GLOBAL_CAPACITY - 1);
+            query.executeUpdate();
+        }
+    }
+}

@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,24 +18,23 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.business.location.dto.request.LocationCreateRequest;
-import vn.vietroute.business.location.dto.request.LocationLookupRequest;
-import vn.vietroute.business.location.dto.request.LocationSearchRequest;
-import vn.vietroute.business.location.dto.request.LocationUpdateRequest;
-import vn.vietroute.business.location.dto.request.ProvinceCreateRequest;
-import vn.vietroute.business.location.dto.request.ProvinceLookupRequest;
-import vn.vietroute.business.location.dto.request.ProvinceSearchRequest;
-import vn.vietroute.business.location.dto.request.ProvinceUpdateRequest;
+import vn.vietroute.business.location.dto.request.LocationRequest;
+import vn.vietroute.business.location.dto.request.ProvinceRequest;
 import vn.vietroute.business.location.dto.response.LocationLookupResponse;
 import vn.vietroute.business.location.dto.response.LocationResponse;
 import vn.vietroute.business.location.dto.response.ProvinceLookupResponse;
 import vn.vietroute.business.location.dto.response.ProvinceResponse;
+import vn.vietroute.business.location.dto.search.LocationLookupSearch;
+import vn.vietroute.business.location.dto.search.LocationSearch;
+import vn.vietroute.business.location.dto.search.ProvinceLookupSearch;
+import vn.vietroute.business.location.dto.search.ProvinceSearch;
 import vn.vietroute.business.location.service.LocationService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
+import vn.vietroute.common.validation.RequestGroups;
 import vn.vietroute.common.web.response.ApiResponses;
 import vn.vietroute.common.web.response.ApiResult;
 
@@ -56,7 +56,7 @@ public class LocationAPI extends BaseController {
         description = "Chỉ dữ liệu đang sử dụng; địa điểm còn yêu cầu tỉnh/thành active. page từ 0, size tối đa 100, query nguyên văn; không trả audit."
     )
     public ApiResult<PageResponse<ProvinceLookupResponse>> lookupProvinces(
-        @Valid @ModelAttribute ProvinceLookupRequest page,
+        @Valid @ModelAttribute ProvinceLookupSearch page,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> locations.lookupProvinces(page, locale(request)));
@@ -65,10 +65,10 @@ public class LocationAPI extends BaseController {
     @GetMapping(Routes.ADMIN_PROVINCES)
     @Operation(
         summary = "Danh sách tỉnh/thành quản trị",
-        description = "ADMIN + LOCATION_READ; query, active và phân trang tại DB. Xem cả dữ liệu đã ngừng sử dụng."
+        description = "Grant GET endpoint địa điểm; query, active và phân trang tại DB. Xem cả dữ liệu đã ngừng sử dụng."
     )
     public ApiResult<PageResponse<ProvinceResponse>> provinces(
-        @Valid @ModelAttribute ProvinceSearchRequest page,
+        @Valid @ModelAttribute ProvinceSearch page,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> locations.provinces(page, locale(request)));
@@ -77,7 +77,7 @@ public class LocationAPI extends BaseController {
     @GetMapping(Routes.ADMIN_PROVINCES_BY_ID)
     @Operation(
         summary = "Đọc tỉnh/thành quản trị",
-        description = "ADMIN + LOCATION_READ; ID không tồn tại trả COM004/404, gồm cả bản ngừng sử dụng."
+        description = "Grant GET endpoint địa điểm; ID không tồn tại trả COM004/404, gồm cả bản ngừng sử dụng."
     )
     public ApiResult<ProvinceResponse> province(
         @Parameter(description = "ID tỉnh/thành, số nguyên dương") @PathVariable @Min(
@@ -93,10 +93,10 @@ public class LocationAPI extends BaseController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(
         summary = "Tạo tỉnh/thành",
-        description = "ADMIN + LOCATION_CREATE; mã trùng COM005/409, audit từ principal."
+        description = "Grant POST endpoint địa điểm; mã trùng COM005/409, audit từ principal."
     )
     public ApiResult<ProvinceResponse> createProvince(
-        @Valid @RequestBody ProvinceCreateRequest body,
+        @Validated(RequestGroups.Create.class) @RequestBody ProvinceRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
@@ -108,14 +108,14 @@ public class LocationAPI extends BaseController {
     @PutMapping(Routes.ADMIN_PROVINCES_BY_ID)
     @Operation(
         summary = "Sửa/ngừng sử dụng tỉnh/thành",
-        description = "ADMIN + LOCATION_UPDATE; version cũ COM008/409. Giữ mã, không xóa dữ liệu hoặc tham chiếu. Tỉnh tắt ẩn mọi địa điểm con khỏi tra cứu; bật lại giữ trạng thái riêng của từng con."
+        description = "Grant PUT endpoint địa điểm; version cũ COM008/409. Giữ mã, không xóa dữ liệu hoặc tham chiếu. Tỉnh tắt ẩn mọi địa điểm con khỏi tra cứu; bật lại giữ trạng thái riêng của từng con."
     )
     public ApiResult<ProvinceResponse> updateProvince(
         @Parameter(description = "ID tỉnh/thành, số nguyên dương") @PathVariable @Min(
             value = 1,
             message = "{validation.invalid}"
         ) long id,
-        @Valid @RequestBody ProvinceUpdateRequest body,
+        @Validated(RequestGroups.Update.class) @RequestBody ProvinceRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
@@ -128,7 +128,7 @@ public class LocationAPI extends BaseController {
         description = "Chỉ dữ liệu đang sử dụng; địa điểm còn yêu cầu tỉnh/thành active. page từ 0, size tối đa 100, query nguyên văn; không trả audit."
     )
     public ApiResult<PageResponse<LocationLookupResponse>> lookupLocations(
-        @Valid @ModelAttribute LocationLookupRequest page,
+        @Valid @ModelAttribute LocationLookupSearch page,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> locations.lookupLocations(page, locale(request)));
@@ -137,10 +137,10 @@ public class LocationAPI extends BaseController {
     @GetMapping(Routes.ADMIN_LOCATIONS)
     @Operation(
         summary = "Danh sách địa điểm quản trị",
-        description = "ADMIN + LOCATION_READ; query, active và phân trang tại DB. Xem cả dữ liệu đã ngừng sử dụng."
+        description = "Grant GET endpoint địa điểm; query, active và phân trang tại DB. Xem cả dữ liệu đã ngừng sử dụng."
     )
     public ApiResult<PageResponse<LocationResponse>> locations(
-        @Valid @ModelAttribute LocationSearchRequest page,
+        @Valid @ModelAttribute LocationSearch page,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> locations.locations(page, locale(request)));
@@ -149,7 +149,7 @@ public class LocationAPI extends BaseController {
     @GetMapping(Routes.ADMIN_LOCATIONS_BY_ID)
     @Operation(
         summary = "Đọc địa điểm quản trị",
-        description = "ADMIN + LOCATION_READ; ID không tồn tại trả COM004/404, gồm cả bản ngừng sử dụng."
+        description = "Grant GET endpoint địa điểm; ID không tồn tại trả COM004/404, gồm cả bản ngừng sử dụng."
     )
     public ApiResult<LocationResponse> location(
         @Parameter(description = "ID địa điểm, số nguyên dương") @PathVariable @Min(
@@ -165,10 +165,10 @@ public class LocationAPI extends BaseController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(
         summary = "Tạo địa điểm",
-        description = "ADMIN + LOCATION_CREATE; mã trùng COM005/409, audit từ principal. Tỉnh không tồn tại COM004/404; tỉnh ngừng sử dụng LOC001/409."
+        description = "Grant POST endpoint địa điểm; mã trùng COM005/409, audit từ principal. Tỉnh không tồn tại COM004/404; tỉnh ngừng sử dụng LOC001/409."
     )
     public ApiResult<LocationResponse> createLocation(
-        @Valid @RequestBody LocationCreateRequest body,
+        @Validated(RequestGroups.Create.class) @RequestBody LocationRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
@@ -180,14 +180,14 @@ public class LocationAPI extends BaseController {
     @PutMapping(Routes.ADMIN_LOCATIONS_BY_ID)
     @Operation(
         summary = "Sửa/ngừng sử dụng địa điểm",
-        description = "ADMIN + LOCATION_UPDATE; version cũ COM008/409. Giữ mã và tỉnh/thành, không xóa dữ liệu hoặc tham chiếu. Bật địa điểm yêu cầu tỉnh active; nếu không trả LOC001/409."
+        description = "Grant PUT endpoint địa điểm; version cũ COM008/409. Giữ mã và tỉnh/thành, không xóa dữ liệu hoặc tham chiếu. Bật địa điểm yêu cầu tỉnh active; nếu không trả LOC001/409."
     )
     public ApiResult<LocationResponse> updateLocation(
         @Parameter(description = "ID địa điểm, số nguyên dương") @PathVariable @Min(
             value = 1,
             message = "{validation.invalid}"
         ) long id,
-        @Valid @RequestBody LocationUpdateRequest body,
+        @Validated(RequestGroups.Update.class) @RequestBody LocationRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {

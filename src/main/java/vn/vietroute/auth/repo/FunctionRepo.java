@@ -54,11 +54,15 @@ public class FunctionRepo extends JpaRepositorySupport<Function, String> {
     }
 
     private static final String GRANTS = """
-    FROM auth_users u JOIN auth_user_roles ur ON ur.user_id=u.id AND ur.scope_id=0 AND ur.active
-    JOIN auth_roles r ON r.code=ur.role_code AND r.active AND NOT r.deleted
-    JOIN auth_role_functions rf ON rf.role_code=r.code JOIN auth_functions f ON f.code=rf.function_code AND f.active AND NOT f.deleted
-    JOIN auth_function_resources fr ON fr.function_code=f.code WHERE u.id=? AND u.active AND NOT u.deleted
-    AND NOT u.activation_pending AND NOT u.must_change_password AND u.email_verified_at IS NOT NULL
+    FROM auth_users u
+    JOIN auth_user_roles ur ON ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
+    JOIN auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
+    JOIN auth_role_functions rf ON rf.role_code = r.code
+    JOIN auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
+    JOIN auth_function_resources fr ON fr.function_code = f.code
+    WHERE u.id = ? AND u.active AND NOT u.deleted AND NOT u.activation_pending
+        AND NOT u.must_change_password
+        AND u.email_verified_at IS NOT NULL
     """;
 
     public List<FunctionDTO> capabilities(long user) {
@@ -67,9 +71,11 @@ public class FunctionRepo extends JpaRepositorySupport<Function, String> {
             Map<String, Set<String>> targets = new LinkedHashMap<>();
             try (
                 PreparedStatement query = connection.prepareStatement(
-                    "SELECT DISTINCT f.code,f.name_vi,f.name_en,fr.kind,fr.target " +
-                        GRANTS +
-                        " ORDER BY f.code,fr.target"
+                    """
+                    SELECT DISTINCT f.code, f.name_vi, f.name_en, fr.kind, fr.target
+                    %s
+                    ORDER BY f.code, fr.target
+                    """.formatted(GRANTS)
                 )
             ) {
                 query.setLong(1, user);
@@ -101,9 +107,13 @@ public class FunctionRepo extends JpaRepositorySupport<Function, String> {
             List<FunctionDTO> result = new ArrayList<>();
             try (
                 PreparedStatement query = connection.prepareStatement(
-                    "SELECT DISTINCT ON(fr.target) fr.target,fr.name_vi,fr.name_en,fr.icon " +
-                        GRANTS +
-                        " AND fr.kind='MENU' AND fr.http_method='GET' ORDER BY fr.target,f.sort_order,fr.sort_order,f.code"
+                    """
+                    SELECT DISTINCT ON(fr.target) fr.target, fr.name_vi, fr.name_en, fr.icon
+                    %s
+                        AND fr.kind = 'MENU'
+                        AND fr.http_method = 'GET'
+                    ORDER BY fr.target, f.sort_order, fr.sort_order, f.code
+                    """.formatted(GRANTS)
                 )
             ) {
                 query.setLong(1, user);

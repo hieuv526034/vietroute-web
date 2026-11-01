@@ -6,12 +6,11 @@ import org.springframework.stereotype.Service;
 import vn.vietroute.auth.repo.AccessChangeRepo;
 import vn.vietroute.auth.repo.UserRoleRepo;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.business.carrier.dto.request.CarrierCreateRequest;
-import vn.vietroute.business.carrier.dto.request.CarrierSearchRequest;
-import vn.vietroute.business.carrier.dto.request.CarrierUpdateRequest;
+import vn.vietroute.business.carrier.dto.request.CarrierRequest;
 import vn.vietroute.business.carrier.dto.response.CarrierResponse;
+import vn.vietroute.business.carrier.dto.search.CarrierSearch;
 import vn.vietroute.business.carrier.entity.Carrier;
-import vn.vietroute.business.carrier.repository.CarrierRepository;
+import vn.vietroute.business.carrier.repo.CarrierRepo;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.media.service.MediaService;
@@ -21,14 +20,14 @@ import vn.vietroute.common.media.service.MediaService;
 @RequiredArgsConstructor
 public class CarrierService {
 
-    private final CarrierRepository carriers;
+    private final CarrierRepo carriers;
     private final JdbcTransactions transactions;
     private final MediaService media;
 
     private final AccessChangeRepo changes;
 
     /** Count/trang đều lọc quyền scoped trong SQL, không union quyền từ nhà xe khác. */
-    public PageResponse<CarrierResponse> page(CarrierSearchRequest page) {
+    public PageResponse<CarrierResponse> page(CarrierSearch page) {
         PageResponse<Carrier> result = carriers.carriers(page);
         return new PageResponse<>(
             result.content().stream().map(CarrierResponse::from).toList(),
@@ -45,8 +44,8 @@ public class CarrierService {
         return transactions.execute(connection -> CarrierResponse.from(carriers.carrier(connection, id, false)));
     }
 
-    /** ADMIN tạo scope + nhà xe cùng transaction, không tự cấp mapping role cho người dùng thường. */
-    public CarrierResponse create(CarrierCreateRequest body, UserPrincipal actor) {
+    /** Actor có global target tạo scope + nhà xe cùng transaction, không tự cấp mapping role cho người dùng thường. */
+    public CarrierResponse create(CarrierRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
             UserRoleRepo.requireGlobal(connection, actor);
@@ -66,8 +65,8 @@ public class CarrierService {
         });
     }
 
-    /** Khóa ảnh trước entity, version/audit đồng thời; chỉ ADMIN được đổi trạng thái nhận nghiệp vụ. */
-    public CarrierResponse update(long id, CarrierUpdateRequest body, UserPrincipal actor) {
+    /** Khóa ảnh trước entity, version/audit đồng thời; đổi trạng thái nhận nghiệp vụ cần global target tương ứng. */
+    public CarrierResponse update(long id, CarrierRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
             if (body.getLogoMediaId() != null) media.requireReference(connection, body.getLogoMediaId(), actor);

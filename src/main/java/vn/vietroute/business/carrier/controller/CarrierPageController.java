@@ -32,4 +32,9 @@ public class CarrierPageController {
         model.addAttribute("fleetFeature", feature);
         return "carrier/manage";
     }
+
+    @GetMapping(Routes.PUBLIC_CARRIERS_PAGE)
+    public String publicPage() {
+        return "carrier/public";
+    }
 }

@@ -65,7 +65,7 @@
                                     th:text="#{ui.fleet.allStates}"
                                 ></option>
                                 <option
-                                    th:each="state : ${T(vn.vietroute.business.trip.entity.TripStatus).values()}"
+                                    th:each="state : ${T(vn.vietroute.business.trip.constant.TripStatus).values()}"
                                     th:value="${state}"
                                     th:text="#{'ui.trip.'+${state}}"
                                 ></option>

@@ -120,6 +120,18 @@ class OpenApiContractTest {
                 assertFalse(parameter(journal, name).isMissingNode(), name);
             // Client được dùng mã registry mới, Swagger không khóa role/permission thành enum bootstrap.
             assertFalse(schemas.path("Permission").has("enum"));
+            // DTO dùng chung không làm version bắt buộc khi tạo, hoặc code/type bắt buộc khi sửa/xóa.
+            assertRequired(spec, Routes.ADMIN_CATALOGS, "post", Set.of("type", "nameVi", "nameEn"));
+            assertRequired(spec, Routes.ADMIN_CATALOG_BY_ID, "put", Set.of("nameVi", "nameEn", "version"));
+            assertRequired(spec, Routes.ADMIN_CATALOG_BY_ID, "delete", Set.of("version"));
+            assertRequired(spec, Routes.ADMIN_TRIPS + Routes.TRIP_STATE, "put", Set.of("status", "version", "note"));
+            assertRequired(spec, Routes.ADMIN_TRIPS + Routes.TRIP_NOTICE, "put", Set.of("version", "note"));
+            assertRequired(
+                spec,
+                Routes.ADMIN_BOOKINGS + Routes.BOOKING_PAYMENT,
+                "put",
+                Set.of("kind", "amount", "requestKey", "version", "note")
+            );
             assertEquals("CUSTOM_ROLE", json.readValue("\"CUSTOM_ROLE\"", String.class));
         }
     }
@@ -129,6 +141,23 @@ class OpenApiContractTest {
             .filter(item -> item.path("name").asText().equals(name))
             .findFirst()
             .orElse(operation.path("missing"));
+    }
+
+    private static void assertRequired(JsonNode spec, String path, String method, Set<String> expected) {
+        JsonNode schema = resolve(
+            spec,
+            spec
+                .path("paths")
+                .path(path)
+                .path(method)
+                .path("requestBody")
+                .path("content")
+                .path("application/json")
+                .path("schema")
+        );
+        Set<String> actual = new HashSet<>();
+        schema.path("required").forEach(field -> actual.add(field.asText()));
+        assertEquals(expected, actual, method + " " + path);
     }
 
     private static JsonNode resolve(JsonNode spec, JsonNode schema) {

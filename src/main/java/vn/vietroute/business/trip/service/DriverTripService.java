@@ -6,19 +6,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.booking.dto.response.DriverPassengerResponse;
-import vn.vietroute.business.booking.repository.BookingLifecycleRepository;
-import vn.vietroute.business.booking.repository.BookingRepository;
-import vn.vietroute.business.carrier.repository.CarrierRepository;
-import vn.vietroute.business.tracking.repository.TrackingRepository;
-import vn.vietroute.business.trip.dto.request.DriverProgressRequest;
-import vn.vietroute.business.trip.dto.request.TripSearchRequest;
+import vn.vietroute.business.booking.repo.BookingRepo;
+import vn.vietroute.business.carrier.repo.CarrierRepo;
+import vn.vietroute.business.tracking.repo.TrackingRepo;
+import vn.vietroute.business.trip.constant.TripProgressAction;
+import vn.vietroute.business.trip.constant.TripStatus;
+import vn.vietroute.business.trip.dto.request.TripRequest;
 import vn.vietroute.business.trip.dto.response.TripResponse;
 import vn.vietroute.business.trip.dto.response.TripStopResponse;
-import vn.vietroute.business.trip.entity.TripStatus;
-import vn.vietroute.business.trip.repository.DriverProgressRepository;
-import vn.vietroute.business.trip.repository.TripRepository;
-import vn.vietroute.business.trip.repository.TripTemplateRepository;
-import vn.vietroute.business.trip.repository.TripTemplateRepository.Assets;
+import vn.vietroute.business.trip.dto.search.TripSearch;
+import vn.vietroute.business.trip.repo.TripRepo;
+import vn.vietroute.business.trip.repo.TripRepo.Assets;
+import vn.vietroute.business.trip.repo.TripStopRepo;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ErrorCode;
@@ -30,26 +29,24 @@ import vn.vietroute.common.validation.BusinessRules;
 @RequiredArgsConstructor
 public class DriverTripService {
 
-    private final TripRepository trips;
-    private final TripTemplateRepository templates;
-    private final CarrierRepository carriers;
-    private final DriverProgressRepository progress;
+    private final TripRepo trips;
+    private final CarrierRepo carriers;
+    private final TripStopRepo progress;
     private final JdbcTransactions transactions;
-    private final BookingLifecycleRepository bookings;
-    private final BookingRepository passengerBookings;
-    private final TrackingRepository tracking;
+    private final BookingRepo bookings;
+    private final TrackingRepo tracking;
 
-    /** Driver không cần BOOKING_READ; chỉ projection đón/trả sau kiểm chính phân công hiện hành. */
+    /** Driver không cần grant GET quản trị booking; chỉ projection đón/trả sau kiểm chính phân công hiện hành. */
     public PageResponse<DriverPassengerResponse> passengers(long id, PageRequest page, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
             trips.assigned(connection, id, false, actor.id());
-            return passengerBookings.passengers(connection, id, page);
+            return bookings.passengers(connection, id, page);
         });
     }
 
     /** SQL count/page cùng ràng buộc người được phân công, không có bypass ADMIN. */
-    public PageResponse<TripResponse> page(TripSearchRequest search, UserPrincipal actor) {
+    public PageResponse<TripResponse> page(TripSearch search, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         return trips.assignedPage(search, actor.id());
     }
@@ -61,44 +58,47 @@ public class DriverTripService {
     }
 
     /** Khóa trip trước, kiểm trạng thái/điểm, ghi actual/state/event cùng transaction. */
-    public TripResponse update(long id, DriverProgressRequest body, UserPrincipal actor) {
+    public TripResponse update(long id, TripRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
-        BusinessRules.require(body.action() != null, ErrorCode.INVALID_REQUEST);
+        BusinessRules.require(body.getAction() != null, ErrorCode.INVALID_REQUEST);
         return transactions.execute(connection -> {
             TripResponse trip = trips.assigned(connection, id, true, actor.id());
-            BusinessRules.require(body.version() != null && body.version() == trip.version(), ErrorCode.STALE_VERSION);
-            List<TripStopResponse> stops = trip.stops();
+            BusinessRules.require(
+                body.getVersion() != null && body.getVersion() == trip.getVersion(),
+                ErrorCode.STALE_VERSION
+            );
+            List<TripStopResponse> stops = trip.getStops();
             int count = stops.size();
             Instant now = Instant.now();
             BusinessRules.require(
-                count >= 2 && body.stopOrder() >= 1 && body.stopOrder() <= count,
+                count >= 2 && body.getStopOrder() >= 1 && body.getStopOrder() <= count,
                 ErrorCode.TRIP_STATE_CONFLICT
             );
-            TripStopResponse stop = stops.get(body.stopOrder() - 1);
-            TripStatus state = trip.status();
+            TripStopResponse stop = stops.get(body.getStopOrder() - 1);
+            TripStatus state = trip.getStatus();
             String event;
-            switch (body.action()) {
+            switch (body.getAction()) {
                 case START -> {
                     BusinessRules.require(
                         state == TripStatus.OPEN &&
-                            body.stopOrder() == 1 &&
-                            stop.actualArrivalAt() == null &&
-                            !now.isBefore(trip.departureAt().minusSeconds(1800)),
+                            body.getStopOrder() == 1 &&
+                            stop.getActualArrivalAt() == null &&
+                            !now.isBefore(trip.getDepartureAt().minusSeconds(1800)),
                         ErrorCode.TRIP_STATE_CONFLICT
                     );
-                    Assets assets = templates.assets(
+                    Assets assets = trips.assets(
                         connection,
-                        trip.carrierId(),
-                        trip.scopeId(),
-                        trip.vehicleId(),
-                        trip.driverId()
+                        trip.getCarrierId(),
+                        trip.getScopeId(),
+                        trip.getVehicleId(),
+                        trip.getDriverId()
                     );
-                    carriers.requireDriverUser(connection, assets.driverUserId(), trip.scopeId());
+                    carriers.requireDriverUser(connection, assets.getDriverUserId(), trip.getScopeId());
                     BusinessRules.require(
-                        assets.driverUserId() == actor.id() && assets.capacity() >= trip.capacity(),
+                        assets.getDriverUserId() == actor.id() && assets.getCapacity() >= trip.getCapacity(),
                         ErrorCode.TRIP_STATE_CONFLICT
                     );
-                    templates.requireAvailable(connection, id, assets, trip.departureAt(), trip.endAt(), true);
+                    trips.requireAvailable(connection, id, assets, trip.getDepartureAt(), trip.getEndAt(), true);
                     progress.mark(connection, trip, 1, true, now, actor.id());
                     progress.mark(connection, trip, 1, false, now, actor.id());
                     state = TripStatus.IN_PROGRESS;
@@ -107,35 +107,35 @@ public class DriverTripService {
                 case ARRIVE -> {
                     BusinessRules.require(
                         state == TripStatus.IN_PROGRESS &&
-                            body.stopOrder() > 1 &&
-                            stop.actualArrivalAt() == null &&
-                            stops.get(body.stopOrder() - 2).actualDepartureAt() != null &&
-                            !now.isBefore(stops.get(body.stopOrder() - 2).actualDepartureAt()),
+                            body.getStopOrder() > 1 &&
+                            stop.getActualArrivalAt() == null &&
+                            stops.get(body.getStopOrder() - 2).getActualDepartureAt() != null &&
+                            !now.isBefore(stops.get(body.getStopOrder() - 2).getActualDepartureAt()),
                         ErrorCode.TRIP_STATE_CONFLICT
                     );
-                    progress.mark(connection, trip, body.stopOrder(), true, now, actor.id());
+                    progress.mark(connection, trip, body.getStopOrder(), true, now, actor.id());
                     event = "ARRIVED";
                 }
                 case DEPART -> {
                     BusinessRules.require(
                         state == TripStatus.IN_PROGRESS &&
-                            body.stopOrder() > 1 &&
-                            body.stopOrder() < count &&
-                            stop.actualArrivalAt() != null &&
-                            stop.actualDepartureAt() == null &&
-                            !now.isBefore(stop.actualArrivalAt()),
+                            body.getStopOrder() > 1 &&
+                            body.getStopOrder() < count &&
+                            stop.getActualArrivalAt() != null &&
+                            stop.getActualDepartureAt() == null &&
+                            !now.isBefore(stop.getActualArrivalAt()),
                         ErrorCode.TRIP_STATE_CONFLICT
                     );
-                    progress.mark(connection, trip, body.stopOrder(), false, now, actor.id());
+                    progress.mark(connection, trip, body.getStopOrder(), false, now, actor.id());
                     event = "DEPARTED";
                 }
                 case COMPLETE -> {
                     BusinessRules.require(
                         state == TripStatus.IN_PROGRESS &&
-                            body.stopOrder() == count &&
-                            stop.actualArrivalAt() != null &&
-                            stop.actualDepartureAt() == null &&
-                            !now.isBefore(stop.actualArrivalAt()),
+                            body.getStopOrder() == count &&
+                            stop.getActualArrivalAt() != null &&
+                            stop.getActualDepartureAt() == null &&
+                            !now.isBefore(stop.getActualArrivalAt()),
                         ErrorCode.TRIP_STATE_CONFLICT
                     );
                     progress.mark(connection, trip, count, false, now, actor.id());
@@ -145,25 +145,24 @@ public class DriverTripService {
                 default -> throw new IllegalArgumentException("Hành động tiến độ chưa hỗ trợ");
             }
             if (
-                body.action() == DriverProgressRequest.Action.START ||
-                body.action() == DriverProgressRequest.Action.DEPART
-            ) bookings.departed(connection, id, body.stopOrder(), actor.id());
-            if (body.action() == DriverProgressRequest.Action.ARRIVE) bookings.arrived(
+                body.getAction() == TripProgressAction.START || body.getAction() == TripProgressAction.DEPART
+            ) bookings.departed(connection, id, body.getStopOrder(), actor.id());
+            if (body.getAction() == TripProgressAction.ARRIVE) bookings.arrived(
                 connection,
                 id,
-                body.stopOrder(),
+                body.getStopOrder(),
                 actor.id()
             );
-            trips.state(connection, trip, state, trip.operationNote(), actor.id());
+            trips.state(connection, trip, state, trip.getOperationNote(), actor.id());
             if (state == TripStatus.COMPLETED) tracking.stop(connection, id, actor.id());
             trips.event(
                 connection,
                 id,
-                trip.carrierId(),
-                trip.scopeId(),
+                trip.getCarrierId(),
+                trip.getScopeId(),
                 event,
-                body.stopOrder(),
-                body.note().strip(),
+                body.getStopOrder(),
+                body.getNote().strip(),
                 actor.id()
             );
             return trips.assigned(connection, id, false, actor.id());

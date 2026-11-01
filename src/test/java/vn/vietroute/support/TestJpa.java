@@ -18,7 +18,7 @@ public final class TestJpa {
         LocalContainerEntityManagerFactoryBean factory = new LocalContainerEntityManagerFactoryBean();
         factory.setDataSource(source);
         factory.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
-        factory.setPackagesToScan("vn.vietroute.auth.entity");
+        factory.setPackagesToScan("vn.vietroute.auth.entity", "vn.vietroute.business");
         factory.setJpaPropertyMap(Map.of("hibernate.hbm2ddl.auto", "none"));
         factory.afterPropertiesSet();
         MANAGER = SharedEntityManagerCreator.createSharedEntityManager(factory.getObject());

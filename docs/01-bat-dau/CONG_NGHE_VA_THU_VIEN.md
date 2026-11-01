@@ -17,14 +17,14 @@ VietRoute là ứng dụng Java server render giao diện bằng Thymeleaf, cung
 | Jakarta Servlet | 6.0.0 API, provided | Chuẩn request/response/filter/multipart; Tomcat cung cấp implementation | [khởi tạo WAR](../../src/main/java/vn/vietroute/common/config/WebApplicationInitializer.java) |
 | Apache Tomcat | 10.1; embedded local 10.1.61 | Servlet container; chạy WAR production và Run/Debug local | [Dockerfile](../../Dockerfile), [cấu hình local](CHAY_LOCAL_VA_CLOUDINARY.md) |
 | Jackson | BOM 2.22.4 | JSON request/response, `JavaTimeModule` cho Instant; chặn field lạ/key trùng/JSON dư | [RootConfig](../../src/main/java/vn/vietroute/common/config/RootConfig.java) |
-| Spring Data JPA / Hibernate ORM | 3.5.13 / 6.6.59.Final | CRUD auth, chia sẻ transaction JDBC; không tự sửa schema | [JpaConfig](../../src/main/java/vn/vietroute/common/config/database/JpaConfig.java) |
+| Spring Data JPA / Hibernate ORM | 3.5.13 / 6.6.59.Final | CRUD auth và business đơn giản, chia sẻ transaction JDBC; không tự sửa schema | [JpaConfig](../../src/main/java/vn/vietroute/common/config/database/JpaConfig.java) |
 | Jakarta Bean Validation / Hibernate Validator | Hibernate Validator 8.0.6.Final | `@NotBlank`, `@Size`, `@Valid` và annotation kiểm mã/mật khẩu; chỉ là validation, không ORM | [validation](../../src/main/java/vn/vietroute/common/validation/BusinessCode.java), [quy ước](../02-phat-trien/QUY_UOC_PHAT_TRIEN.md) |
 | Expressly | 5.0.0 | Jakarta Expression Language phục vụ thư viện validation | [pom](../../pom.xml) |
 | Lombok | 1.18.42, provided | Sinh getter/setter/builder/constructor khi compile; đọc annotation để hiểu code được sinh | [BaseEntity](../../src/main/java/vn/vietroute/common/base/BaseEntity.java) |
 | Swagger Core Jakarta | 2.2.55 | `@Operation`/`@Schema` mô tả hợp đồng API và DTO; bộ generator trong source dựng OpenAPI | [OpenAPI](../../src/main/java/vn/vietroute/common/web/openapi/OpenApiAPI.java), [API base](../02-phat-trien/API_BASE.md) |
 | SLF4J + JDK logging | slf4j-jdk14 2.0.18 | Bridge log thư viện sang logging JVM; log theo traceId và dữ liệu đã lọc | [trace filter](../../src/main/java/vn/vietroute/common/web/filter/RequestTraceFilter.java) |
 
-Source giữ Spring MVC/WAR, auth dùng Spring Data JPA/Hibernate ORM; JDBC cho batch/query phức tạp và các module nghiệp vụ. Không dùng Spring Boot. `BaseController`, response factory, `BusinessException`, constants, DTO và locale là code nền tảng của dự án, không phải dependency riêng. Mỗi API/nghiệp vụ mới kế thừa và áp dụng quy ước này; đọc [API base](../02-phat-trien/API_BASE.md).
+Source giữ Spring MVC/WAR, auth và CRUD business đơn giản dùng Spring Data JPA/Hibernate ORM; JDBC cho batch/query phức tạp/khóa nguyên tử. Không dùng Spring Boot. `BaseController`, response factory, `BusinessException`, constants, DTO và locale là code nền tảng của dự án, không phải dependency riêng. Mỗi API/nghiệp vụ mới kế thừa và áp dụng quy ước này; đọc [API base](../02-phat-trien/API_BASE.md).
 
 ## 3. Xác thực và phân quyền
 
@@ -107,7 +107,7 @@ Kafka hiện chưa dùng. Cloudinary, Gmail, cảnh báo ngoài app và backup/r
 | Câu hỏi | Cách trả lời theo source hiện có |
 |---|---|
 | Frontend và backend giao tiếp thế nào? | HTML ban đầu render bằng Thymeleaf; Axios gọi API JSON, envelope/error/locale/traceId chung. |
-| Vì sao có Hibernate trong pom nhưng lại nói JDBC? | Hibernate Validator thực thi Bean Validation; Hibernate ORM/Spring Data JPA phục vụ CRUD auth, JDBC dùng cho batch/query phức tạp và nghiệp vụ đang có. |
+| Vì sao có Hibernate trong pom nhưng lại nói JDBC? | Hibernate Validator thực thi Bean Validation; Hibernate ORM/Spring Data JPA phục vụ CRUD auth/business đơn giản, JDBC dùng cho batch/query phức tạp và khóa nguyên tử. |
 | Bootstrap tự tạo gì? | Migration/table/index, role/quyền, admin nếu chưa có, danh mục mẫu và actor system; giữ mật khẩu admin cũ. |
 | Token/role lưu ở đâu? | Cookie HttpOnly cho web, JWT cho API client; account/role/permission/tokenVersion trong PostgreSQL; không giữ token trong localStorage. |
 | Worker nhiều node có nhận trùng không? | Claim có khóa/lease; mô hình at least once vẫn cần handler/idempotency chống tác động lặp khi ACK lỗi. |
@@ -119,4 +119,4 @@ Kafka hiện chưa dùng. Cloudinary, Gmail, cảnh báo ngoài app và backup/r
 Khi được hỏi một tính năng “đã có chưa”, dẫn [tiến độ và PR bằng chứng](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md) cùng màn/code liên quan. Không trình bày kế hoạch như tính năng đã hoàn thành; phiên bản dependency, khả năng chịu tải và trạng thái deploy là ba thông tin cần kiểm chứng riêng.
 
 
-AUTHDB04 dùng Spring Data JPA/Hibernate cho auth CRUD, JDBC/PostgreSQL cho batch/query phức tạp và online/bucket. Role/function là chuỗi trong DB, không enum/value object permission hoặc action/policy registry. Media core chung và config theo trách nhiệm dùng các thư viện hiện có. Chi tiết cơ chế/giới hạn xem [nền tảng mở rộng](../02-phat-trien/NEN_TANG_MO_RONG.md) và [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md).
+AUTHDB04 dùng Spring Data JPA/Hibernate cho auth và CRUD business đơn giản, JDBC/PostgreSQL cho batch/query phức tạp và online/bucket. Role/function là chuỗi trong DB, không enum/value object permission hoặc action/policy registry. Media core chung và config theo trách nhiệm dùng các thư viện hiện có. Chi tiết cơ chế/giới hạn xem [nền tảng mở rộng](../02-phat-trien/NEN_TANG_MO_RONG.md) và [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md).

@@ -38,7 +38,7 @@ import vn.vietroute.auth.security.AuthCookies;
 import vn.vietroute.auth.security.JwtAuthenticationFilter;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.JwtService;
-import vn.vietroute.business.catalog.dto.request.CatalogCreateRequest;
+import vn.vietroute.business.catalog.dto.request.CatalogRequest;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.monitoring.ApiJournalSettings;
 import vn.vietroute.common.config.web.WebConfig;
@@ -370,12 +370,13 @@ class ApiJournalTest {
         login.setPassword("secretpassword");
         assertFalse(projection.request(login).contains("secret"));
         assertFalse(projection.request(Map.of("future", "secret")).contains("secret"));
-        var catalog = new CatalogCreateRequest();
+        var catalog = new CatalogRequest();
         catalog.setNameVi("secretperson");
         catalog.setNameEn("secretpassword");
         catalog.setCode("SECRETCODE");
         assertFalse(projection.request(catalog).contains("secret"));
         assertFalse(projection.request(catalog).contains("SECRETCODE"));
+        assertFalse(mapper.readTree(projection.request(catalog)).has("active"));
         var response = new ApiResponse<>(
             false,
             "COM007",

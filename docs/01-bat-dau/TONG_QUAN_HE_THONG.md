@@ -10,7 +10,7 @@ Phần hoàn thiện ngày 23/10 có UI quản trị job/quyền và xem cấu h
 
 ## 1. Hệ thống gồm những gì
 
-VietRoute là một ứng dụng Java đóng gói WAR: Spring MVC 6 + Spring Security, Thymeleaf + Bootstrap/Axios, Spring Data JPA/Hibernate cho auth CRUD, JDBC cho batch/query phức tạp/nghiệp vụ và PostgreSQL. Docker chạy Java 21/Tomcat 10.1; IntelliJ dùng launcher trong `src/dev/java`. Không có Spring Boot, Kafka hoặc Redis bắt buộc. ORM auth được cấu hình bằng JpaConfig, không tự sinh schema. Redis adapter cũ chỉ là tùy chọn tương thích, không bật trong cấu hình hiện tại. Từ 31/10/2026 phát triển/tích hợp trên dev, phát hành main theo yêu cầu chủ dự án tại [quy trình Git](../../CONTRIBUTING.md#tích-hợp-dev-và-phát-hành-main-từ-31102026). Hướng nhiều hệ DB/Oracle đang ở bước tách adapter cấu hình, chưa hỗ trợ runtime Oracle; đọc [DB01](../02-phat-trien/QUY_UOC_PHAT_TRIEN.md#hướng-hỗ-trợ-nhiều-hệ-db--db01).
+VietRoute là một ứng dụng Java đóng gói WAR: Spring MVC 6 + Spring Security, Thymeleaf + Bootstrap/Axios, Spring Data JPA/Hibernate cho auth và CRUD business đơn giản, JDBC cho batch/query phức tạp/khóa nguyên tử và PostgreSQL. Docker chạy Java 21/Tomcat 10.1; IntelliJ dùng launcher trong `src/dev/java`. Không có Spring Boot, Kafka hoặc Redis bắt buộc. ORM auth/business được cấu hình bằng JpaConfig, không tự sinh schema. Redis adapter cũ chỉ là tùy chọn tương thích, không bật trong cấu hình hiện tại. Từ 31/10/2026 phát triển/tích hợp trên dev, phát hành main theo yêu cầu chủ dự án tại [quy trình Git](../../CONTRIBUTING.md#tích-hợp-dev-và-phát-hành-main-từ-31102026). Hướng nhiều hệ DB/Oracle đang ở bước tách adapter cấu hình, chưa hỗ trợ runtime Oracle; đọc [DB01](../02-phat-trien/QUY_UOC_PHAT_TRIEN.md#hướng-hỗ-trợ-nhiều-hệ-db--db01).
 
 ```mermaid
 flowchart LR
@@ -47,7 +47,7 @@ Phần đã có source: nền tảng locale/error/validation/audit/paging, auth/
 | `common.monitoring` | `controller`, `dto/response`, `filter`, `repository`, `service`: đo HTTP/JVM/pool/worker và probe DB có chủ đích |
 | `common.traffic` | Giới hạn request/body/quota, nhận địa chỉ qua trusted proxy; quota memory theo node |
 | `auth` | 40 class: credential, User → Role → Function → Menu/API, principal/cookie/JWT, bootstrap; không đăng ký/email/reset/recovery riêng |
-| `business/catalog` | Danh mục nền đang chạy; controller → service → repository → entity/response |
+| `business/catalog` | Danh mục nền đang chạy; controller/api → service → repo JPA/JDBC → entity/response |
 | `business/location` | LOCATION01 tỉnh/thành và địa điểm, V016; grant endpoint cụ thể, public chỉ active, UI `/operations/locations`. Hợp đồng trường/tọa độ/trạng thái ở API base |
 | `business/carrier` (gồm nhà xe, xe và tài xế) | BUSINESS02/V017: nhà xe và scope, xe, hồ sơ tài xế; API/UI theo grant endpoint và membership hiện hành. Hồ sơ tài xế khác account auth |
 | `business/route` | V018: tuyến một chiều và điểm dừng theo thứ tự, offset phút qua ngày, giá cộng dồn; không sửa snapshot chuyến cũ |
@@ -81,7 +81,7 @@ Lỗi trước controller vào GlobalExceptionHandler, lỗi trong execute vào 
 
 ## 5. Transaction, job và provider
 
-JpaTransactionManager/JdbcTransactions dùng chung transaction/connection cho auth JPA và JDBC; connection đặt LOCAL search_path sau khi bắt đầu transaction, commit/rollback theo owner. Auth CRUD và SQL mapping/history rollback cùng nhau. Không gọi Gmail/Cloudinary trong transaction giữ khóa DB dài. Client không được ghi audit, quyền hoặc tenant.
+JpaTransactionManager/JdbcTransactions dùng chung transaction/connection cho auth/business JPA và JDBC; connection đặt LOCAL search_path sau khi bắt đầu transaction, commit/rollback theo owner. CRUD JPA và SQL mapping/history rollback cùng nhau. Không gọi Gmail/Cloudinary trong transaction giữ khóa DB dài. Client không được ghi audit, quyền hoặc tenant.
 
 Outbox: transaction lưu `system_jobs` cùng thay đổi nghiệp vụ → commit → worker claim `SKIP LOCKED` và lease → commit claim → handler mạng → transaction ACK/NACK. Retry backoff+jitter, lỗi cuối DEAD; token lease ngăn worker cũ ghi đè. Đây là at least once: provider đã nhận nhưng ACK mất thì có thể gửi lặp. Handler cần idempotent và timeout nhỏ hơn lease; tác vụ dài cần thiết kế gia hạn riêng.
 
@@ -101,7 +101,7 @@ Auth đủ nền để phát triển tiếp theo cấu trúc hiện hành, có b
 
 ## 7. Cách thêm module đúng nền
 
-Đọc quy ước/phân công → tạo nhánh member/task → chốt API, quyền, scope và SQL migration mới → DTO @Schema/Validation + bundle vi/en → service transaction + quyền/nghiệp vụ → auth JPA repo hoặc JDBC/batch → controller BaseController + @Operation → UI gọi client CSRF chung → kiểm thử bằng DB tạm → format → PR/CI → merge. Không sửa migration đã áp dụng hoặc test trên Neon production.
+Đọc quy ước/phân công → tạo nhánh member/task → chốt API, quyền, scope và SQL migration mới → DTO @Schema/Validation + bundle vi/en → service transaction + quyền/nghiệp vụ → repo JPA hoặc JDBC/batch → controller BaseController + @Operation → UI gọi client CSRF chung → kiểm thử bằng DB tạm → format → PR/CI → merge. Không sửa migration đã áp dụng hoặc test trên Neon production.
 
 Local: `mvnw verify`, Node test Swagger và formatter. Production: `-Pproduction` chỉ main, bỏ test/launcher/Node; CI Docker dùng PostgreSQL tạm. Xem [CONTRIBUTING.md](../../CONTRIBUTING.md). Khi đọc kết quả kiểm tra trong tài liệu cũ, xem commit/PR tương ứng, không coi số test lịch sử là số hiện tại.
 

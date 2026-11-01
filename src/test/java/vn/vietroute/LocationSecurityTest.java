@@ -36,12 +36,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.business.location.dto.request.LocationLookupRequest;
-import vn.vietroute.business.location.dto.request.LocationSearchRequest;
-import vn.vietroute.business.location.dto.request.ProvinceLookupRequest;
+import vn.vietroute.business.location.dto.search.LocationLookupSearch;
+import vn.vietroute.business.location.dto.search.LocationSearch;
+import vn.vietroute.business.location.dto.search.ProvinceLookupSearch;
 import vn.vietroute.business.location.entity.Location;
 import vn.vietroute.business.location.entity.Province;
-import vn.vietroute.business.location.repository.LocationRepository;
+import vn.vietroute.business.location.repo.LocationRepo;
 import vn.vietroute.business.location.service.LocationService;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.config.RootConfig;
@@ -49,6 +49,7 @@ import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.support.AccessTestConfig;
 import vn.vietroute.support.JournalTestConfig;
+import vn.vietroute.support.TestJpa;
 
 /** Hai context WAR và guard production; SQL/filter/cạnh tranh/version kiểm thêm trên PostgreSQL Docker CI. */
 class LocationSecurityTest {
@@ -136,7 +137,7 @@ class LocationSecurityTest {
     }
 
     @Test
-    void invalidCoordinatesReferencesAndImmutableFieldsFailBeforeTransaction() throws Exception {
+    void invalidCoordinatesReferencesAndServerFieldsFailBeforeTransaction() throws Exception {
         String valid =
             "{\"code\":\"PLACE01\",\"provinceId\":1,\"nameVi\":\"Địa điểm\",\"nameEn\":\"Place\",\"address\":\"Địa chỉ\",\"latitude\":10,\"longitude\":106}";
         for (String body : List.of(
@@ -177,7 +178,7 @@ class LocationSecurityTest {
         );
         String update = valid
             .replace("\"code\":\"PLACE01\",", "")
-            .replace("\"provinceId\":1,", "\"provinceId\":2,\"version\":0,");
+            .replace("\"provinceId\":1,", "\"scopeId\":2,\"version\":0,");
         assertEquals(
             400,
             mvc
@@ -203,7 +204,7 @@ class LocationSecurityTest {
             assertTrue(parameters.contains("\"name\":\"" + name + "\""), name);
         var publicRead = spec.path("paths").path(Routes.LOCATIONS).path("get");
         assertTrue(publicRead.path("security").isEmpty());
-        var body = spec.path("components").path("schemas").path("LocationCreateRequest").path("properties");
+        var body = spec.path("components").path("schemas").path("LocationRequest").path("properties");
         for (String name : List.of(
             "nameVi",
             "nameEn",
@@ -232,10 +233,10 @@ class LocationSecurityTest {
 
         @Bean
         @Primary
-        LocationRepository isolatedLocations() {
-            return new LocationRepository(null) {
+        LocationRepo isolatedLocations() {
+            return new LocationRepo(TestJpa.MANAGER, null) {
                 @Override
-                public PageResponse<Province> provinces(ProvinceLookupRequest page, Boolean active) {
+                public PageResponse<Province> provinces(ProvinceLookupSearch page, Boolean active) {
                     return PageResponse.of(
                         List.of(
                             Province.builder()
@@ -256,11 +257,7 @@ class LocationSecurityTest {
                 }
 
                 @Override
-                public PageResponse<Location> locations(
-                    LocationLookupRequest page,
-                    Boolean active,
-                    boolean publicOnly
-                ) {
+                public PageResponse<Location> locations(LocationLookupSearch page, Boolean active, boolean publicOnly) {
                     return PageResponse.of(
                         List.of(
                             Location.builder()

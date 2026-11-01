@@ -1,5 +1,79 @@
 # Quy ước nền tảng VietRoute
 
+## BUSINESSDB01 — Cấu trúc business theo auth (01/11/2026)
+
+Theo yêu cầu quy hoạch source, business dùng Spring MVC/Spring Data JPA/Hibernate; SQL join/aggregate/batch/khóa nguyên tử ở repo. Không Spring Boot. Giữ toàn bộ nghiệp vụ hiện có và hợp đồng HTTP, không gộp projection public với dữ liệu staff/owner để giảm file. [API base](API_BASE.md#businessdb01--ranh-giới-jpa-jdbc-và-hợp-đồng-giữ-nguyên) mô tả ranh giới; kết quả và phần chưa nghiệm thu chỉ ghi tại [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
+
+```text
+business/<module>/
+  controller/       *PageController: render Thymeleaf
+    api/            *API: HTTP, validation, Swagger, BaseController
+  dto/request/      Một *Request cho mỗi tài nguyên, nhóm validation theo thao tác
+  dto/response/     Class response/projection whitelist, không entity hoặc record
+  dto/search/       *Search: query/lookup/picker và phân trang, không *SearchRequest
+  entity/           Chỉ entity JPA theo bảng, @Column/@Id/@Version/Instant
+  constant/         Enum/hằng nghiệp vụ của module, không đặt trong entity/DTO
+  repo/             *Repo: JPA CRUD và SQL phức tạp của aggregate/bảng liên quan
+  service/          *Service: actor, nghiệp vụ, transaction, mapping DTO
+  initializer/      *Initializer: opt-in sau migration, ngang cấp service
+```
+
+BUSINESSDB02/03 cập nhật theo nghiệm thu: hiện có **130 file Java**, từ 148 ở BUSINESSDB01 và 166 trước quy hoạch. Class dài nhất TripRepo 996 dòng sau khi trình bày SQL thành text block, vẫn dưới 1000 dòng. Phân bổ: 16 entity JPA, 5 enum trong constant, 12 repo, 14 service, 14 API, 10 page controller, 11 request, 31 response, 16 search và 1 initializer. Số này tính source business, không gồm auth/common/test. Projection SQL nội bộ và khóa ghép vẫn là class nhỏ theo repo/entity; DTO HTTP nằm riêng, không giấu vào nested class hoặc chuyển logic sang common để giảm số file.
+
+- Không record hoặc var trong business. Các class thay record có getter/setter/constructor; JSON field, Bean Validation và @Schema giữ nguyên, không thêm accessor record tương thích. Search nằm đúng dto/search; package nhiều từ dùng dấu gạch dưới khi cần, tên type theo tài nguyên/aggregate.
+- 16 entity ánh xạ đủ cột thật, gồm scope_* của carriers, plate_key/code sinh bởi DB và khóa ghép trip_segments. Cột generated chỉ đọc. Field từ JOIN/guard như canUpdate/canAssign/carrierName/provinceName là @Transient; actor/quyền/scope không nhận từ client. Không hậu tố Entity hoặc schema cứng.
+- @Table/@Index mô tả index cột, @JdbcTable/@JdbcIndex phục vụ kiểm metadata. Migration là nguồn DDL chính cho UNIQUE/CHECK/FK, expression/partial/INCLUDE/GIN index; Hibernate không tạo/sửa schema. TripSegment.Key ánh xạ PK ghép thật, không thêm identity/migration chỉ để bớt class. V001–V026 giữ nguyên checksum.
+- CatalogRepo/LocationRepo/CarrierRepo xử lý JPA CRUD đơn giản cho danh mục, tỉnh/địa điểm, nhà xe/xe/tài xế; chọn ID/scope, type, khóa cha và kiểm version trước ghi. Query tìm kiếm/phân trang/join còn ở JDBC để dùng đúng predicate/index. Repo theo aggregate giữ logic con liên quan, không tạo service/repo rỗng chỉ cho đủ từng bảng.
+- TripRepo giữ nguồn tuyến/assets/picker và snapshot trip/stops/segments/events; TripStopRepo giữ tiến độ. BookingRepo giữ đơn/event/cascade, TripSegmentRepo giữ một thuật toán tồn chỗ. TrackingRepo, JourneyRepo, ReportRepo giữ SQL consent/trace/public lookup/báo cáo. DemoSeedRepo giữ cả bộ nền/tuyến, BusinessDataInitializer nằm demo/initializer.
+- CatalogService gộp các wrapper typed cũ; loại danh mục do handler truyền từ hằng server, không lấy làm quyền từ payload. BookingService giữ phương thức staff/customer rõ ràng và helper transaction riêng; TrackingService giữ readStaff/readCustomer/read-driver/consent. API cùng aggregate có thể chung class nhưng không bỏ guard/owner/scope hoặc thêm boolean tùy ý do HTTP chọn luồng staff.
+- Service mở transaction qua JdbcTransactions/JpaTransactionManager. JPA flush và JDBC batch/history dùng cùng connection/rollback; không tự commit trong repo, không query/save từng phần tử. Lỗi Hibernate tại @Repository được dịch sang lỗi Spring để UNIQUE/FK trả 409 và version trả 409 theo envelope chung. Khóa trip → booking → segments tăng dần và khóa parent/child vẫn giữ.
+
+Khi sửa: clean build/restart để loại bytecode tên cũ; kiểm DTO/Swagger, hai context WAR, nhập URL trực tiếp, version, scope/owner, rollback và race bằng DB test cô lập. H2 kiểm phần portable, PostgreSQL mới kiểm migration/array/advisory lock/index/khóa. Mỗi class dưới 1000 dòng; chỉ tách khi có trách nhiệm hoặc trần kích thước thực sự cần.
+
+
+### Request dùng chung và constant — BUSINESSDB02
+
+Không tách CreateRequest/UpdateRequest/WriteRequest hoặc base request riêng cho cùng tài nguyên. Tạo/sửa dùng cùng class; cả thao tác trạng thái/thu-hoàn tiền/consent cũng chung DTO tài nguyên. Response/public projection vẫn tách đúng dữ liệu được công bố.
+
+| Module | Request hiện hành |
+|---|---|
+| catalog | CatalogRequest |
+| carrier | CarrierRequest, VehicleRequest, DriverRequest |
+| location | ProvinceRequest, LocationRequest |
+| route | RouteRequest, RouteStopRequest (một điểm con, không là DTO create/update khác) |
+| trip | TripRequest: tạo, phân công, state, notice, tiến độ tài xế |
+| booking | BookingRequest: tạo, state, payment, owner và staff |
+| tracking | TrackingRequest: start/stop/sample |
+
+Controller chọn @Validated(RequestGroups.Create/Update/Delete/State/Payment/Notice/Progress.class). RequestGroups là nhóm marker kỹ thuật dùng chung trong common.validation; các constraint và ý nghĩa field vẫn nằm tại DTO business. Create/Update kế thừa Default để giữ constraint dùng chung và cascade @Valid trên stop con. Các group trạng thái/thanh toán riêng không buộc payload gửi field tạo mới. Không chọn group từ request hoặc role client.
+
+Version chỉ bắt buộc cho thao tác cập nhật/xóa/trạng thái tương ứng, vẫn kiểm version tại service/repo. Code, carrierId, provinceId có thể bỏ khi sửa hoặc gửi đúng giá trị hiện hành; giá trị khác bị từ chối, không dùng shared DTO để đổi scope/quan hệ. Route giữ hợp đồng gửi lại code/carrierId khi sửa; phân công chuyến không đổi code/routeId. Mỗi operation chỉ dùng field của chính nó, không có cờ HTTP chọn nhánh staff; actor/audit/owner/giá vẫn do server.
+
+Swagger dựng required riêng cho từng handler theo group và default của DTO, không cộng các field bắt buộc của POST/PUT/DELETE vào một schema. Component DTO chung mô tả đầy đủ field, body từng operation có required riêng và x-validation-groups; giữ mô tả của từng field, envelope và locale. Nhật ký API cập nhật whitelist CatalogRequest một lần, không tự thêm active vào capture request chỉ vì DTO đã gộp.
+
+Enum/hằng nghiệp vụ công khai đặt tại business/<module>/constant: trip có TripStatus/TripProgressAction/TripChoiceKind; booking có BookingStatus/BookingPaymentKind. Entity chỉ ánh xạ bảng, DTO chỉ giữ input/output. Env/route/regex dùng chung vẫn ở ApplicationConstants trong common.constant; đây không là enum quyền. SQL fragment và private descriptor phục vụ query giữ trong repo; serialVersionUID của khóa Serializable là metadata kỹ thuật.
+
+
+### SQL trong repo — BUSINESSDB03
+
+SQL dài hoặc nhiều mệnh đề trong repo auth/business dùng Java text block `"""`, không dồn thành chuỗi hàng trăm ký tự hoặc chẻ thành nhiều chuỗi cộng nối chỉ để xuống dòng. Tách SELECT/FROM/JOIN/WHERE/ORDER BY/LIMIT, thụt lề CTE/subquery/CASE; danh sách cột và điều kiện ngắn có thể cùng dòng khi dễ đọc, hướng tới 120 ký tự. Giữ nguyên khoảng trắng bên trong giá trị SQL literal; không cắt giá trị dài thành literal khác để đạt số ký tự.
+
+```java
+String sql = """
+    SELECT segment_order, capacity, reserved_seats
+    FROM trip_segments
+    WHERE trip_id = ?
+        AND segment_order >= ?
+        AND segment_order < ?
+    ORDER BY segment_order
+    FOR UPDATE
+    """;
+```
+
+Đoạn cột/scope/owner/khóa dùng chung vẫn giữ trong chính repo. `.formatted(...)` chỉ ghép fragment hoặc định danh từ whitelist server; dữ liệu người dùng tiếp tục bind qua PreparedStatement, không nội suy vào SQL. Template phải đặt khoảng trắng/xuống dòng rõ giữa các fragment; không phụ thuộc dấu cách lẻ ở đầu/cuối string, không trim fragment tùy ý. Kiểm cả SQL đã ghép, không chỉ từng literal. Query ngắn, dễ đọc có thể giữ string thường. StringBuilder chỉ dùng khi cấu trúc truy vấn thực sự động; thân CTE/query dài vẫn là text block. Không đưa SQL vào service hoặc tạo class query mới chỉ để format.
+
+Khi chỉ sửa cách trình bày: giữ nguyên thứ tự cột, placeholder/bind, biểu thức, literal, scope/owner, lock/CAS/history và transaction; kiểm lại SQL trên DB test cô lập. Formatter Java không tự format nội dung SQL. Không thay formatter/checker và không format migration đã áp dụng vì checksum. Số class không tăng; mỗi class tiếp tục dưới 1000 dòng.
+
 ## AUTHDB04 — Auth gọn: 40 class, tám bảng (01/11/2026)
 
 Theo xác nhận của chủ dự án, giới hạn 30–40 class tính **toàn bộ package auth**, ưu tiên cắt chức năng phụ. Hợp đồng này thay hợp đồng lifecycle/action/DTO AUTHDB02–AUTHDB03 cũ. Trạng thái nghiệm thu thật chỉ ghi tại [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
@@ -36,7 +110,7 @@ Người mới theo [mục lục và lộ trình đọc](../README.md), bắt đ
 
 Lượt nền tảng: common → auth/JWT/bootstrap → danh mục mẫu → layout/Swagger → kiểm thử và CI. Sau đó mới triển khai lần lượt các nghiệp vụ theo `PHAN_CONG.md`. Không coi các module đặt vé, tuyến/chuyến hoặc Maps là đã hoàn thành khi mới có package.
 
-Giữ Spring MVC 6, Thymeleaf, PostgreSQL và WAR/Tomcat 10.1. Auth CRUD dùng Spring Data JPA/Hibernate; JDBC phục vụ batch/query phức tạp và module nghiệp vụ hiện có. Spring Security xử lý bảo mật; không dùng Spring Boot.
+Giữ Spring MVC 6, Thymeleaf, PostgreSQL và WAR/Tomcat 10.1. Auth và CRUD business đơn giản dùng Spring Data JPA/Hibernate; JDBC phục vụ batch/query phức tạp/khóa nguyên tử. Spring Security xử lý bảo mật; không dùng Spring Boot.
 
 Đọc [nền tảng mở rộng](NEN_TANG_MO_RONG.md) trước khi thêm endpoint được cấp quyền, job hoặc email. Quyền endpoint kiểm ở EndpointAccess theo DB; service kiểm principal đã duyệt/nghiệp vụ và transaction; scope nhà xe/owner kiểm riêng ở SQL/service khi module có dữ liệu. Email đi qua outbox cùng transaction nghiệp vụ; worker chỉ nhận việc khi có slot, không tự tạo thread cho từng request. Giữ stack theo quy ước hiện tại, không tự đổi major để lấy nhãn mới nhất.
 
@@ -66,14 +140,14 @@ vn.vietroute
     initializer/   AuthInitializer: khởi tạo theo JSON/env khi bật cờ
     security/      UserPrincipal, EndpointAccess, JwtAuthenticationFilter, AuthCookies
   business/
-    catalog/       controller, dto/request, dto/response, entity, repository, service
+    catalog/       controller/api, dto/request, dto/response, dto/search, entity, repo, service, initializer
     carrier/       Nhà xe, phương tiện, tài xế, scope và quan hệ account
     location/, route/, trip/  Địa điểm, tuyến, điểm dừng và chuyến
     booking/       Đặt/xác nhận/hủy chỗ theo chặng
     tracking/      Chia sẻ vị trí riêng tư; Maps theo cấu hình provider
 ```
 
-Controller chỉ nhận/validate input và gọi service. Service giữ transaction và quy tắc nghiệp vụ; repository auth dùng Spring Data JPA CRUD và JDBC cho batch/query phức tạp; repository nghiệp vụ JDBC giữ PreparedStatement/ResultSet. Entity không trả thẳng ra API; response thực hiện mapping rõ ràng, không kéo password hash hoặc token version ra client. Không tạo generic CRUD bỏ qua quyền và tenant.
+Controller chỉ nhận/validate input và gọi service. Service giữ transaction và quy tắc nghiệp vụ; repository auth dùng Spring Data JPA CRUD và JDBC cho batch/query phức tạp; repo business giữ JPA CRUD cùng PreparedStatement/ResultSet cho query phức tạp. Entity không trả thẳng ra API; response thực hiện mapping rõ ràng, không kéo password hash hoặc token version ra client. Không tạo generic CRUD bỏ qua quyền và tenant.
 
 API auth/nghiệp vụ kế thừa `BaseController`, dùng `execute(...)` có try/catch chung và `ApiExceptionMapper`. Advice dùng cùng mapper cho lỗi trước controller. Đọc [luồng xử lý và cách học base](LUONG_XU_LY_BASE.md) trước khi thêm module.
 

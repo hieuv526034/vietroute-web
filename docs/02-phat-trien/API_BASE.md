@@ -143,6 +143,36 @@ Swagger mô tả path/query/header/body, multipart, inherited pagination và gen
 
 Maven/test không tự đọc `.env`, không migration Neon. Init/sync theo cờ chỉ ở runtime; [chạy local](../01-bat-dau/CHAY_LOCAL_VA_CLOUDINARY.md) mô tả OS/IDE → file launcher → default properties. `.env` gốc được theo dõi Git theo yêu cầu, có thể còn placeholder; không đưa giá trị vào docs/log/WAR/image. H2 kiểm phần portable, PostgreSQL riêng kiểm dialect/migration/FK/batch và hai context. Bằng chứng kết quả/giới hạn nằm tại tiến độ; code local không đồng nghĩa đã lên dev/main/Render.
 
+## BUSINESSDB01 — Ranh giới JPA, JDBC và hợp đồng giữ nguyên
+
+Quy hoạch source business ngày 01/11/2026 giữ URL/method, payload, status, locale/envelope, Bean Validation, Swagger và kiểm quyền endpoint hiện hành. Các response/request record đã chuyển thành class trong dto/request và dto/response; query/lookup/picker chuyển thành *Search ở dto/search. Java caller dùng getter chuẩn. BUSINESSDB02 gộp request theo tài nguyên; payload JSON hiện có vẫn dùng được, tên schema request chuyển về *Request. [Cấu trúc và số file](QUY_UOC_PHAT_TRIEN.md#businessdb01--cấu-trúc-business-theo-auth-01112026) là nguồn quy ước.
+
+JPA CRUD: danh mục, tỉnh/địa điểm, nhà xe/xe/tài xế. JDBC trong repo: join/count/page/scope/owner, khóa cha và kiểm quan hệ, snapshot tuyến/chuyến, batch stops/segments, confirm/cancel/thu-hoàn tiền/history, tracking, public lookup và báo cáo. Không chuyển cơ chế tồn chỗ hoặc cascade sang save từng đơn; không đổi lock order hoặc ngữ nghĩa tiền thật chỉ vì đổi ORM. JPA/JDBC cùng transaction và connection; lỗi constraint/version vẫn trả 409, lỗi history rollback mutation.
+
+CatalogItemAPI gộp public/legacy và hai nhóm typed; type cố định ở handler giữ chống sửa chéo ID. BookingAPI gộp staff và owner, gọi phương thức BookingService tương ứng; TripTrackingAPI gộp ba nhóm staff/customer/driver nhưng đường dẫn và guard/owner/assignment vẫn riêng. Service không suy quyền từ tên role, không có API chọn tùy ý nhánh staff hoặc actor. Public projection vẫn không có PII của booking/driver/staff. Class/package đổi không tự cấp quyền mới; target method+template được giữ.
+
+Initializer chỉ chạy khi bật cờ runtime, không trong Maven. V001–V026 không đổi, không cần migrate/xóa dữ liệu vì đổi class. Hibernate không tự DDL; restart/clean WAR cần loại class cũ đã gộp. Kiểm thử không đọc .env/ghi Neon; kết quả và giới hạn triển khai xem tiến độ.
+
+
+### Một request cho tạo/sửa và nhóm thao tác — BUSINESSDB02
+
+Tất cả request business ở [quy ước BUSINESSDB02](QUY_UOC_PHAT_TRIEN.md#request-dùng-chung-và-constant--businessdb02). Không còn class CreateRequest/UpdateRequest/WriteRequest/ManageUpdateRequest/DeleteRequest theo cùng tài nguyên. Trường cần gửi được Swagger required theo operation, không dùng schema union bắt nhập cả field POST lẫn PUT. Các enum nghiệp vụ chuyển sang constant, giữ nguyên giá trị JSON và trạng thái DB.
+
+Ví dụ cùng VehicleRequest:
+
+```json
+{"code":"XE002","carrierId":1,"plateNumber":"51A-123.45","vehicleTypeId":5,"capacity":16}
+```
+
+POST /api/v1/admin/vehicles không cần version. PUT /api/v1/admin/vehicles/{id} dùng cùng class:
+
+```json
+{"plateNumber":"51A-123.45","vehicleTypeId":5,"capacity":16,"active":true,"version":0}
+```
+
+Code/carrierId không bắt buộc ở PUT; nếu gửi lại phải trùng giá trị đã lưu. Không đổi quan hệ bằng cách thêm field create vào payload sửa. ID/version ở trên chỉ minh họa hợp đồng, phải lấy giá trị thật từ môi trường thử. Province/Location/Driver/Carrier/Catalog kiểm định danh tương tự; Route giữ trường code/carrierId của hợp đồng trước. Booking payment không bắt gửi contact/trip của lúc tạo; Tracking stop chỉ yêu cầu nonce hiện hành. Guard/scope/owner/version/history và CSRF vẫn độc lập validation.
+
+
 ## Danh mục địa lý — LOCATION01
 
 GET /api/v1/provinces và /api/v1/locations là lookup public theo active/locale. CRUD quản trị /api/v1/admin/provinces và /api/v1/admin/locations dùng target cụ thể từ MVC; menu /catalogs/provinces, /catalogs/locations và /operations/locations kiểm GET riêng. Cập nhật kiểm version, quan hệ tỉnh-địa điểm và tọa độ hợp lệ; owner/scope không được client tự gán. Chi tiết field/coordinate validation đọc các DTO trong business/location và Swagger của phiên bản đang chạy.
@@ -225,7 +255,7 @@ V020 thêm `bookings`/`booking_events`, giữ V001–V019. Đơn gắn FK compos
 | PUT `/api/v1/admin/bookings/{id}/payment` | grant PUT booking tương ứng + scope; kind PAYMENT/REFUND, amount, note, version, requestKey. Ghi nhận thủ công đã diễn ra ngoài hệ thống: chỉ thu CONFIRMED/COMPLETED, hoàn CANCELLED; tổng thu ≤ giá đơn, tổng hoàn ≤ đã thu. Không gọi provider. |
 | GET `/api/v1/driver/trips/{id}/passengers` | grant GET API tài xế tương ứng, guard đúng assigned/global+scoped DRIVER/link hiện hành trong cùng connection; phân trang CONFIRMED/COMPLETED theo đón/trả. Chỉ mã/chặng/số chỗ/tên/điện thoại cần phục vụ; không email/user ID/giá/audit. |
 
-Mutation khóa trip → user (chỉ tạo WEB) → booking → segments tăng dần. `TripCapacityRepository` là một thuật toán dùng chung; confirm tăng đúng [pickup,dropoff), hủy CONFIRMED giảm đúng một lần, kiểm liên tục và đủ mọi chặng. CAS và booking_events cùng transaction; history lỗi rollback. UUID tạo/tiền replay cùng actor và nội dung trả kết quả cũ, khác nội dung bị chặn; không tự retry mutation. Hủy trip cascade PENDING/CONFIRMED và giải phóng chỗ trong transaction trip. START/DEPART đóng PENDING tại điểm đã rời; ARRIVE hoàn thành CONFIRMED ở điểm trả, giữ reserved lịch sử. Hoàn thành/hủy kết thúc ràng buộc một WEB active.
+Mutation khóa trip → user (chỉ tạo WEB) → booking → segments tăng dần. `TripSegmentRepo` là một thuật toán dùng chung; confirm tăng đúng [pickup,dropoff), hủy CONFIRMED giảm đúng một lần, kiểm liên tục và đủ mọi chặng. CAS và booking_events cùng transaction; history lỗi rollback. UUID tạo/tiền replay cùng actor và nội dung trả kết quả cũ, khác nội dung bị chặn; không tự retry mutation. Hủy trip cascade PENDING/CONFIRMED và giải phóng chỗ trong transaction trip. START/DEPART đóng PENDING tại điểm đã rời; ARRIVE hoàn thành CONFIRMED ở điểm trả, giữ reserved lịch sử. Hoàn thành/hủy kết thúc ràng buộc một WEB active.
 
 BOOKING001 dữ liệu sai/400, BOOKING002 thiếu chỗ/409, BOOKING003 trạng thái/409, BOOKING004 đã có WEB active/409, BOOKING005 UUID khác nội dung/409, BOOKING006 thu/hoàn vượt giới hạn/400; version cũ COM008/409. Tiền hủy chưa hoàn có refundDue, không tự ghi đã hoàn. Trang `/journeys` công khai, `/my-bookings` grant GET menu đơn của tôi và `/operations/bookings` grant GET menu booking độc lập API GET. Startup sync bindings/bootstrap khi bật; role thường vẫn cần mapping DB tường minh. Maps/GPS và báo cáo tiếp tục riêng; không suy từ chi tiết text là đã có GPS thật.
 

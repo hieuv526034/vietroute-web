@@ -4,7 +4,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 
-/** Method security trong servlet context bảo vệ cả truy cập nhập URL trực tiếp. */
+/** EndpointAccess trong servlet context kiểm grant GET của page, kể cả nhập URL trực tiếp. */
 @Controller
 public class TripPageController {
 

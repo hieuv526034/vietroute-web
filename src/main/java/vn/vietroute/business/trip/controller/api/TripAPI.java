@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,20 +17,18 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.business.trip.dto.request.TripAssignmentRequest;
-import vn.vietroute.business.trip.dto.request.TripChoiceRequest;
-import vn.vietroute.business.trip.dto.request.TripCreateRequest;
-import vn.vietroute.business.trip.dto.request.TripNoticeRequest;
-import vn.vietroute.business.trip.dto.request.TripSearchRequest;
-import vn.vietroute.business.trip.dto.request.TripStateRequest;
+import vn.vietroute.business.trip.dto.request.TripRequest;
 import vn.vietroute.business.trip.dto.response.TripChoiceResponse;
 import vn.vietroute.business.trip.dto.response.TripResponse;
+import vn.vietroute.business.trip.dto.search.TripChoiceSearch;
+import vn.vietroute.business.trip.dto.search.TripSearch;
 import vn.vietroute.business.trip.service.TripService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
+import vn.vietroute.common.validation.RequestGroups;
 import vn.vietroute.common.web.response.ApiResponses;
 import vn.vietroute.common.web.response.ApiResult;
 
@@ -54,7 +53,7 @@ public class TripAPI extends BaseController {
             value = 1,
             message = "{validation.invalid}"
         ) long id,
-        @Valid @RequestBody TripNoticeRequest body,
+        @Validated(RequestGroups.Notice.class) @RequestBody TripRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
@@ -67,14 +66,17 @@ public class TripAPI extends BaseController {
         description = "Lọc query/carrierId/status/date/page/size ở PostgreSQL; ngày xuất phát Việt Nam"
     )
     public ApiResult<PageResponse<TripResponse>> page(
-        @Valid @ModelAttribute TripSearchRequest query,
+        @Valid @ModelAttribute TripSearch query,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> service.page(query));
     }
 
     @GetMapping(Routes.ADMIN_TRIPS + Routes.BY_ID)
-    @Operation(summary = "Chi tiết chuyến và snapshot điểm", description = "READ độc lập VIEW; ID ngoài scope trả 404")
+    @Operation(
+        summary = "Chi tiết chuyến và snapshot điểm",
+        description = "GET dữ liệu độc lập GET menu; ID ngoài scope trả 404"
+    )
     public ApiResult<TripResponse> find(
         @Parameter(description = "ID chuyến dương") @PathVariable @Min(
             value = 1,
@@ -94,7 +96,7 @@ public class TripAPI extends BaseController {
         @Parameter(description = "0 để tạo mới, ID chuyến dương để phân công lại") @RequestParam(
             defaultValue = "0"
         ) @Min(value = 0, message = "{validation.invalid}") long tripId,
-        @Valid @ModelAttribute TripChoiceRequest query,
+        @Valid @ModelAttribute TripChoiceSearch query,
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> service.choices(tripId, query));
@@ -106,7 +108,7 @@ public class TripAPI extends BaseController {
         description = "Chụp điểm/giờ/giá, tạo segment; xe và DRIVER ready cùng nhà xe; không tự mở bán"
     )
     public ApiResult<TripResponse> create(
-        @Valid @RequestBody TripCreateRequest body,
+        @Validated(RequestGroups.Create.class) @RequestBody TripRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
@@ -123,7 +125,7 @@ public class TripAPI extends BaseController {
             value = 1,
             message = "{validation.invalid}"
         ) long id,
-        @Valid @RequestBody TripAssignmentRequest body,
+        @Validated(RequestGroups.Update.class) @RequestBody TripRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {
@@ -140,7 +142,7 @@ public class TripAPI extends BaseController {
             value = 1,
             message = "{validation.invalid}"
         ) long id,
-        @Valid @RequestBody TripStateRequest body,
+        @Validated(RequestGroups.State.class) @RequestBody TripRequest body,
         @AuthenticationPrincipal UserPrincipal actor,
         HttpServletRequest request
     ) {

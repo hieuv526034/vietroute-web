@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor;
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
@@ -23,6 +24,12 @@ import vn.vietroute.common.jdbc.JdbcSchema;
 @Configuration
 @EnableTransactionManagement(proxyTargetClass = true)
 public class JpaConfig {
+
+    /** Chuẩn hóa lỗi Hibernate ở @Repository thành lỗi Spring như JDBC: unique/FK409, version409. */
+    @Bean
+    public static PersistenceExceptionTranslationPostProcessor persistenceExceptionTranslation() {
+        return new PersistenceExceptionTranslationPostProcessor();
+    }
 
     @Bean
     public SchemaDataSource jpaDataSource(@Qualifier("dataSource") DataSource pool, JdbcSchema schema) {
@@ -51,7 +58,7 @@ public class JpaConfig {
         factory.setJpaVendorAdapter(vendor);
         factory.setJpaDialect(dialect);
         factory.setDataSource(jpaDataSource);
-        factory.setPackagesToScan("vn.vietroute.auth.entity");
+        factory.setPackagesToScan("vn.vietroute.auth.entity", "vn.vietroute.business");
         Properties properties = new Properties();
         properties.setProperty("hibernate.dialect", PostgreSQLDialect.class.getName());
         properties.setProperty("hibernate.default_schema", schema.name());

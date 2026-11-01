@@ -28,7 +28,7 @@ import vn.vietroute.business.carrier.entity.Carrier;
 import vn.vietroute.business.carrier.entity.Driver;
 import vn.vietroute.business.carrier.entity.Vehicle;
 import vn.vietroute.business.catalog.entity.CatalogItem;
-import vn.vietroute.business.catalog.repository.CatalogRepository;
+import vn.vietroute.business.catalog.repo.CatalogRepo;
 import vn.vietroute.business.location.entity.Location;
 import vn.vietroute.business.location.entity.Province;
 import vn.vietroute.business.route.entity.Route;
@@ -66,7 +66,7 @@ public class DatabaseInitializer implements InitializingBean {
 
     private final JdbcSchema schema;
 
-    private final CatalogRepository catalogs;
+    private final CatalogRepo catalogs;
 
     @Override
     public void afterPropertiesSet() {

@@ -6,10 +6,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import vn.vietroute.business.carrier.dto.request.PublicCarrierSearchRequest;
 import vn.vietroute.business.carrier.dto.response.PublicCarrierResponse;
-import vn.vietroute.business.carrier.repository.PublicCarrierRepository;
-import vn.vietroute.business.carrier.repository.PublicCarrierRepository.Published;
+import vn.vietroute.business.carrier.dto.search.PublicCarrierSearch;
+import vn.vietroute.business.carrier.repo.CarrierRepo;
+import vn.vietroute.business.carrier.repo.CarrierRepo.Published;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.media.service.MediaService;
@@ -19,18 +19,18 @@ import vn.vietroute.common.media.service.MediaService;
 @RequiredArgsConstructor
 public class PublicCarrierService {
 
-    private final PublicCarrierRepository carriers;
+    private final CarrierRepo carriers;
     private final JdbcTransactions transactions;
     private final MediaService media;
 
     /** Đọc trang và logo READY theo lô trên cùng connection; không tạo N+1 hoặc gọi CDN khi truy vấn. */
-    public PageResponse<PublicCarrierResponse> page(PublicCarrierSearchRequest body) {
+    public PageResponse<PublicCarrierResponse> page(PublicCarrierSearch body) {
         return transactions.execute(connection -> {
             PageResponse<Published> page = carriers.page(connection, body);
             Set<Long> ids = page
                 .content()
                 .stream()
-                .map(Published::logoId)
+                .map(Published::getLogoId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
             Map<Long, String> urls = media.publishedUrls(connection, ids);
@@ -38,7 +38,7 @@ public class PublicCarrierService {
                 page
                     .content()
                     .stream()
-                    .map(row -> response(row, row.logoId() == null ? null : urls.get(row.logoId())))
+                    .map(row -> response(row, row.getLogoId() == null ? null : urls.get(row.getLogoId())))
                     .toList(),
                 page.page(),
                 page.size(),
@@ -56,13 +56,20 @@ public class PublicCarrierService {
             Published row = carriers.find(connection, id);
             Map<Long, String> urls = media.publishedUrls(
                 connection,
-                row.logoId() == null ? Set.of() : Set.of(row.logoId())
+                row.getLogoId() == null ? Set.of() : Set.of(row.getLogoId())
             );
-            return response(row, row.logoId() == null ? null : urls.get(row.logoId()));
+            return response(row, row.getLogoId() == null ? null : urls.get(row.getLogoId()));
         });
     }
 
     private PublicCarrierResponse response(Published row, String logo) {
-        return new PublicCarrierResponse(row.id(), row.code(), row.name(), row.phone(), row.description(), logo);
+        return new PublicCarrierResponse(
+            row.getId(),
+            row.getCode(),
+            row.getName(),
+            row.getPhone(),
+            row.getDescription(),
+            logo
+        );
     }
 }

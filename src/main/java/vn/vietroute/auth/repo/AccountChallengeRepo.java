@@ -52,7 +52,13 @@ public class AccountChallengeRepo extends JpaRepositorySupport<AccountChallenge,
         // Khóa user đã được service giữ: tối đa 10 email auth/tài khoản/24h trên toàn bộ node/mục đích.
         try (
             PreparedStatement budget = connection.prepareStatement(
-                "SELECT count(*) FROM system_jobs WHERE type='AUTH_ACCOUNT_MAIL' AND dedup_key LIKE ? AND created_at>CURRENT_TIMESTAMP-INTERVAL '24 hours'"
+                """
+                SELECT count(*)
+                FROM system_jobs
+                WHERE type = 'AUTH_ACCOUNT_MAIL'
+                    AND dedup_key LIKE ?
+                    AND created_at > CURRENT_TIMESTAMP - INTERVAL '24 hours'
+                """
             )
         ) {
             budget.setString(1, "account-mail:" + user + ":%");
@@ -63,9 +69,16 @@ public class AccountChallengeRepo extends JpaRepositorySupport<AccountChallenge,
         }
         try (
             PreparedStatement query = connection.prepareStatement(
-                "INSERT INTO auth_account_challenges(user_id,purpose,token_hash,token_version,expires_at) VALUES (?,?,?,?,?) " +
-                    "ON CONFLICT (user_id,purpose) DO UPDATE SET token_hash=EXCLUDED.token_hash,token_version=EXCLUDED.token_version," +
-                    "expires_at=EXCLUDED.expires_at,updated_at=CURRENT_TIMESTAMP WHERE auth_account_challenges.updated_at<CURRENT_TIMESTAMP-INTERVAL '60 seconds'"
+                """
+                INSERT INTO auth_account_challenges(user_id, purpose, token_hash, token_version, expires_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT (user_id, purpose)
+                DO UPDATE
+                SET token_hash = EXCLUDED.token_hash, token_version = EXCLUDED.token_version,
+                    expires_at = EXCLUDED.expires_at,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE auth_account_challenges.updated_at < CURRENT_TIMESTAMP - INTERVAL '60 seconds'
+                """
             )
         ) {
             query.setLong(1, user);
@@ -82,7 +95,12 @@ public class AccountChallengeRepo extends JpaRepositorySupport<AccountChallenge,
         throws SQLException {
         try (
             PreparedStatement query = connection.prepareStatement(
-                "DELETE FROM auth_account_challenges WHERE user_id=? AND purpose=? AND token_hash=? AND token_version=? AND expires_at>CURRENT_TIMESTAMP"
+                """
+                DELETE
+                FROM auth_account_challenges
+                WHERE user_id = ? AND purpose = ? AND token_hash = ? AND token_version = ?
+                    AND expires_at > CURRENT_TIMESTAMP
+                """
             )
         ) {
             query.setLong(1, user);

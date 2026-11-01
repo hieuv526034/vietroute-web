@@ -63,7 +63,11 @@ public class RoleRepo extends JpaRepositorySupport<Role, String> {
     public void initialize(Connection connection, JsonNode data) throws SQLException {
         try (
             PreparedStatement query = connection.prepareStatement(
-                "INSERT INTO auth_roles(code,name_vi,name_en,all_scopes,protected_role) VALUES(?,?,?,?,?) ON CONFLICT DO NOTHING"
+                """
+                INSERT INTO auth_roles(code, name_vi, name_en, all_scopes, protected_role)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT DO NOTHING
+                """
             )
         ) {
             for (JsonNode role : data.path("roles")) {
@@ -78,7 +82,11 @@ public class RoleRepo extends JpaRepositorySupport<Role, String> {
         }
         try (
             PreparedStatement query = connection.prepareStatement(
-                "INSERT INTO auth_functions(code,name_vi,name_en,icon,sort_order) VALUES(?,?,?,?,?) ON CONFLICT DO NOTHING"
+                """
+                INSERT INTO auth_functions(code, name_vi, name_en, icon, sort_order)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT DO NOTHING
+                """
             )
         ) {
             for (JsonNode function : data.path("functions")) {
@@ -103,8 +111,15 @@ public class RoleRepo extends JpaRepositorySupport<Role, String> {
         try (
             PreparedStatement insert = connection.prepareStatement(
                 """
-                INSERT INTO auth_function_resources(function_code,kind,target,http_method,path_template,handler,description,name_vi,name_en,icon,sort_order)
-                SELECT ?,?,?,?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_functions WHERE code=? AND NOT resources_initialized AND NOT deleted) ON CONFLICT DO NOTHING
+                INSERT INTO auth_function_resources(function_code, kind, target, http_method, path_template,
+                    handler, description, name_vi, name_en, icon, sort_order)
+                SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM auth_functions
+                    WHERE code = ? AND NOT resources_initialized AND NOT deleted
+                )
+                ON CONFLICT DO NOTHING
                 """
             )
         ) {
@@ -135,7 +150,14 @@ public class RoleRepo extends JpaRepositorySupport<Role, String> {
         try (
             PreparedStatement insert = connection.prepareStatement(
                 """
-                INSERT INTO auth_role_functions(role_code,function_code) SELECT ?,? WHERE EXISTS(SELECT 1 FROM auth_roles WHERE code=? AND NOT functions_initialized AND NOT deleted) ON CONFLICT DO NOTHING
+                INSERT INTO auth_role_functions(role_code, function_code)
+                SELECT ?, ?
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM auth_roles
+                    WHERE code = ? AND NOT functions_initialized AND NOT deleted
+                )
+                ON CONFLICT DO NOTHING
                 """
             )
         ) {
@@ -170,7 +192,13 @@ public class RoleRepo extends JpaRepositorySupport<Role, String> {
         throws SQLException {
         try (
             PreparedStatement update = connection.prepareStatement(
-                "UPDATE auth_roles SET active=true,deleted=false,all_scopes=true,protected_role=true,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE code=? AND (NOT active OR deleted OR NOT all_scopes OR NOT protected_role)"
+                """
+                UPDATE auth_roles
+                SET active = true, deleted = false, all_scopes = true, protected_role = true, updated_by = ?,
+                    updated_at = CURRENT_TIMESTAMP, version = version + 1
+                WHERE code = ?
+                    AND (NOT active OR deleted OR NOT all_scopes OR NOT protected_role)
+                """
             )
         ) {
             update.setLong(1, actor);
@@ -188,7 +216,13 @@ public class RoleRepo extends JpaRepositorySupport<Role, String> {
         );
         try (
             PreparedStatement update = connection.prepareStatement(
-                "UPDATE auth_functions SET active=true,deleted=false,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE code=? AND (NOT active OR deleted)"
+                """
+                UPDATE auth_functions
+                SET active = true, deleted = false, updated_by = ?, updated_at = CURRENT_TIMESTAMP,
+                    version = version + 1
+                WHERE code = ?
+                    AND (NOT active OR deleted)
+                """
             )
         ) {
             update.setLong(1, actor);
@@ -197,7 +231,11 @@ public class RoleRepo extends JpaRepositorySupport<Role, String> {
         }
         try (
             PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO auth_role_functions(role_code,function_code,created_by,updated_by) VALUES(?,?,?,?) ON CONFLICT DO NOTHING"
+                """
+                INSERT INTO auth_role_functions(role_code, function_code, created_by, updated_by)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT DO NOTHING
+                """
             )
         ) {
             insert.setString(1, data.path("bootstrapRole").asText());

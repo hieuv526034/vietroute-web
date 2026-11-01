@@ -2,12 +2,34 @@ package vn.vietroute.business.booking.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
+import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-public record BookingTripChoiceResponse(
-    @Schema(description = "ID chuyến") long id,
-    @Schema(description = "Mã chuyến") String code,
-    @Schema(description = "Nhà xe") String carrierName,
-    @Schema(description = "Tên Việt") String nameVi,
-    @Schema(description = "Tên Anh") String nameEn,
-    @Schema(description = "Giờ đầu tuyến UTC") Instant departureAt
-) {}
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@EqualsAndHashCode
+public class BookingTripChoiceResponse {
+
+    @Schema(description = "ID chuyến")
+    private long id;
+
+    @Schema(description = "Mã chuyến")
+    private String code;
+
+    @Schema(description = "Nhà xe")
+    private String carrierName;
+
+    @Schema(description = "Tên Việt")
+    private String nameVi;
+
+    @Schema(description = "Tên Anh")
+    private String nameEn;
+
+    @Schema(description = "Giờ đầu tuyến UTC")
+    private Instant departureAt;
+}

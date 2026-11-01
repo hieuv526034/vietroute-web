@@ -39,19 +39,35 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
     }
 
     private static final String AUTHORITIES = """
-    , ARRAY(SELECT r.code FROM auth_user_roles ur JOIN auth_roles r ON r.code=ur.role_code AND r.active AND NOT r.deleted
-        WHERE ur.user_id=u.id AND ur.scope_id=0 AND ur.active ORDER BY r.code) AS role_codes
-    , ARRAY(SELECT DISTINCT fr.target FROM auth_user_roles ur JOIN auth_roles r ON r.code=ur.role_code AND r.active AND NOT r.deleted
-        JOIN auth_role_functions rf ON rf.role_code=r.code JOIN auth_functions f ON f.code=rf.function_code AND f.active AND NOT f.deleted
-        JOIN auth_function_resources fr ON fr.function_code=f.code WHERE ur.user_id=u.id AND ur.scope_id=0 AND ur.active ORDER BY fr.target) AS resource_targets
+    , ARRAY(
+        SELECT r.code
+        FROM auth_user_roles ur
+        JOIN auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
+        WHERE ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
+        ORDER BY r.code
+    ) AS role_codes, ARRAY(
+        SELECT DISTINCT fr.target
+        FROM auth_user_roles ur
+        JOIN auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
+        JOIN auth_role_functions rf ON rf.role_code = r.code
+        JOIN auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
+        JOIN auth_function_resources fr ON fr.function_code = f.code
+        WHERE ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
+        ORDER BY fr.target
+    ) AS resource_targets
     """;
-    private static final String ARRAYS =
-        AUTHORITIES +
-        """
-        , ARRAY(SELECT DISTINCT fr.target FROM auth_user_roles ur JOIN auth_roles r ON r.code=ur.role_code AND r.active AND NOT r.deleted AND r.all_scopes
-        JOIN auth_role_functions rf ON rf.role_code=r.code JOIN auth_functions f ON f.code=rf.function_code AND f.active AND NOT f.deleted
-        JOIN auth_function_resources fr ON fr.function_code=f.code WHERE ur.user_id=u.id AND ur.scope_id=0 AND ur.active ORDER BY fr.target) AS global_targets
-        """;
+    private static final String ARRAYS = """
+    %s, ARRAY(
+        SELECT DISTINCT fr.target
+        FROM auth_user_roles ur
+        JOIN auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted AND r.all_scopes
+        JOIN auth_role_functions rf ON rf.role_code = r.code
+        JOIN auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
+        JOIN auth_function_resources fr ON fr.function_code = f.code
+        WHERE ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
+        ORDER BY fr.target
+    ) AS global_targets
+    """.formatted(AUTHORITIES);
 
     static Set<String> roles(ResultSet row) throws SQLException {
         return strings(row, "role_codes");
@@ -71,14 +87,17 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
         }
     }
 
-    private static final String ACCOUNT_COLUMNS =
-        """
-        u.id,u.username,u.display_name,u.email,u.avatar_media_id,u.email_verified_at,
-        u.activation_pending,u.password_hash,u.active,u.must_change_password,
-        u.failed_login_attempts,u.locked_until,u.token_version,u.version,
-        u.created_at,u.updated_at,u.created_by,u.updated_by,
-        (SELECT thumbnail_url FROM media_assets WHERE id=u.avatar_media_id AND status='READY') AS avatar_url
-        """ + ARRAYS;
+    private static final String ACCOUNT_COLUMNS = """
+    u.id, u.username, u.display_name, u.email, u.avatar_media_id, u.email_verified_at, u.activation_pending,
+        u.password_hash, u.active, u.must_change_password, u.failed_login_attempts, u.locked_until,
+        u.token_version, u.version, u.created_at, u.updated_at, u.created_by, u.updated_by, (
+            SELECT thumbnail_url
+            FROM media_assets
+            WHERE id = u.avatar_media_id
+                AND status = 'READY'
+        ) AS avatar_url
+    %s
+    """.formatted(ARRAYS);
 
     /** Projection filter/me: một statement cho user + role/quyền hiện hành, không đọc password hash hoặc bộ đếm đăng nhập. */
     public User load(Long id) {
@@ -86,13 +105,20 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
             try (
                 PreparedStatement query = connection.prepareStatement(
                     """
-                    SELECT u.id,u.username,u.display_name,u.email,u.avatar_media_id,u.email_verified_at,
-                           u.activation_pending,u.active,u.must_change_password,u.token_version,
-                           u.version,u.created_at,u.updated_at,u.created_by,u.updated_by,
-                           (SELECT thumbnail_url FROM media_assets WHERE id=u.avatar_media_id AND status='READY') AS avatar_url
-                    """ +
-                        ARRAYS +
-                        " FROM auth_users u WHERE u.id=? AND NOT u.deleted"
+                    SELECT u.id, u.username, u.display_name, u.email, u.avatar_media_id, u.email_verified_at,
+                        u.activation_pending,
+                        u.active, u.must_change_password, u.token_version, u.version, u.created_at, u.updated_at,
+                            u.created_by,
+                        u.updated_by, (
+                            SELECT thumbnail_url
+                            FROM media_assets
+                            WHERE id = u.avatar_media_id
+                                AND status = 'READY'
+                        ) AS avatar_url
+                    %s
+                    FROM auth_users u
+                    WHERE u.id = ? AND NOT u.deleted
+                    """.formatted(ARRAYS)
                 )
             ) {
                 query.setLong(1, id);
@@ -137,12 +163,12 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
         // column chỉ do các hàm nội bộ chọn id/username, tuyệt đối không nhận tên cột từ HTTP.
         try (
             PreparedStatement query = connection.prepareStatement(
-                "SELECT " +
-                    ACCOUNT_COLUMNS +
-                    " FROM auth_users u WHERE u." +
-                    column +
-                    " = ? AND NOT u.deleted" +
-                    (lock ? " FOR UPDATE OF u" : "")
+                """
+                SELECT %s
+                FROM auth_users u
+                WHERE u.%s = ? AND NOT u.deleted
+                %s
+                """.formatted(ACCOUNT_COLUMNS, column, lock ? " FOR UPDATE OF u" : "")
             )
         ) {
             query.setObject(1, value);
@@ -187,7 +213,12 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
     public void recordFailure(Connection connection, long id, int attempts, Instant lockedUntil) throws SQLException {
         try (
             PreparedStatement update = connection.prepareStatement(
-                "UPDATE auth_users SET failed_login_attempts=?, locked_until=?, updated_at=CURRENT_TIMESTAMP, updated_by=?, version=version+1 WHERE id=?"
+                """
+                UPDATE auth_users
+                SET failed_login_attempts = ?, locked_until = ?, updated_at = CURRENT_TIMESTAMP, updated_by = ?,
+                    version = version + 1
+                WHERE id = ?
+                """
             )
         ) {
             update.setInt(1, attempts);
@@ -203,9 +234,14 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
     public User completeLogin(Connection connection, long id) throws SQLException {
         try (
             PreparedStatement update = connection.prepareStatement(
-                "UPDATE auth_users u SET failed_login_attempts=0,locked_until=NULL,updated_at=CURRENT_TIMESTAMP," +
-                    "updated_by=?,version=version+1 WHERE u.id=? AND NOT u.deleted RETURNING " +
-                    ACCOUNT_COLUMNS
+                """
+                UPDATE auth_users u
+                SET failed_login_attempts = 0, locked_until = NULL, updated_at = CURRENT_TIMESTAMP, updated_by = ?,
+                    version = version + 1
+                WHERE u.id = ? AND NOT u.deleted
+                RETURNING
+                %s
+                """.formatted(ACCOUNT_COLUMNS)
             )
         ) {
             update.setLong(1, SystemActor.ID);
@@ -234,7 +270,14 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
     public void changePassword(Connection connection, long id, String hash, long actor) throws SQLException {
         try (
             PreparedStatement update = connection.prepareStatement(
-                "UPDATE auth_users SET previous_password_hash_2=previous_password_hash_1,previous_password_hash_1=password_hash,password_hash=?, must_change_password=false, token_version=token_version+1, failed_login_attempts=0, locked_until=NULL, updated_by=?, updated_at=CURRENT_TIMESTAMP, version=version+1 WHERE id=?"
+                """
+                UPDATE auth_users
+                SET previous_password_hash_2 = previous_password_hash_1, previous_password_hash_1 = password_hash,
+                    password_hash = ?, must_change_password = false, token_version = token_version + 1,
+                    failed_login_attempts = 0, locked_until = NULL, updated_by = ?, updated_at = CURRENT_TIMESTAMP,
+                    version = version + 1
+                WHERE id = ?
+                """
             )
         ) {
             update.setString(1, hash);
@@ -251,7 +294,12 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
         BusinessRules.require(!encoder.matches(candidate, user.getPasswordHash()), ErrorCode.PASSWORD_REUSED);
         try (
             PreparedStatement query = connection.prepareStatement(
-                "SELECT hash FROM auth_users CROSS JOIN LATERAL unnest(ARRAY[previous_password_hash_1,previous_password_hash_2]) hash WHERE id=? AND hash IS NOT NULL"
+                """
+                SELECT hash
+                FROM auth_users
+                CROSS JOIN LATERAL unnest(ARRAY [previous_password_hash_1, previous_password_hash_2]) hash
+                WHERE id = ? AND hash IS NOT NULL
+                """
             )
         ) {
             query.setLong(1, user.getId());
@@ -266,7 +314,12 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
     public void revokeTokens(Connection connection, long id) throws SQLException {
         try (
             PreparedStatement update = connection.prepareStatement(
-                "UPDATE auth_users SET token_version=token_version+1, updated_by=?, updated_at=CURRENT_TIMESTAMP, version=version+1 WHERE id=?"
+                """
+                UPDATE auth_users
+                SET token_version = token_version + 1, updated_by = ?, updated_at = CURRENT_TIMESTAMP,
+                    version = version + 1
+                WHERE id = ?
+                """
             )
         ) {
             update.setLong(1, id);
@@ -284,8 +337,13 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
     public PageResponse<UserDTO> search(UserSearch page) {
         return read(connection -> {
             String where = " FROM auth_users u WHERE NOT u.deleted AND u.id<>? AND lower(u.username) LIKE ? ESCAPE '!'";
-            if (page.getRole() != null && !page.getRole().isBlank()) where +=
-                " AND EXISTS(SELECT 1 FROM auth_user_roles ur WHERE ur.user_id=u.id AND ur.scope_id=0 AND ur.role_code=?)";
+            if (page.getRole() != null && !page.getRole().isBlank()) where += """
+                AND EXISTS (
+                    SELECT 1
+                    FROM auth_user_roles ur
+                    WHERE ur.user_id = u.id AND ur.scope_id = 0 AND ur.role_code = ?
+                )
+            """;
             if (page.getActive() != null) where += " AND u.active=?";
             long total;
             try (PreparedStatement count = connection.prepareStatement("SELECT count(*)" + where)) {
@@ -298,9 +356,21 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
             ArrayList<UserDTO> content = new ArrayList<UserDTO>();
             try (
                 PreparedStatement query = connection.prepareStatement(
-                    "SELECT u.id,u.username,u.display_name,u.email,u.email_verified_at,u.updated_by,u.active,u.activation_pending,u.must_change_password,(u.email_verified_at IS NULL) AS email_verification_required,u.locked_until,u.version,u.created_at,u.updated_at,COALESCE((SELECT string_agg(role_code,',' ORDER BY role_code) FROM auth_user_roles WHERE user_id=u.id AND scope_id=0),'') AS roles" +
-                        where +
-                        " ORDER BY u.username,u.id LIMIT ? OFFSET ?"
+                    """
+                    SELECT u.id, u.username, u.display_name, u.email, u.email_verified_at, u.updated_by, u.active,
+                        u.activation_pending,
+                        u.must_change_password, (u.email_verified_at IS NULL) AS email_verification_required,
+                            u.locked_until,
+                        u.version, u.created_at, u.updated_at, COALESCE((
+                            SELECT string_agg(role_code, ','
+                            ORDER BY role_code)
+                            FROM auth_user_roles
+                            WHERE user_id = u.id AND scope_id = 0
+                        ), '') AS roles
+                    %s
+                    ORDER BY u.username, u.id
+                    LIMIT ? OFFSET ?
+                    """.formatted(where)
                 )
             ) {
                 int index = bind(query, page);
@@ -406,9 +476,10 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
         if (created) try (
             PreparedStatement insert = connection.prepareStatement(
                 """
-                INSERT INTO auth_users(username,password_hash,display_name,created_by,updated_by,email,
-                  email_verified_at,active,activation_pending,must_change_password)
-                VALUES (?,?,'Quản trị viên',?,?,?,CURRENT_TIMESTAMP,true,false,false) RETURNING id
+                INSERT INTO auth_users(username, password_hash, display_name, created_by, updated_by, email,
+                    email_verified_at, active, activation_pending, must_change_password)
+                VALUES (?, ?, 'Quản trị viên', ?, ?, ?, CURRENT_TIMESTAMP, true, false, false)
+                RETURNING id
                 """
             )
         ) {
@@ -427,12 +498,16 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
         if (!created) try (
             PreparedStatement update = connection.prepareStatement(
                 """
-                UPDATE auth_users SET email=?,email_verified_at=CASE WHEN email IS DISTINCT FROM ?
-                  OR email_verified_at IS NULL THEN CURRENT_TIMESTAMP ELSE email_verified_at END,
-                  active=true,deleted=false,activation_pending=false,must_change_password=false,
-                  token_version=token_version+1,version=version+1,updated_at=CURRENT_TIMESTAMP,updated_by=?
-                WHERE id=? AND (email IS DISTINCT FROM ? OR email_verified_at IS NULL
-                  OR NOT active OR deleted OR activation_pending OR must_change_password)
+                UPDATE auth_users
+                SET email = ?, email_verified_at = CASE WHEN email IS DISTINCT FROM ?
+                    OR email_verified_at IS NULL THEN CURRENT_TIMESTAMP ELSE email_verified_at END, active = true,
+                    deleted = false, activation_pending = false, must_change_password = false,
+                        token_version = token_version + 1,
+                    version = version + 1, updated_at = CURRENT_TIMESTAMP, updated_by = ?
+                WHERE id = ?
+                    AND (email IS DISTINCT FROM ? OR email_verified_at IS NULL OR NOT active OR deleted OR
+                        activation_pending
+                    OR must_change_password)
                 """
             )
         ) {
@@ -454,7 +529,8 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
         try (
             PreparedStatement insert = connection.prepareStatement(
                 """
-                INSERT INTO auth_user_roles(user_id,role_code,created_by,updated_by) VALUES (?,?,?,?)
+                INSERT INTO auth_user_roles(user_id, role_code, created_by, updated_by)
+                VALUES (?, ?, ?, ?)
                 ON CONFLICT DO NOTHING
                 """
             )
@@ -466,8 +542,10 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
             if (insert.executeUpdate() > 0 && !created) try (
                 PreparedStatement update = connection.prepareStatement(
                     """
-                    UPDATE auth_users SET token_version=token_version+1,version=version+1,
-                      updated_at=CURRENT_TIMESTAMP,updated_by=? WHERE id=?
+                    UPDATE auth_users
+                    SET token_version = token_version + 1, version = version + 1, updated_at = CURRENT_TIMESTAMP,
+                        updated_by = ?
+                    WHERE id = ?
                     """
                 )
             ) {
@@ -482,7 +560,12 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
     public void insertDefaults(Connection connection, List<User> accounts) throws SQLException {
         try (
             PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO auth_users(username,display_name,email,password_hash,email_verified_at,active,activation_pending,must_change_password,bootstrap_scope_pending) VALUES(?,?,?,?,CURRENT_TIMESTAMP,true,false,false,true) ON CONFLICT DO NOTHING"
+                """
+                INSERT INTO auth_users(username, display_name, email, password_hash, email_verified_at, active,
+                    activation_pending, must_change_password, bootstrap_scope_pending)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, true, false, false, true)
+                ON CONFLICT DO NOTHING
+                """
             )
         ) {
             for (User account : accounts) {
@@ -496,7 +579,13 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
         }
         try (
             PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO auth_user_roles(user_id,role_code) SELECT id,? FROM auth_users WHERE username=? AND bootstrap_scope_pending ON CONFLICT DO NOTHING"
+                """
+                INSERT INTO auth_user_roles(user_id, role_code)
+                SELECT id, ?
+                FROM auth_users
+                WHERE username = ? AND bootstrap_scope_pending
+                ON CONFLICT DO NOTHING
+                """
             )
         ) {
             for (User account : accounts) {
@@ -531,10 +620,14 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
         try (
             PreparedStatement query = connection.prepareStatement(
                 """
-                INSERT INTO auth_user_roles(user_id,role_code,scope_id)
-                SELECT u.id,ur.role_code,c.scope_id FROM auth_users u JOIN auth_user_roles ur ON ur.user_id=u.id AND ur.scope_id=0
-                JOIN carriers c ON c.code='VRMIENNAM' WHERE u.bootstrap_scope_pending
-                    AND (u.username='operator01' AND ur.role_code='OPERATOR' OR u.username='driver01' AND ur.role_code='DRIVER')
+                INSERT INTO auth_user_roles(user_id, role_code, scope_id)
+                SELECT u.id, ur.role_code, c.scope_id
+                FROM auth_users u
+                JOIN auth_user_roles ur ON ur.user_id = u.id AND ur.scope_id = 0
+                JOIN carriers c ON c.code = 'VRMIENNAM'
+                WHERE u.bootstrap_scope_pending
+                    AND (u.username = 'operator01' AND ur.role_code = 'OPERATOR' OR u.username = 'driver01' AND
+                        ur.role_code = 'DRIVER')
                 ON CONFLICT DO NOTHING
                 """
             )
@@ -544,9 +637,14 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
         try (
             PreparedStatement query = connection.prepareStatement(
                 """
-                UPDATE carrier_drivers d SET user_id=u.id,updated_at=CURRENT_TIMESTAMP,updated_by=0,version=d.version+1
-                FROM auth_users u,carriers c WHERE u.username='driver01' AND u.bootstrap_scope_pending AND c.code='VRMIENNAM'
-                    AND d.carrier_id=c.id AND d.code='DRVSOUTH01' AND d.user_id IS NULL
+                UPDATE carrier_drivers d
+                SET user_id = u.id, updated_at = CURRENT_TIMESTAMP, updated_by = 0, version = d.version + 1
+                FROM auth_users u, carriers c
+                WHERE u.username = 'driver01' AND u.bootstrap_scope_pending
+                    AND c.code = 'VRMIENNAM'
+                    AND d.carrier_id = c.id
+                    AND d.code = 'DRVSOUTH01'
+                    AND d.user_id IS NULL
                 """
             )
         ) {
@@ -554,7 +652,16 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
         }
         try (
             PreparedStatement query = connection.prepareStatement(
-                "UPDATE auth_users SET bootstrap_scope_pending=false WHERE bootstrap_scope_pending AND (username='custom01' OR EXISTS(SELECT 1 FROM auth_user_roles ur WHERE ur.user_id=auth_users.id AND ur.scope_id>0))"
+                """
+                UPDATE auth_users
+                SET bootstrap_scope_pending = false
+                WHERE bootstrap_scope_pending
+                    AND (username = 'custom01' OR EXISTS (
+                        SELECT 1
+                        FROM auth_user_roles ur
+                        WHERE ur.user_id = auth_users.id AND ur.scope_id > 0
+                    ))
+                """
             )
         ) {
             query.executeUpdate();

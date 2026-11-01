@@ -31,8 +31,11 @@ public class RoleFunctionRepo extends JpaRepositorySupport<RoleFunction, Long> {
         return strings(
             connection,
             """
-            SELECT DISTINCT fr.target FROM auth_role_functions rf JOIN auth_functions f ON f.code=rf.function_code AND NOT f.deleted
-            JOIN auth_function_resources fr ON fr.function_code=f.code WHERE rf.role_code=?
+            SELECT DISTINCT fr.target
+            FROM auth_role_functions rf
+            JOIN auth_functions f ON f.code = rf.function_code AND NOT f.deleted
+            JOIN auth_function_resources fr ON fr.function_code = f.code
+            WHERE rf.role_code = ?
             """,
             role
         );
@@ -75,7 +78,12 @@ public class RoleFunctionRepo extends JpaRepositorySupport<RoleFunction, Long> {
             }
             try (
                 PreparedStatement query = connection.prepareStatement(
-                    "INSERT INTO auth_role_functions(role_code,function_code,created_by,updated_by) SELECT ?,code,?,? FROM unnest(?::text[]) code ON CONFLICT DO NOTHING"
+                    """
+                    INSERT INTO auth_role_functions(role_code, function_code, created_by, updated_by)
+                    SELECT ?, code, ?, ?
+                    FROM unnest(?::text []) code
+                    ON CONFLICT DO NOTHING
+                    """
                 )
             ) {
                 query.setString(1, role);
@@ -106,7 +114,13 @@ public class RoleFunctionRepo extends JpaRepositorySupport<RoleFunction, Long> {
     public boolean hasAllScopesRole(Connection connection, String code) throws SQLException {
         try (
             PreparedStatement query = connection.prepareStatement(
-                "SELECT 1 FROM auth_role_functions rf JOIN auth_roles r ON r.code=rf.role_code WHERE rf.function_code=? AND r.all_scopes LIMIT 1"
+                """
+                SELECT 1
+                FROM auth_role_functions rf
+                JOIN auth_roles r ON r.code = rf.role_code
+                WHERE rf.function_code = ? AND r.all_scopes
+                LIMIT 1
+                """
             )
         ) {
             query.setString(1, code);
@@ -120,7 +134,15 @@ public class RoleFunctionRepo extends JpaRepositorySupport<RoleFunction, Long> {
     public void touchRoles(Connection connection, String function, long actor) throws SQLException {
         try (
             PreparedStatement query = connection.prepareStatement(
-                "UPDATE auth_roles r SET version=version+1,updated_at=CURRENT_TIMESTAMP,updated_by=? WHERE EXISTS(SELECT 1 FROM auth_role_functions rf WHERE rf.role_code=r.code AND rf.function_code=?)"
+                """
+                UPDATE auth_roles r
+                SET version = version + 1, updated_at = CURRENT_TIMESTAMP, updated_by = ?
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM auth_role_functions rf
+                    WHERE rf.role_code = r.code AND rf.function_code = ?
+                )
+                """
             )
         ) {
             query.setLong(1, actor);
