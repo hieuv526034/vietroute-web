@@ -25,7 +25,7 @@ import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
-import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.repo.UserRepository;
 import vn.vietroute.auth.security.AccessMethodExpressionHandler;
 import vn.vietroute.auth.security.AuthCookies;
 import vn.vietroute.auth.security.JwtAuthenticationFilter;

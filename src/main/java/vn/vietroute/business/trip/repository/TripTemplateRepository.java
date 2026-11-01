@@ -254,7 +254,7 @@ public class TripTemplateRepository extends BaseRepository {
                 code = "item.code";
                 name = "item.name";
                 usable =
-                    "owner.active AND item.active AND du.active AND NOT du.activation_pending AND NOT du.must_change_password AND du.email_verified_at IS NOT NULL AND EXISTS(SELECT 1 FROM auth_scope_memberships sm JOIN auth_scope_roles sr ON sr.scope_id=sm.scope_id AND sr.user_id=sm.user_id JOIN auth_user_roles ur ON ur.user_id=sr.user_id AND ur.role_code=sr.role_code JOIN auth_roles rr ON rr.code=ur.role_code AND rr.active AND NOT rr.deleted WHERE sm.scope_id=owner.scope_id AND sm.user_id=du.id AND sm.active AND rr.code='DRIVER')";
+                    "owner.active AND item.active AND du.active AND NOT du.activation_pending AND NOT du.must_change_password AND du.email_verified_at IS NOT NULL AND EXISTS(SELECT 1 FROM (SELECT scope_id,user_id,bool_and(active) AS active,max(version) AS version FROM auth_user_roles WHERE scope_id>0 GROUP BY scope_id,user_id) sm JOIN (SELECT scope_id,user_id,role_code FROM auth_user_roles WHERE scope_id>0 AND active) sr ON sr.scope_id=sm.scope_id AND sr.user_id=sm.user_id JOIN auth_user_roles ur ON ur.user_id=sr.user_id AND ur.role_code=sr.role_code JOIN auth_roles rr ON rr.code=ur.role_code AND rr.active AND NOT rr.deleted WHERE sm.scope_id=owner.scope_id AND sm.user_id=du.id AND sm.active AND rr.code='DRIVER')";
             }
             default -> throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }

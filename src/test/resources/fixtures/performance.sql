@@ -1,10 +1,8 @@
 -- Chỉ BusinessIntegrationTest loopback/schema ngẫu nhiên. :trip/:booking là ID fixture server test, không HTTP.
-INSERT INTO auth_data_scopes(code,name_vi,name_en)
-SELECT 'PERF03S'||n,'Scope fixture '||n,'Scope fixture '||n FROM generate_series(1,20000) n;
-INSERT INTO carriers(scope_id,code,name,phone)
-SELECT id,'PERF03C'||substring(code FROM 8),
-    CASE WHEN id%1000=0 THEN 'needlexyz ' ELSE 'Carrier fixture ' END||id,'0000000000'
-FROM auth_data_scopes WHERE code LIKE 'PERF03S%';
+INSERT INTO carriers(scope_id,scope_code,scope_name_vi,scope_name_en,code,name,phone)
+SELECT nextval('carrier_scope_ids'),'PERF03S'||n,'Scope fixture '||n,'Scope fixture '||n,'PERF03C'||n,
+    CASE WHEN n%1000=0 THEN 'needlexyz ' ELSE 'Carrier fixture ' END||n,'0000000000'
+FROM generate_series(1,20000) n;
 INSERT INTO catalog_items(type,code,name_vi,name_en)
 SELECT 'VEHICLE_TYPE','PERF03CAT'||n,
     CASE WHEN n%1000=0 THEN 'needlexyz ' ELSE 'Danh mục fixture ' END||n,'Catalog fixture '||n
@@ -36,7 +34,6 @@ FROM carrier_trips t JOIN trip_stops p ON p.trip_id=t.id AND p.stop_order=1
 JOIN trip_stops d ON d.trip_id=t.id AND d.stop_order=3
 CROSS JOIN bookings b CROSS JOIN generate_series(1,3) n
 WHERE t.code LIKE 'PERF03T%' AND b.id=:booking;
-ANALYZE auth_data_scopes;
 ANALYZE carriers;
 ANALYZE catalog_items;
 ANALYZE carrier_trips;

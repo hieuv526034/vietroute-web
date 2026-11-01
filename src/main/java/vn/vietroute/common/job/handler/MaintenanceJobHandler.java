@@ -2,7 +2,7 @@ package vn.vietroute.common.job.handler;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import vn.vietroute.auth.repository.AccessChangeRepository;
+import vn.vietroute.auth.repo.AccessChangeRepository;
 import vn.vietroute.common.config.integration.JobSettings;
 import vn.vietroute.common.config.monitoring.ApiJournalSettings;
 import vn.vietroute.common.jdbc.JdbcTransactions;

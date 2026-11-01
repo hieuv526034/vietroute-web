@@ -44,9 +44,9 @@ call 200 POST /api/v1/auth/login "$work/login.json" cookie
 token=$(field data.accessToken)
 # Ngừng node thứ hai để không có startup sync tự sửa trong lúc kiểm đường thủ công.
 docker stop vietroute-auth-ci2 >/dev/null
-sql "DELETE FROM auth_user_roles WHERE role_code='ADMIN'; DELETE FROM auth_role_permissions WHERE role_code='ADMIN'; DELETE FROM auth_role_resource_sets WHERE role_code='ADMIN'; DELETE FROM auth_roles WHERE code='ADMIN'; DELETE FROM auth_role_permissions WHERE permission_code='CATALOG_DELETE'; DELETE FROM auth_permissions WHERE code='CATALOG_DELETE'; UPDATE auth_permissions SET active=false WHERE code='CATALOG_UPDATE'" >/dev/null
-recovery_damaged_ordinary=$(sql "SELECT md5(COALESCE(string_agg(role_code||':'||permission_code,',' ORDER BY role_code,permission_code),'')) FROM auth_role_permissions WHERE role_code<>'ADMIN'")
-sql "INSERT INTO auth_access_policies(kind,target,name_vi,name_en,enabled,required_permissions,allowed_roles) VALUES ('MENU','GET /account','Chặn account cũ','Legacy account deny',false,'','')" >/dev/null
+sql "DELETE FROM auth_user_roles WHERE role_code='ADMIN'; DELETE FROM auth_role_functions WHERE role_code='ADMIN'; DELETE FROM auth_roles WHERE code='ADMIN'; DELETE FROM auth_role_functions WHERE function_code='CATALOG_DELETE'; DELETE FROM auth_functions WHERE code='CATALOG_DELETE'; UPDATE auth_functions SET active=false WHERE code='CATALOG_UPDATE'" >/dev/null
+recovery_damaged_ordinary=$(sql "SELECT md5(COALESCE(string_agg(role_code||':'||function_code,',' ORDER BY role_code,function_code),'')) FROM auth_role_functions WHERE role_code<>'ADMIN'")
+# /account là self-service do source khai báo, không phụ thuộc native Function hoặc ADMIN bị hỏng.
 call 403 GET /api/v1/admin/access/tree '' bearer
 call 200 GET /account '' bearer
 grep -q 'id="admin-recovery-open"' "$result"
@@ -55,7 +55,7 @@ grep -q 'id="admin-recovery-open"' "$result"
 sql 'CREATE FUNCTION reject_admin_recovery_ci() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.event_type='"'"'ADMIN_RECOVERED'"'"' THEN RAISE EXCEPTION '"'"'CI recovery audit unavailable'"'"'; END IF; RETURN NEW; END $$; CREATE TRIGGER reject_admin_recovery_ci BEFORE INSERT ON auth_access_changes FOR EACH ROW EXECUTE FUNCTION reject_admin_recovery_ci()' >/dev/null
 call 503 POST /api/v1/auth/admin-recovery "$work/recovery.json" bearer
 [[ "$(sql "SELECT count(*) FROM auth_roles WHERE code='ADMIN'")" == 0 ]]
-[[ "$(sql "SELECT count(*) FROM auth_permissions WHERE code='CATALOG_DELETE'")" == 0 ]]
+[[ "$(sql "SELECT count(*) FROM auth_functions WHERE code='CATALOG_DELETE'")" == 0 ]]
 sql 'DROP TRIGGER reject_admin_recovery_ci ON auth_access_changes; DROP FUNCTION reject_admin_recovery_ci()' >/dev/null
 call 200 POST /api/v1/auth/admin-recovery "$work/recovery.json" bearer
 recovery_trace=$(field traceId)
@@ -65,13 +65,13 @@ login_body admin "$next_password"
 call 200 POST /api/v1/auth/login "$work/login.json" cookie
 token=$(field data.accessToken)
 call 200 GET /api/v1/admin/access/tree '' bearer
-[[ "$(sql "SELECT count(*) FROM auth_permissions p WHERE p.active AND NOT EXISTS(SELECT 1 FROM auth_role_permissions rp WHERE rp.role_code='ADMIN' AND rp.permission_code=p.code)")" == 0 ]]
+[[ "$(sql "SELECT count(*) FROM auth_functions p WHERE p.active AND p.source_managed AND NOT p.deleted AND NOT EXISTS(SELECT 1 FROM auth_role_functions rp WHERE rp.role_code='ADMIN' AND rp.function_code=p.code)")" == 0 ]]
 [[ "$(sql "SELECT md5(password_hash) FROM auth_users WHERE id=1")" == "$recovery_original_hash" ]]
-[[ "$(sql "SELECT md5(COALESCE(string_agg(role_code||':'||permission_code,',' ORDER BY role_code,permission_code),'')) FROM auth_role_permissions WHERE role_code<>'ADMIN'")" == "$recovery_damaged_ordinary" ]]
+[[ "$(sql "SELECT md5(COALESCE(string_agg(role_code||':'||function_code,',' ORDER BY role_code,function_code),'')) FROM auth_role_functions WHERE role_code<>'ADMIN'")" == "$recovery_damaged_ordinary" ]]
 [[ "$(sql "SELECT count(*) FROM auth_access_changes WHERE event_type='ADMIN_RECOVERED' AND actor_id=1 AND trace_id='$recovery_trace' AND after_state->'roles' ? 'ADMIN'")" == 1 ]]
 
 # Khởi động lại tự sửa mapping bị mất, giữ mật khẩu và không cấp lại ADMIN cho user khác.
-sql "DELETE FROM auth_user_roles WHERE user_id=1 AND role_code='ADMIN'; DELETE FROM auth_role_permissions WHERE role_code='ADMIN' AND permission_code='ACCESS_READ'" >/dev/null
+sql "DELETE FROM auth_user_roles WHERE user_id=1 AND role_code='ADMIN'; DELETE FROM auth_role_functions WHERE role_code='ADMIN' AND function_code='ACCESS_READ'" >/dev/null
 docker restart vietroute-auth-ci >/dev/null
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors --retry-connrefused --max-time 5 "$base/health" >/dev/null
 login_body admin "$next_password"

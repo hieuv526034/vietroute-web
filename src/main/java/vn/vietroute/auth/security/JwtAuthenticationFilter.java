@@ -18,7 +18,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.web.filter.OncePerRequestFilter;
 import vn.vietroute.auth.entity.UserAccount;
-import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.repo.UserRepository;
 import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;

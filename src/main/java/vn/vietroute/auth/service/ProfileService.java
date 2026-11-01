@@ -2,9 +2,9 @@ package vn.vietroute.auth.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.dto.record.account.ProfileUpdateRequest;
+import vn.vietroute.auth.dto.request.account.ProfileUpdateRequest;
 import vn.vietroute.auth.dto.response.account.UserResponse;
-import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.repo.UserRepository;
 import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessOperation;

@@ -5,12 +5,14 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import vn.vietroute.common.base.BaseRequest;
 import vn.vietroute.common.validation.StrongPassword;
 
 /** Đổi mật khẩu yêu cầu xác minh mật khẩu hiện tại; không nhận user ID từ client. */
 @Getter
+@NoArgsConstructor
 @Setter
 @Schema(description = "Đổi mật khẩu tài khoản hiện tại và thu hồi các token cũ")
 public class ChangePasswordRequest extends BaseRequest {

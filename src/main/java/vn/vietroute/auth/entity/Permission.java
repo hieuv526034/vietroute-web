@@ -7,19 +7,8 @@ import java.util.Set;
 import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.AccessConstants.Permissions;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
-import vn.vietroute.common.jdbc.JdbcIndex;
-import vn.vietroute.common.jdbc.JdbcTable;
 
 /** Quyền là hành động cụ thể; role chỉ gom quyền, không được dùng role để bỏ qua phạm vi dữ liệu. */
-@JdbcTable(
-    name = "auth_permissions",
-    primaryKey = { "code" },
-    indexes = {
-        @JdbcIndex(name = "auth_permissions_pkey", columns = { "code" }, unique = true),
-        @JdbcIndex(name = "idx_permissions_created_by", columns = { "created_by" }),
-        @JdbcIndex(name = "idx_permissions_updated_by", columns = { "updated_by" }),
-    }
-)
 @Schema(type = "string", description = "Mã Permission ổn định từ registry, JSON dạng chuỗi")
 public final class Permission {
 

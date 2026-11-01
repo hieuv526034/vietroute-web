@@ -87,7 +87,7 @@ jobs:
           set -euo pipefail
           docker cp vietroute-ci:/usr/local/tomcat/webapps/ROOT.war "$RUNNER_TEMP/production.war"
           unzip -Z -1 "$RUNNER_TEMP/production.war" > "$RUNNER_TEMP/war-contents.txt"
-          if grep -Ei '(junit|spring-test|mysql-connector|test-classes|tomcat-embed|vn/vietroute/dev/|(^|/)\.env($|/)|Test\.class$)' "$RUNNER_TEMP/war-contents.txt"; then
+          if grep -Ei '(junit|spring-test|h2-[0-9]|mysql-connector|test-classes|tomcat-embed|vn/vietroute/dev/|(^|/)\.env($|/)|Test\.class$)' "$RUNNER_TEMP/war-contents.txt"; then
             echo 'Production WAR contains unexpected test/development files' >&2
             exit 1
           fi

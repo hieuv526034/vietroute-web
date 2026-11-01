@@ -5,14 +5,16 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.dto.record.session.AuthResponse;
 import vn.vietroute.auth.dto.request.session.ChangePasswordRequest;
 import vn.vietroute.auth.dto.request.session.LoginRequest;
 import vn.vietroute.auth.dto.response.account.UserResponse;
+import vn.vietroute.auth.dto.response.session.AuthResponse;
 import vn.vietroute.auth.entity.UserAccount;
-import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.repo.UserRepository;
 import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessOperation;
@@ -135,5 +137,25 @@ public class AuthService {
         }
     }
 
-    private record LoginOutcome(UserAccount user, ErrorCode error) {}
+    @Getter
+    @Setter
+    private static class LoginOutcome {
+
+        private UserAccount user;
+
+        private ErrorCode error;
+
+        public LoginOutcome(UserAccount user, ErrorCode error) {
+            this.user = user;
+            this.error = error;
+        }
+
+        public UserAccount user() {
+            return user;
+        }
+
+        public ErrorCode error() {
+            return error;
+        }
+    }
 }

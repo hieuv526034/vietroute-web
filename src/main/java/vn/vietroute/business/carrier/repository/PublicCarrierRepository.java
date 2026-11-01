@@ -18,7 +18,7 @@ public class PublicCarrierRepository {
     public record Published(long id, String code, String name, String phone, String description, Long logoId) {}
 
     private static final String FROM =
-        " FROM carriers c JOIN auth_data_scopes s ON s.id=c.scope_id WHERE c.active AND s.active";
+        " FROM carriers c JOIN (SELECT scope_id AS id,scope_code AS code,scope_name_vi AS name_vi,scope_name_en AS name_en,scope_active AS active,scope_version AS version,updated_at,updated_by FROM carriers) s ON s.id=c.scope_id WHERE c.active AND s.active";
     private static final String COLUMNS = "c.id,c.code,c.name,c.phone,c.description,c.logo_media_id";
 
     /** Từ khóa nguyên văn và phân trang ổn định name/id được xử lý hoàn toàn trong PostgreSQL. */

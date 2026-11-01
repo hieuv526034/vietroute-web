@@ -24,9 +24,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
-import vn.vietroute.auth.dto.record.resource.AccessResourceResponse;
+import vn.vietroute.auth.dto.response.resource.AccessResourceResponse;
 import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.repository.AccessRegistryRepository;
+import vn.vietroute.auth.repo.AccessRegistryRepository;
 import vn.vietroute.auth.security.AccessPermissionDefinitions;
 import vn.vietroute.auth.security.AccessResourceSynchronizer;
 import vn.vietroute.auth.security.AccessTargets;
@@ -217,7 +217,7 @@ class AccessResourceDiscoveryTest {
         private Set<String> serviceCodes = Set.of();
 
         RecordingResources() {
-            super(null, null, null, null, null, new AccessPermissionDefinitions());
+            super(null, null, null, null, null, new AccessPermissionDefinitions(), null, null);
         }
 
         @Override

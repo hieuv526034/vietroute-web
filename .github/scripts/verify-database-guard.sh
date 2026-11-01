@@ -23,14 +23,14 @@ guard_check false
 sql "UPDATE auth_users SET email_verified_at=CURRENT_TIMESTAMP WHERE id=$guard_user" >/dev/null
 guard_check true
 # Cùng principal/tokenVersion và chuỗi authority giả: thu hồi mapping có hiệu lực ngay lần gọi hàm tiếp theo.
-sql "DELETE FROM auth_role_permissions WHERE role_code='DB_GUARD_CI'" >/dev/null
+sql "DELETE FROM auth_role_functions WHERE role_code='DB_GUARD_CI'" >/dev/null
 guard_check false
-sql "INSERT INTO auth_role_permissions(role_code,permission_code) VALUES ('DB_GUARD_CI','BOOKING_LIST')" >/dev/null
+sql "INSERT INTO auth_role_functions(role_code,function_code,operation_codes) VALUES ('DB_GUARD_CI','BOOKING_LIST',ARRAY['BOOKING_LIST'])" >/dev/null
 sql "UPDATE auth_roles SET active=false WHERE code='DB_GUARD_CI'" >/dev/null
 guard_check false
-sql "UPDATE auth_roles SET active=true WHERE code='DB_GUARD_CI'; UPDATE auth_permissions SET active=false WHERE code='BOOKING_LIST'" >/dev/null
+sql "UPDATE auth_roles SET active=true WHERE code='DB_GUARD_CI'; UPDATE auth_functions SET active=false WHERE code='BOOKING_LIST'" >/dev/null
 guard_check false
-sql "UPDATE auth_permissions SET active=true WHERE code='BOOKING_LIST'; UPDATE auth_users SET must_change_password=true WHERE id=$guard_user" >/dev/null
+sql "UPDATE auth_functions SET active=true WHERE code='BOOKING_LIST'; UPDATE auth_users SET must_change_password=true WHERE id=$guard_user" >/dev/null
 guard_check false
 sql "UPDATE auth_users SET must_change_password=false,token_version=token_version+1 WHERE id=$guard_user" >/dev/null
 guard_check false

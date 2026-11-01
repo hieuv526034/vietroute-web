@@ -5,11 +5,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import org.springframework.security.core.Authentication;
-import vn.vietroute.auth.dto.record.capability.AccessCapabilityResponse;
-import vn.vietroute.auth.dto.record.policy.AccessPolicyResponse;
-import vn.vietroute.auth.dto.record.resource.AccessResourceResponse;
+import vn.vietroute.auth.dto.response.capability.AccessCapabilityResponse;
+import vn.vietroute.auth.dto.response.policy.AccessPolicyResponse;
+import vn.vietroute.auth.dto.response.resource.AccessResourceResponse;
 import vn.vietroute.auth.entity.Permission;
-import vn.vietroute.auth.service.AccessManagementService;
+import vn.vietroute.auth.service.RoleService;
 
 /** Cùng phép tính cho header và nút: guard source + authorities DB + chính sách siết riêng endpoint. */
 public final class AccessCapabilities {
@@ -33,7 +33,7 @@ public final class AccessCapabilities {
                     policies
                         .stream()
                         .filter(policy -> policy.target().equals(endpoint.target()))
-                        .allMatch(policy -> AccessManagementService.allows(policy, auth));
+                        .allMatch(policy -> RoleService.allows(policy, auth));
                 if (!allowed) continue;
                 targets.add(endpoint.target());
                 if (feature.path() != null && endpoint.target().equals("GET " + feature.path())) view = true;

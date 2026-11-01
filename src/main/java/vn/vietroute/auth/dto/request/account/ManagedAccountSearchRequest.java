@@ -3,11 +3,13 @@ package vn.vietroute.auth.dto.request.account;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 
 /** Lọc danh tính quản trị bằng tham số bind JDBC; không nhận tên cột hoặc SQL từ client. */
 @Getter
+@NoArgsConstructor
 @Setter
 @Schema(description = "Lọc tài khoản quản trị, loại trừ actor system")
 public class ManagedAccountSearchRequest extends AccessUserSearchRequest {

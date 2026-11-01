@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.Locale;
 import org.springframework.stereotype.Repository;
 import vn.vietroute.auth.entity.PermissionAction;
-import vn.vietroute.auth.repository.BusinessScopeRepository;
+import vn.vietroute.auth.repo.BusinessScopeRepository;
 import vn.vietroute.auth.security.DataScopeGuard;
 import vn.vietroute.business.carrier.dto.request.CarrierCreateRequest;
 import vn.vietroute.business.carrier.dto.request.CarrierSearchRequest;
@@ -239,7 +239,7 @@ public class CarrierRepository extends BaseRepository {
         long scope = scopes.create(connection, body.getName(), actor);
         try (
             var query = connection.prepareStatement(
-                "INSERT INTO carriers(scope_id,code,name,phone,description,active,logo_media_id,created_by,updated_by) VALUES (?,?,?,?,?,?,?,?,?) RETURNING id"
+                "INSERT INTO carriers(scope_id,code,name,phone,description,active,logo_media_id,created_by,updated_by,scope_code,scope_name_vi,scope_name_en) VALUES (?,?,?,?,?,?,?,?,?,'CARRIER_'||?::text,?,?) RETURNING id"
             )
         ) {
             query.setLong(1, scope);
@@ -251,6 +251,9 @@ public class CarrierRepository extends BaseRepository {
             query.setObject(7, body.getLogoMediaId(), Types.BIGINT);
             query.setLong(8, actor);
             query.setLong(9, actor);
+            query.setLong(10, scope);
+            query.setString(11, body.getName().strip());
+            query.setString(12, body.getName().strip());
             try (var row = query.executeQuery()) {
                 row.next();
                 return row.getLong(1);
@@ -301,8 +304,8 @@ public class CarrierRepository extends BaseRepository {
                 SELECT u.id FROM auth_users u
                 JOIN auth_user_roles ur ON ur.user_id=u.id AND ur.role_code='DRIVER'
                 JOIN auth_roles r ON r.code=ur.role_code AND r.active AND NOT r.deleted
-                JOIN auth_scope_memberships sm ON sm.user_id=u.id AND sm.scope_id=? AND sm.active
-                JOIN auth_scope_roles sr ON sr.scope_id=sm.scope_id AND sr.user_id=sm.user_id AND sr.role_code=ur.role_code
+                JOIN (SELECT scope_id,user_id,bool_and(active) AS active,max(version) AS version FROM auth_user_roles WHERE scope_id>0 GROUP BY scope_id,user_id) sm ON sm.user_id=u.id AND sm.scope_id=? AND sm.active
+                JOIN (SELECT scope_id,user_id,role_code FROM auth_user_roles WHERE scope_id>0 AND active) sr ON sr.scope_id=sm.scope_id AND sr.user_id=sm.user_id AND sr.role_code=ur.role_code
                 WHERE u.id=? AND u.active AND NOT u.activation_pending AND NOT u.must_change_password AND u.email_verified_at IS NOT NULL
                 FOR SHARE OF u
                 """

@@ -1,5 +1,37 @@
 # Cấu hình schema, role và tài nguyên menu/API
 
+## Hợp đồng hiện hành AUTHDB02 — tám bảng, từ 01/11/2026
+
+Yêu cầu mới của chủ dự án thay mô hình ACCESS24 ở giao diện quản trị bằng **User → Role → Function → Menu/API**. Các mục V001–V023 bên dưới là lịch sử/giải thích chuyển tiếp; source V024 dùng bảng sau:
+
+| Bảng | Trách nhiệm |
+|---|---|
+| auth_users | Credential, xác minh email, khóa đăng nhập, tokenVersion, hai hash mật khẩu cũ trong hai cột |
+| auth_roles | Vai trò và version cấu hình/mapping; ADMIN bất biến |
+| auth_user_roles | Gán role toàn cục scope_id=0 hoặc theo nhà xe; FK scoped là tập con global |
+| auth_functions | Chức năng có tên vi/en, trạng thái và version; operation_codes là projection backend |
+| auth_role_functions | Gán Function cho Role; tập rỗng deny, không tự nhận chức năng mới |
+| auth_function_resources | Menu/API cụ thể của Function; metadata handler/guard lấy từ source |
+| auth_account_challenges | Mã xác minh/reset có hạn dùng, một lần và ràng buộc tokenVersion |
+| auth_access_changes | Lịch sử quản trị cùng transaction; lỗi ghi lịch sử rollback mutation |
+
+Không còn bảng permission, policy, scope/membership riêng hoặc marker native. Phạm vi bảo mật lưu trong carriers (scope_*), độc lập trạng thái kinh doanh. User_role scoped tham chiếu carriers.scope_id và global role của chính user; role ở nhà xe khác không được union để vượt scope. Các Permission/PermissionAction trong Java là từ vựng guard/JSON tương thích, không phải bảng hoặc ma trận phải gán lần hai.
+
+Mốc CAS membership nằm trong auth_users.scope_membership_versions, tối đa 32 khóa scope/tài khoản; JSON này chỉ chứa số version, không chứa role hoặc quyền. Role vẫn chỉ nằm ở auth_user_roles. Gỡ hết scoped role hoặc thu hồi global role cuối vẫn giữ mốc; lần gán lại phải dùng version hiện hành, không quay về 0. Ghi mốc, mapping và history cùng transaction; lỗi history rollback cả ba. Phạm vi mới được tạo cùng nhà xe qua API carrier, không còn POST tạo scope độc lập.
+
+Ví dụ: operator01 → OPERATOR → DEFAULT_OPERATOR → trang/chức năng điều hành được cấp. Quản trị có thể tạo BOOKING_MANAGEMENT, chọn trang đơn + API đọc/tạo/sửa và gán cho OPERATOR. Backend kiểm action bắt buộc, target HTTP chính xác, tài khoản/tokenVersion hiện hành và scope/owner trên connection nghiệp vụ. Public/self-service do source xác định; cờ DB không biến route thành public. JWT/BCrypt/CSRF, 5 lần sai/khóa 15 phút, mật khẩu hiện tại + hai lần trước, ADMIN recovery và audit system=0 vẫn giữ.
+
+Function tùy chỉnh quản lý qua API /api/v1/admin/access/functions và role-function qua /roles/{role}/functions. UI chính gồm tài khoản, tab Vai trò/Chức năng/Phạm vi nhà xe/Lịch sử; thêm/sửa/gán dùng modal. Không có màn policy hoặc ma trận action thứ hai. Danh bạ source chỉ đọc; Function source không bị đổi binding/tắt/xóa qua API. API action/target cũ còn làm adapter trên cùng Function để chuyển caller hiện có, không có bảng phụ hoặc fallback quyền.
+
+V024 giữ nguyên byte/checksum V001–V023, chuyển ID/hash/audit/mapping bằng SQL theo tập. Các grant hiện có của mỗi role thường được gom vào MIGRATED_<ROLE>, giữ đúng operation/target; target từng có policy bổ sung bị thu hồi để không vô tình mở quyền khi bỏ policy. ADMIN/source registry được phục hồi khi init/sync được bật. Lịch sử cũ vẫn đọc được qua projection whitelist. Scope độc lập không gắn nhà xe không còn là scope nghiệp vụ ở mô hình mới.
+
+**Nâng cấp phải dừng toàn bộ node V023 trước khi bật V024.** Sao lưu trước phát hành; không rollback code cũ sau chuyển schema. Không dùng H2 để kết luận migration/array/advisory lock hoặc SQL PostgreSQL đã đúng. Kiểm upgrade/fresh/schema tùy cấu hình/hai context ở PostgreSQL cô lập, H2 chỉ kiểm JDBC portable và rollback. Thay đổi này chưa tự cho phép phát hành main/Render.
+
+Khởi tạo chuẩn: DB_INIT_ENABLED + ACCESS_SYNC_ENABLED. DEFAULT_ACCOUNTS_ENABLED chỉ tạo custom01/CUSTOMER, driver01/DRIVER, operator01/OPERATOR còn thiếu bằng email/mật khẩu env, active/đã xác minh theo ngoại lệ chủ dự án chốt; không sửa hash, khóa hoặc trạng thái user đã có. Admin bootstrap cấu hình riêng. Function mặc định role thường được chụp/gán đúng một lần, không cấp thêm API mới khi restart. BUSINESS_INIT_ENABLED tạo bộ dữ liệu dự án theo tập; gán operator01/driver01 vào nhà xe Miền Nam và gắn driver01 vào hồ sơ tài xế đúng một lần qua bootstrap_scope_pending. Xóa quyền/membership sau đó không bị init tự phục hồi.
+
+Nguồn dữ liệu ở [business.json](../../src/main/resources/demo/business.json): tên/mã/địa chỉ/liên hệ/xe/tài xế đầy đủ do dự án tạo theo yêu cầu, có provenance PROJECT_GENERATED; không phải đơn vị, thuê bao, biển số, tọa độ hoặc lịch khai thác đã xác minh ngoài thực tế. Hai tuyến nền và sáu điểm dừng do dự án quy định; không tự công bố chuyến hoặc tạo booking giả. Giữ dữ liệu đã có, mã nhà xe xung đột tên trả 409 và rollback toàn bộ. Thay thông tin bằng dữ liệu của đơn vị trước nhận khách thật. Các cờ init mặc định false; test/build không đọc .env và không ghi Neon.
+
+
 Cập nhật 22/10/2026, phụ trách hieuv526034. Quy ước này thay phần schema cố định và quyền WRITE gộp trong tài liệu nền tảng trước đó.
 
 ## ACCESS24 — Cấu hình User → Role → Menu/API

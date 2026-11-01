@@ -4,15 +4,18 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.dto.record.resource.AccessResourceResponse;
 import vn.vietroute.auth.dto.request.access.AccessResourceSearchRequest;
+import vn.vietroute.auth.dto.response.resource.AccessResourceResponse;
 import vn.vietroute.auth.entity.PermissionAction;
-import vn.vietroute.auth.repository.AccessFeatureRepository;
-import vn.vietroute.auth.repository.AccessResourceRepository;
-import vn.vietroute.auth.repository.AdminRecoveryRepository;
-import vn.vietroute.auth.repository.RoleResourceRepository;
+import vn.vietroute.auth.repo.AccessFeatureRepository;
+import vn.vietroute.auth.repo.AccessResourceRepository;
+import vn.vietroute.auth.repo.AdminRecoveryRepository;
+import vn.vietroute.auth.repo.DefaultAccountsRepository;
+import vn.vietroute.auth.repo.RoleResourceRepository;
 import vn.vietroute.auth.security.AccessPermissionDefinitions;
 import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.base.PageResponse;
@@ -37,6 +40,10 @@ public class AccessResourceService {
 
     private final AccessPermissionDefinitions permissions;
 
+    private final DefaultAccountsInitializer defaults;
+
+    private final DefaultAccountsRepository defaultAccounts;
+
     private volatile Definition definition;
 
     /** Chỉ collector servlet công bố metadata server đã validate, kể cả khi tắt ghi startup. Không chứa quyền user. */
@@ -51,6 +58,7 @@ public class AccessResourceService {
             bootstrap.initialize(connection, SystemActor.ID);
             features.synchronize(connection, inventory, serviceCodes);
             resources.synchronize(connection, inventory);
+            if (defaults.enabled()) defaultAccounts.initializeFunctions(connection);
             RoleResourceRepository.initializeLegacy(connection);
             recovery.grantAll(connection, SystemActor.ID);
             return null;
@@ -67,7 +75,27 @@ public class AccessResourceService {
         recovery.grantAll(connection, actor);
     }
 
-    private record Definition(List<AccessResourceResponse> inventory, Set<String> serviceCodes) {}
+    @Getter
+    @Setter
+    private static class Definition {
+
+        private List<AccessResourceResponse> inventory;
+
+        private Set<String> serviceCodes;
+
+        public Definition(List<AccessResourceResponse> inventory, Set<String> serviceCodes) {
+            this.inventory = inventory;
+            this.serviceCodes = serviceCodes;
+        }
+
+        public List<AccessResourceResponse> inventory() {
+            return inventory;
+        }
+
+        public Set<String> serviceCodes() {
+            return serviceCodes;
+        }
+    }
 
     /** Metadata bất biến của node hiện tại; không lấy cờ public do DB chỉnh để làm yếu guard nguồn. */
     public List<AccessResourceResponse> inventory() {

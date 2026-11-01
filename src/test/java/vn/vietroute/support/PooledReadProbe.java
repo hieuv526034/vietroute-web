@@ -17,8 +17,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import javax.sql.DataSource;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import vn.vietroute.auth.repository.AuthorizationRepository;
-import vn.vietroute.auth.security.DatabaseAccessGuard;
+import vn.vietroute.auth.repo.AuthorizationRepository;
+import vn.vietroute.auth.security.AccessGuard;
 import vn.vietroute.common.jdbc.BaseRepository.SqlWork;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.jdbc.JdbcSchema;
@@ -139,7 +139,7 @@ public final class PooledReadProbe {
 
         private final HikariDataSource pool;
         private final JdbcTransactions transactions;
-        private final DatabaseAccessGuard guard;
+        private final AccessGuard guard;
         private final AtomicLong borrowNanos = new AtomicLong();
         private final AtomicLong maxBorrow = new AtomicLong();
         private final AtomicLong borrows = new AtomicLong();
@@ -183,7 +183,7 @@ public final class PooledReadProbe {
             );
             var connections = new JdbcConnectionFactory(source, new JdbcSchema(schema));
             transactions = new JdbcTransactions(connections);
-            guard = new DatabaseAccessGuard(new AuthorizationRepository(connections));
+            guard = new AccessGuard(new AuthorizationRepository(connections));
         }
 
         @Override

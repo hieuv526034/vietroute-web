@@ -28,24 +28,24 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import vn.vietroute.auth.dto.record.account.ManagedAccountResponse;
-import vn.vietroute.auth.dto.record.policy.AccessPolicyResponse;
-import vn.vietroute.auth.dto.record.resource.AccessResourceResponse;
 import vn.vietroute.auth.dto.request.account.ManagedAccountCreateRequest;
 import vn.vietroute.auth.dto.request.account.ManagedAccountSearchRequest;
+import vn.vietroute.auth.dto.response.account.ManagedAccountResponse;
+import vn.vietroute.auth.dto.response.policy.AccessPolicyResponse;
+import vn.vietroute.auth.dto.response.resource.AccessResourceResponse;
 import vn.vietroute.auth.entity.AuthorizationState;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
-import vn.vietroute.auth.repository.AuthorizationRepository;
-import vn.vietroute.auth.repository.ManagedAccountRepository;
-import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.repo.AuthorizationRepository;
+import vn.vietroute.auth.repo.ManagedAccountRepository;
+import vn.vietroute.auth.repo.UserRepository;
+import vn.vietroute.auth.security.AccessGuard;
 import vn.vietroute.auth.security.AccessPermissionDefinitions;
-import vn.vietroute.auth.security.DatabaseAccessGuard;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.auth.service.AccessManagementService;
+import vn.vietroute.auth.service.AccountService;
 import vn.vietroute.auth.service.JwtService;
-import vn.vietroute.auth.service.ManagedAccountService;
+import vn.vietroute.auth.service.RoleService;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.web.WebConfig;
@@ -118,7 +118,7 @@ class ManagedAccountSecurityTest {
             );
             SecurityContextHolder.getContext().setAuthentication(delegated);
             assertThrows(AccessDeniedException.class, () ->
-                root.getBean(ManagedAccountService.class).page(new ManagedAccountSearchRequest())
+                root.getBean(AccountService.class).page(new ManagedAccountSearchRequest())
             );
             SecurityContextHolder.clearContext();
             var adminRead = actor("ROLE_ADMIN", "ACCOUNT_READ");
@@ -315,7 +315,7 @@ class ManagedAccountSecurityTest {
                 return fixture(false);
             }
         };
-        var service = new ManagedAccountService(
+        var service = new AccountService(
             null,
             new ManagedAccountRepository(null) {
                 @Override
@@ -328,9 +328,9 @@ class ManagedAccountSecurityTest {
             null,
             null,
             null,
-            new AccessManagementService(registry, null, null, null, null),
+            new RoleService(registry, null, null, null, null),
             null,
-            new DatabaseAccessGuard(
+            new AccessGuard(
                 new AuthorizationRepository(null) {
                     @Override
                     public AuthorizationState find(long id) {

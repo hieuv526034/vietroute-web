@@ -40,6 +40,14 @@ public final class ApplicationConstants {
         BOOTSTRAP_ADMIN_USERNAME("VIETROUTE_BOOTSTRAP_ADMIN_USERNAME"),
         BOOTSTRAP_ADMIN_EMAIL("VIETROUTE_BOOTSTRAP_ADMIN_EMAIL"),
         BOOTSTRAP_ADMIN_PASSWORD("VIETROUTE_BOOTSTRAP_ADMIN_PASSWORD"),
+        DEFAULT_ACCOUNTS_ENABLED("VIETROUTE_DEFAULT_ACCOUNTS_ENABLED"),
+        BUSINESS_INIT_ENABLED("VIETROUTE_BUSINESS_INIT_ENABLED"),
+        DEFAULT_CUSTOMER_EMAIL("VIETROUTE_DEFAULT_CUSTOMER_EMAIL"),
+        DEFAULT_CUSTOMER_PASSWORD("VIETROUTE_DEFAULT_CUSTOMER_PASSWORD"),
+        DEFAULT_DRIVER_EMAIL("VIETROUTE_DEFAULT_DRIVER_EMAIL"),
+        DEFAULT_DRIVER_PASSWORD("VIETROUTE_DEFAULT_DRIVER_PASSWORD"),
+        DEFAULT_OPERATOR_EMAIL("VIETROUTE_DEFAULT_OPERATOR_EMAIL"),
+        DEFAULT_OPERATOR_PASSWORD("VIETROUTE_DEFAULT_OPERATOR_PASSWORD"),
 
         // Database và pool kết nối.
         DB_INIT_ENABLED("VIETROUTE_DB_INIT_ENABLED"),
@@ -163,6 +171,12 @@ public final class ApplicationConstants {
         public static final String ACCESS_TREE = "/tree";
 
         public static final String ACCESS_EFFECTIVE = "/users/{id}/effective";
+
+        public static final String ACCESS_FUNCTIONS = "/functions";
+
+        public static final String ACCESS_FUNCTION_ITEM = "/functions/{code}";
+
+        public static final String ACCESS_ROLE_FUNCTIONS = "/roles/{role}/functions";
 
         public static final String AUTH_CAPABILITIES = "/capabilities";
         public static final String ACCESS_POLICIES = "/policies";
@@ -388,6 +402,8 @@ public final class ApplicationConstants {
 
     /** Regex chỉ mô tả từng loại dữ liệu cụ thể; không áp quy tắc mã cho tên người/địa chỉ/mật khẩu. */
     public static final class Regex {
+
+        public static final String FUNCTION_CODE = "^[A-Z][A-Za-z0-9_]{2,79}$";
 
         public static final String PHONE_NUMBER = "^[+0-9(). -]{6,30}$";
 

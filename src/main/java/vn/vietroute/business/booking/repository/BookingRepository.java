@@ -175,7 +175,7 @@ public class BookingRepository extends BaseRepository {
     public Trip trip(Connection connection, long id, boolean lock) throws SQLException {
         try (
             var query = connection.prepareStatement(
-                "SELECT t.id,t.carrier_id,t.scope_id,t.status,t.departure_at,owner.active AND scope.active AS accepting FROM carrier_trips t JOIN carriers owner ON owner.id=t.carrier_id AND owner.scope_id=t.scope_id JOIN auth_data_scopes scope ON scope.id=t.scope_id WHERE t.id=?" +
+                "SELECT t.id,t.carrier_id,t.scope_id,t.status,t.departure_at,owner.active AND scope.active AS accepting FROM carrier_trips t JOIN carriers owner ON owner.id=t.carrier_id AND owner.scope_id=t.scope_id JOIN (SELECT scope_id AS id,scope_code AS code,scope_name_vi AS name_vi,scope_name_en AS name_en,scope_active AS active,scope_version AS version,updated_at,updated_by FROM carriers) scope ON scope.id=t.scope_id WHERE t.id=?" +
                     (lock ? " FOR UPDATE OF t" : "")
             )
         ) {

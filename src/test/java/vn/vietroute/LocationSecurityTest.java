@@ -37,7 +37,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.repository.AccessRegistryRepository;
+import vn.vietroute.auth.repo.AccessRegistryRepository;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.location.dto.request.LocationLookupRequest;
 import vn.vietroute.business.location.dto.request.LocationSearchRequest;

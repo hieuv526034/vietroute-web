@@ -6,12 +6,14 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import vn.vietroute.common.base.BaseRequest;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 
 /** Mật khẩu chỉ được nhận vào, không serialize ngược hoặc thêm vào toString. */
 @Getter
+@NoArgsConstructor
 @Setter
 @Schema(description = "Thông tin đăng nhập")
 public class LoginRequest extends BaseRequest {

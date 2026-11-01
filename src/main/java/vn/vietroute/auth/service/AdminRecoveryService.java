@@ -4,14 +4,16 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.dto.record.recovery.AdminRecoveryRequest;
-import vn.vietroute.auth.dto.record.recovery.AdminRecoveryResponse;
-import vn.vietroute.auth.repository.AccessChangeRepository;
-import vn.vietroute.auth.repository.AdminRecoveryRepository;
-import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.dto.request.recovery.AdminRecoveryRequest;
+import vn.vietroute.auth.dto.response.recovery.AdminRecoveryResponse;
+import vn.vietroute.auth.repo.AccessChangeRepository;
+import vn.vietroute.auth.repo.AdminRecoveryRepository;
+import vn.vietroute.auth.repo.UserRepository;
 import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessOperation;
@@ -107,5 +109,25 @@ public class AdminRecoveryService {
         return outcome.response();
     }
 
-    private record Outcome(AdminRecoveryResponse response, ErrorCode error) {}
+    @Getter
+    @Setter
+    private static class Outcome {
+
+        private AdminRecoveryResponse response;
+
+        private ErrorCode error;
+
+        public Outcome(AdminRecoveryResponse response, ErrorCode error) {
+            this.response = response;
+            this.error = error;
+        }
+
+        public AdminRecoveryResponse response() {
+            return response;
+        }
+
+        public ErrorCode error() {
+            return error;
+        }
+    }
 }

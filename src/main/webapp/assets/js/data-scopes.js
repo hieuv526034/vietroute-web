@@ -130,7 +130,7 @@
         }
         if (!page.content.length) empty(body, 4);
         pager.update(page);
-        node('scope-create').hidden = !can('CREATE');
+        node('scope-create').hidden = true;
         node('scope-member-create').hidden = !can('ASSIGN');
     };
     const empty = (body, columns) => {

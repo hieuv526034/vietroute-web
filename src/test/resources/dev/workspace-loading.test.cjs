@@ -38,11 +38,15 @@ function fixture(page) {
     };
     const root = node('root');
     node('role-form').elements = { code: node('code'), nameVi: node('vi'), nameEn: node('en'), active: node('active') };
+    node('function-form').elements = { code: node('function-code'), nameVi: node('function-vi'), nameEn: node('function-en'), active: node('function-active') };
     const allow = [
         'GET /api/v1/admin/access/registry/{kind}/page', 'GET /api/v1/admin/access/tree',
         'GET /api/v1/admin/access/resource-catalog', 'GET /api/v1/admin/access/roles/{role}/resources',
         'PUT /api/v1/admin/access/roles/{role}/resources', 'POST /api/v1/admin/accounts',
         'PUT /api/v1/admin/access/users/{id}/roles', 'GET /api/v1/admin/accounts',
+        'GET /api/v1/admin/access/functions', 'GET /api/v1/admin/access/roles/{role}/functions',
+        'PUT /api/v1/admin/access/roles/{role}/functions',
+        'POST /api/v1/admin/access/functions', 'PUT /api/v1/admin/access/functions/{code}',
     ];
     const user = { id: 2, username: 'target', displayName: 'Target', roles: ['CUSTOMER'], active: true, version: 3 };
     const role = { code: 'CUSTOMER', role: 'CUSTOMER', nameVi: 'Khách', nameEn: 'Customer', active: true, version: 2 };
@@ -55,6 +59,8 @@ function fixture(page) {
         if (path.includes('/registry/roles/page?')) return { page: { content, totalElements: 1 } };
         if (path.endsWith('/roles') || path.endsWith('/registry/roles')) return [role];
         if (path.endsWith('/resources')) return { targets: [], version: 2 };
+        if (path.endsWith('/roles/CUSTOMER/functions')) return { functionCodes: [], version: 2 };
+        if (path.includes('/functions?')) return { content: [], totalElements: 0 };
         if (path.endsWith('/access')) return { user, capabilities: [] };
         return [];
     };
@@ -84,7 +90,7 @@ function fixture(page) {
         VietRouteResourceGrants: { model: grants.model, render() {} },
     };
     const document = { querySelector: () => root, getElementById: node, createElement: element, documentElement: { lang: 'vi' } };
-    vm.runInNewContext(fs.readFileSync(`src/main/webapp/assets/js/${page}.js`, 'utf8'), { window, document, Date, FormData, URLSearchParams });
+    vm.runInNewContext(fs.readFileSync(`src/main/webapp/assets/js/${page}.js`, 'utf8'), { window, document, Date, FormData, URLSearchParams, MutationObserver: class { observe() {} } });
     return { node, requests, errors, buttons, modals, state, user };
 }
 
@@ -94,7 +100,7 @@ test('Role tải bảng trước metadata; modal lỗi giữ mở và chặn lư
     assert.equal(ui.requests.length, 2);
     assert.ok(ui.requests[1].includes('/registry/roles/page?'));
     const wait = deferred();
-    ui.state.override = (path, read) => path.endsWith('/tree') ? wait.promise : read(path);
+    ui.state.override = (path, read) => path.endsWith('/roles/CUSTOMER/functions') ? wait.promise : read(path);
     ui.buttons.find((item) => item.icon === 'assign').click();
     assert.equal(ui.node('grants-dialog').open, true);
     assert.equal(ui.modals.get('grants-dialog').busy(), true);
@@ -111,7 +117,48 @@ test('Role tải bảng trước metadata; modal lỗi giữ mở và chặn lư
     ui.buttons.find((item) => item.icon === 'assign').click();
     await settle();
     assert.equal(ui.node('grants-save').disabled, false);
-    assert.equal(ui.requests.filter((path) => path.endsWith('/tree')).length, 2);
+    assert.equal(ui.requests.filter((path) => path.endsWith('/roles/CUSTOMER/functions')).length, 2);
+    assert.equal(ui.requests.filter((path) => path.endsWith('/tree')).length, 0);
+});
+
+test('Role không lưu snapshot khi danh sách Function lỗi sau khi đã đọc mapping', async () => {
+    const ui = fixture('roles');
+    await settle();
+    ui.state.override = (path, read) => path.includes('/functions?') ? Promise.reject({ response: { status: 503 } }) : read(path);
+    ui.buttons.find((item) => item.icon === 'assign').click();
+    await settle();
+    assert.equal(ui.node('grants-dialog').open, true);
+    assert.equal(ui.node('grants-save').disabled, true);
+    assert.equal(ui.errors[0].target, 'grants-feedback');
+    ui.node('grants-form').handlers.submit({ preventDefault() {} });
+    assert.equal(ui.state.mutations, 0);
+    assert.equal(ui.requests.filter((path) => path.includes('/functions?')).length, 1);
+    ui.modals.get('grants-dialog').onClose();
+    ui.state.override = undefined;
+    ui.buttons.find((item) => item.icon === 'assign').click();
+    await settle();
+    assert.equal(ui.node('grants-save').disabled, false);
+    assert.equal(ui.requests.filter((path) => path.includes('/functions?')).length, 2);
+});
+
+test('Function giữ modal và chặn mutation khi danh bạ target lỗi; chỉ tải lại khi người dùng mở lại', async () => {
+    const ui=fixture('functions');await settle();
+    const wait=deferred();ui.state.override=(path,read)=>path.endsWith('/resource-catalog')?wait.promise:read(path);
+    ui.node('function-create').handlers.click();
+    assert.equal(ui.node('function-dialog').open,true);
+    assert.equal(ui.modals.get('function-dialog').busy(),true);
+    ui.node('function-form').handlers.submit({preventDefault(){},currentTarget:ui.node('function-form')});
+    assert.equal(ui.state.mutations,0);
+    wait.reject({response:{status:503}});await settle();
+    assert.equal(ui.node('function-dialog').open,true);
+    assert.equal(ui.errors[0].target,'function-form-feedback');
+    ui.node('function-form').handlers.submit({preventDefault(){},currentTarget:ui.node('function-form')});
+    assert.equal(ui.state.mutations,0);
+    assert.equal(ui.requests.filter(path=>path.endsWith('/resource-catalog')).length,1);
+    ui.modals.get('function-dialog').onClose();ui.state.override=undefined;
+    ui.node('function-create').handlers.click();await settle();
+    assert.equal(ui.requests.filter(path=>path.endsWith('/resource-catalog')).length,2);
+    assert.equal(ui.state.mutations,0);
 });
 
 test('Tài khoản chỉ tải me/capabilities/bảng; tạo chỉ tải role khi mở và lỗi không được gửi', async () => {

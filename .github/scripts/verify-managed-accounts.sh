@@ -67,17 +67,15 @@ call 403 GET /operations/accounts '' bearer
 assert_code AUTH003
 call 403 GET /api/v1/admin/accounts '' bearer
 assert_code AUTH003
-# Preview phải áp dụng policy của user đích dù người xem ADMIN được miễn policy bổ sung.
+# Preview dùng snapshot Function của user đích; thu hồi menu không lấy quyền ADMIN đang xem.
 token="$managed_admin_token"
 call 200 GET "/api/v1/admin/accounts/$managed_id/access" '' bearer
 python3 -c 'import json,sys;d=json.load(open(sys.argv[1]))["data"];assert next(f for f in d["capabilities"] if f["function"]=="CATALOG")["view"]' "$result"
-printf '%s\n' '{"kind":"MENU","target":"GET /admin","nameVi":"Chặn menu CI","nameEn":"CI blocked menu","enabled":false,"permissions":[],"roles":[],"version":0}' > "$work/managed-policy.json"
-call 201 POST /api/v1/admin/access/policies "$work/managed-policy.json" bearer
-# field() không đọc chỉ số mảng; lấy ID từ projection tường minh.
-managed_policy=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["data"][0]["id"])' "$result")
+printf '%s\n' '{"permissions":["CATALOG_CREATE"],"version":1}' > "$work/managed-grants.json"
+call 200 PUT /api/v1/admin/access/roles/ACCOUNT_ENTRY_CI/permissions "$work/managed-grants.json" bearer
 call 200 GET "/api/v1/admin/accounts/$managed_id/access" '' bearer
 python3 -c 'import json,sys;d=json.load(open(sys.argv[1]))["data"];assert not next(f for f in d["capabilities"] if f["function"]=="CATALOG")["view"]' "$result"
-call 200 DELETE "/api/v1/admin/access/policies/$managed_policy?version=0" '' bearer
+call 200 GET /admin '' bearer
 # Gán role hiện hành rồi kiểm preview bằng cùng guard/capabilities, giữ tokenVersion và version thực tế.
 token="$managed_admin_token"
 managed_version=$(sql "SELECT version FROM auth_users WHERE id=$managed_id")

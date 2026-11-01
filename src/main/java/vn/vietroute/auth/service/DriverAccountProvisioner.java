@@ -9,15 +9,15 @@ import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-import vn.vietroute.auth.dto.record.history.AccessChangeStateResponse;
-import vn.vietroute.auth.dto.record.scope.ScopeMembershipRequest;
 import vn.vietroute.auth.dto.request.account.DriverAccountCreateRequest;
+import vn.vietroute.auth.dto.request.scope.ScopeMembershipRequest;
+import vn.vietroute.auth.dto.response.history.AccessChangeStateResponse;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.repository.AccessRepository;
-import vn.vietroute.auth.repository.DataScopeRepository;
-import vn.vietroute.auth.repository.ManagedAccountRepository;
+import vn.vietroute.auth.repo.AccessRepository;
+import vn.vietroute.auth.repo.DataScopeRepository;
+import vn.vietroute.auth.repo.ManagedAccountRepository;
 import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.DataScopeGuard;
 import vn.vietroute.auth.security.UserPrincipal;
@@ -39,7 +39,7 @@ public class DriverAccountProvisioner {
     private final AccessRepository access;
     private final DataScopeRepository scopes;
     private final DataScopeGuard guard;
-    private final AccessChangeService changes;
+    private final AccessHistoryService changes;
 
     /** BCrypt trước khi lấy connection/khóa nghiệp vụ; giá trị trả chỉ truyền nội bộ, không thành DTO. */
     public String passwordHash(String password) {

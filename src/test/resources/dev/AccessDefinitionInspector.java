@@ -2,10 +2,10 @@ import java.sql.Connection;
 import java.util.List;
 import java.util.Set;
 import org.postgresql.ds.PGSimpleDataSource;
-import vn.vietroute.auth.config.AccessSettings;
-import vn.vietroute.auth.dto.record.resource.AccessResourceResponse;
-import vn.vietroute.auth.repository.AccessFeatureRepository;
-import vn.vietroute.auth.repository.AccessRegistryRepository;
+import vn.vietroute.auth.config.AuthSettings;
+import vn.vietroute.auth.dto.response.resource.AccessResourceResponse;
+import vn.vietroute.auth.repo.AccessFeatureRepository;
+import vn.vietroute.auth.repo.AccessRegistryRepository;
 import vn.vietroute.auth.security.AccessPermissionDefinitions;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
@@ -29,7 +29,7 @@ public final class AccessDefinitionInspector {
         var connections = new JdbcConnectionFactory(source, new JdbcSchema(System.getenv("CI_GUARD_DB_SCHEMA")));
         var features = new AccessFeatureRepository(connections);
         var definitions = new AccessPermissionDefinitions();
-        var registry = new AccessRegistryRepository(connections, new AccessSettings(key -> null), definitions);
+        var registry = new AccessRegistryRepository(connections, new AuthSettings(key -> null), definitions);
         try {
             long user;
             try (var connection = connections.open(); var query = connection.createStatement()) {
@@ -74,7 +74,7 @@ public final class AccessDefinitionInspector {
                 features.synchronize(connection, inventory, serviceCodes);
                 try (var query = connection.createStatement()) {
                     query.executeUpdate(
-                        "UPDATE auth_permissions SET active=false,name_vi='Tên đã sửa',name_en='Edited name' WHERE code='DEFINITION_CREATE'"
+                        "UPDATE auth_functions SET active=false,name_vi='Tên đã sửa',name_en='Edited name' WHERE code='DEFINITION_CREATE'"
                     );
                 }
                 features.synchronize(connection, inventory, serviceCodes);
@@ -95,7 +95,7 @@ public final class AccessDefinitionInspector {
                 try (
                     var query = connection.createStatement();
                     var rows = query.executeQuery(
-                        "SELECT count(*) FILTER (WHERE role_code='ADMIN'),count(*) FILTER (WHERE role_code<>'ADMIN') FROM auth_role_permissions WHERE permission_code IN ('DEFINITION_CREATE','DEFINITION_DETAIL')"
+                        "SELECT count(*) FILTER (WHERE role_code='ADMIN'),count(*) FILTER (WHERE role_code<>'ADMIN') FROM auth_role_functions WHERE function_code IN ('DEFINITION_CREATE','DEFINITION_DETAIL')"
                     )
                 ) {
                     rows.next();
@@ -106,13 +106,13 @@ public final class AccessDefinitionInspector {
                 }
                 try (var query = connection.createStatement()) {
                     query.executeUpdate(
-                        "INSERT INTO auth_permissions(code,name_vi,name_en) SELECT 'DEFINITION_'||lpad(n::text,4,'0')||'_READ','CI fixture','CI fixture' FROM generate_series(1,2049) n"
+                        "INSERT INTO auth_functions(code,name_vi,name_en,operation_codes) SELECT 'DEFINITION_'||lpad(n::text,4,'0')||'_READ','CI fixture','CI fixture',ARRAY['DEFINITION_'||lpad(n::text,4,'0')||'_READ'] FROM generate_series(1,2049) n"
                     );
                     query.executeUpdate(
-                        "INSERT INTO auth_role_permissions(role_code,permission_code) SELECT 'DEFINITION_'||((n-1)/512+1)||'_CI','DEFINITION_'||lpad(n::text,4,'0')||'_READ' FROM generate_series(1,513) n"
+                        "INSERT INTO auth_role_functions(role_code,function_code,operation_codes) SELECT 'DEFINITION_'||((n-1)/512+1)||'_CI','DEFINITION_'||lpad(n::text,4,'0')||'_READ',ARRAY['DEFINITION_'||lpad(n::text,4,'0')||'_READ'] FROM generate_series(1,513) n"
                     );
                     query.executeUpdate(
-                        "INSERT INTO auth_role_permissions(role_code,permission_code) VALUES ('DEFINITION_5_CI','DEFINITION_0001_READ')"
+                        "INSERT INTO auth_role_functions(role_code,function_code,operation_codes) VALUES ('DEFINITION_5_CI','DEFINITION_0001_READ',ARRAY['DEFINITION_0001_READ'])"
                     );
                 }
                 connection.commit();
@@ -124,7 +124,7 @@ public final class AccessDefinitionInspector {
             );
             try (var connection = connections.open(); var query = connection.createStatement()) {
                 query.executeUpdate(
-                    "INSERT INTO auth_role_permissions(role_code,permission_code) SELECT 'DEFINITION_'||((n-1)/512+1)||'_CI','DEFINITION_'||lpad(n::text,4,'0')||'_READ' FROM generate_series(514,2048) n"
+                    "INSERT INTO auth_role_functions(role_code,function_code,operation_codes) SELECT 'DEFINITION_'||((n-1)/512+1)||'_CI','DEFINITION_'||lpad(n::text,4,'0')||'_READ',ARRAY['DEFINITION_'||lpad(n::text,4,'0')||'_READ'] FROM generate_series(514,2048) n"
                 );
                 connection.commit();
             }
@@ -149,7 +149,7 @@ public final class AccessDefinitionInspector {
             try (var connection = connections.open(); var query = connection.createStatement()) {
                 query.executeUpdate("UPDATE auth_users SET must_change_password=false WHERE username='definitionci'");
                 query.executeUpdate(
-                    "INSERT INTO auth_role_permissions(role_code,permission_code) VALUES ('DEFINITION_5_CI','DEFINITION_2049_READ')"
+                    "INSERT INTO auth_role_functions(role_code,function_code,operation_codes) VALUES ('DEFINITION_5_CI','DEFINITION_2049_READ',ARRAY['DEFINITION_2049_READ'])"
                 );
                 connection.commit();
             }
@@ -174,10 +174,10 @@ public final class AccessDefinitionInspector {
     private static void cleanup(Connection connection) throws Exception {
         try (var query = connection.createStatement()) {
             query.executeUpdate(
-                "DELETE FROM auth_role_permissions WHERE permission_code LIKE 'DEFINITION_%' OR role_code LIKE 'DEFINITION_%_CI'"
+                "DELETE FROM auth_role_functions WHERE function_code LIKE 'DEFINITION_%' OR role_code LIKE 'DEFINITION_%_CI'"
             );
             query.executeUpdate("DELETE FROM auth_user_roles WHERE role_code LIKE 'DEFINITION_%_CI'");
-            query.executeUpdate("DELETE FROM auth_permissions WHERE code LIKE 'DEFINITION_%'");
+            query.executeUpdate("DELETE FROM auth_functions WHERE code LIKE 'DEFINITION_%'");
             query.executeUpdate("DELETE FROM auth_roles WHERE code LIKE 'DEFINITION_%_CI'");
             query.executeUpdate("DELETE FROM auth_users WHERE username='definitionci'");
         }

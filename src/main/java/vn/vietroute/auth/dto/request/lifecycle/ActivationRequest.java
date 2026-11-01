@@ -7,12 +7,14 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import vn.vietroute.common.base.BaseRequest;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 
 /** Request auth không nhận user ID, role, audit hoặc trạng thái xác minh do client gửi. */
 @Getter
+@NoArgsConstructor
 @Setter
 @Schema(description = "ActivationRequest cho vòng đời tài khoản")
 public class ActivationRequest extends BaseRequest {

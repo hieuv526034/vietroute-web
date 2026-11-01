@@ -9,14 +9,14 @@
 | `/admin` | Tổng quan | Không |
 | `/catalogs/vehicle-types`, `/catalogs/booking-sources` | Từng danh mục riêng | Thêm/sửa/ngừng sử dụng |
 | `/operations/accounts` | User: danh tính, role và preview quyền | Thêm, sửa tên, gán role, trạng thái; xóa mềm có xác nhận |
-| `/operations/access` | Role / Phạm vi / Lịch sử (ADMIN) | CRUD role; cây Menu → API cụ thể, public/self-service chỉ đọc |
-| `/operations/access/resources` | Inventory menu/API phân trang | Chỉ đọc nguồn; gán tại màn Role |
+| `/operations/access` | Vai trò / Chức năng / Phạm vi nhà xe / Lịch sử (ADMIN) | CRUD role/chức năng; gán chức năng cho role, chọn Menu/API trong chức năng; public/self-service chỉ đọc |
+| `/operations/access/resources` | Inventory menu/API phân trang | Chỉ đọc nguồn; chọn Menu/API trong Chức năng rồi gán chức năng cho Role |
 | `/operations/reports` | Bộ lọc ngày/nhà xe và hai tab số liệu | Chọn nhà xe qua modal tìm/phân trang riêng |
 | `/operations/configuration` | Ứng dụng / Pool / Bảo vệ request / Worker / Tính năng / Giám sát | Chỉ đọc, không chỉnh env/secret |
 | `/account`, `/media` | Một nhóm, không thêm tab thừa | Đổi mật khẩu, upload ảnh; ảnh tắt thì khóa nút mở |
 | `/operations/jobs` | Danh sách có lọc trạng thái | Chi tiết/retry theo quyền và version |
 
-ACCESS24: cây chọn target chính xác, không chọn ma trận action thứ hai; menu và từng API độc lập. Tìm kiếm không làm mất lựa chọn ngoài kết quả; chọn cha chỉ chọn mục hiện đang hiển thị, không wildcard tương lai. Public/self-service không có lựa chọn cấp quyền. Hiển thị preview số thêm/bỏ và giữ version/bản nháp khi lỗi; ADMIN chỉ xem.
+AUTHDB02 thay giao diện ACCESS24: trong Chức năng chọn target Menu/API chính xác, sau đó gán chức năng cho Role; không có ma trận action phải gán thêm. Tìm kiếm/phân trang giữ lựa chọn ngoài kết quả; không wildcard tương lai. Public/self-service không có lựa chọn cấp quyền. Modal gán hiển thị số thêm/bỏ và giữ version/bản nháp khi lỗi; ADMIN chỉ xem. Tải mapping và danh sách chức năng phải hoàn tất trước khi cho lưu. Footer Lưu/Hủy nằm ngoài vùng nội dung cuộn để không bị cắt ở viewport thấp. [Ảnh bản nghiệm thu local](../images/authdb02-role-functions.jpg).
 
 Role ADMIN chỉ xem; gán role bản thân bị khóa. Modal có tên/đối tượng rõ ràng; kiểm CSRF, version, scope, quyền và thu hồi token vẫn ở API/service.
 

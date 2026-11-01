@@ -6,7 +6,7 @@ import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-import vn.vietroute.auth.repository.AdminRecoveryRepository;
+import vn.vietroute.auth.repo.AdminRecoveryRepository;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.validation.StrongPasswordValidator;
 

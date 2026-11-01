@@ -1,5 +1,9 @@
 package vn.vietroute.auth.entity;
 
+import java.time.Instant;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import vn.vietroute.common.jdbc.JdbcIndex;
 import vn.vietroute.common.jdbc.JdbcTable;
 
@@ -17,7 +21,34 @@ import vn.vietroute.common.jdbc.JdbcTable;
         @JdbcIndex(name = "idx_access_changes_updated_by", columns = { "updated_by" }),
     }
 )
-public final class AccessChange {
+@Getter
+@Setter
+@NoArgsConstructor
+public class AccessChange {
 
-    private AccessChange() {}
+    private long id;
+
+    private String eventType;
+
+    private String targetKind;
+
+    private String targetKey;
+
+    private long actorId;
+
+    private String traceId;
+
+    private String beforeState;
+
+    private String afterState;
+
+    private Instant createdAt;
+
+    private Instant updatedAt;
+
+    private long createdBy;
+
+    private long updatedBy;
+
+    private long version;
 }

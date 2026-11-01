@@ -5,12 +5,14 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 
 /** Tìm mã/tên vi/en trong PostgreSQL trước phân trang, không lọc riêng trang đang nhìn thấy. */
 @Getter
+@NoArgsConstructor
 @Setter
 @Schema(description = "Tra registry role/quyền theo mã, tên và trạng thái")
 public class AccessRegistrySearchRequest extends PageRequest {

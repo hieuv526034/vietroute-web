@@ -20,7 +20,7 @@ import vn.vietroute.common.exception.ApiExceptionMapper;
 import vn.vietroute.common.web.response.ApiResponses;
 import vn.vietroute.common.web.response.ApiResult;
 
-/** API tạo DEMO tường minh; không nhận dữ liệu/role/audit tùy ý và không gọi mail/provider ngoài. */
+/** API khởi tạo dữ liệu tường minh; không nhận dữ liệu/role/audit tùy ý và không gọi mail/provider ngoài. */
 @RestController
 public class DemoSeedController extends BaseController {
 
@@ -33,8 +33,8 @@ public class DemoSeedController extends BaseController {
 
     @PostMapping(Routes.ADMIN_DEMO)
     @Operation(
-        summary = "Tạo dữ liệu DEMO nghiệp vụ",
-        description = "ADMIN và mọi quyền CREATE liên quan. Chỉ INSERT dữ liệu thiếu mang mã/nhãn DEMO, giữ dữ liệu có sẵn; chạy lại không tạo trùng. Không tạo account, không gửi mail, không tự chạy lúc startup."
+        summary = "Khởi tạo dữ liệu nghiệp vụ",
+        description = "ADMIN và mọi quyền CREATE liên quan. Chỉ INSERT bản ghi thiếu từ bộ dữ liệu VietRoute, do dự án tự xây dựng, giữ dữ liệu có sẵn; chạy lại không tạo trùng. Không tạo account, không gửi mail, endpoint này không tạo tuyến hoặc membership; startup có cờ khởi tạo riêng."
     )
     @AccessFunction(
         group = Groups.DEMO,

@@ -5,20 +5,20 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.dto.record.history.AccessChangeStateResponse;
-import vn.vietroute.auth.dto.record.registry.AccessRegistryResponse;
-import vn.vietroute.auth.dto.record.scope.DataScopeRequest;
-import vn.vietroute.auth.dto.record.scope.DataScopeResponse;
-import vn.vietroute.auth.dto.record.scope.ScopeMembershipRequest;
-import vn.vietroute.auth.dto.record.scope.ScopeMembershipResponse;
-import vn.vietroute.auth.dto.record.scope.ScopePermissionsResponse;
 import vn.vietroute.auth.dto.request.access.AccessRegistrySearchRequest;
+import vn.vietroute.auth.dto.request.scope.DataScopeRequest;
 import vn.vietroute.auth.dto.request.scope.ScopeMemberSearchRequest;
+import vn.vietroute.auth.dto.request.scope.ScopeMembershipRequest;
+import vn.vietroute.auth.dto.response.history.AccessChangeStateResponse;
+import vn.vietroute.auth.dto.response.registry.AccessRegistryResponse;
+import vn.vietroute.auth.dto.response.scope.DataScopeResponse;
+import vn.vietroute.auth.dto.response.scope.ScopeMembershipResponse;
+import vn.vietroute.auth.dto.response.scope.ScopePermissionsResponse;
 import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.repository.AccessRepository;
-import vn.vietroute.auth.repository.DataScopeRepository;
-import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.repo.AccessRepository;
+import vn.vietroute.auth.repo.DataScopeRepository;
+import vn.vietroute.auth.repo.UserRepository;
 import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessOperation;
@@ -43,7 +43,7 @@ public class DataScopeService {
 
     private final JdbcTransactions transactions;
 
-    private final AccessChangeService changes;
+    private final AccessHistoryService changes;
 
     /** Danh bạ scope bảo mật riêng với tra cứu nhà xe/chuyến công khai cho khách. */
     @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.READ, adminOnly = true)
@@ -52,24 +52,18 @@ public class DataScopeService {
     }
 
     /** Mã bất biến; thay trạng thái scope là thao tác bảo mật, không thay trạng thái nhận booking của nhà xe. */
-    @AccessOperation(
-        resource = Groups.ACCESS,
-        action = PermissionAction.UPDATE,
-        createArgument = "id",
-        adminOnly = true
-    )
+    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.UPDATE, adminOnly = true)
     public DataScopeResponse save(long id, DataScopeRequest body, UserPrincipal actor) {
         AccessActors.requireCurrent(actor);
-        BusinessRules.require(id >= 0, ErrorCode.INVALID_REQUEST);
-        BusinessRules.require(id != 0 || body.version() == 0, ErrorCode.INVALID_REQUEST);
+        BusinessRules.require(id > 0, ErrorCode.INVALID_REQUEST);
         return transactions.execute(connection -> {
             access.lockRoleAssignments(connection);
-            var before = id == 0 ? null : BusinessRules.requireFound(scopes.find(connection, id));
+            var before = BusinessRules.requireFound(scopes.find(connection, id));
             long key = scopes.save(connection, id, body, actor.id());
             var after = scopes.find(connection, key);
             changes.record(
                 connection,
-                id == 0 ? Event.SCOPE_CREATED : Event.SCOPE_UPDATED,
+                Event.SCOPE_UPDATED,
                 Target.SCOPE,
                 Long.toString(key),
                 actor.id(),

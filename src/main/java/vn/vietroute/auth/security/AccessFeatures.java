@@ -3,6 +3,8 @@ package vn.vietroute.auth.security;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import lombok.Getter;
+import lombok.Setter;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.common.constant.AccessConstants.Functions;
@@ -15,7 +17,48 @@ public final class AccessFeatures {
 
     private AccessFeatures() {}
 
-    public record Feature(String code, String parent, String nameKey, String path, String viewPermission) {}
+    @Getter
+    @Setter
+    public static class Feature {
+
+        private String code;
+
+        private String parent;
+
+        private String nameKey;
+
+        private String path;
+
+        private String viewPermission;
+
+        public Feature(String code, String parent, String nameKey, String path, String viewPermission) {
+            this.code = code;
+            this.parent = parent;
+            this.nameKey = nameKey;
+            this.path = path;
+            this.viewPermission = viewPermission;
+        }
+
+        public String code() {
+            return code;
+        }
+
+        public String parent() {
+            return parent;
+        }
+
+        public String nameKey() {
+            return nameKey;
+        }
+
+        public String path() {
+            return path;
+        }
+
+        public String viewPermission() {
+            return viewPermission;
+        }
+    }
 
     private static final List<Feature> DEFINITIONS = List.of(
         new Feature(Functions.SYSTEM, null, "access.function.SYSTEM", null, null),

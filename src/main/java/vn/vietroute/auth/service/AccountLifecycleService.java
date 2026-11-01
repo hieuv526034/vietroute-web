@@ -13,16 +13,16 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.config.AccountSettings;
-import vn.vietroute.auth.dto.record.account.AccountOptionsResponse;
+import vn.vietroute.auth.config.AuthSettings;
 import vn.vietroute.auth.dto.request.lifecycle.ActivationRequest;
 import vn.vietroute.auth.dto.request.lifecycle.BindEmailRequest;
 import vn.vietroute.auth.dto.request.lifecycle.RegisterRequest;
 import vn.vietroute.auth.dto.request.lifecycle.ResetPasswordRequest;
+import vn.vietroute.auth.dto.response.account.AccountOptionsResponse;
 import vn.vietroute.auth.entity.UserAccount;
-import vn.vietroute.auth.repository.AccessRepository;
-import vn.vietroute.auth.repository.AccountRepository;
-import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.repo.AccessRepository;
+import vn.vietroute.auth.repo.AccountRepository;
+import vn.vietroute.auth.repo.UserRepository;
 import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.AccountSecrets;
 import vn.vietroute.auth.security.UserPrincipal;
@@ -45,7 +45,7 @@ public class AccountLifecycleService {
 
     private final BootstrapAdminInitializer bootstrap;
 
-    private final AccountSettings settings;
+    private final AuthSettings settings;
 
     private final MailSettings mail;
 
@@ -111,7 +111,7 @@ public class AccountLifecycleService {
             Long id = accounts.findByEmail(connection, address);
             if (id == null) return null;
             UserAccount user = users.findById(connection, id, true);
-            if (!address.equals(user.getEmail())) return null;
+            if (user == null || !address.equals(user.getEmail())) return null;
             if (
                 reset
                     ? user.isActive() && user.getEmailVerifiedAt() != null
@@ -193,7 +193,7 @@ public class AccountLifecycleService {
         Long id = accounts.findByEmail(connection, address);
         BusinessRules.require(id != null, ErrorCode.ACCOUNT_CODE_INVALID);
         UserAccount user = users.findById(connection, id, true);
-        BusinessRules.require(address.equals(user.getEmail()), ErrorCode.ACCOUNT_CODE_INVALID);
+        BusinessRules.require(user != null && address.equals(user.getEmail()), ErrorCode.ACCOUNT_CODE_INVALID);
         return user;
     }
 

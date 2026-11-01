@@ -1,6 +1,25 @@
 # Hợp đồng API nền tảng
 
-AUTHDTO01: Java DTO auth đã chia theo nhóm và chuyển DTO dạng record vào `auth.dto.record.<nhóm>`; class request/response ở nhóm tương ứng. Giữ tên type, JSON, validation, schema OpenAPI, URL và quyền hiện hành. Tra [sơ đồ package DTO](QUY_UOC_PHAT_TRIEN.md#quy-hoạch-auth-dto-theo-chức-năng) khi tìm class/import; không giữ lớp trùng ở package cũ.
+## Auth hiện hành AUTHDB02
+
+Auth DTO là class trong request/response; không dùng record. User → Role → Function → Menu/API dùng tám bảng theo [hợp đồng schema](SCHEMA_VA_PHAN_QUYEN.md#hợp-đồng-hiện-hành-authdb02--tám-bảng-từ-01112026). Các mục action/policy trước V024 bên dưới dùng để tra lịch sử, không là ma trận quản trị hiện hành.
+
+| API | Quyền và input |
+|---|---|
+| GET /api/v1/admin/access/functions | ACCESS_READ; query, active, page, size; count/page ở PostgreSQL |
+| GET /api/v1/admin/access/functions/{code} | ACCESS_READ; code; trả FunctionResponse gồm target, trạng thái, version |
+| POST /api/v1/admin/access/functions | ACCESS_CREATE; FunctionCreateRequest: code, nameVi, nameEn, active, targets |
+| PUT /api/v1/admin/access/functions/{code} | ACCESS_UPDATE; FunctionUpdateRequest thêm version bắt buộc; code path/body khớp |
+| DELETE /api/v1/admin/access/functions/{code}?version=… | ACCESS_DELETE; version, function chưa có role tham chiếu; source function được bảo vệ |
+| GET /api/v1/admin/access/roles/{role}/functions | ACCESS_READ; role; trả functionCodes + version mapping |
+| PUT /api/v1/admin/access/roles/{role}/functions | ACCESS_ASSIGN; RoleFunctionsRequest: functionCodes + version bắt buộc; ADMIN bất biến |
+
+Body không nhận actor, public flag, handler hoặc operation_codes. Target được chọn từ danh bạ source, không nhận route tự chế/wildcard. Actor được ủy quyền không gán/vô hiệu hóa/sửa chức năng ngoài tập operation/target hiện hành của chính họ. Function tắt thu hồi ở lần guard tiếp theo; không hủy công việc đã qua guard đang thực thi. Role rỗng deny. Mapping chuyển tiếp ALL không đổi giữ operation cũ; muốn cấp trọn Function phải bỏ/lưu rồi cấp lại tường minh. CRUD function, projection role và history cùng transaction. API trả 400 input, 401 chưa đăng nhập, 403 thiếu quyền, 404 không có, 409 CAS/tham chiếu/trùng mã, 503 DB/lịch sử lỗi; envelope/locale/traceId dùng chung.
+
+Đăng nhập/đăng ký/email/reset, CRUD tài khoản/profile/avatar, gán global/scoped role và bootstrap recovery giữ URL hiện có. Tài khoản API cấp vẫn cần đổi mật khẩu/xác minh; ngoại lệ startup chỉ gồm bootstrap riêng và ba danh tính mặc định đã được chủ dự án xác nhận. Nút init dữ liệu dùng /api/v1/admin/demo như adapter URL cũ, dữ liệu không còn nhãn DEMO; không tạo account qua API seed. Startup BUSINESS_INIT_ENABLED mới thêm hai tuyến nền và gắn account init một lần; không tự công bố chuyến.
+
+
+AUTHDB02 thay AUTHDTO01: auth chỉ dùng class DTO trong `auth.dto.request.<nhóm>` và `auth.dto.response.<nhóm>`, không Java record. Tra [sơ đồ package DTO](QUY_UOC_PHAT_TRIEN.md#quy-hoạch-auth-dto-theo-chức-năng) khi tìm class/import; không giữ lớp trùng ở package cũ.
 
 ## ACCESS24 — Tài nguyên cụ thể và quản trị User
 
@@ -235,14 +254,13 @@ COM016/409 báo đạt quota cấu hình, khác COM005 trùng mã và COM008 sta
 | API | Guard | Input/kết quả |
 |---|---|---|
 | GET /api/v1/admin/access/scopes | ADMIN + ACCESS_READ | query/active/page/size theo registry search; PageResponse metadata |
-| POST /api/v1/admin/access/scopes | ADMIN + ACCESS_CREATE | code/nameVi/nameEn/active/version=0, 201; code bất biến/duy nhất, quota COM016 |
 | PUT /api/v1/admin/access/scopes/{id} | ADMIN + ACCESS_UPDATE | tên/trạng thái, giữ code/version; stale 409 |
 | GET /api/v1/admin/access/scopes/{id}/members | ADMIN + ACCESS_READ | userId tùy chọn/page/size; projection userId/username/role/trạng thái/version, không credential |
 | PUT /api/v1/admin/access/scopes/{id}/members/{userId} | ADMIN + ACCESS_ASSIGN | roles là tập con role toàn cục của user, active, version=0 tạo/phiên bản hiện hành để sửa; không ADMIN/system/self; audit nguyên tử |
 | GET /api/v1/auth/scopes | JWT hợp lệ, không mật khẩu tạm | danh sách scope của chính user, không có userId đầu vào; không thay tìm nhà xe công khai |
 | GET /api/v1/auth/scopes/{id}/permissions | JWT + membership/quyền ADMIN DB hiện hành | scopeId và tập permission riêng trong scope, 403 nếu scope/user/membership không hợp lệ; UI còn kết hợp policy/capabilities chung |
 
-Không endpoint xóa hoặc nhận audit/tenant claim tin cậy từ client. Membership có thể tắt bằng roles rỗng/active=false; bật cần ít nhất một role active thuộc user. Tắt role/quyền/account/scope hoặc thu hồi global role có hiệu lực lần DB check tiếp theo; không hủy transaction đang chạy. Nền guard/DAO integration, giới hạn và bắt buộc drain V015 tại [thiết kế](SCHEMA_VA_PHAN_QUYEN.md#nền-phạm-vi-dữ-liệu--scope01). Swagger bao phủ query/path/body/response; không tạo API nghiệp vụ giả để minh chứng đã có nhà xe/trip.
+AUTHDB02: phạm vi được tạo cùng nhà xe qua API carrier, POST scope độc lập đã bỏ (405). Không endpoint xóa hoặc nhận audit/tenant claim tin cậy từ client. Membership có thể tắt bằng roles rỗng/active=false; bật cần ít nhất một role active thuộc user. Mapping rỗng vẫn trả version hiện hành; phải dùng version này để gán lại, không tạo lại bằng 0. Tắt role/quyền/account/scope hoặc thu hồi global role có hiệu lực lần DB check tiếp theo; không hủy transaction đang chạy. Xem [hợp đồng hiện hành](SCHEMA_VA_PHAN_QUYEN.md#hợp-đồng-hiện-hành-authdb02--tám-bảng-từ-01112026); phần SCOPE01 bên dưới là nền lịch sử. Swagger bao phủ query/path/body/response.
 
 ### Khôi phục quyền admin gốc — ACCESS15
 

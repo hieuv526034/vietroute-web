@@ -5,23 +5,20 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import vn.vietroute.auth.dto.record.scope.DataScopeRequest;
-import vn.vietroute.auth.dto.record.scope.DataScopeResponse;
-import vn.vietroute.auth.dto.record.scope.ScopeMembershipRequest;
-import vn.vietroute.auth.dto.record.scope.ScopeMembershipResponse;
 import vn.vietroute.auth.dto.request.access.AccessRegistrySearchRequest;
+import vn.vietroute.auth.dto.request.scope.DataScopeRequest;
 import vn.vietroute.auth.dto.request.scope.ScopeMemberSearchRequest;
+import vn.vietroute.auth.dto.request.scope.ScopeMembershipRequest;
+import vn.vietroute.auth.dto.response.scope.DataScopeResponse;
+import vn.vietroute.auth.dto.response.scope.ScopeMembershipResponse;
 import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessFunction;
@@ -68,21 +65,6 @@ public class DataScopeController extends BaseController {
         HttpServletRequest request
     ) {
         return execute(SuccessCode.OK, request, () -> scopes.page(search));
-    }
-
-    @PostMapping(Routes.ACCESS_SCOPES)
-    @ResponseStatus(HttpStatus.CREATED)
-    @AccessFunction(group = Groups.ACCESS, actions = { PermissionAction.CREATE }, adminOnly = true)
-    @Operation(
-        summary = "Tạo phạm vi bảo mật",
-        description = "ADMIN + ACCESS_CREATE; code bất biến/duy nhất, quota hữu hạn, audit cùng transaction"
-    )
-    public ApiResult<DataScopeResponse> create(
-        @Valid @RequestBody DataScopeRequest body,
-        @AuthenticationPrincipal UserPrincipal actor,
-        HttpServletRequest request
-    ) {
-        return execute(HttpStatus.CREATED, SuccessCode.CREATED, request, () -> scopes.save(0, body, actor));
     }
 
     @PutMapping(Routes.ACCESS_SCOPE_ITEM)

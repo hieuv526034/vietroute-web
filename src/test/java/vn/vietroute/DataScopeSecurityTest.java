@@ -58,7 +58,8 @@ class DataScopeSecurityTest {
                 List.of(
                     new SimpleGrantedAuthority("ROLE_ADMIN"),
                     new SimpleGrantedAuthority("ACCESS_READ"),
-                    new SimpleGrantedAuthority("ACCESS_CREATE")
+                    new SimpleGrantedAuthority("ACCESS_CREATE"),
+                    new SimpleGrantedAuthority("ACCESS_UPDATE")
                 )
             );
             String path = "/api/v1/admin/access/scopes";
@@ -117,13 +118,28 @@ class DataScopeSecurityTest {
                 400,
                 mvc
                     .perform(
-                        post(path)
+                        put(path + "/1")
                             .with(authentication(admin))
                             .with(csrf())
                             .contentType("application/json")
                             .content(
                                 "{\"code\":\"bad!\",\"nameVi\":\"A\",\"nameEn\":\"A\",\"active\":true,\"version\":0}"
                             )
+                    )
+                    .andReturn()
+                    .getResponse()
+                    .getStatus()
+            );
+            // Phạm vi được tạo cùng nhà xe; endpoint tạo scope độc lập đã bỏ trong AUTHDB02.
+            assertEquals(
+                405,
+                mvc
+                    .perform(
+                        post(path)
+                            .with(authentication(admin))
+                            .with(csrf())
+                            .contentType("application/json")
+                            .content("{}")
                     )
                     .andReturn()
                     .getResponse()

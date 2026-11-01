@@ -43,8 +43,8 @@ public class TripRepository extends BaseRepository {
     AND t.status<>'DRAFT' AND t.driver_user_id=?
     AND EXISTS (SELECT 1 FROM carrier_drivers cd WHERE cd.id=t.driver_id AND cd.carrier_id=t.carrier_id
                 AND cd.scope_id=t.scope_id AND cd.active AND cd.user_id=t.driver_user_id)
-    AND EXISTS (SELECT 1 FROM auth_scope_memberships dm
-                JOIN auth_scope_roles dr ON dr.scope_id=dm.scope_id AND dr.user_id=dm.user_id
+    AND EXISTS (SELECT 1 FROM (SELECT scope_id,user_id,bool_and(active) AS active,max(version) AS version FROM auth_user_roles WHERE scope_id>0 GROUP BY scope_id,user_id) dm
+                JOIN (SELECT scope_id,user_id,role_code FROM auth_user_roles WHERE scope_id>0 AND active) dr ON dr.scope_id=dm.scope_id AND dr.user_id=dm.user_id
                 JOIN auth_user_roles du ON du.user_id=dr.user_id AND du.role_code=dr.role_code
                 JOIN auth_roles role ON role.code=du.role_code AND role.active AND NOT role.deleted
                 WHERE dm.scope_id=t.scope_id AND dm.user_id=t.driver_user_id AND dm.active AND role.code='DRIVER')

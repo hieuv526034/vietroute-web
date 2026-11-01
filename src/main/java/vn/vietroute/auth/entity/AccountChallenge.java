@@ -1,5 +1,9 @@
 package vn.vietroute.auth.entity;
 
+import java.time.Instant;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import vn.vietroute.common.jdbc.JdbcIndex;
 import vn.vietroute.common.jdbc.JdbcTable;
 
@@ -13,7 +17,26 @@ import vn.vietroute.common.jdbc.JdbcTable;
         @JdbcIndex(name = "idx_auth_account_challenges_updated_by", columns = { "updated_by" }),
     }
 )
-public final class AccountChallenge {
+@Getter
+@Setter
+@NoArgsConstructor
+public class AccountChallenge {
 
-    private AccountChallenge() {}
+    private long userId;
+
+    private String purpose;
+
+    private String tokenHash;
+
+    private long tokenVersion;
+
+    private Instant expiresAt;
+
+    private Instant createdAt;
+
+    private Instant updatedAt;
+
+    private long createdBy;
+
+    private long updatedBy;
 }

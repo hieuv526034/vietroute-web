@@ -6,11 +6,13 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.Set;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.common.base.BaseRequest;
 
 @Getter
+@NoArgsConstructor
 @Setter
 @Schema(description = "Gán role cho tài khoản với optimistic version; không tự sửa role của chính mình")
 public class UserRolesRequest extends BaseRequest {

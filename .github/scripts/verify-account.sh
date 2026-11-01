@@ -72,7 +72,7 @@ account_change "$password_third" "$account_password" 400
 account_change "$password_third" "$password_second" 400
 account_change "$password_third" "$password_fourth" 200
 account_change "$password_fourth" "$account_password" 200
-[[ "$(sql "SELECT count(*) FROM auth_password_history WHERE user_id=$account_id")" == 2 ]]
+[[ "$(sql "SELECT (previous_password_hash_1 IS NOT NULL)::int+(previous_password_hash_2 IS NOT NULL)::int FROM auth_users WHERE id=$account_id")" == 2 ]]
 
 printf '%s\n' '{"email":"accountci@example.invalid"}' > "$work/account-email.json"
 call 202 POST /api/v1/auth/password/forgot "$work/account-email.json" cookie

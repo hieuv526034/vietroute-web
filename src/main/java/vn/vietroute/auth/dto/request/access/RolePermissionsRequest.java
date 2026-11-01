@@ -6,12 +6,14 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.Set;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.common.base.BaseRequest;
 
 /** Thay thế toàn bộ quyền của role với version; client không gửi actor/audit. */
 @Getter
+@NoArgsConstructor
 @Setter
 @Schema(description = "Thay quyền chức năng của role; ADMIN được bảo vệ")
 public class RolePermissionsRequest extends BaseRequest {

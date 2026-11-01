@@ -26,12 +26,12 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import vn.vietroute.auth.dto.record.history.AccessChangeStateResponse;
-import vn.vietroute.auth.dto.record.policy.AccessPolicyResponse;
+import vn.vietroute.auth.dto.response.history.AccessChangeStateResponse;
+import vn.vietroute.auth.dto.response.policy.AccessPolicyResponse;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
-import vn.vietroute.auth.repository.AdminRecoveryRepository;
-import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.repo.AdminRecoveryRepository;
+import vn.vietroute.auth.repo.UserRepository;
 import vn.vietroute.auth.security.AccessPermissionDefinitions;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.AccessResourceService;
@@ -306,7 +306,7 @@ class AdminRecoverySecurityTest {
         @Bean
         @Primary
         AccessResourceService resources(State state, AccessPermissionDefinitions definitions) {
-            return new AccessResourceService(null, null, null, null, null, definitions) {
+            return new AccessResourceService(null, null, null, null, null, definitions, null, null) {
                 @Override
                 public void restore(Connection connection, long actor) {
                     state.restores++;

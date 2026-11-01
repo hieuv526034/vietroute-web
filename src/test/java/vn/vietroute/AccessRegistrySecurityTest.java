@@ -15,7 +15,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import vn.vietroute.auth.config.AccessSettings;
+import vn.vietroute.auth.config.AuthSettings;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.web.WebConfig;
@@ -93,14 +93,14 @@ class AccessRegistrySecurityTest {
 
     @Test
     void capacitySettingsHaveFiniteValidatedBoundsAndConservativeDefaults() {
-        var defaults = new AccessSettings(key -> null);
+        var defaults = new AuthSettings(key -> null);
         assertEquals(512, defaults.getRegistryCapacity());
         assertEquals(256, defaults.getPolicyCapacity());
-        var expanded = new AccessSettings(key -> key.equals(Env.ACCESS_REGISTRY_CAPACITY.key()) ? "600" : null);
+        var expanded = new AuthSettings(key -> key.equals(Env.ACCESS_REGISTRY_CAPACITY.key()) ? "600" : null);
         assertEquals(600, expanded.getRegistryCapacity());
         for (String invalid : List.of("0", "2049"))
             assertThrows(IllegalStateException.class, () ->
-                new AccessSettings(key -> key.equals(Env.ACCESS_REGISTRY_CAPACITY.key()) ? invalid : null)
+                new AuthSettings(key -> key.equals(Env.ACCESS_REGISTRY_CAPACITY.key()) ? invalid : null)
             );
     }
 }

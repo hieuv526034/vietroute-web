@@ -20,10 +20,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import vn.vietroute.auth.config.AccessSettings;
+import vn.vietroute.auth.config.AuthSettings;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.auth.service.AccessChangeService;
+import vn.vietroute.auth.service.AccessHistoryService;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.AccessAuditConstants.Event;
@@ -39,7 +39,7 @@ class AccessChangeHistoryTest {
     @Test
     void changesRetainExactAddedAndRemovedCodesWithoutCopyingUnchangedPermissions() throws Exception {
         var fixture = new AccessTestConfig.HistoryFixture();
-        var history = new AccessChangeService(fixture);
+        var history = new AccessHistoryService(fixture);
         history.mappings(
             null,
             Event.ROLE_PERMISSIONS,
@@ -69,7 +69,7 @@ class AccessChangeHistoryTest {
         request.setAttribute(Http.TRACE_ATTRIBUTE, "history-server-trace");
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
         try {
-            new AccessChangeService(fixture).mappings(
+            new AccessHistoryService(fixture).mappings(
                 null,
                 Event.USER_ROLES,
                 Target.USER,
@@ -92,14 +92,14 @@ class AccessChangeHistoryTest {
 
     @Test
     void historyRetentionAndCapacityAreValidatedWithoutOpeningDb() {
-        var defaults = new AccessSettings(key -> null);
+        var defaults = new AuthSettings(key -> null);
         assertEquals(7, defaults.getAuditRetentionDays());
         assertEquals(1000, defaults.getAuditCapacity());
         assertThrows(IllegalStateException.class, () ->
-            new AccessSettings(key -> key.equals(Env.ACCESS_AUDIT_RETENTION_DAYS.key()) ? "0" : null)
+            new AuthSettings(key -> key.equals(Env.ACCESS_AUDIT_RETENTION_DAYS.key()) ? "0" : null)
         );
         assertThrows(IllegalStateException.class, () ->
-            new AccessSettings(key -> key.equals(Env.ACCESS_AUDIT_CAPACITY.key()) ? "99" : null)
+            new AuthSettings(key -> key.equals(Env.ACCESS_AUDIT_CAPACITY.key()) ? "99" : null)
         );
     }
 

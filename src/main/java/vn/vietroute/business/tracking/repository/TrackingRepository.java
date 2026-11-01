@@ -145,20 +145,20 @@ public class TrackingRepository {
                 AND NOT du.must_change_password AND du.email_verified_at IS NOT NULL
             JOIN auth_user_roles ur ON ur.user_id=du.id AND ur.role_code='DRIVER'
             JOIN auth_roles rr ON rr.code=ur.role_code AND rr.active AND NOT rr.deleted
-            JOIN auth_scope_memberships sm ON sm.scope_id=t.scope_id AND sm.user_id=du.id AND sm.active
-            JOIN auth_scope_roles sr ON sr.scope_id=sm.scope_id AND sr.user_id=sm.user_id AND sr.role_code=rr.code
+            JOIN (SELECT scope_id,user_id,bool_and(active) AS active,max(version) AS version FROM auth_user_roles WHERE scope_id>0 GROUP BY scope_id,user_id) sm ON sm.scope_id=t.scope_id AND sm.user_id=du.id AND sm.active
+            JOIN (SELECT scope_id,user_id,role_code FROM auth_user_roles WHERE scope_id>0 AND active) sr ON sr.scope_id=sm.scope_id AND sr.user_id=sm.user_id AND sr.role_code=rr.code
             WHERE cd.id=t.driver_id AND cd.carrier_id=t.carrier_id AND cd.scope_id=t.scope_id
                 AND cd.active AND cd.user_id=t.driver_user_id
                 AND (EXISTS(SELECT 1 FROM auth_user_roles au JOIN auth_roles ar ON ar.code=au.role_code
                     WHERE au.user_id=du.id AND ar.code='ADMIN' AND ar.active AND NOT ar.deleted)
-                OR EXISTS(SELECT 1 FROM auth_scope_roles sx
+                OR EXISTS(SELECT 1 FROM (SELECT scope_id,user_id,role_code FROM auth_user_roles WHERE scope_id>0 AND active) sx
                     JOIN auth_user_roles ux ON ux.user_id=sx.user_id AND ux.role_code=sx.role_code
                     JOIN auth_roles rx ON rx.code=sx.role_code AND rx.active AND NOT rx.deleted
-                    JOIN auth_role_permissions rp ON rp.role_code=rx.code
-                    JOIN auth_permissions p ON p.code=rp.permission_code AND p.active
+                    JOIN (SELECT DISTINCT rf.role_code,op.code AS permission_code FROM auth_role_functions rf JOIN auth_functions f ON f.code=rf.function_code AND f.active AND NOT f.deleted CROSS JOIN LATERAL unnest(rf.operation_codes) op(code)) rp ON rp.role_code=rx.code
+                    JOIN auth_functions p ON p.code=rp.permission_code AND p.active
                     WHERE sx.scope_id=sm.scope_id AND sx.user_id=sm.user_id AND p.code='DRIVER_TRIP_UPDATE'
-                      AND (NOT EXISTS(SELECT 1 FROM auth_role_resource_sets rs WHERE rs.role_code=rx.code)
-                        OR EXISTS(SELECT 1 FROM auth_role_resources rg WHERE rg.role_code=rx.code AND rg.target=?)))))
+                      AND (NOT EXISTS(SELECT 1 FROM (SELECT code AS role_code FROM auth_roles WHERE NOT deleted) rs WHERE rs.role_code=rx.code)
+                        OR EXISTS(SELECT 1 FROM (SELECT DISTINCT rf.role_code,fr.kind,fr.target FROM auth_role_functions rf JOIN auth_functions f ON f.code=rf.function_code AND f.active AND NOT f.deleted JOIN auth_function_resources fr ON fr.function_code=f.code WHERE NOT fr.public_route) rg WHERE rg.role_code=rx.code AND rg.target=?)))))
         """;
         String sql =
             "SELECT t.status,t.driver_user_id AS assigned_user," +
@@ -167,7 +167,7 @@ public class TrackingRepository {
                 : "EXISTS(SELECT 1 FROM bookings b WHERE b.id=? AND b.trip_id=t.id AND b.customer_id=? AND b.status='CONFIRMED')") +
             " AS eligible," +
             driverEligible +
-            " AS driver_eligible FROM carrier_trips t JOIN carriers owner ON owner.id=t.carrier_id AND owner.scope_id=t.scope_id JOIN auth_data_scopes ds ON ds.id=t.scope_id AND ds.active WHERE t.id=?" +
+            " AS driver_eligible FROM carrier_trips t JOIN carriers owner ON owner.id=t.carrier_id AND owner.scope_id=t.scope_id JOIN (SELECT scope_id AS id,scope_code AS code,scope_name_vi AS name_vi,scope_name_en AS name_en,scope_active AS active,scope_version AS version,updated_at,updated_by FROM carriers) ds ON ds.id=t.scope_id AND ds.active WHERE t.id=?" +
             (resource == null ? "" : " AND " + DataScopeGuard.visibleSql()) +
             " FOR SHARE OF t";
         String status;

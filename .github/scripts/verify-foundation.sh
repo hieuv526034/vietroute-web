@@ -40,7 +40,7 @@ call 200 PUT /api/v1/admin/access/registry/roles/DRIVER "$work/foundation-regist
 call 409 PUT /api/v1/admin/access/registry/roles/DRIVER "$work/foundation-registry.json" bearer
 call 200 DELETE '/api/v1/admin/access/registry/roles/DRIVER?version=2' '' bearer
 [[ "$(sql "SELECT deleted AND NOT active FROM auth_roles WHERE code='DRIVER'")" == t ]]
-[[ "$(sql "SELECT count(*) FROM auth_role_permissions WHERE role_code='DRIVER'")" == 0 ]]
+[[ "$(sql "SELECT count(*) FROM auth_role_functions WHERE role_code='DRIVER'")" == 0 ]]
 
 printf '%s\n' '{"nameVi":"Biên tập","nameEn":"Editor","active":true,"version":0}' > "$work/foundation-registry.json"
 call 201 POST /api/v1/admin/access/registry/roles/EDITOR_CI "$work/foundation-registry.json" bearer
@@ -92,20 +92,21 @@ call 200 PUT /api/v1/admin/access/roles/EDITOR_CI/permissions "$work/foundation-
 token="$foundation_user_token"
 call 403 GET /admin '' bearer
 token="$foundation_admin_token"
-printf '%s\n' '{"kind":"ENDPOINT","target":"GET /api/v1/media/{id}","nameVi":"Ảnh CI","nameEn":"CI image","enabled":true,"permissions":[],"roles":["EDITOR_CI"],"version":0}' > "$work/foundation-policy.json"
-call 201 POST /api/v1/admin/access/policies "$work/foundation-policy.json" bearer
-policy_id=$(python3 -c 'import json,sys; print(next(x["id"] for x in json.load(open(sys.argv[1]))["data"] if x["target"]=="GET /api/v1/media/{id}"))' "$result")
+printf '%s\n' '{"code":"CI_EDITOR","nameVi":"Đọc ảnh CI","nameEn":"CI image","active":true,"targets":["GET /api/v1/media/{id}"],"version":0}' > "$work/foundation-function.json"
+call 201 POST /api/v1/admin/access/functions "$work/foundation-function.json" bearer
+printf '%s\n' '{"functionCodes":["CI_EDITOR"],"version":2}' > "$work/foundation-functions.json"
+call 200 PUT /api/v1/admin/access/roles/EDITOR_CI/functions "$work/foundation-functions.json" bearer
+call 409 DELETE '/api/v1/admin/access/functions/CI_EDITOR?version=0' '' bearer
+assert_code COM015
 account_version=$(sql "SELECT version FROM auth_users WHERE id=$account_id")
 printf '{"roles":["CUSTOMER"],"version":%s}\n' "$account_version" > "$work/foundation-roles.json"
 call 200 PUT "/api/v1/admin/access/users/$account_id/roles" "$work/foundation-roles.json" bearer
-call 409 DELETE '/api/v1/admin/access/registry/roles/EDITOR_CI?version=0' '' bearer
-assert_code COM015
-call 200 DELETE "/api/v1/admin/access/policies/$policy_id?version=0" '' bearer
 call 200 DELETE '/api/v1/admin/access/registry/roles/EDITOR_CI?version=0' '' bearer
+call 200 DELETE '/api/v1/admin/access/functions/CI_EDITOR?version=0' '' bearer
 
 docker rm --force vietroute-auth-ci >/dev/null
 start_app vietroute-auth-ci 18080 vietroute_ci 1000 '' vietroute true
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors --retry-connrefused --max-time 5 "$base/health" >/dev/null
 [[ "$(sql "SELECT deleted AND NOT active FROM auth_roles WHERE code='DRIVER'")" == t ]]
-[[ "$(sql "SELECT count(*) FROM auth_role_permissions WHERE role_code='DRIVER'")" == 0 ]]
+[[ "$(sql "SELECT count(*) FROM auth_role_functions WHERE role_code='DRIVER'")" == 0 ]]
 printf 'Annotation discovery, role lifecycle, multi-role DB guards and avatar/profile checks passed.\n'

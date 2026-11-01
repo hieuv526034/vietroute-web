@@ -26,9 +26,9 @@ call 200 POST /api/v1/admin/demo "$work/business-demo.json" bearer
 # Seed cha qua API hiện hành; credential DRIVER ready là fixture CI, không ngoại lệ vận hành thật.
 for business_number in 1 2; do
   if [[ "$business_number" == 1 ]]; then
-    business_carrier_code=DEMOMIENNAM; business_vehicle_code=DEMOVEH01; business_driver_code=DEMODRIVER01
+    business_carrier_code=VRMIENNAM; business_vehicle_code=VRSOUTH01; business_driver_code=DRVSOUTH01
   else
-    business_carrier_code=DEMOBACNAM; business_vehicle_code=DEMOVEH03; business_driver_code=DEMODRIVER03
+    business_carrier_code=VRBACNAM; business_vehicle_code=VRNORTH01; business_driver_code=DRVNORTH01
   fi
   business_carrier=$(business_sql "SELECT id FROM carriers WHERE code='$business_carrier_code'")
   business_scope=$(business_sql "SELECT scope_id FROM carriers WHERE id=$business_carrier")
@@ -36,10 +36,10 @@ for business_number in 1 2; do
   business_driver=$(business_sql "SELECT id FROM carrier_drivers WHERE code='$business_driver_code'")
   business_sql "INSERT INTO auth_users(username,password_hash,display_name,must_change_password,email,email_verified_at) SELECT 'perf03driver$business_number',password_hash,'Driver fixture',false,'perf03driver$business_number@example.invalid',CURRENT_TIMESTAMP FROM auth_users WHERE id=1" >/dev/null
   business_user=$(business_sql "SELECT id FROM auth_users WHERE username='perf03driver$business_number'")
-  business_sql "INSERT INTO auth_user_roles(user_id,role_code) VALUES($business_user,'DRIVER'); INSERT INTO auth_scope_memberships(scope_id,user_id) VALUES($business_scope,$business_user); INSERT INTO auth_scope_roles(scope_id,user_id,role_code) VALUES($business_scope,$business_user,'DRIVER'); UPDATE carrier_drivers SET user_id=$business_user WHERE id=$business_driver" >/dev/null
-  business_first=$(business_sql "SELECT id FROM location_places WHERE code='DEMOPLACEA'")
-  business_middle=$(business_sql "SELECT id FROM location_places WHERE code='DEMOPLACEB'")
-  business_last=$(business_sql "SELECT id FROM location_places WHERE code='DEMOPLACEC'")
+  business_sql "INSERT INTO auth_user_roles(user_id,role_code) VALUES($business_user,'DRIVER'); INSERT INTO auth_user_roles(scope_id,user_id,role_code) VALUES($business_scope,$business_user,'DRIVER'); UPDATE carrier_drivers SET user_id=$business_user WHERE id=$business_driver" >/dev/null
+  business_first=$(business_sql "SELECT id FROM location_places WHERE code='VRTHUDUC'")
+  business_middle=$(business_sql "SELECT id FROM location_places WHERE code='VRDANANG'")
+  business_last=$(business_sql "SELECT id FROM location_places WHERE code='VRHANOI'")
   python3 - "$business_carrier" "$business_number" "$business_first" "$business_middle" "$business_last" > "$work/business-route.json" <<'PY'
 import json,sys
 carrier,number,first,middle,last=map(int,sys.argv[1:])

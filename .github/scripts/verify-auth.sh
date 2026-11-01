@@ -51,14 +51,14 @@ for port in 18080 18081; do
 done
 sql() { docker exec -e PGOPTIONS=-csearch_path=vietroute vietroute-db-ci psql -U vietroute_ci -d vietroute_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
 [[ "$(sql "SELECT count(*) FROM auth_users WHERE username='admin'")" == 1 ]]
-[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 23 ]]
+[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 24 ]]
 [[ "$(sql 'SELECT count(*) FROM catalog_items')" == 5 ]]
 [[ "$(sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','catalog_items','vietroute_schema_history')")" == 0 ]]
-[[ "$(sql "SELECT count(*) FROM pg_indexes WHERE schemaname='vietroute' AND indexname IN ('idx_auth_users_created_by','idx_auth_users_updated_by','idx_auth_user_roles_role_code','idx_catalog_created_by','idx_catalog_updated_by')")" == 5 ]]
+[[ "$(sql "SELECT count(*) FROM pg_indexes WHERE schemaname='vietroute' AND indexname IN ('idx_auth_users_created_by','idx_auth_users_updated_by','idx_user_roles_role','idx_catalog_created_by','idx_catalog_updated_by')")" == 5 ]]
 printf 'Audit stage: reserved actor, non-null seed and database guards\n'
 [[ "$(sql "SELECT count(*) FROM auth_users WHERE id=0 AND username='system' AND NOT active AND NOT must_change_password AND created_by=0 AND updated_by=0")" == 1 ]]
 [[ "$(sql "SELECT id FROM auth_users WHERE username='admin'")" == 1 ]]
-for audit_table in auth_users auth_roles auth_permissions auth_user_roles auth_role_permissions catalog_items system_jobs media_assets api_request_journal auth_access_policies auth_access_resources auth_password_history auth_account_challenges system_visitor_presence system_activity_buckets auth_access_changes auth_data_scopes auth_scope_memberships auth_scope_roles auth_role_resource_sets auth_role_resources; do
+for audit_table in auth_users auth_roles auth_user_roles auth_functions auth_role_functions auth_function_resources auth_account_challenges auth_access_changes catalog_items system_jobs media_assets api_request_journal system_visitor_presence system_activity_buckets; do
   [[ "$(sql "SELECT count(*) FROM $audit_table WHERE created_by IS NULL OR updated_by IS NULL")" == 0 ]]
   [[ "$(sql "SELECT count(*) FROM information_schema.columns WHERE table_schema='vietroute' AND table_name='$audit_table' AND column_name IN ('created_by','updated_by') AND is_nullable='NO'")" == 2 ]]
 done
@@ -297,7 +297,7 @@ assert_code AUTH004
 # Restart giữ nguyên hash đã đổi; không lấy mật khẩu bootstrap ghi đè lên tài khoản có sẵn.
 sql "SELECT password_hash FROM auth_users WHERE username='admin'" > "$work/hash-before"
 printf 'Auth stage: restart does not reset password\n'
-sql "INSERT INTO auth_access_resources(kind,target,handler,description,public_route,configurable) VALUES ('ENDPOINT','GET /retained-version-route','LegacyController#read','CI rolling deployment fixture',false,false)" >/dev/null
+sql "INSERT INTO auth_functions(code,name_vi,name_en,source_managed) VALUES ('HTTP_RETAINED_CI','CI retained','CI retained',true); INSERT INTO auth_function_resources(function_code,kind,target,handler,description,public_route,configurable) VALUES ('HTTP_RETAINED_CI','ENDPOINT','GET /retained-version-route','LegacyController#read','CI retained inventory fixture',false,false)" >/dev/null
 docker restart vietroute-auth-ci >/dev/null
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 "$base/health" >/dev/null
@@ -366,11 +366,11 @@ call 200 GET /v3/api-docs '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert "multipart/form-data" in d["paths"]["/api/v1/media"]["post"]["requestBody"]["content"]' "$result"
 token="$customer_token"
 call 403 GET /api/v1/media '' bearer
-sql "INSERT INTO auth_role_permissions(role_code,permission_code) VALUES ('CUSTOMER','MEDIA_READ'); INSERT INTO auth_role_resources(role_code,kind,target) SELECT 'CUSTOMER',kind,target FROM auth_access_resources WHERE target IN ('GET /api/v1/media','GET /api/v1/media/{id}') ON CONFLICT DO NOTHING" >/dev/null
+sql "INSERT INTO auth_role_functions(role_code,function_code,operation_codes) SELECT 'CUSTOMER',f.code,ARRAY['MEDIA_READ'] FROM auth_functions f WHERE f.code='MEDIA_READ' OR EXISTS(SELECT 1 FROM auth_function_resources fr WHERE fr.function_code=f.code AND f.source_managed AND fr.target IN ('GET /api/v1/media','GET /api/v1/media/{id}')) ON CONFLICT DO NOTHING" >/dev/null
 call 200 GET /api/v1/media '' bearer
 [[ "$(field data.totalElements)" == 0 ]]
 call 404 GET "/api/v1/media/$media_id" '' bearer
-sql "DELETE FROM auth_role_permissions WHERE role_code='CUSTOMER' AND permission_code='MEDIA_READ'; DELETE FROM auth_role_resources WHERE role_code='CUSTOMER' AND target IN ('GET /api/v1/media','GET /api/v1/media/{id}')" >/dev/null
+sql "DELETE FROM auth_role_functions WHERE role_code='CUSTOMER' AND 'MEDIA_READ'=ANY(operation_codes)" >/dev/null
 token="$admin_token"
 printf '%s\n' '{"version":0}' > "$work/media-delete.json"
 call 503 DELETE "/api/v1/media/$media_id" "$work/media-delete.json" bearer
@@ -456,12 +456,12 @@ token="$customer_token"
 call 401 GET /api/v1/auth/me '' bearer
 token="$admin_token"
 printf 'Resource discovery stage: persisted UI/API inventory, public classification and paging\n'
-[[ "$(sql 'SELECT count(*) FROM auth_access_resources')" -ge 20 ]]
-[[ "$(sql "SELECT count(*) FROM auth_access_resources WHERE target='GET /retained-version-route'")" == 1 ]]
-[[ "$(sql 'SELECT count(*) FROM auth_access_resources WHERE created_by<>0 OR updated_by<>0')" == 0 ]]
-[[ "$(sql "SELECT count(*) FROM auth_access_resources WHERE kind='MENU' AND target='GET /media'")" == 1 ]]
-[[ "$(sql "SELECT count(*) FROM auth_access_resources WHERE kind='ENDPOINT' AND target='GET /api/v1/catalogs/{type}' AND public_route AND NOT configurable")" == 1 ]]
-[[ "$(sql 'SELECT count(*) FROM auth_access_resources WHERE public_route AND configurable')" == 0 ]]
+[[ "$(sql 'SELECT count(*) FROM auth_function_resources')" -ge 20 ]]
+[[ "$(sql "SELECT count(*) FROM auth_function_resources WHERE target='GET /retained-version-route'")" == 1 ]]
+[[ "$(sql 'SELECT count(*) FROM auth_function_resources WHERE created_by<>0 OR updated_by<>0')" == 0 ]]
+[[ "$(sql "SELECT count(*) FROM auth_function_resources WHERE kind='MENU' AND target='GET /media'")" == 1 ]]
+[[ "$(sql "SELECT count(*) FROM auth_function_resources WHERE kind='ENDPOINT' AND target='GET /api/v1/catalogs/{type}' AND public_route AND NOT configurable")" == 1 ]]
+[[ "$(sql 'SELECT count(*) FROM auth_function_resources WHERE public_route AND configurable')" == 0 ]]
 call 200 GET '/api/v1/admin/access/resources?page=0&size=10' '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["size"]==10 and len(d["content"])==10 and d["totalElements"]>=20; assert all(x["firstSeenAt"] and x["lastSeenAt"] for x in d["content"])' "$result"
 call 400 GET '/api/v1/admin/access/resources?size=101' '' bearer
@@ -474,7 +474,7 @@ customer_token=$(field data.accessToken)
 token="$customer_token"
 call 403 GET '/api/v1/admin/access/resources' '' bearer
 token="$saved_admin_token"
-printf 'Foundation registry stage: dynamic roles, policy guards and live DB revocation\n'
+printf 'Foundation registry stage: dynamic roles, function target guards and live DB revocation\n'
 call 200 GET /api/v1/admin/access/targets '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert any(x["kind"]=="MENU" and x["target"]=="GET /media" for x in d); assert not any("/auth" in x["target"] or "/admin/access" in x["target"] for x in d)' "$result"
 printf '%s\n' '{"nameVi":"Hỗ trợ","nameEn":"Support","active":true,"version":0}' > "$work/registry.json"
@@ -503,24 +503,30 @@ token="$admin_token"
 call 200 PUT "/api/v1/media/$media_id" "$work/media-update.json" bearer
 [[ "$(field data.title)" == 'Xe thử nghiệm' ]]
 call 409 PUT "/api/v1/media/$media_id" "$work/media-update.json" bearer
-printf '%s\n' '{"kind":"MENU","target":"GET /media","nameVi":"Ảnh","nameEn":"Media","enabled":false,"permissions":[],"roles":[],"version":0}' > "$work/policy.json"
-call 201 POST /api/v1/admin/access/policies "$work/policy.json" bearer
-policy_id=$(python3 -c 'import json,sys; print(next(x["id"] for x in json.load(open(sys.argv[1]))["data"] if x["target"]=="GET /media"))' "$result")
+# Function độc lập cho menu và API; giữ API khi thu hồi menu, tập rỗng deny.
+printf '%s\n' '{"code":"CI_MEDIA","nameVi":"Thư viện CI","nameEn":"CI media","active":true,"targets":["GET /media","GET /api/v1/media/{id}"],"version":0}' > "$work/media-function.json"
+call 201 POST /api/v1/admin/access/functions "$work/media-function.json" bearer
+printf '%s\n' '{"functionCodes":["CI_MEDIA"],"version":1}' > "$work/media-functions.json"
+call 200 PUT /api/v1/admin/access/roles/SUPPORT/functions "$work/media-functions.json" bearer
+printf '%s\n' '{"code":"CI_MEDIA","nameVi":"Thư viện CI","nameEn":"CI media","active":true,"targets":["GET /api/v1/media/{id}"],"version":0}' > "$work/media-function.json"
+call 200 PUT /api/v1/admin/access/functions/CI_MEDIA "$work/media-function.json" bearer
+call 409 PUT /api/v1/admin/access/functions/CI_MEDIA "$work/media-function.json" bearer
 token="$support_token"
 call 403 GET /media '' bearer
 call 200 GET '/?lang=vi' '' bearer
 if grep -q 'href="/media?lang=vi"' "$result"; then exit 1; fi
+# Guard owner vẫn áp dụng dù được cấp endpoint.
+call 404 GET "/api/v1/media/$media_id" '' bearer
 token="$admin_token"
 call 200 GET /media '' bearer
-call 200 DELETE "/api/v1/admin/access/policies/$policy_id?version=0" '' bearer
-call 409 DELETE "/api/v1/admin/access/policies/$policy_id?version=0" '' bearer
-printf '%s\n' '{"kind":"ENDPOINT","target":"GET /api/v1/media/{id}","nameVi":"Đọc ảnh","nameEn":"Read image","enabled":false,"permissions":[],"roles":[],"version":0}' > "$work/endpoint-policy.json"
-call 201 POST /api/v1/admin/access/policies "$work/endpoint-policy.json" bearer
-policy_id=$(python3 -c 'import json,sys; print(next(x["id"] for x in json.load(open(sys.argv[1]))["data"] if x["kind"]=="ENDPOINT"))' "$result")
+printf '%s\n' '{"functionCodes":[],"version":3}' > "$work/media-functions.json"
+call 200 PUT /api/v1/admin/access/roles/SUPPORT/functions "$work/media-functions.json" bearer
 token="$support_token"
 call 403 GET "/api/v1/media/$media_id" '' bearer
 token="$admin_token"
-call 200 DELETE "/api/v1/admin/access/policies/$policy_id?version=0" '' bearer
+# Khôi phục projection tương thích để kiểm tắt permission/role bên dưới.
+printf '%s\n' '{"permissions":["MEDIA_VIEW","MEDIA_READ","MEDIA_UPDATE","SUPPORT_READ"],"version":4}' > "$work/support-permissions.json"
+call 200 PUT /api/v1/admin/access/roles/SUPPORT/permissions "$work/support-permissions.json" bearer
 printf '%s\n' '{"nameVi":"Hỗ trợ","nameEn":"Support","active":false,"version":0}' > "$work/disable-registry.json"
 call 200 PUT /api/v1/admin/access/registry/permissions/SUPPORT_READ "$work/disable-registry.json" bearer
 call 409 PUT /api/v1/admin/access/registry/permissions/SUPPORT_READ "$work/disable-registry.json" bearer
@@ -607,7 +613,7 @@ docker rm --force vietroute-auth-ci2 >/dev/null
 docker restart vietroute-auth-ci >/dev/null
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 "$base/health" >/dev/null
-[[ "$(sql "SELECT count(*) FROM auth_role_permissions WHERE role_code='CUSTOMER'")" == 0 ]]
+[[ "$(sql "SELECT count(*) FROM auth_role_functions WHERE role_code='CUSTOMER'")" == 0 ]]
 call 200 GET /v3/api-docs
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert isinstance(d,dict), "OpenAPI must be a JSON object"; assert "/api/v1/auth/change-password" in d["paths"]; assert "bearerAuth" in d["components"]["securitySchemes"]; assert "CatalogResponse" in d["components"]["schemas"]; assert "201" in d["paths"]["/api/v1/admin/catalogs"]["post"]["responses"]' "$result"
 
@@ -632,7 +638,7 @@ start_app vietroute-auth-ci2 18081 vietroute_legacy_ci 300 '' legacy_custom
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 http://127.0.0.1:18081/health >/dev/null
 legacy_sql() { docker exec -e PGOPTIONS=-csearch_path=legacy_custom vietroute-db-ci psql -U vietroute_ci -d vietroute_legacy_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(legacy_sql 'SELECT count(*) FROM vietroute_schema_history')" == 23 ]]
+[[ "$(legacy_sql 'SELECT count(*) FROM vietroute_schema_history')" == 24 ]]
 [[ "$(legacy_sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','catalog_items','vietroute_schema_history')")" == 0 ]]
 [[ "$(legacy_sql "SELECT display_name FROM auth_users WHERE id=1 AND username='admin'")" == 'Legacy admin retained' ]]
 [[ "$(legacy_sql "SELECT code FROM catalog_items WHERE id=1")" == LEGACY ]]
@@ -659,7 +665,7 @@ start_app vietroute-auth-ci 18080 vietroute_schema_ci 300 '' select
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 http://127.0.0.1:18080/health >/dev/null
 custom_sql() { docker exec -e 'PGOPTIONS=-csearch_path="select"' vietroute-db-ci psql -U vietroute_ci -d vietroute_schema_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(custom_sql 'SELECT count(*) FROM vietroute_schema_history')" == 23 ]]
+[[ "$(custom_sql 'SELECT count(*) FROM vietroute_schema_history')" == 24 ]]
 [[ "$(custom_sql 'SELECT count(*) FROM catalog_items')" == 5 ]]
 [[ "$(custom_sql "SELECT count(*) FROM pg_namespace WHERE nspname='vietroute'")" == 0 ]]
 for migration in src/main/resources/db/migration/V00*.sql; do
@@ -701,7 +707,7 @@ start_app vietroute-auth-ci 18080 vietroute_schema_ci 300 '' renamed_app
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors \
   --retry-connrefused --max-time 5 "$base/health" >/dev/null
 renamed_sql() { docker exec -e PGOPTIONS=-csearch_path=renamed_app vietroute-db-ci psql -U vietroute_ci -d vietroute_schema_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-[[ "$(renamed_sql 'SELECT count(*) FROM vietroute_schema_history')" == 23 ]]
+[[ "$(renamed_sql 'SELECT count(*) FROM vietroute_schema_history')" == 24 ]]
 [[ "$(renamed_sql 'SELECT count(*) FROM catalog_items')" == 6 ]]
 renamed_sql "SELECT password_hash FROM auth_users WHERE username='admin'" > "$work/renamed-hash"
 cmp --silent "$work/custom-hash" "$work/renamed-hash"

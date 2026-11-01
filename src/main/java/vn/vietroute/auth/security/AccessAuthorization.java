@@ -5,12 +5,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.method.HandlerMethod;
-import vn.vietroute.auth.dto.record.resource.AccessResourceResponse;
+import vn.vietroute.auth.dto.response.resource.AccessResourceResponse;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.annotation.AccessFunction;
@@ -21,13 +23,54 @@ public final class AccessAuthorization {
 
     private AccessAuthorization() {}
 
-    public record Binding(
-        String function,
-        List<String> permissions,
-        String match,
-        boolean adminOnly,
-        boolean authenticated
-    ) {}
+    @Getter
+    @Setter
+    public static class Binding {
+
+        private String function;
+
+        private List<String> permissions;
+
+        private String match;
+
+        private boolean adminOnly;
+
+        private boolean authenticated;
+
+        public Binding(
+            String function,
+            List<String> permissions,
+            String match,
+            boolean adminOnly,
+            boolean authenticated
+        ) {
+            this.function = function;
+            this.permissions = permissions;
+            this.match = match;
+            this.adminOnly = adminOnly;
+            this.authenticated = authenticated;
+        }
+
+        public String function() {
+            return function;
+        }
+
+        public List<String> permissions() {
+            return permissions;
+        }
+
+        public String match() {
+            return match;
+        }
+
+        public boolean adminOnly() {
+            return adminOnly;
+        }
+
+        public boolean authenticated() {
+            return authenticated;
+        }
+    }
 
     /** Method khai báo quyền ghi đè class; function bỏ trống kế thừa class, tránh nhập lại đường dẫn. */
     public static Binding binding(HandlerMethod handler) {

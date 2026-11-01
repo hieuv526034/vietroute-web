@@ -3,15 +3,15 @@
 printf 'Access tree stage: bootstrap, actions, multiple roles, delegated assignment and two nodes\n'
 tree_admin_token="$foundation_admin_token"
 token="$tree_admin_token"
-[[ "$(sql 'SELECT count(*) FROM auth_access_functions')" == 27 ]]
-[[ "$(sql "SELECT count(*) FROM auth_access_resources WHERE target='POST /api/v1/admin/catalogs' AND function_code='CATALOG' AND permission_match='ANY' AND declared_permissions LIKE '%CATALOG_CREATE%'")" == 1 ]]
+[[ "$(sql "SELECT count(DISTINCT feature_code) FROM auth_function_resources WHERE feature_code<>''")" -ge 27 ]]
+[[ "$(sql "SELECT count(*) FROM auth_function_resources WHERE target='POST /api/v1/admin/catalogs' AND feature_code='CATALOG' AND permission_match='ANY' AND declared_permissions LIKE '%CATALOG_CREATE%'")" == 1 ]]
 call 200 GET /api/v1/admin/access/tree '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; f=next(x for x in d if x["code"]=="CATALOG"); assert f["parent"] is None and f["viewPermission"]=="CATALOG_VIEW"; a=next(x for x in f["actions"] if x["permission"]=="CATALOG_CREATE"); assert any(x["target"]=="POST /api/v1/admin/catalogs" and x["match"]=="ANY" for x in a["endpoints"])' "$result"
 # Lấy bộ quyền từ metadata API thật giống thao tác chọn mẫu; lưu mapping, không có authority bypass toàn cục.
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; codes={a["permission"] for f in d if f["systemBundle"] for a in f["actions"] if not a["permission"].endswith("_WRITE") and any(not e["adminOnly"] for e in a["endpoints"])}; assert "CONFIGURATION_READ" in codes and "ACCESS_ASSIGN" in codes and "CATALOG_CREATE" not in codes and "JOURNAL_VIEW" not in codes; json.dump({"permissions":sorted(codes),"version":0},open(sys.argv[2],"w"))' "$result" "$work/tree-system-permissions.json"
 # Bộ lọc dùng chung predicate count/data trên DB, từ khóa nguyên văn không diễn giải wildcard hoặc SQL.
 call 200 GET '/api/v1/admin/access/resources?kind=ENDPOINT&query=CATALOG&page=0&size=2' '' bearer
-tree_resource_total=$(sql "SELECT count(*) FROM auth_access_resources WHERE kind='ENDPOINT' AND strpos(lower(concat_ws(' ',target,handler,description,resource_group,function_code,declared_permissions)),'catalog')>0")
+tree_resource_total=$(sql "SELECT count(*) FROM auth_function_resources WHERE left(function_code,5)='HTTP_' AND kind='ENDPOINT' AND strpos(lower(concat_ws(' ',target,handler,description,resource_group,feature_code,declared_permissions)),'catalog')>0")
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["totalElements"]==int(sys.argv[2]) and d["totalElements"]>2 and len(d["content"])==2; assert all(x["kind"]=="ENDPOINT" for x in d["content"])' "$result" "$tree_resource_total"
 call 200 GET '/api/v1/admin/access/resources?kind=MENU&query=MediaPageController' '' bearer
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1]))["data"]; assert d["totalElements"]==1 and d["content"][0]["kind"]=="MENU"' "$result"
@@ -147,7 +147,7 @@ printf '%s\n' '{"nameVi":"Tự bật","nameEn":"Self enable","active":true,"vers
 call 403 PUT /api/v1/admin/access/registry/roles/POWER_CI "$work/tree-enable.json" bearer
 call 403 PUT /api/v1/admin/access/registry/permissions/EXTRA_READ "$work/tree-enable.json" bearer
 [[ "$(sql "SELECT NOT active FROM auth_roles WHERE code='POWER_CI'")" == t ]]
-[[ "$(sql "SELECT NOT active FROM auth_permissions WHERE code='EXTRA_READ'")" == t ]]
+[[ "$(sql "SELECT NOT active FROM auth_functions WHERE code='EXTRA_READ'")" == t ]]
 call 200 GET /operations/access '' bearer
 call 200 GET /api/v1/admin/access/tree '' bearer
 call 200 GET /api/v1/admin/access/users '' bearer
@@ -167,34 +167,37 @@ tree_user_version=$(sql "SELECT version FROM auth_users WHERE id=$tree_user")
 printf '{"roles":["TARGET_CI"],"version":%s}\n' "$tree_user_version" > "$work/tree-roles.json"
 call 200 PUT "/api/v1/admin/access/users/$tree_user/roles" "$work/tree-roles.json" bearer
 [[ "$(field data.updatedBy)" == "$tree_manager" ]]
-[[ "$(sql "SELECT count(*) FROM auth_role_permissions WHERE role_code='TARGET_CI' AND permission_code IN ('CATALOG_VIEW','CATALOG_CREATE')")" == 2 ]]
+[[ "$(sql "SELECT count(DISTINCT op) FROM auth_role_functions rf CROSS JOIN LATERAL unnest(rf.operation_codes) op WHERE role_code='TARGET_CI' AND op IN ('CATALOG_VIEW','CATALOG_CREATE')")" == 2 ]]
 token="$tree_admin_token"
-printf 'Upgrade stage: V012 snapshot keeps grants/password; VIEW backfill runs exactly once\n'
+printf 'Upgrade stage: genuine V012 fixture migrates through V024 with VIEW backfill exactly once\n'
 sql 'CREATE DATABASE view_upgrade_ci' >/dev/null
-docker exec vietroute-db-ci pg_dump -U vietroute_ci -d vietroute_ci -Fc |
-  docker exec -i vietroute-db-ci pg_restore -U vietroute_ci -d view_upgrade_ci --no-owner
 upgrade_sql() { docker exec -e PGOPTIONS=-csearch_path=vietroute vietroute-db-ci psql -U vietroute_ci -d view_upgrade_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
-# Khôi phục hình dạng V012 trong DB clone cô lập; checksum V001–V012 và toàn bộ dữ liệu gốc giữ nguyên.
-upgrade_sql "DROP INDEX idx_catalog_search_text; DELETE FROM vietroute_schema_history WHERE version='V023__search_and_report_indexes.sql'; DROP TABLE auth_role_resources; DROP TABLE auth_role_resource_sets; ALTER TABLE auth_users DROP CONSTRAINT ck_auth_users_deleted; ALTER TABLE auth_users DROP COLUMN deleted; DELETE FROM vietroute_schema_history WHERE version='V022__role_resource_grants.sql'; DROP TABLE trip_locations; DROP TABLE trip_tracking; DELETE FROM vietroute_schema_history WHERE version='V021__trip_location_sharing.sql'; DROP TABLE booking_events; DROP TABLE bookings; DELETE FROM vietroute_schema_history WHERE version='V020__bookings_and_events.sql'; DROP TABLE trip_events; DROP TABLE trip_segments; DROP TABLE trip_stops; DROP TABLE carrier_trips; DELETE FROM vietroute_schema_history WHERE version='V019__trips_and_capacity.sql'; DROP TABLE carrier_route_stops; DROP TABLE carrier_routes; DELETE FROM vietroute_schema_history WHERE version='V018__routes_and_stops.sql'; DROP TABLE carrier_drivers; DROP TABLE carrier_vehicles; DROP TABLE carriers; ALTER TABLE catalog_items DROP CONSTRAINT catalog_items_id_type_key; DELETE FROM vietroute_schema_history WHERE version='V017__carriers_and_fleet.sql'; ALTER TABLE auth_access_resources DROP COLUMN function_code; ALTER TABLE auth_access_resources DROP COLUMN permission_match; ALTER TABLE auth_access_resources DROP COLUMN admin_only; DROP TABLE auth_access_functions; DROP TABLE auth_scope_roles; DROP TABLE auth_scope_memberships; DROP TABLE auth_data_scopes; DELETE FROM vietroute_schema_history WHERE version='V015__data_scope_memberships.sql'; DROP TABLE auth_access_changes; DELETE FROM vietroute_schema_history WHERE version='V014__access_change_history.sql'; DELETE FROM auth_role_permissions WHERE permission_code LIKE '%_VIEW' OR permission_code='CONFIGURATION_READ'; DELETE FROM auth_permissions WHERE code LIKE '%_VIEW' OR code='CONFIGURATION_READ'; DELETE FROM vietroute_schema_history WHERE version='V013__function_tree_and_view.sql'; INSERT INTO auth_roles(code,name_vi,name_en,permissions_initialized,permission_version) VALUES ('UPGRADE_CI','Nâng cấp','Upgrade',true,4),('LOOKALIKE_CI','Tên gần giống','Similar prefix',true,4); INSERT INTO auth_permissions(code,name_vi,name_en) VALUES ('CATALOGX_READ','Khác danh mục','Different resource'); INSERT INTO auth_role_permissions(role_code,permission_code) VALUES ('UPGRADE_CI','CATALOG_READ'),('LOOKALIKE_CI','CATALOGX_READ');" >/dev/null
+javac -proc:none -encoding UTF-8 -cp "$account_cp" -d "$work/upgrade-tools" src/test/resources/dev/LegacyViewUpgradeFixture.java
+docker cp "$work/upgrade-tools" vietroute-auth-ci:/tmp/upgrade-tools >/dev/null
+docker exec -e CI_UPGRADE_DB_URL=jdbc:postgresql://vietroute-db-ci:5432/view_upgrade_ci -e CI_GUARD_DB_PASSWORD="$db_password" -e CI_UPGRADE_HASH="$(sql "SELECT password_hash FROM auth_users WHERE id=1")" vietroute-auth-ci java -cp '/tmp/upgrade-tools:/usr/local/tomcat/webapps/ROOT/WEB-INF/classes:/usr/local/tomcat/webapps/ROOT/WEB-INF/lib/*' LegacyViewUpgradeFixture
 upgrade_hash=$(upgrade_sql "SELECT md5(password_hash) FROM auth_users WHERE id=1")
 docker rm --force vietroute-auth-ci2 >/dev/null
 start_app vietroute-auth-ci2 18081 view_upgrade_ci
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors --retry-connrefused --max-time 5 http://127.0.0.1:18081/health >/dev/null
-[[ "$(upgrade_sql 'SELECT count(*) FROM vietroute_schema_history')" == 23 ]]
+[[ "$(upgrade_sql 'SELECT count(*) FROM vietroute_schema_history')" == 24 ]]
 [[ "$(upgrade_sql "SELECT count(*) FROM information_schema.tables WHERE table_schema=current_schema() AND table_name IN ('carriers','carrier_vehicles','carrier_drivers')")" == 3 ]]
-[[ "$(upgrade_sql "SELECT count(*) FROM auth_role_permissions WHERE role_code='UPGRADE_CI' AND permission_code='CATALOG_VIEW'")" == 1 ]]
-[[ "$(upgrade_sql "SELECT permission_version=5 AND updated_by=0 FROM auth_roles WHERE code='UPGRADE_CI'")" == t ]]
-[[ "$(upgrade_sql "SELECT count(*) FROM auth_role_permissions WHERE role_code='LOOKALIKE_CI' AND permission_code='CATALOG_VIEW'")" == 0 ]]
+[[ "$(upgrade_sql "SELECT count(*) FROM auth_role_functions WHERE role_code='UPGRADE_CI' AND 'CATALOG_VIEW'=ANY(operation_codes)")" == 1 ]]
+[[ "$(upgrade_sql "SELECT permission_version=6 AND updated_by=0 FROM auth_roles WHERE code='UPGRADE_CI'")" == t ]]
+[[ "$(upgrade_sql "SELECT count(*) FROM auth_role_functions WHERE role_code='LOOKALIKE_CI' AND 'CATALOG_VIEW'=ANY(operation_codes)")" == 0 ]]
 [[ "$(upgrade_sql "SELECT md5(password_hash) FROM auth_users WHERE id=1")" == "$upgrade_hash" ]]
 base=http://127.0.0.1:18081
+login_body admin "$next_password"
+call 200 POST /api/v1/auth/login "$work/login.json" cookie
+token=$(field data.accessToken)
 call 200 GET /api/v1/admin/access/tree '' bearer
-printf '%s\n' '{"permissions":["CATALOG_READ"],"version":5}' > "$work/tree-upgrade-revoke.json"
+printf '%s\n' '{"permissions":["CATALOG_READ"],"version":6}' > "$work/tree-upgrade-revoke.json"
 call 200 PUT /api/v1/admin/access/roles/UPGRADE_CI/permissions "$work/tree-upgrade-revoke.json" bearer
 docker restart vietroute-auth-ci2 >/dev/null
 curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors --retry-connrefused --max-time 5 "$base/health" >/dev/null
-[[ "$(upgrade_sql "SELECT count(*) FROM auth_role_permissions WHERE role_code='UPGRADE_CI' AND permission_code='CATALOG_VIEW'")" == 0 ]]
-[[ "$(upgrade_sql "SELECT permission_version FROM auth_roles WHERE code='UPGRADE_CI'")" == 6 ]]
+[[ "$(upgrade_sql "SELECT count(*) FROM auth_role_functions WHERE role_code='UPGRADE_CI' AND 'CATALOG_VIEW'=ANY(operation_codes)")" == 0 ]]
+[[ "$(upgrade_sql "SELECT permission_version FROM auth_roles WHERE code='UPGRADE_CI'")" == 7 ]]
 [[ "$(upgrade_sql "SELECT md5(password_hash) FROM auth_users WHERE id=1")" == "$upgrade_hash" ]]
 base="$tree_base"
+token="$tree_admin_token"
 docker stop vietroute-auth-ci2 >/dev/null
 printf 'Function tree, VIEW/action guards, delegation, effective sources and cross-node revocation passed.\n'

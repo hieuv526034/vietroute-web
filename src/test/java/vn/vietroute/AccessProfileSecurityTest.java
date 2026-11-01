@@ -26,14 +26,14 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import vn.vietroute.auth.dto.record.registry.AccessRegistryRequest;
+import vn.vietroute.auth.dto.request.registry.AccessRegistryRequest;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
-import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.repo.UserRepository;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.auth.service.AccessManagementService;
 import vn.vietroute.auth.service.JwtService;
+import vn.vietroute.auth.service.RoleService;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
@@ -47,7 +47,7 @@ class AccessProfileSecurityTest {
 
     @Test
     void adminRegistryCannotBeRenamedDisabledOrDeleted() {
-        var service = new AccessManagementService(null, null, null, null, null);
+        var service = new RoleService(null, null, null, null, null);
         var actor = new UserPrincipal(1L, "admin", Set.of(Role.ADMIN), 0);
         for (boolean active : List.of(true, false)) {
             var failure = assertThrows(BusinessException.class, () ->

@@ -7,13 +7,17 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.validation.StrongPassword;
 
 /** Credentials thuộc auth; không nhận role/scope/trạng thái xác minh hoặc hash từ client. */
 @Getter
+@NoArgsConstructor
+@EqualsAndHashCode
 @Setter
 @Schema(description = "Cấp DRIVER mới cho hồ sơ chưa liên kết, bắt đổi mật khẩu và xác minh email")
 public class DriverAccountCreateRequest {

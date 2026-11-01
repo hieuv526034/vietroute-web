@@ -2,8 +2,8 @@
 # Chỉ source trong verify-auth.sh trên DB/container CI; không đọc .env, không seed dữ liệu địa lý production.
 printf 'Location stage: public lookup, admin guards, coordinates, references and status/version transactions\n'
 token="$tree_admin_token"
-[[ "$(sql "SELECT count(*) FROM auth_permissions WHERE code IN ('LOCATION_VIEW','LOCATION_READ','LOCATION_CREATE','LOCATION_UPDATE') AND active")" == 4 ]]
-[[ "$(sql "SELECT count(*) FROM auth_role_permissions WHERE role_code='ADMIN' AND permission_code LIKE 'LOCATION_%'")" == 4 ]]
+[[ "$(sql "SELECT count(*) FROM auth_functions WHERE code IN ('LOCATION_VIEW','LOCATION_READ','LOCATION_CREATE','LOCATION_UPDATE') AND active")" == 4 ]]
+[[ "$(sql "SELECT count(*) FROM auth_role_functions WHERE role_code='ADMIN' AND function_code LIKE 'LOCATION_%'")" == 4 ]]
 call 200 GET '/api/v1/admin/access/registry/permissions/page?query=LOCATION_' '' bearer
 python3 -c 'import json,sys;v=json.load(open(sys.argv[1]))["data"]["page"];assert v["totalElements"]==4;assert all(x["builtIn"] and x["nameVi"]!=x["code"] and x["nameEn"]!=x["code"] for x in v["content"])' "$result"
 printf '%s\n' '{"nameVi":"Không được tắt","nameEn":"Must stay active","active":false,"version":0}' > "$work/location-disable-permission.json"
@@ -83,7 +83,7 @@ if sql "UPDATE location_places SET latitude=91 WHERE id=$location_place2" >/dev/
 if sql "UPDATE location_places SET longitude=181 WHERE id=$location_place2" >/dev/null 2>&1; then exit 1; fi
 
 # Có đủ quyền mới nhưng không có ADMIN vẫn bị chặn cả page/read/create/update, không chỉ ẩn menu.
-sql "INSERT INTO auth_roles(code,name_vi,name_en) VALUES ('LOCATION_CI','Quyền địa điểm CI','CI location permissions'); INSERT INTO auth_role_permissions(role_code,permission_code) SELECT 'LOCATION_CI',code FROM auth_permissions WHERE code LIKE 'LOCATION_%'; INSERT INTO auth_users(username,password_hash,display_name,active,must_change_password,email_verified_at) SELECT 'locationstaffci',password_hash,'Location CI',true,false,CURRENT_TIMESTAMP FROM auth_users WHERE id=1; INSERT INTO auth_user_roles(user_id,role_code) SELECT id,'LOCATION_CI' FROM auth_users WHERE username='locationstaffci'" >/dev/null
+sql "INSERT INTO auth_roles(code,name_vi,name_en) VALUES ('LOCATION_CI','Quyền địa điểm CI','CI location permissions'); INSERT INTO auth_role_functions(role_code,function_code) SELECT 'LOCATION_CI',code FROM auth_functions WHERE code LIKE 'LOCATION_%'; INSERT INTO auth_users(username,password_hash,display_name,active,must_change_password,email_verified_at) SELECT 'locationstaffci',password_hash,'Location CI',true,false,CURRENT_TIMESTAMP FROM auth_users WHERE id=1; INSERT INTO auth_user_roles(user_id,role_code) SELECT id,'LOCATION_CI' FROM auth_users WHERE username='locationstaffci'" >/dev/null
 login_body locationstaffci "$next_password"
 call 200 POST /api/v1/auth/login "$work/login.json" cookie
 token=$(field data.accessToken)

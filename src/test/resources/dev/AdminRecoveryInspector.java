@@ -1,7 +1,7 @@
 import java.sql.DriverManager;
 import java.util.Map;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import vn.vietroute.auth.repository.AdminRecoveryRepository;
+import vn.vietroute.auth.repo.AdminRecoveryRepository;
 import vn.vietroute.auth.service.BootstrapAdminInitializer;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.constant.ApplicationConstants.Env;

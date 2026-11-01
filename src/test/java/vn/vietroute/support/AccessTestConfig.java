@@ -17,27 +17,27 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import vn.vietroute.auth.config.AccessSettings;
-import vn.vietroute.auth.dto.record.history.AccessChangeResponse;
-import vn.vietroute.auth.dto.record.history.AccessChangeStateResponse;
-import vn.vietroute.auth.dto.record.policy.AccessPolicyResponse;
-import vn.vietroute.auth.dto.record.registry.AccessRegistryPageResponse;
-import vn.vietroute.auth.dto.record.registry.PermissionResponse;
-import vn.vietroute.auth.dto.record.resource.AccessResourceResponse;
-import vn.vietroute.auth.dto.record.scope.DataScopeResponse;
-import vn.vietroute.auth.dto.record.scope.ScopeMembershipResponse;
+import vn.vietroute.auth.config.AuthSettings;
 import vn.vietroute.auth.dto.request.access.AccessChangeSearchRequest;
 import vn.vietroute.auth.dto.request.access.AccessRegistrySearchRequest;
 import vn.vietroute.auth.dto.request.access.AccessResourceSearchRequest;
 import vn.vietroute.auth.dto.request.scope.ScopeMemberSearchRequest;
+import vn.vietroute.auth.dto.response.history.AccessChangeResponse;
+import vn.vietroute.auth.dto.response.history.AccessChangeStateResponse;
+import vn.vietroute.auth.dto.response.policy.AccessPolicyResponse;
+import vn.vietroute.auth.dto.response.registry.AccessRegistryPageResponse;
+import vn.vietroute.auth.dto.response.registry.PermissionResponse;
+import vn.vietroute.auth.dto.response.resource.AccessResourceResponse;
+import vn.vietroute.auth.dto.response.scope.DataScopeResponse;
+import vn.vietroute.auth.dto.response.scope.ScopeMembershipResponse;
 import vn.vietroute.auth.entity.AuthorizationState;
 import vn.vietroute.auth.entity.Permission;
-import vn.vietroute.auth.repository.AccessChangeRepository;
-import vn.vietroute.auth.repository.AccessRegistryRepository;
-import vn.vietroute.auth.repository.AccessRepository;
-import vn.vietroute.auth.repository.AccessResourceRepository;
-import vn.vietroute.auth.repository.AuthorizationRepository;
-import vn.vietroute.auth.repository.DataScopeRepository;
+import vn.vietroute.auth.repo.AccessChangeRepository;
+import vn.vietroute.auth.repo.AccessRegistryRepository;
+import vn.vietroute.auth.repo.AccessRepository;
+import vn.vietroute.auth.repo.AccessResourceRepository;
+import vn.vietroute.auth.repo.AuthorizationRepository;
+import vn.vietroute.auth.repo.DataScopeRepository;
 import vn.vietroute.auth.security.AccessPermissionDefinitions;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.base.PageRequest;
@@ -62,7 +62,7 @@ public class AccessTestConfig {
     @Bean
     @Primary
     public DataScopeRepository isolatedDataScopes() {
-        return new DataScopeRepository(null, new AccessSettings(key -> null)) {
+        return new DataScopeRepository(null, new AuthSettings(key -> null)) {
             @Override
             public PageResponse<DataScopeResponse> page(AccessRegistrySearchRequest search) {
                 return PageResponse.of(List.of(), search, 0);
@@ -85,7 +85,7 @@ public class AccessTestConfig {
         public final List<AccessChangeResponse> events = new ArrayList<>();
 
         public HistoryFixture() {
-            super(null, null, new AccessSettings(key -> null));
+            super(null, null, new AuthSettings(key -> null));
         }
 
         @Override
@@ -273,7 +273,7 @@ public class AccessTestConfig {
         public List<AccessPolicyResponse> rules = List.of();
 
         public PolicyFixture(AccessPermissionDefinitions definitions) {
-            super(null, new AccessSettings(key -> null), definitions);
+            super(null, new AuthSettings(key -> null), definitions);
         }
 
         @Override

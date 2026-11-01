@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.util.Set;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.common.base.BaseRequest;
@@ -16,6 +17,7 @@ import vn.vietroute.common.validation.StrongPassword;
 
 /** Admin cấp tài khoản và role trong một transaction; không nhận audit/tokenVersion hoặc hash. */
 @Getter
+@NoArgsConstructor
 @Setter
 @Schema(description = "Cấp tài khoản hoạt động; bắt đổi mật khẩu tạm sau lần đăng nhập đầu")
 public class ManagedAccountCreateRequest extends BaseRequest {

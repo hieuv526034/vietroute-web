@@ -11,13 +11,13 @@ call 200 PUT '/api/v1/admin/access/roles/SCOPED_EDIT_CI/permissions' "$work/scop
 printf '%s\n' '{"permissions":["BOOKING_LIST"],"version":0}' > "$work/scope-permissions.json"
 call 200 PUT '/api/v1/admin/access/roles/SCOPED_VIEW_CI/permissions' "$work/scope-permissions.json" bearer
 for scope_code in SCOPE_A_CI SCOPE_B_CI SCOPE_C_CI; do
-  printf '{"code":"%s","nameVi":"Phạm vi CI","nameEn":"Scope CI","active":true,"version":0}\n' "$scope_code" > "$work/scope.json"
-  call 201 POST '/api/v1/admin/access/scopes' "$work/scope.json" bearer
+  printf '{"code":"%s","name":"Nhà xe phạm vi CI","phone":"0000000000"}\n' "$scope_code" > "$work/scope.json"
+  call 201 POST '/api/v1/admin/carriers' "$work/scope.json" bearer
 done
-scope_a=$(sql "SELECT id FROM auth_data_scopes WHERE code='SCOPE_A_CI'")
-scope_b=$(sql "SELECT id FROM auth_data_scopes WHERE code='SCOPE_B_CI'")
-scope_c=$(sql "SELECT id FROM auth_data_scopes WHERE code='SCOPE_C_CI'")
-call 200 GET '/api/v1/admin/access/scopes?query=SCOPE_&size=1&page=1' '' bearer
+scope_a=$(sql "SELECT scope_id FROM carriers WHERE code='SCOPE_A_CI'")
+scope_b=$(sql "SELECT scope_id FROM carriers WHERE code='SCOPE_B_CI'")
+scope_c=$(sql "SELECT scope_id FROM carriers WHERE code='SCOPE_C_CI'")
+call 200 GET '/api/v1/admin/access/scopes?query=Nh%C3%A0%20xe%20ph%E1%BA%A1m%20vi&size=1&page=1' '' bearer
 [[ "$(field data.totalElements)" == 3 ]]
 call 200 GET '/api/v1/admin/access/scopes?query=SCOPE%25' '' bearer
 [[ "$(field data.totalElements)" == 0 ]]
@@ -33,7 +33,7 @@ printf '%s\n' '{"roles":["ADMIN"],"active":true,"version":0}' > "$work/scope-inv
 call 400 PUT "/api/v1/admin/access/scopes/$scope_c/members/$scope_user" "$work/scope-invalid.json" bearer
 printf '%s\n' '{"roles":["DRIVER"],"active":true,"version":0}' > "$work/scope-invalid.json"
 call 400 PUT "/api/v1/admin/access/scopes/$scope_c/members/$scope_user" "$work/scope-invalid.json" bearer
-[[ "$(sql "SELECT count(*) FROM auth_scope_memberships WHERE scope_id=$scope_c AND user_id=$scope_user")" == 0 ]]
+[[ "$(sql "SELECT count(*) FROM auth_user_roles WHERE scope_id=$scope_c AND user_id=$scope_user")" == 0 ]]
 
 # Mật khẩu tạm vẫn chưa được dùng API membership; đổi mật khẩu qua auth chuẩn, không tự phát JWT thủ công.
 login_body scopeduserci "$admin_password"
@@ -56,7 +56,7 @@ account_id="$scope_saved_account_id"
 python3 -c 'import json,sys;json.dump({"email":"scopeduserci@example.invalid","token":open(sys.argv[1]).read()},sys.stdout)' "$work/account-code.txt" > "$work/scope-activate.json"
 call 200 POST /api/v1/auth/activate "$work/scope-activate.json" cookie
 call 200 GET /api/v1/auth/scopes '' bearer
-python3 -c 'import json,sys;v=json.load(open(sys.argv[1]))["data"];assert {x["code"] for x in v}=={"SCOPE_A_CI","SCOPE_B_CI"}' "$result"
+python3 -c 'import json,sys;v=json.load(open(sys.argv[1]))["data"];assert {x["id"] for x in v}=={int(sys.argv[2]),int(sys.argv[3])}' "$result" "$scope_a" "$scope_b"
 call 200 GET "/api/v1/auth/scopes/$scope_a/permissions" '' bearer
 python3 -c 'import json,sys;v=json.load(open(sys.argv[1]))["data"];assert "BOOKING_DETAIL" in v["permissions"] and "BOOKING_LIST" in v["permissions"]' "$result"
 call 200 GET "/api/v1/auth/scopes/$scope_b/permissions" '' bearer
@@ -78,17 +78,17 @@ scope_check "$scope_a" DETAIL true "$scope_b"
 scope_check "$scope_b" LIST true
 scope_check "$scope_b" DETAIL false
 scope_check "$scope_c" LIST false
-sql "UPDATE auth_scope_memberships SET active=false WHERE scope_id=$scope_b AND user_id=$scope_user" >/dev/null
+sql "UPDATE auth_user_roles SET active=false WHERE scope_id=$scope_b AND user_id=$scope_user" >/dev/null
 scope_check "$scope_b" LIST false
-sql "UPDATE auth_scope_memberships SET active=true WHERE scope_id=$scope_b AND user_id=$scope_user; UPDATE auth_roles SET active=false WHERE code='SCOPED_EDIT_CI'" >/dev/null
+sql "UPDATE auth_user_roles SET active=true WHERE scope_id=$scope_b AND user_id=$scope_user; UPDATE auth_roles SET active=false WHERE code='SCOPED_EDIT_CI'" >/dev/null
 scope_check "$scope_a" DETAIL false
-sql "UPDATE auth_roles SET active=true WHERE code='SCOPED_EDIT_CI'; UPDATE auth_permissions SET active=false WHERE code='BOOKING_DETAIL'" >/dev/null
+sql "UPDATE auth_roles SET active=true WHERE code='SCOPED_EDIT_CI'; UPDATE auth_functions SET active=false WHERE code='BOOKING_DETAIL'" >/dev/null
 scope_check "$scope_a" DETAIL false
-sql "UPDATE auth_permissions SET active=true WHERE code='BOOKING_DETAIL'; UPDATE auth_users SET active=false WHERE id=$scope_user" >/dev/null
+sql "UPDATE auth_functions SET active=true WHERE code='BOOKING_DETAIL'; UPDATE auth_users SET active=false WHERE id=$scope_user" >/dev/null
 scope_check "$scope_a" DETAIL false
-sql "UPDATE auth_users SET active=true WHERE id=$scope_user; UPDATE auth_data_scopes SET active=false WHERE id=$scope_a" >/dev/null
+sql "UPDATE auth_users SET active=true WHERE id=$scope_user; UPDATE carriers SET scope_active=false WHERE scope_id=$scope_a" >/dev/null
 scope_check "$scope_a" DETAIL false
-sql "UPDATE auth_data_scopes SET active=true WHERE id=$scope_a" >/dev/null
+sql "UPDATE carriers SET scope_active=true WHERE scope_id=$scope_a" >/dev/null
 scope_check "$scope_a" DETAIL true
 
 # Audit lỗi phải rollback cả membership version và mapping trước đó.
@@ -105,7 +105,7 @@ docker exec -i -e PGOPTIONS=-csearch_path=vietroute vietroute-db-ci psql -U viet
 printf '%s\n' '{"roles":[],"active":false,"version":1}' > "$work/scope-membership.json"
 call 503 PUT "/api/v1/admin/access/scopes/$scope_b/members/$scope_user" "$work/scope-membership.json" bearer
 assert_code COM007
-[[ "$(sql "SELECT version FROM auth_scope_memberships WHERE scope_id=$scope_b AND user_id=$scope_user")" == 1 ]]
+[[ "$(sql "SELECT version FROM auth_user_roles WHERE scope_id=$scope_b AND user_id=$scope_user")" == 1 ]]
 scope_check "$scope_b" LIST true
 sql 'DROP TRIGGER ci_scope_audit_failure ON auth_access_changes; DROP FUNCTION ci_scope_audit_failure()' >/dev/null
 call 200 PUT "/api/v1/admin/access/scopes/$scope_b/members/$scope_user" "$work/scope-membership.json" bearer
@@ -117,14 +117,14 @@ call 200 PUT "/api/v1/admin/access/scopes/$scope_b/members/$scope_user" "$work/s
 scope_user_version=$(sql "SELECT version FROM auth_users WHERE id=$scope_user")
 printf '{"roles":["SCOPED_EDIT_CI","SCOPED_VIEW_CI"],"version":%s}\n' "$scope_user_version" > "$work/scope-global.json"
 call 200 PUT "/api/v1/admin/access/users/$scope_user/roles" "$work/scope-global.json" bearer
-[[ "$(sql "SELECT count(*) FROM auth_scope_roles WHERE user_id=$scope_user")" == 2 ]]
+[[ "$(sql "SELECT count(*) FROM auth_user_roles WHERE user_id=$scope_user AND scope_id>0")" == 2 ]]
 scope_user_version=$(field data.version)
 scope_version=$(sql "SELECT token_version FROM auth_users WHERE id=$scope_user")
 scope_check "$scope_a" DETAIL true
 printf '{"roles":["SCOPED_VIEW_CI"],"version":%s}\n' "$scope_user_version" > "$work/scope-global.json"
 call 200 PUT "/api/v1/admin/access/users/$scope_user/roles" "$work/scope-global.json" bearer
-[[ "$(sql "SELECT count(*) FROM auth_scope_roles WHERE user_id=$scope_user AND scope_id=$scope_a")" == 0 ]]
-[[ "$(sql "SELECT version FROM auth_scope_memberships WHERE user_id=$scope_user AND scope_id=$scope_a")" == 2 ]]
+[[ "$(sql "SELECT count(*) FROM auth_user_roles WHERE user_id=$scope_user AND scope_id=$scope_a")" == 0 ]]
+[[ "$(sql "SELECT (scope_membership_versions->>'$scope_a')::bigint FROM auth_users WHERE id=$scope_user")" == 2 ]]
 [[ "$(sql "SELECT before_state->'roles'='[\"SCOPED_EDIT_CI\"]'::jsonb AND after_state->'roles'='[]'::jsonb FROM auth_access_changes WHERE event_type='SCOPE_MEMBERSHIP' AND target_key='$scope_a:$scope_user' ORDER BY id DESC LIMIT 1")" == t ]]
 scope_check "$scope_b" LIST false # tokenVersion cũ cũng bị từ chối dù membership B còn hiệu lực.
 scope_version=$(sql "SELECT token_version FROM auth_users WHERE id=$scope_user")

@@ -30,7 +30,7 @@ printf '%s\n' '{"permissions":["CATALOG_DELETE"],"version":2}' > "$work/history-
 call 503 PUT /api/v1/admin/access/roles/HISTORY_CI/permissions "$work/history-grants.json" bearer
 assert_code COM007
 [[ "$(sql "SELECT permission_version FROM auth_roles WHERE code='HISTORY_CI'")" == 2 ]]
-[[ "$(sql "SELECT permission_code FROM auth_role_permissions WHERE role_code='HISTORY_CI'")" == CATALOG_CREATE ]]
+[[ "$(sql "SELECT DISTINCT unnest(operation_codes) FROM auth_role_functions WHERE role_code='HISTORY_CI'")" == CATALOG_CREATE ]]
 [[ "$(sql "SELECT count(*) FROM auth_access_changes WHERE event_type='ROLE_PERMISSIONS' AND target_key='HISTORY_CI'")" == 2 ]]
 sql 'DROP TRIGGER ci_access_history_failure ON auth_access_changes; DROP FUNCTION ci_access_history_failure()' >/dev/null
 call 200 PUT /api/v1/admin/access/roles/HISTORY_CI/permissions "$work/history-grants.json" bearer

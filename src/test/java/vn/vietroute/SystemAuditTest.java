@@ -28,7 +28,7 @@ import org.springframework.web.context.support.AnnotationConfigWebApplicationCon
 import vn.vietroute.auth.dto.request.session.LoginRequest;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.UserAccount;
-import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.repo.UserRepository;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.AuthService;
 import vn.vietroute.auth.service.JwtService;

@@ -6,6 +6,8 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import lombok.Getter;
+import lombok.Setter;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.core.annotation.AnnotatedElementUtils;
@@ -16,12 +18,41 @@ import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.auth.security.annotation.AccessResource;
 
 /** Suy ra RESOURCE_ACTION từ metadata tin cậy của hàm, không cần một hằng/rule cho mỗi quyền. */
-public record AccessOperationMetadata(
-    List<String> any,
-    List<String> required,
-    boolean adminOnly,
-    boolean authenticated
-) {
+@Getter
+@Setter
+public class AccessOperationMetadata {
+
+    private List<String> any;
+
+    private List<String> required;
+
+    private boolean adminOnly;
+
+    private boolean authenticated;
+
+    public AccessOperationMetadata(List<String> any, List<String> required, boolean adminOnly, boolean authenticated) {
+        this.any = any;
+        this.required = required;
+        this.adminOnly = adminOnly;
+        this.authenticated = authenticated;
+    }
+
+    public List<String> any() {
+        return any;
+    }
+
+    public List<String> required() {
+        return required;
+    }
+
+    public boolean adminOnly() {
+        return adminOnly;
+    }
+
+    public boolean authenticated() {
+        return authenticated;
+    }
+
     /** Startup kiểm và thu thập cả guard service không có HTTP, không cần gọi hàm nghiệp vụ để sinh registry. */
     public static Set<String> declaredCodes(Class<?> type, Method method) {
         var declaration = AnnotatedElementUtils.findMergedAnnotation(method, AccessOperation.class);

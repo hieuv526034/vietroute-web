@@ -15,9 +15,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.sql.DataSource;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import vn.vietroute.auth.repository.AuthorizationRepository;
-import vn.vietroute.auth.repository.UserRepository;
-import vn.vietroute.auth.security.DatabaseAccessGuard;
+import vn.vietroute.auth.repo.AuthorizationRepository;
+import vn.vietroute.auth.repo.UserRepository;
+import vn.vietroute.auth.security.AccessGuard;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.jdbc.JdbcSchema;
@@ -44,7 +44,7 @@ public final class AccessCostInspector {
                 new JdbcSchema(System.getenv("CI_GUARD_DB_SCHEMA"))
             );
             var users = new UserRepository(connections);
-            var guard = new DatabaseAccessGuard(new AuthorizationRepository(connections));
+            var guard = new AccessGuard(new AuthorizationRepository(connections));
             var authentication = UsernamePasswordAuthenticationToken.authenticated(
                 new UserPrincipal(id, "costci", Set.of(), version),
                 null,

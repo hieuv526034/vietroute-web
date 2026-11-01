@@ -30,12 +30,12 @@ import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.spring6.templateresolver.SpringResourceTemplateResolver;
 import org.thymeleaf.spring6.view.ThymeleafViewResolver;
 import org.thymeleaf.templatemode.TemplateMode;
+import vn.vietroute.auth.security.AccessGuard;
 import vn.vietroute.auth.security.AccessMethodExpressionHandler;
 import vn.vietroute.auth.security.AccessPolicyInterceptor;
 import vn.vietroute.auth.security.AccessResourceSynchronizer;
-import vn.vietroute.auth.security.DatabaseAccessGuard;
-import vn.vietroute.auth.service.AccessManagementService;
 import vn.vietroute.auth.service.AccessResourceService;
+import vn.vietroute.auth.service.RoleService;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
@@ -63,9 +63,9 @@ public class WebConfig extends DelegatingWebMvcConfiguration {
         return new AccessMethodExpressionHandler();
     }
 
-    private final AccessManagementService access;
+    private final RoleService access;
 
-    private final DatabaseAccessGuard guard;
+    private final AccessGuard guard;
 
     private final MessageSource messages;
 
@@ -77,8 +77,8 @@ public class WebConfig extends DelegatingWebMvcConfiguration {
         MessageSource messages,
         ObjectMapper mapper,
         SupportedLocaleResolver locales,
-        AccessManagementService access,
-        DatabaseAccessGuard guard
+        RoleService access,
+        AccessGuard guard
     ) {
         this.access = access;
         this.guard = guard;

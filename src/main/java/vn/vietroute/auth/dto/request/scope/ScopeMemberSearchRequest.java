@@ -3,10 +3,12 @@ package vn.vietroute.auth.dto.request.scope;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import vn.vietroute.common.base.PageRequest;
 
 @Getter
+@NoArgsConstructor
 @Setter
 @Schema(description = "Tra membership theo phạm vi và ID tài khoản, phân trang DB")
 public class ScopeMemberSearchRequest extends PageRequest {

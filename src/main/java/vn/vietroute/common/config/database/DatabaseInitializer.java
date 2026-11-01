@@ -9,27 +9,21 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HexFormat;
-import java.util.Locale;
-import java.util.ResourceBundle;
 import java.util.logging.Logger;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;
 import vn.vietroute.auth.entity.AccessChange;
-import vn.vietroute.auth.entity.AccessFeature;
-import vn.vietroute.auth.entity.AccessPolicy;
-import vn.vietroute.auth.entity.AccessResource;
 import vn.vietroute.auth.entity.AccountChallenge;
-import vn.vietroute.auth.entity.DataScope;
-import vn.vietroute.auth.entity.PasswordHistory;
-import vn.vietroute.auth.entity.Permission;
+import vn.vietroute.auth.entity.Function;
+import vn.vietroute.auth.entity.FunctionResource;
 import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.entity.RoleResource;
-import vn.vietroute.auth.entity.RoleResourceSet;
-import vn.vietroute.auth.entity.ScopeMembership;
-import vn.vietroute.auth.entity.ScopeRole;
+import vn.vietroute.auth.entity.RoleFunction;
 import vn.vietroute.auth.entity.UserAccount;
+import vn.vietroute.auth.entity.UserRole;
+import vn.vietroute.auth.repo.AuthBootstrapRepository;
 import vn.vietroute.auth.service.BootstrapAdminInitializer;
+import vn.vietroute.auth.service.DefaultAccountsInitializer;
 import vn.vietroute.business.booking.entity.Booking;
 import vn.vietroute.business.booking.entity.BookingEvent;
 import vn.vietroute.business.carrier.entity.Carrier;
@@ -74,6 +68,10 @@ public class DatabaseInitializer implements InitializingBean {
 
     private final JdbcSchema schema;
 
+    private final AuthBootstrapRepository foundation;
+
+    private final DefaultAccountsInitializer defaults;
+
     @Override
     public void afterPropertiesSet() {
         if (!settings.isDatabaseInitEnabled()) {
@@ -113,11 +111,11 @@ public class DatabaseInitializer implements InitializingBean {
         migrate(connection, "V021__trip_location_sharing.sql");
         migrate(connection, "V022__role_resource_grants.sql");
         migrate(connection, "V023__search_and_report_indexes.sql");
+        migrate(connection, "V024__eight_table_authorization.sql");
         JdbcSchemaValidator.verify(
             connection,
             UserAccount.class,
             AccountChallenge.class,
-            PasswordHistory.class,
             CatalogItem.class,
             Carrier.class,
             Vehicle.class,
@@ -137,82 +135,19 @@ public class DatabaseInitializer implements InitializingBean {
             MediaAsset.class,
             Job.class,
             Role.class,
-            RoleResource.class,
-            RoleResourceSet.class,
-            Permission.class,
+            Function.class,
+            RoleFunction.class,
+            FunctionResource.class,
+            UserRole.class,
             ApiJournalRecord.class,
-            AccessPolicy.class,
-            AccessResource.class,
-            AccessFeature.class,
             AccessChange.class,
-            DataScope.class,
-            ScopeMembership.class,
-            ScopeRole.class,
             VisitorPresence.class,
             ActivityBucket.class
         );
-        seedRoles(connection);
-        seedPermissions(connection);
+        foundation.seed(connection);
         bootstrap.initialize(connection, SystemActor.ID);
-        seedCatalogs(connection);
+        defaults.initialize(connection);
         return null;
-    }
-
-    /** Seed registry quyền; role thường chỉ nhận mặc định một lần, không phục hồi quyền quản trị đã thu hồi. */
-    private void seedPermissions(Connection connection) throws SQLException {
-        var vi = ResourceBundle.getBundle("i18n.messages", Locale.forLanguageTag("vi"));
-        var en = ResourceBundle.getBundle("i18n.messages", Locale.ENGLISH);
-        try (
-            PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO auth_permissions(code,name_vi,name_en) VALUES (?,?,?) ON CONFLICT (code) DO NOTHING"
-            )
-        ) {
-            for (Permission permission : Permission.values()) {
-                insert.setString(1, permission.name());
-                insert.setString(2, vi.getString(permission.messageKey()));
-                insert.setString(3, en.getString(permission.messageKey()));
-                insert.addBatch();
-            }
-            insert.executeBatch();
-        }
-        for (Role role : Role.values()) {
-            try (
-                PreparedStatement query = connection.prepareStatement(
-                    "SELECT permissions_initialized OR deleted FROM auth_roles WHERE code=?"
-                )
-            ) {
-                query.setString(1, role.name());
-                try (ResultSet row = query.executeQuery()) {
-                    row.next();
-                    if (row.getBoolean(1) && role != Role.ADMIN) {
-                        continue;
-                    }
-                }
-            }
-            try (
-                PreparedStatement insert = connection.prepareStatement(
-                    "INSERT INTO auth_role_permissions(role_code,permission_code) VALUES (?,?) ON CONFLICT DO NOTHING"
-                )
-            ) {
-                for (Permission permission : Permission.values()) {
-                    if (permission.grantedInitially(role)) {
-                        insert.setString(1, role.name());
-                        insert.setString(2, permission.name());
-                        insert.addBatch();
-                    }
-                }
-                insert.executeBatch();
-            }
-            try (
-                PreparedStatement update = connection.prepareStatement(
-                    "UPDATE auth_roles SET permissions_initialized=true,updated_at=CURRENT_TIMESTAMP,updated_by=? WHERE code=? AND NOT permissions_initialized"
-                )
-            ) {
-                update.setLong(1, SystemActor.ID);
-                update.setString(2, role.name());
-                update.executeUpdate();
-            }
-        }
     }
 
     /** Checksum ngăn sửa âm thầm migration đã chạy; thay schema phải tạo version mới. */
@@ -254,54 +189,6 @@ public class DatabaseInitializer implements InitializingBean {
             insert.setString(1, version);
             insert.setString(2, checksum);
             insert.executeUpdate();
-        }
-    }
-
-    /** Seed quyền ổn định theo code; chạy lại không ghi đè tên hay dữ liệu người dùng đã chỉnh. */
-    private void seedRoles(Connection connection) throws SQLException {
-        String[][] roles = {
-            { "ADMIN", "Quản trị viên", "Administrator" },
-            { "OPERATOR", "Quản lý nhà xe", "Operator" },
-            { "DRIVER", "Tài xế", "Driver" },
-            { "CUSTOMER", "Khách hàng", "Customer" },
-        };
-        try (
-            PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO auth_roles(code,name_vi,name_en) VALUES (?,?,?) ON CONFLICT (code) DO NOTHING"
-            )
-        ) {
-            for (String[] role : roles) {
-                for (int i = 0; i < role.length; i++) {
-                    insert.setString(i + 1, role[i]);
-                }
-                insert.addBatch();
-            }
-            insert.executeBatch();
-        }
-    }
-
-    /** Seed danh mục nền bằng UNIQUE(type, code); không thêm dữ liệu chuyến/đơn giả. */
-    private void seedCatalogs(Connection connection) throws SQLException {
-        String[][] values = {
-            { "VEHICLE_TYPE", "SEAT", "Ghế ngồi", "Seated coach" },
-            { "VEHICLE_TYPE", "SLEEPER", "Giường nằm", "Sleeper coach" },
-            { "VEHICLE_TYPE", "LIMOUSINE", "Limousine", "Limousine" },
-            { "BOOKING_SOURCE", "WEB", "Đặt trên website", "Website" },
-            { "BOOKING_SOURCE", "PHONE", "Đặt qua điện thoại", "Phone" },
-        };
-        try (
-            PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO catalog_items(type,code,name_vi,name_en,sort_order) VALUES (?,?,?,?,?) ON CONFLICT (type,code) DO NOTHING"
-            )
-        ) {
-            for (int i = 0; i < values.length; i++) {
-                for (int j = 0; j < values[i].length; j++) {
-                    insert.setString(j + 1, values[i][j]);
-                }
-                insert.setInt(5, i);
-                insert.addBatch();
-            }
-            insert.executeBatch();
         }
     }
 }

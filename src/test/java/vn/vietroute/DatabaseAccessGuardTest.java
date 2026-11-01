@@ -29,8 +29,8 @@ import org.springframework.web.context.support.AnnotationConfigWebApplicationCon
 import vn.vietroute.auth.entity.AuthorizationState;
 import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.entity.Role;
+import vn.vietroute.auth.security.AccessGuard;
 import vn.vietroute.auth.security.AccessOperationMetadata;
-import vn.vietroute.auth.security.DatabaseAccessGuard;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessFunction;
 import vn.vietroute.auth.security.annotation.AccessOperation;
@@ -47,7 +47,7 @@ import vn.vietroute.support.JournalTestConfig;
 class DatabaseAccessGuardTest {
 
     private final AccessTestConfig.AuthorizationFixture db = new AccessTestConfig.AuthorizationFixture();
-    private final DatabaseAccessGuard guard = new DatabaseAccessGuard(db);
+    private final AccessGuard guard = new AccessGuard(db);
 
     @Test
     void authorityTextAndAdminRoleClaimsCannotCreatePermissionsWithoutDbMapping() {

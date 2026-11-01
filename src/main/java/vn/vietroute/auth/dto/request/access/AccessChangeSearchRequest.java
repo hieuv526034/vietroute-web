@@ -4,12 +4,14 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.constant.AccessAuditConstants.Event;
 
 /** Điều kiện lọc metadata, không nhận hoặc xuất payload thô của request. */
 @Getter
+@NoArgsConstructor
 @Setter
 @Schema(description = "Lọc lịch sử quyền, có phân trang PostgreSQL")
 public class AccessChangeSearchRequest extends PageRequest {

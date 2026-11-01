@@ -5,12 +5,14 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 
 /** Bộ lọc danh bạ thực hiện tại DB trước phân trang; từ khóa được bind nguyên văn, không phải SQL/wildcard. */
 @Getter
+@NoArgsConstructor
 @Setter
 @Schema(description = "Lọc danh bạ tài nguyên UI/API đã được startup đồng bộ")
 public class AccessResourceSearchRequest extends PageRequest {

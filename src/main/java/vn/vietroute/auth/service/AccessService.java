@@ -11,22 +11,22 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.dto.record.account.AccessUserResponse;
-import vn.vietroute.auth.dto.record.history.AccessChangeStateResponse;
-import vn.vietroute.auth.dto.record.registry.PermissionResponse;
-import vn.vietroute.auth.dto.record.role.RolePermissionsResponse;
-import vn.vietroute.auth.dto.record.scope.ScopeMembershipResponse;
 import vn.vietroute.auth.dto.request.access.RolePermissionsRequest;
 import vn.vietroute.auth.dto.request.account.AccessUserSearchRequest;
 import vn.vietroute.auth.dto.request.account.UserRolesRequest;
+import vn.vietroute.auth.dto.response.account.AccessUserResponse;
 import vn.vietroute.auth.dto.response.account.UserResponse;
+import vn.vietroute.auth.dto.response.history.AccessChangeStateResponse;
+import vn.vietroute.auth.dto.response.registry.PermissionResponse;
+import vn.vietroute.auth.dto.response.role.RolePermissionsResponse;
+import vn.vietroute.auth.dto.response.scope.ScopeMembershipResponse;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.repository.AccessChangeRepository.Entry;
-import vn.vietroute.auth.repository.AccessRepository;
-import vn.vietroute.auth.repository.DataScopeRepository;
-import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.repo.AccessChangeRepository.Entry;
+import vn.vietroute.auth.repo.AccessRepository;
+import vn.vietroute.auth.repo.DataScopeRepository;
+import vn.vietroute.auth.repo.UserRepository;
 import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessOperation;
@@ -53,7 +53,7 @@ public class AccessService {
 
     private final JdbcTransactions transactions;
 
-    private final AccessChangeService changes;
+    private final AccessHistoryService changes;
 
     private final RoleResourceService resourceGrants;
 
@@ -200,10 +200,7 @@ public class AccessService {
                 var membershipChanges = new ArrayList<Entry>();
                 for (var previous : scopedBefore) {
                     var current = scopedAfter.get(previous.scopeId());
-                    if (current == null) throw new IllegalStateException(
-                        "Membership bị thiếu trong cùng transaction gán role"
-                    );
-                    if (!previous.roles().equals(current.roles())) membershipChanges.add(
+                    if (current == null || !previous.roles().equals(current.roles())) membershipChanges.add(
                         new Entry(
                             Event.SCOPE_MEMBERSHIP,
                             Target.MEMBERSHIP,
@@ -213,11 +210,13 @@ public class AccessService {
                                 previous.active(),
                                 previous.version()
                             ),
-                            AccessChangeStateResponse.membership(
-                                current.roles().stream().map(Role::name).collect(Collectors.toSet()),
-                                current.active(),
-                                current.version()
-                            )
+                            current == null
+                                ? AccessChangeStateResponse.empty()
+                                : AccessChangeStateResponse.membership(
+                                      current.roles().stream().map(Role::name).collect(Collectors.toSet()),
+                                      current.active(),
+                                      current.version()
+                                  )
                         )
                     );
                 }

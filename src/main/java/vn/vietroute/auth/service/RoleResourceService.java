@@ -9,14 +9,14 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.dto.record.resource.AccessResourceResponse;
-import vn.vietroute.auth.dto.record.role.RoleResourcesRequest;
-import vn.vietroute.auth.dto.record.role.RoleResourcesResponse;
+import vn.vietroute.auth.dto.request.role.RoleResourcesRequest;
+import vn.vietroute.auth.dto.response.resource.AccessResourceResponse;
+import vn.vietroute.auth.dto.response.role.RoleResourcesResponse;
 import vn.vietroute.auth.entity.Permission;
 import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.repository.AccessRepository;
-import vn.vietroute.auth.repository.RoleResourceRepository;
+import vn.vietroute.auth.repo.AccessRepository;
+import vn.vietroute.auth.repo.RoleResourceRepository;
 import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.AccessAuthorization;
 import vn.vietroute.auth.security.UserPrincipal;
@@ -37,7 +37,7 @@ public class RoleResourceService {
     private final AccessResourceService definitions;
     private final AccessRepository roles;
     private final JdbcTransactions transactions;
-    private final AccessChangeService changes;
+    private final AccessHistoryService changes;
 
     @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.READ)
     public RoleResourcesResponse get(Role role) {

@@ -13,9 +13,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.repository.AuthorizationRepository;
+import vn.vietroute.auth.repo.AuthorizationRepository;
+import vn.vietroute.auth.security.AccessGuard;
 import vn.vietroute.auth.security.AccessMethodExpressionHandler;
-import vn.vietroute.auth.security.DatabaseAccessGuard;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.auth.security.annotation.AccessResource;
@@ -32,7 +32,7 @@ public final class DatabaseGuardInspector {
         source.setURL(System.getenv("CI_GUARD_DB_URL"));
         source.setUser(System.getenv("CI_GUARD_DB_USER"));
         source.setPassword(System.getenv("CI_GUARD_DB_PASSWORD"));
-        var guard = new DatabaseAccessGuard(
+        var guard = new AccessGuard(
             new AuthorizationRepository(
                 new JdbcConnectionFactory(source, new JdbcSchema(System.getenv("CI_GUARD_DB_SCHEMA")))
             )
@@ -57,7 +57,7 @@ public final class DatabaseGuardInspector {
         // Tài nguyên/hành động ngoài hằng bootstrap: dùng đúng meta-annotation và proxy method security production.
         try (var context = new AnnotationConfigApplicationContext()) {
             context.register(GuardConfig.class);
-            context.registerBean("accessGuard", DatabaseAccessGuard.class, () -> guard);
+            context.registerBean("accessGuard", AccessGuard.class, () -> guard);
             context.registerBean(BookingModule.class);
             context.refresh();
             SecurityContextHolder.getContext().setAuthentication(auth);
