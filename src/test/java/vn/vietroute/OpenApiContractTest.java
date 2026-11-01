@@ -7,9 +7,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.FileSystemResourceLoader;
@@ -72,6 +76,18 @@ class OpenApiContractTest {
                 }
             });
             var schemas = spec.path("components").path("schemas");
+            // URL inventory trong JS phải tồn tại trong MVC thật; fixture không được che lệch tên route.
+            Matcher inventoryCall = Pattern.compile("inventory = \\(await get\\('([^']+)'\\)\\)").matcher(
+                Files.readString(Path.of("src/main/webapp/assets/js/functions.js"))
+            );
+            assertTrue(inventoryCall.find(), "Không tìm thấy URL tải danh bạ của modal Function");
+            assertFalse(
+                spec
+                    .path("paths")
+                    .path(Routes.ACCESS + inventoryCall.group(1))
+                    .path("get")
+                    .isMissingNode()
+            );
             schemas.properties().forEach(entry ->
                 entry
                     .getValue()

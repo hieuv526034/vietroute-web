@@ -107,7 +107,7 @@ Kafka hiện chưa dùng. Cloudinary, Gmail, cảnh báo ngoài app và backup/r
 | Câu hỏi | Cách trả lời theo source hiện có |
 |---|---|
 | Frontend và backend giao tiếp thế nào? | HTML ban đầu render bằng Thymeleaf; Axios gọi API JSON, envelope/error/locale/traceId chung. |
-| Vì sao có Hibernate trong pom nhưng lại nói JDBC? | Hibernate Validator chỉ thực thi Bean Validation; repository SQL dùng JDBC, không có Hibernate ORM/JPA. |
+| Vì sao có Hibernate trong pom nhưng lại nói JDBC? | Hibernate Validator thực thi Bean Validation; Hibernate ORM/Spring Data JPA phục vụ CRUD auth, JDBC dùng cho batch/query phức tạp và nghiệp vụ đang có. |
 | Bootstrap tự tạo gì? | Migration/table/index, role/quyền, admin nếu chưa có, danh mục mẫu và actor system; giữ mật khẩu admin cũ. |
 | Token/role lưu ở đâu? | Cookie HttpOnly cho web, JWT cho API client; account/role/permission/tokenVersion trong PostgreSQL; không giữ token trong localStorage. |
 | Worker nhiều node có nhận trùng không? | Claim có khóa/lease; mô hình at least once vẫn cần handler/idempotency chống tác động lặp khi ACK lỗi. |
@@ -119,4 +119,4 @@ Kafka hiện chưa dùng. Cloudinary, Gmail, cảnh báo ngoài app và backup/r
 Khi được hỏi một tính năng “đã có chưa”, dẫn [tiến độ và PR bằng chứng](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md) cùng màn/code liên quan. Không trình bày kế hoạch như tính năng đã hoàn thành; phiên bản dependency, khả năng chịu tải và trạng thái deploy là ba thông tin cần kiểm chứng riêng.
 
 
-FOUNDATION02 không thêm framework/provider mới. Registry auth/policy và online/bucket tiếp tục JDBC/PostgreSQL; Role/Permission dùng value object JSON chuỗi để nhận mã mở rộng, hằng lõi dùng bootstrap. Media core chung và config theo trách nhiệm dùng các thư viện hiện có. Chi tiết cơ chế/giới hạn xem [nền tảng mở rộng](../02-phat-trien/NEN_TANG_MO_RONG.md) và [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md).
+AUTHDB04 dùng Spring Data JPA/Hibernate cho auth CRUD, JDBC/PostgreSQL cho batch/query phức tạp và online/bucket. Role/function là chuỗi trong DB, không enum/value object permission hoặc action/policy registry. Media core chung và config theo trách nhiệm dùng các thư viện hiện có. Chi tiết cơ chế/giới hạn xem [nền tảng mở rộng](../02-phat-trien/NEN_TANG_MO_RONG.md) và [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md).

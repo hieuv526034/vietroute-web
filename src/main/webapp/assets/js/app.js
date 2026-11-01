@@ -204,8 +204,7 @@
             form.reset();
             feedback(response.data.message, true);
             document.getElementById('password-dialog').close();
-            // Cookie mới đã được server trả về: tải lại document để dựng menu theo quyền DB của phiên mới.
-            // Chỉ đọc lại /me sẽ để header mắc ở menu rỗng của phiên mật khẩu tạm dù đổi đã thành công.
+            // Server đã thu hồi mọi token và xóa cookie; người dùng phải đăng nhập lại sau đổi mật khẩu.
             window.location.assign(route('/login'));
         },
         'password-feedback',

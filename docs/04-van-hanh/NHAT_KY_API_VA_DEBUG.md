@@ -2,7 +2,7 @@
 
 ## Sử dụng trên giao diện
 
-Đăng nhập **ADMIN có SYSTEM_READ**, mở **Hệ thống → Nhật ký API** (`/operations/api-journal`). Dán mã yêu cầu `traceId` từ thông báo lỗi hoặc DevTools → Network → Response. Có thể lọc thêm endpoint, method, HTTP status, mã lỗi và thời gian xử lý tối thiểu; đánh dấu **Chỉ xem lỗi** để bỏ request thành công. Tra cứu thủ công, không poll liên tục.
+Đăng nhập **tài khoản được gán GET page và GET API nhật ký**, mở **Hệ thống → Nhật ký API** (`/operations/api-journal`). Dán mã yêu cầu `traceId` từ thông báo lỗi hoặc DevTools → Network → Response. Có thể lọc thêm endpoint, method, HTTP status, mã lỗi và thời gian xử lý tối thiểu; đánh dấu **Chỉ xem lỗi** để bỏ request thành công. Tra cứu thủ công, không poll liên tục.
 
 Mở **Chi tiết** để xem controller/method, status, thời gian, mã lỗi/messageKey và nhóm chẩn đoán/SQLState. Modal có ba tab **Request / Response / Xuất debug**, hỗ trợ bàn phím và trả focus về nút mở sau khi đóng. JSON được hiển thị bằng text, không render HTML từ payload.
 
@@ -57,7 +57,7 @@ Route lấy từ mapping MVC; replay chỉ khôi phục path variable số/UUID/
 - `ApiJournalBodyAdvice` đọc DTO đã parse trước validation, tạo projection rồi trả nguyên DTO cho controller. Không đọc stream thêm lần nữa.
 - `ApiResponses` ghi projection response vào trạng thái request; `ApiExceptionMapper` trích SQLState tối đa 8 tầng cause. `BaseRepository` giữ cause nội bộ để chẩn đoán, không trả cause ra client.
 - Khi request hoàn tất, filter đưa metadata/projection vào `ApiJournalStore` để insert đồng bộ và commit PostgreSQL. Không giữ danh sách/queue lịch sử trong RAM; chỉ có snapshot tạm của request đang xử lý. Không lưu servlet, exception, principal hay raw object. UUID bản ghi khác traceId vì client có thể gửi lại cùng traceId.
-- `ApiJournalRepository` lưu bảng `api_request_journal` (V005) bằng JDBC/PreparedStatement, query/filter/paging trên DB, chỉ tải metadata trang hiện tại và JSON khi mở chi tiết. Pool nhật ký riêng tối đa 1 connection/node, không chiếm slot pool nghiệp vụ (mặc định 4). Service/page kiểm **ADMIN + SYSTEM_READ**; API kế thừa `BaseController`, Swagger đầy đủ.
+- `ApiJournalRepository` lưu bảng `api_request_journal` (V005) bằng JDBC/PreparedStatement, query/filter/paging trên DB, chỉ tải metadata trang hiện tại và JSON khi mở chi tiết. Pool nhật ký riêng tối đa 1 connection/node, không chiếm slot pool nghiệp vụ (mặc định 4). Service/page kiểm **grant chính xác page/API nhật ký từ DB**; API kế thừa `BaseController`, Swagger đầy đủ.
 
 WAR có hai Spring context: root tạo service/security, servlet tạo controller. `@EnableMethodSecurity` phải hiện diện tại `SecurityConfig` **và** `WebConfig`; advisor root không tự áp dụng cho controller ở servlet context con. Test hồi quy dựng đúng hai context để kiểm HTTP 403 cho trang nhật ký/giám sát/cấu hình/job/quyền khi CUSTOMER nhập URL trực tiếp. Không chỉ kiểm bằng context gộp hoặc dựa vào menu bị ẩn.
 
@@ -102,7 +102,7 @@ Java test dùng repository giả chỉ để kiểm filter/security/omission/no-
 
 ## Danh tính người gọi — V011 / FOUNDATION04
 
-Theo yêu cầu chủ dự án 24/10/2026, metadata journal bổ sung request_user_id (FK) từ JWT/password **đã xác minh**; audit created_by/updated_by vẫn là system vì recorder là hệ thống. UI/API chỉ ADMIN + SYSTEM_READ hiển thị userId/username và lọc ID user. Username đọc hiện tại từ auth_users bằng ID, không snapshot email/display name. Không dùng header X-User-ID, user ID trong body hoặc claim chưa xác minh. Login thành công gắn actor; logout vẫn giữ actor cho journal dù presence bị xóa.
+Theo yêu cầu chủ dự án 24/10/2026, metadata journal bổ sung request_user_id (FK) từ JWT/password **đã xác minh**; audit created_by/updated_by vẫn là system vì recorder là hệ thống. UI/API cần grant chính xác page/API tương ứng từ DB hiển thị userId/username và lọc ID user. Username đọc hiện tại từ auth_users bằng ID, không snapshot email/display name. Không dùng header X-User-ID, user ID trong body hoặc claim chưa xác minh. Login thành công gắn actor; logout vẫn giữ actor cho journal dù presence bị xóa.
 
 Các dòng trước V011 để userId NULL, không backfill phỏng đoán. NULL cũng có thể là khách, JWT sai, CSRF/quota/lỗi DB trước khi xác minh user. UI ghi “Khách / chưa ghi nhận”, không gán nhầm system/username trong payload login. Nếu DB/slot log lỗi vẫn có thể miss record theo cơ chế đã nêu; lọc sai user ID sẽ không ra dòng. Dữ liệu mới chỉ được lưu sau khi runtime áp dụng V011, không thay đổi log cũ.
 

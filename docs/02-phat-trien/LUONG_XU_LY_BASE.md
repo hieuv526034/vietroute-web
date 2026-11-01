@@ -2,78 +2,73 @@
 
 ## Đọc code theo luồng request
 
-1. `HttpMetricsFilter` ở ngoài Security gắn `X-Request-ID`, bắt đầu đo và ghi nhận cả 401/403/429/503. `TrafficGuardFilter` giới hạn quota/semaphore/body trước CSRF/JWT. `RequestTraceFilter` của MVC tái sử dụng ID đã có; health/static/scrape không tính lưu lượng nghiệp vụ.
-2. Spring Security kiểm CSRF, JWT và quyền truy cập. `JwtAuthenticationFilter` ưu tiên Bearer; nếu không có header mới lấy cookie. Sau xác minh chữ ký/thời hạn, filter đọc lại user/role/tokenVersion từ DB.
+Đọc theo thứ tự: [RootConfig](../../src/main/java/vn/vietroute/common/config/RootConfig.java) → SecurityConfig/JwtAuthenticationFilter → WebConfig/EndpointAccess → controller/api → service → repo → DTO/envelope. [Schema auth](SCHEMA_VA_PHAN_QUYEN.md#luồng-xác-thực-và-kiểm-endpoint) là hợp đồng hiện hành; không học theo class AccessFunction/Permission/AccessGuard đã xóa. Auth có 40 class, ba DTO trực tiếp ở auth.dto, request/search riêng; các module business đang có vẫn dùng repository JDBC.
 
-   `AccessPolicyInterceptor` làm mới principal/authorities từ projection DB rồi kiểm annotation `AccessFunction` và policy siết thêm. Method security bật ở cả `SecurityConfig` (root context, service) và `WebConfig` (servlet context, controller), cùng AccessMethodExpressionHandler. `@AccessOperation` là meta-PreAuthorize chung, lấy resource/action từ hàm server → `accessGuard.operation` → `AuthorizationRepository.find`, đọc lại tài khoản/tokenVersion và mapping role/quyền active trong một SELECT tại mỗi lần kiểm. Không tạo AccessRules riêng theo quyền, không tin authorities cũ hoặc cache quyền; DB lỗi trả 503, thiếu quyền trả 403 và method không chạy. Guard không thay scope/version/transaction. Xem [metadata ACCESS08](SCHEMA_VA_PHAN_QUYEN.md#guard-chung-theo-metadata-hàm--access08) và [chi phí/giới hạn DB](SCHEMA_VA_PHAN_QUYEN.md#hàm-kiểm-db-trong-preauthorize--access06).
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant S as Security/JWT
+    participant E as EndpointAccess
+    participant A as API/BaseController
+    participant V as Service
+    participant D as JPA/JDBC/PostgreSQL
+    C->>S: Cookie + CSRF hoặc Bearer
+    S->>D: Đọc account/tokenVersion
+    S->>E: Principal danh tính
+    E->>D: Đọc grant method + template
+    E->>A: Principal có target được duyệt
+    A->>V: Input đã validate + actor server
+    V->>D: Transaction, nghiệp vụ, scope/version/history
+    D-->>V: Commit hoặc rollback
+    V-->>A: DTO whitelist
+    A-->>C: ApiResult chứa ApiResponse
+```
 
-   WAR tách hai context nên không bỏ cấu hình ở MVC chỉ vì service đã có advisor; trang HTML có `@PreAuthorize` cũng phải từ chối người nhập URL trực tiếp. Kiểm hồi quy bằng hai context tách biệt, không chỉ mô hình test gộp.
-3. Spring MVC đọc JSON, chuyển enum/kiểu dữ liệu và chạy `@Valid` trước khi gọi controller. Lỗi bước này đi vào `GlobalExceptionHandler`.
-4. Controller auth/catalog kế thừa `BaseController`, gọi `execute(...)` và truyền phần việc dưới dạng `Supplier<T>`. Base gọi callback đúng một lần trong cùng thread, tạo envelope thành công hoặc bắt `Exception` và chuyển qua `ApiExceptionMapper`.
-5. Service kiểm tra nghiệp vụ/quyền và quyết định transaction. Repository chỉ bind tham số SQL, thực hiện câu lệnh rồi map dữ liệu; bảng ứng dụng nằm trong schema cấu hình qua VIETROUTE_DB_SCHEMA (mặc định vietroute).
-6. `ApiExceptionMapper` là nơi duy nhất phân loại lỗi MVC/nghiệp vụ thành HTTP status, code, key dịch và lỗi field. Response luôn dùng factory `ApiResponses`.
-
-Lỗi từ filter xảy ra trước MVC nên được ghi bằng `ApiErrorWriter`, vẫn dùng cùng enum/factory. `/health` trả text và `/v3/api-docs` trả đặc tả OpenAPI thuần theo hợp đồng của hai endpoint; không bọc JSON thành công của chúng vào envelope nghiệp vụ.
+Public endpoint được WebRoutePolicy phân loại và có thể bỏ bước JWT/DB tùy route. Method security vẫn bật ở root và servlet, nhưng không có annotation action tự ánh xạ method Java sang quyền nữa. HTTP endpoint được interceptor kiểm; service dùng UserPrincipal.current/requireCurrent, trần ủy quyền và kiểm nghiệp vụ. Caller nội bộ không được tự coi principal danh tính là một endpoint đã duyệt. Scope/owner phải lọc tại DAO, không chỉ tại menu hoặc URL.
 
 ## Base API và try/catch
 
-Xem `common/base/BaseController.java`, `auth/controller/AuthController.java` và `business/catalog/controller/CatalogController.java` làm mẫu thực tế.
+Auth/business API kế thừa BaseController, gọi execute(status,SuccessCode,request,callback), trả ApiResult<T>. HTTP body vẫn ApiResponse<T> gồm code/messageKey/message/data/errors/timestamp/path/traceId/locale. Tạo mới chọn HTTP201 trong execute; không đổi lỗi thành200/201. Không cần thêm @ResponseStatus nếu execute đã trả ResponseEntity đúng status.
 
-- API đọc/cập nhật: `execute(SuccessCode.OK, request, callback)` trả HTTP 200 khi thành công.
-- API tạo mới: `execute(HttpStatus.CREATED, SuccessCode.CREATED, request, callback)` trả HTTP 201 khi thành công. Gắn `@ResponseStatus(HttpStatus.CREATED)` để Swagger ghi đúng status; `ResponseEntity` vẫn mang status lỗi 400/403/409/500 khi callback thất bại.
-- Đặt cả phần việc có thể ném lỗi của endpoint bên trong callback. Không tự trả `null`, HTTP 200 hoặc `exception.getMessage()` sau khi bắt lỗi.
-- Lỗi nghiệp vụ: ném `BusinessException(ErrorCode, args)` ở service. Thêm mã mới vào enum và cả hai bundle vi/en trước khi sử dụng.
-- Lỗi chưa biết: trả COM006/HTTP 500 và traceId. Chi tiết chỉ ghi phía server. Base không bắt `Error` của JVM.
-- Không viết `try/catch(Exception)` lặp lại trong mỗi controller. Chỉ bắt tại nơi có hành động cụ thể như rollback, đóng resource, giải mã token hoặc chuyển lỗi ở biên HTTP.
+ApiExceptionMapper dùng chung với GlobalExceptionHandler; advice xử lý JSON/binding/validation trước controller, ApiErrorWriter xử lý lỗi filter. Không catch rồi trả exception.getMessage() của SQL/provider. Client xử lý HTTP status + code, không so câu dịch. Thêm message key vào cả vi/en.
 
-`ApiExceptionMapper` được dùng cả ở base lẫn advice nên lỗi sau khi vào controller và lỗi trước controller có cùng cấu trúc. API mới vẫn cần `@Operation`, DTO có `@Schema` và kiểu response cụ thể để OpenAPI suy ra generic.
+DTO không phải entity. Auth DTO/request/search dùng class/getter/setter, không record hoặc var; UserDTO có projection tài khoản và wrapper login/preview để giữ ngân sách lớp. Request dùng chung theo tài nguyên, field bắt buộc từng operation kiểm tại service và mô tả trong [API base](API_BASE.md#api-auth-hiện-hành). Không tạo compatibility class ở package cũ.
 
 ## Transaction và đăng nhập
 
-`JdbcTransactions.execute` mượn connection từ HikariCP → tắt autocommit → đặt schema LOCAL → chạy callback → commit → trả connection về pool. `SQLException`, lỗi nghiệp vụ/runtime hoặc `Error` làm rollback trước khi trả connection; `Error` vẫn ném tiếp lên JVM, không chuyển thành lỗi nghiệp vụ. DAO trong callback dùng cùng connection và không tự commit/đóng connection được truyền vào. Spring đóng pool khi ứng dụng dừng; pool tạo lười và không mở DB chỉ vì khởi tạo context. Các giới hạn pool/timeout nằm trong `DatabaseSettings`, xem `database/README.md`.
+UserService.login dùng transaction khóa account và so BCrypt. Lỗi password phải ghi bộ đếm trước khi trả lỗi; do đó service lưu kết quả lỗi trong callback và ném sau commit. Không ném lỗi sai password bên trong callback khiến bộ đếm rollback. Khóa5 lần/15 phút không tự reset password.
 
-Luồng đăng nhập khóa dòng user để các lần sai đồng thời không làm mất bộ đếm. Nếu sai mật khẩu, callback trả `LoginOutcome` để **commit bộ đếm sai trước**, sau đó service mới ném `BusinessException`. Ném lỗi ngay trong transaction sẽ rollback bộ đếm và làm cơ chế khóa sai. Khi đổi mật khẩu, service kiểm tra mật khẩu cũ/tokenVersion dưới khóa, đổi hash và tăng tokenVersion trong cùng transaction; hoàn tất mới phát cookie/token mới.
+JpaConfig dùng JpaTransactionManager trên SchemaDataSource, SharedEntityManagerCreator và TransactionAwareDataSourceProxy cho JDBC. JdbcTransactions.execute tham gia transaction hiện tại hoặc tạo transaction bằng manager; JPA saveAndFlush và SQL mapping/history cùng commit/rollback. Callback JDBC không tự close/commit connection vật lý hoặc bật autocommit; proxy close chỉ trả quyền sở hữu về transaction. Nhánh JDBC độc lập cho fixture giữ manual commit/rollback của nó.
+
+Sau SQL atomic tăng version, phải refresh entity đang managed trước khi sửa/save tiếp; UserService.delete là ví dụ. Không ghi vòng lặp query/save từng row. Bind addBatch hoặc tính trên dữ liệu đã tải trong RAM là hợp lệ. Không gọi email/storage mạng trong transaction đang giữ khóa.
 
 ## Schema, table và index trong entity
 
-Schema cấu hình qua `VIETROUTE_DB_SCHEMA` (mặc định vietroute), database production vẫn neondb. JdbcConnectionFactory đặt lại search_path khi mượn connection; repository dùng tên bảng không gắn schema, không fallback public/$user. Xem [cấu hình schema và quyền](SCHEMA_VA_PHAN_QUYEN.md).
+Auth có tám @Entity/@Table ánh xạ đầy đủ @Column, @Id/@Version theo model, không schema cứng và không hậu tố Entity. User kế thừa BaseEntity; các entity khác khai báo rõ cột theo bảng, không ép kế thừa khi định danh khác. Mapping/challenge có identity kỹ thuật từ V026, PK/FK ghép của DB vẫn giữ. Entity không sinh schema tự động; migrations là nguồn DDL.
 
-Entity JDBC dùng `@JdbcTable(name = ..., primaryKey = ..., indexes = ...)`. Mỗi `@JdbcIndex` ghi tên, thứ tự cột và unique. UserAccount/CatalogItem khai báo cả index PK/UNIQUE và index đọc/audit. Validator dùng schema thực tế trên connection; roles được repository nạp từ auth_user_roles trong schema cấu hình, không phải cột JSON/ORM relationship.
+@JdbcTable/@JdbcIndex dùng kiểm metadata DB, không thay JPA annotations và không tự tạo index. Các entity business JDBC tiếp tục dùng metadata của chúng. Timestamp JDBC chỉ chuyển tại repo; hợp đồng entity/DTO/service dùng Instant, audit actor hệ thống0.
 
-Metadata này giúp đọc code và kiểm chứng cấu trúc, **không tự sinh DDL**. Migration SQL là nguồn tạo/sửa bảng. `JdbcSchemaValidator` kiểm tra primary key và index thực tế trước seed; mismatch làm startup thất bại và transaction rollback. Khi thêm entity/module, tạo migration version mới, khai báo metadata rồi đưa class vào danh sách kiểm chứng lúc startup.
+## Import, callback và cách viết dễ học
 
-Startup được bật bằng `VIETROUTE_DB_INIT_ENABLED=true`:
-
-1. Lấy advisory transaction lock để hai instance không migrate/seed cùng lúc.
-2. SchemaBootstrap kiểm một history trong DB, tạo schema cấu hình; nếu history legacy public thì chuyển sang schema đó. History nơi khác/nhiều history hoặc legacy thiếu history bị chặn trước seed.
-3. Kiểm tra/chạy V001–V006. DB mới tạo bảng ở schema cấu hình; legacy public được V002 chuyển vào đó, giữ ID/FK/sequence/index/dữ liệu. Migration giữ nguyên byte/checksum; adapter chỉ ánh xạ schema SQL lịch sử V002/V003 trong RAM. Query/DDL mới dùng search_path cấu hình.
-4. Đối chiếu metadata entity với DB, seed role/admin/catalog theo khóa duy nhất, rồi commit. Admin có sẵn không bị reset mật khẩu.
-
-Chạy Maven build không khởi tạo DB. Muốn chạy app và có dữ liệu ngay, đặt các biến DB/JWT/bootstrap và bật initializer trong cấu hình chạy IDE/Tomcat hoặc Render; `.env` không được Java tự nạp. CI dùng PostgreSQL tạm để kiểm DB mới, khởi động đồng thời, restart và nâng cấp từ `public`.
-
-## Lambda, import và cách viết dễ học
-
-Nếu lambda chỉ chuyển tiếp nguyên lời gọi, dùng method reference: `cache -> cache.disable()` đổi thành `AbstractHttpConfigurer::disable`. Giữ lambda khi cần truyền thêm tham số hoặc có nhiều bước nghiệp vụ, ví dụ `() -> auth.me(user)`; không tách hàm vô nghĩa chỉ để xóa mọi dấu `->`.
-
-Class được import tường minh ở đầu file. Không viết `vn.vietroute.common.web.response.ApiResponse` hoặc `java.util.UUID` trong thân hàm; dùng `ApiResponse`, `UUID` sau khi import. Khi hai thư viện trùng tên, tách phần trách nhiệm sang class riêng; `OpenApiModels` minh họa cách tách Swagger model khỏi annotation mà không viết tên package dài trong code. Chuỗi package cấu hình component scan hoặc tên driver dùng reflection vẫn là chuỗi cấu hình hợp lệ.
-
-`common.web` được chia theo trách nhiệm: `controller`, `response`, `filter`, `locale`, `advice`, `openapi`, `routing`. Phần trạng thái hệ thống có cả service và DTO nằm ở `common.monitoring`. Xem [quy hoạch constants và web](CONSTANTS_VA_CAU_TRUC_WEB.md) để tìm class sau khi di chuyển.
-
-Comment/Javadoc tiếng Việt mô tả mục đích, thứ tự, điều kiện và lý do transaction/quyền; không chỉ diễn đạt lại từng lệnh hiển nhiên. Dùng format 4 spaces, mỗi lệnh/annotation một dòng, có dòng trống giữa method/field và các khối xử lý. Chạy `npm run format`, `npm run format:check`, rồi `mvnw verify` trước khi mở PR; production Docker vẫn bỏ compile/chạy/đóng gói test.
+Import tường minh, không wildcard/FQCN trong thân code, không var trong production. Tách trách nhiệm khi thư viện trùng tên; OpenApiModels/OpenApiInputs tách annotation/model Swagger và reflection. Lambda nhiều bước giữ rõ transaction; lambda chỉ chuyển tiếp dùng method reference. Formatter chung không thay việc đặt tên, comment luồng bằng tiếng Việt hoặc review quyền.
 
 ## Kiểu trả về ngắn của controller
 
-Dùng `ApiResult<UserResponse>`, `ApiResult<PageResponse<UserResponse>>` hoặc `ApiResult<Void>` thay kiểu lồng dài ở controller. `ApiResult<T>` kế thừa ResponseEntity với body ApiResponse<T>; BaseController/ApiExceptionMapper tạo status/header/envelope, không custom serialize hoặc ép kiểu Object. Vì vậy JSON `data`, locale, traceId, HTTP 201/202 và lỗi 4xx/5xx giữ nguyên. OpenAPI mở ApiResult thành schema envelope có DTO cụ thể, không mô tả lớp vận chuyển HTTP như payload.
-
 ```java
-@Operation(summary = "Đọc tài khoản đang đăng nhập")
-public ApiResult<UserResponse> me(HttpServletRequest request) {
-    return execute(SuccessCode.OK, request, auth::me);
+@GetMapping(Routes.AUTH + Routes.ME_ACTION)
+@Operation(summary = "Tài khoản hiện tại")
+public ApiResult<UserDTO> me(
+    @AuthenticationPrincipal UserPrincipal actor,
+    HttpServletRequest request
+) {
+    return execute(SuccessCode.OK, request, () -> users.me(actor));
 }
 ```
 
-Ví dụ minh họa chữ ký; import ApiResult ở đầu file và giữ cách lấy principal/service của endpoint thực tế. Filter metrics/health/HTML vẫn dùng hợp đồng riêng của chúng.
+Đoạn này lấy từ hợp đồng UserAPI: principal/servlet là tham số server, không khai báo như query/body Swagger. Page dùng @Controller trong controller; API dùng @RestController trong controller/api. Mỗi operation công khai mô tả @Operation, request/DTO field có @Schema; kiểm cả path/query/header/body và phân trang kế thừa bằng OpenApiContractTest.
 
 ## Ranh giới transaction và schema — AUTH19
 
-Luồng JDBC hiện hành là mượn connection → autocommit=false → schema LOCAL → callback/DAO → commit hoặc rollback → close. BaseRepository tái sử dụng JdbcTransactions, không chỉ đóng connection sau callback thành công. DAO trong transaction dịch vụ dùng connection caller; journal/activity ghi trực tiếp phải commit tường minh. Không đặt schema ở transaction riêng rồi dùng tiếp khi qua Neon pooler. Chi tiết và bằng chứng CI ở [schema cùng transaction](SCHEMA_VA_PHAN_QUYEN.md#schema-cùng-transaction-trên-neon-pooler--auth19).
+JdbcConnectionFactory/SchemaDataSource bắt đầu transaction trước set LOCAL search_path, schema đã validate và pg_temp cuối; không fallback public/$user hoặc session state qua transaction pooler. JdbcTransactions tham gia Spring transaction không tự commit riêng. History failure rollback mutation; journal/activity có cơ chế ghi/commit riêng theo chuyên đề, không gộp chúng vào audit quyền.
+
+Đọc [schema/migration](SCHEMA_VA_PHAN_QUYEN.md#schema-và-migration), [audit](AUDIT_VA_SYSTEM.md) và [kiểm query](QUY_UOC_PHAT_TRIEN.md#rà-query-và-ghi-theo-tập--perf02) khi thêm DAO. Xong thay đổi: formatter/rules/docs, kiểm thử phù hợp trên H2/PostgreSQL riêng và regression hai context khi động tới quyền; không dùng Neon để kiểm build.

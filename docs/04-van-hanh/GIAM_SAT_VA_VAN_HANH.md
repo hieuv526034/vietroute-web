@@ -15,10 +15,10 @@ Cập nhật 22/10/2026. Không cần Kafka/Redis. Source cung cấp instrument,
 | Đường dẫn | Dùng để làm gì | Phụ thuộc và bảo vệ |
 |---|---|---|
 | `/health` | Web availability, giữ hợp đồng text | Công khai, không DB; không xác nhận đăng nhập/DB/provider hoạt động |
-| `/api/v1/admin/system/status` | Kiểm DB + queue/pool theo yêu cầu | JWT/cookie và SYSTEM_READ; query DB thật |
-| `/api/v1/admin/system/runtime` | JVM/HTTP/pool/worker và mẫu DB cache | SYSTEM_READ; method không query DB, nhưng JWT vẫn kiểm tài khoản qua DB |
-| `/monitoring` | Trang xem và 30 mẫu gần nhất trong tab | SYSTEM_READ, poll 5s, dừng khi tab ẩn; không thay kho lịch sử |
-| `/operations/api-journal` và `/api/v1/admin/system/api-journal` | [Nhật ký API, trace/controller, snapshot đã lọc, cURL/Postman](NHAT_KY_API_VA_DEBUG.md) | ADMIN + SYSTEM_READ; lưu PostgreSQL 7 ngày, mục tiêu 10000 dòng toàn DB; pool riêng 1 connection/node, không cache/queue lịch sử RAM |
+| `/api/v1/admin/system/status` | Kiểm DB + queue/pool theo yêu cầu | JWT/cookie và grant GET đúng template; query DB thật |
+| `/api/v1/admin/system/runtime` | JVM/HTTP/pool/worker và mẫu DB cache | Grant GET đúng template; method không query DB, nhưng JWT vẫn kiểm tài khoản qua DB |
+| `/monitoring` | Trang xem và 30 mẫu gần nhất trong tab | Grant GET page/API tương ứng, poll 5s, dừng khi tab ẩn; không thay kho lịch sử |
+| `/operations/api-journal` và `/api/v1/admin/system/api-journal` | [Nhật ký API, trace/controller, snapshot đã lọc, cURL/Postman](NHAT_KY_API_VA_DEBUG.md) | grant chính xác page/API tương ứng từ DB; lưu PostgreSQL 7 ngày, mục tiêu 10000 dòng toàn DB; pool riêng 1 connection/node, không cache/queue lịch sử RAM |
 | `/internal/metrics` | Prometheus text cho collector | Chain chính xác riêng; Bearer token vận hành 32–256 ASCII; không cookie/JWT/DB |
 
 Khi token env rỗng, scrape trả 404; sai/thiếu token trả 401; token đúng mà khác GET trả 405. Token không cấp quyền API nào khác. Một scrape đồng thời/node; không log token, header hoặc query. Endpoint không nhận token qua URL. Luôn dùng HTTPS ngoài local, token đặt secret file/env của collector. Khi đổi token phải cập nhật cả collector và app, thử scrape rồi thu hồi token cũ. UI không nhìn thấy token vận hành.
@@ -49,7 +49,7 @@ Heap không phải toàn bộ RAM container: metaspace/code cache, thread stack,
 
 ## Dashboard và collector
 
-1. Nếu chỉ cần xem nhanh, đăng nhập tài khoản có SYSTEM_READ rồi mở `/monitoring`. Trên nhiều node, trang hiển thị instance ID và reset mẫu khi load balancer chuyển node; không cộng trừ counter khác instance.
+1. Nếu chỉ cần xem nhanh, đăng nhập tài khoản được gán GET page/API giám sát rồi mở `/monitoring`. Trên nhiều node, trang hiển thị instance ID và reset mẫu khi load balancer chuyển node; không cộng trừ counter khác instance.
 2. Render Metrics cung cấp CPU/RAM; bật Notifications cho deploy thất bại/service unhealthy, kiểm tra địa chỉ nhận. Một số biểu đồ HTTP/latency phụ thuộc workspace plan. Không mặc định tài khoản đã bật thông báo.
 3. Với hệ thống giám sát ngoài app, dùng `ops/monitoring/prometheus.yml` làm mẫu; thay hostname public và tạo secret file trên collector. Không deploy Prometheus/Grafana chung container 512MB với Java.
 4. Import `ops/monitoring/dashboard.json` vào Grafana, chọn Prometheus datasource. Self-hosted hoặc collector quản lý sẵn đều dùng được; không có service bên ngoài nào được app tự đăng ký. Rule file `alerts.yml` dùng với Prometheus/Alertmanager; Grafana Cloud cần tạo managed alert/contact point tương ứng bằng biểu thức trong file, không tự bật chỉ vì import dashboard.
@@ -94,7 +94,7 @@ Nguồn: [Micrometer Prometheus](https://docs.micrometer.io/micrometer/reference
 
 ## Truy cập, người online và tín hiệu bất thường
 
-Trang `/monitoring` chia tab tài nguyên và **Truy cập và online**. Tab truy cập và các API `/api/v1/admin/system/activity`, `/online`, `/anomalies` chỉ ADMIN + SYSTEM_READ. Màn cấu hình an toàn hiển thị cờ activity/ngưỡng request; không hiển thị khóa băm, JWT hoặc URL DB.
+Trang `/monitoring` chia tab tài nguyên và **Truy cập và online**. Tab truy cập và các API `/api/v1/admin/system/activity`, `/online`, `/anomalies` cần grant chính xác page/API tương ứng từ DB. Màn cấu hình an toàn hiển thị cờ activity/ngưỡng request; không hiển thị khóa băm, JWT hoặc URL DB.
 
 Đặt `VIETROUTE_ACTIVITY_ENABLED=true` để ghi; mẫu Render và Run local đã bật, constructor test/WAR không cấu hình mặc định tắt. `VIETROUTE_ACTIVITY_REQUEST_THRESHOLD` mặc định 120 request/phút/chủ thể, trong khoảng 20–100000. V009 tạo bảng presence/bucket và hàm PostgreSQL `record_system_activity`; startup cần initializer bật rõ ràng khi triển khai migration. Heartbeat POST `/api/v1/activity/heartbeat` mỗi 60 giây khi tab nhìn thấy, vẫn có CSRF/quota. Trình duyệt nhận cookie visitor ngẫu nhiên có chữ ký, HttpOnly/SameSite, DB chỉ lưu HMAC. User ID chỉ được đặt sau JWT/password đã xác minh; không tin header/payload tự nhận user.
 

@@ -41,7 +41,7 @@ function fixture(page) {
     node('function-form').elements = { code: node('function-code'), nameVi: node('function-vi'), nameEn: node('function-en'), active: node('function-active') };
     const allow = [
         'GET /api/v1/admin/access/registry/roles/page', 'GET /api/v1/admin/access/tree',
-        'GET /api/v1/admin/access/resource-catalog', 'GET /api/v1/admin/access/roles/{role}/resources',
+        'GET /api/v1/admin/access/targets', 'GET /api/v1/admin/access/roles/{role}/resources',
         'PUT /api/v1/admin/access/roles/{role}/resources', 'POST /api/v1/admin/accounts',
         'PUT /api/v1/admin/access/users/{id}/roles', 'GET /api/v1/admin/accounts',
         'GET /api/v1/admin/access/functions', 'GET /api/v1/admin/access/roles/{role}/functions',
@@ -61,6 +61,11 @@ function fixture(page) {
         if (path.endsWith('/resources')) return { targets: [], version: 2 };
         if (path.endsWith('/roles/CUSTOMER/functions')) return { functionCodes: [], version: 2 };
         if (path.includes('/functions?')) return { content: [], totalElements: 0 };
+        if (path.endsWith('/targets')) return [
+            { target: 'GET /api/v1/admin/access/functions', description: 'Function', handler: 'FunctionAPI#search' },
+            { target: 'GET /api/v1/auth/csrf', publicEndpoint: true },
+            { target: 'GET /api/v1/auth/me', selfService: true },
+        ];
         if (path.endsWith('/access')) return { user, capabilities: [] };
         return [];
     };
@@ -143,7 +148,7 @@ test('RoleCode không lưu snapshot khi danh sách Function lỗi sau khi đã �
 
 test('Function giữ modal và chặn mutation khi danh bạ target lỗi; chỉ tải lại khi người dùng mở lại', async () => {
     const ui=fixture('functions');await settle();
-    const wait=deferred();ui.state.override=(path,read)=>path.endsWith('/resource-catalog')?wait.promise:read(path);
+    const wait=deferred();ui.state.override=(path,read)=>path.endsWith('/targets')?wait.promise:read(path);
     ui.node('function-create').handlers.click();
     assert.equal(ui.node('function-dialog').open,true);
     assert.equal(ui.modals.get('function-dialog').busy(),true);
@@ -154,11 +159,24 @@ test('Function giữ modal và chặn mutation khi danh bạ target lỗi; chỉ
     assert.equal(ui.errors[0].target,'function-form-feedback');
     ui.node('function-form').handlers.submit({preventDefault(){},currentTarget:ui.node('function-form')});
     assert.equal(ui.state.mutations,0);
-    assert.equal(ui.requests.filter(path=>path.endsWith('/resource-catalog')).length,1);
+    assert.equal(ui.requests.filter(path=>path.endsWith('/targets')).length,1);
     ui.modals.get('function-dialog').onClose();ui.state.override=undefined;
     ui.node('function-create').handlers.click();await settle();
-    assert.equal(ui.requests.filter(path=>path.endsWith('/resource-catalog')).length,2);
+    assert.equal(ui.requests.filter(path=>path.endsWith('/targets')).length,2);
     assert.equal(ui.state.mutations,0);
+});
+
+test('Modal Function đọc /targets hiện hành và chỉ cho gán endpoint private', async () => {
+    const ui = fixture('functions');
+    await settle();
+    ui.node('function-create').handlers.click();
+    await settle();
+    assert.ok(ui.requests.includes('/api/v1/admin/access/targets'));
+    const choices = ui.node('function-target-options').children;
+    assert.equal(choices.length, 1);
+    assert.equal(choices[0].children[0].value, 'GET /api/v1/admin/access/functions');
+    assert.equal(choices[0].children[0].disabled, false);
+    assert.equal(ui.state.mutations, 0);
 });
 
 test('Tài khoản chỉ tải me/capabilities/bảng; tạo chỉ tải role khi mở và lỗi không được gửi', async () => {

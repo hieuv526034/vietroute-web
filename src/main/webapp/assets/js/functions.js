@@ -167,7 +167,7 @@
         app.feedback('', false, 'function-form-feedback');
         node('function-target-options').replaceChildren(text('p', labels.loading));
         modal.open();
-        inventory = (await get('/resource-catalog')).filter((item) => !item.publicEndpoint && !item.selfService);
+        inventory = (await get('/targets')).filter((item) => !item.publicEndpoint && !item.selfService);
         ready = true;
         renderTargets();
     };

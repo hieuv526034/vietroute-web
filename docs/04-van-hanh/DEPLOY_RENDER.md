@@ -62,7 +62,7 @@ Render Free có thể tạm ngủ khi không có truy cập, nên lần mở l�
 
 ## Giám sát sau deploy
 
-Mở `/monitoring` bằng tài khoản có SYSTEM_READ để xem JVM/HTTP/pool/worker. Cấu hình token metrics riêng, collector ngoài app và Notifications Render theo [giám sát và vận hành](GIAM_SAT_VA_VAN_HANH.md). Blueprint tạo token khi tạo service mới; service có sẵn cần kiểm Environment. DB probe mặc định tắt để tránh giữ Neon thức. Không cần bật Kafka/Redis. Import dashboard hoặc CI pass không tự kích hoạt gửi cảnh báo; phải thử receiver trên staging.
+Mở `/monitoring` bằng tài khoản được gán GET page/API giám sát để xem JVM/HTTP/pool/worker. Cấu hình token metrics riêng, collector ngoài app và Notifications Render theo [giám sát và vận hành](GIAM_SAT_VA_VAN_HANH.md). Blueprint tạo token khi tạo service mới; service có sẵn cần kiểm Environment. DB probe mặc định tắt để tránh giữ Neon thức. Không cần bật Kafka/Redis. Import dashboard hoặc CI pass không tự kích hoạt gửi cảnh báo; phải thử receiver trên staging.
 
 ## Tài liệu tham chiếu
 

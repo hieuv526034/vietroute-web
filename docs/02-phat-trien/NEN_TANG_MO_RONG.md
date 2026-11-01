@@ -1,27 +1,18 @@
 # Nền tảng chống spam, phân quyền, worker và mail
 
-## Mở rộng nền tảng 23/10/2026 — hợp đồng triển khai
+## Phạm vi hiện hành
 
-FOUNDATION03 đã merge qua [PR #38](https://github.com/hieuv526034/vietroute-web/pull/38): media tập trung toàn bộ common, ApiResult<T> rút gọn controller và danh bạ UI/API đồng bộ startup. Role là nhóm quyền; [schema và quyền](SCHEMA_VA_PHAN_QUYEN.md) mô tả V010/cờ sync, public/cứu hộ và giới hạn nhiều node. Kết quả kiểm tra tập trung ở [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
+Auth dùng40 class/tám bảng theo AUTHDB04/AUTHDTO02. [Schema/phân quyền](SCHEMA_VA_PHAN_QUYEN.md) là nguồn chính; không còn permission/action registry, policy bổ sung, auth mail outbox hoặc recovery riêng. Tài liệu này chỉ giữ quota, worker/system_jobs và provider mail chung. Trạng thái chạy/provider/CI ở [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
 
-Đợt FOUNDATION02 trên nhánh `hieuv526034/foundation-access-traffic-media` bổ sung registry role/quyền, chính sách endpoint/menu, thống kê hiện diện/bất thường và media dùng chung trước nghiệp vụ. Quyền cấu hình chỉ siết thêm kiểm tra backend; không biến route công khai hoặc bỏ `@PreAuthorize`. ADMIN là đường cứu hộ; không sửa role ADMIN, không gán system, không tự gán role hoặc bỏ admin cuối. Mã role/quyền đã được tham chiếu không đổi tên; vô hiệu hóa thay vì xóa lịch sử.
-
-Launcher local được phép đọc `.env` riêng để kết nối cùng Neon của chủ dự án. Biến OS/IDE ưu tiên, WAR/Render chỉ đọc env. Chạy local mặc định development/cookie HTTP, không ghi secret vào Git. Chỉ startup với DB_INIT bật rõ ràng mới migration/seed; kiểm thử dùng DB tạm/giả, không dùng Neon để thử ghi.
-
-Lõi media thuộc `common.media`, giữ adapter storage và validation riêng, service kiểm quyền + owner/version; controller và page cùng ở `common.media.controller`, gọi duy nhất service chung. Các module nghiệp vụ sau gọi lại service, không tạo bộ upload thứ hai. Cấu hình chia application/database/integration/traffic/monitoring/web, root chỉ lắp ghép.
-
-Thống kê online là cửa sổ hoạt động, không khẳng định số người thật tuyệt đối. Bản ghi hiện diện và bộ đếm theo phút nằm PostgreSQL để nhiều node dùng chung; không queue lịch sử trong RAM. Chỉ lưu định danh băm, user ID đã xác thực và bộ đếm trạng thái; không IP/UA/token/payload thô. Ghi quan sát có timeout/backoff và công bố missed-write khi DB lỗi; phát hiện bất thường là tín hiệu cần xem xét, không tự kết luận tấn công.
-
-
-Cập nhật 22/10/2026, phụ trách hieuv526034. Đọc cùng [luồng base](LUONG_XU_LY_BASE.md) và [API_BASE.md](API_BASE.md). Các phần dưới đây là code đã triển khai, còn kết quả chạy Docker xem PR/Actions tương ứng. Không chạy thử trên Neon production hoặc gửi thư thật trong CI.
+Launcher local đọc `.env` gốc theo OS/IDE precedence; chủ dự án cho phép theo dõi file trong repo. WAR/Render nhận env, không đọc file local; không in giá trị vào docs/log/image. Media dùng common.media, quan sát/journal dùng common.monitoring; không chuyển chức năng auth đã cắt sang các module này để che số class.
 
 ## Kiến trúc và giới hạn chịu tải
 
 Giai đoạn hiện tại chưa dùng Kafka/Redis: quota mặc định memory theo từng node. Redis adapter ở phần dưới chỉ là khả năng tương thích tùy chọn, không phải dịch vụ đã bật. Đọc [tổng quan](../01-bat-dau/TONG_QUAN_HE_THONG.md) và [giám sát/vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md) cho cấu trúc job/mail mới và metrics/dashboard/cảnh báo.
 
-Giữ Java 17+ (Docker Java 21), **Spring MVC 6/Tomcat 10.1** theo quy ước chủ dự án vừa xác nhận; không có Boot/ORM. Không dùng bản milestone/snapshot để có nhãn “mới nhất”. Spring 6.2.19/Security 6.5.11 vẫn có rủi ro vòng đời đã ghi tại [RA_SOAT_BASE.md](../99-luu-tru/RA_SOAT_BASE.md); yêu cầu stack hiện tại chưa cho phép kết luận đã dùng dòng framework OSS còn hỗ trợ. Bổ sung Lettuce 7.9.0.RELEASE và Angus Mail 2.0.5 bản stable từ Maven Central.
+Giữ Java 17+ (Docker Java 21), **Spring MVC 6/Tomcat 10.1** theo quy ước chủ dự án vừa xác nhận; không Spring Boot; auth CRUD dùng Spring Data JPA/Hibernate, JDBC phục vụ batch/query phức tạp và các module nghiệp vụ. Không dùng bản milestone/snapshot để có nhãn “mới nhất”. Spring 6.2.19/Security 6.5.11 vẫn có rủi ro vòng đời đã ghi tại [RA_SOAT_BASE.md](../99-luu-tru/RA_SOAT_BASE.md); yêu cầu stack hiện tại chưa cho phép kết luận đã dùng dòng framework OSS còn hỗ trợ. Bổ sung Lettuce 7.9.0.RELEASE và Angus Mail 2.0.5 bản stable từ Maven Central.
 
-Luồng HTTP: connector giới hạn tài nguyên → TrafficGuardFilter → CSRF/JWT → controller/base → service kiểm quyền chức năng → repository/transaction → response. Luồng việc nền: transaction lưu system_jobs → commit → poller nhận lease → handler chạy ngoài transaction nhận việc → ACK hoặc retry/dead.
+Luồng HTTP: connector giới hạn tài nguyên → TrafficGuardFilter → CSRF/JWT → EndpointAccess → controller/base → service kiểm principal/nghiệp vụ → repository/transaction → response. Luồng việc nền: transaction lưu system_jobs → commit → poller nhận lease → handler chạy ngoài transaction nhận việc → ACK hoặc retry/dead.
 
 Các giới hạn mặc định cho RAM 512 MB:
 
@@ -53,45 +44,7 @@ MemoryRateLimitStore dùng một khóa đồng bộ để check/increment nguyê
 
 ## Phân quyền chức năng và dữ liệu
 
-Role gom Permission theo resource và hành động READ/CREATE/UPDATE/DELETE/ASSIGN/RETRY/SEND; registry API trả resource/actions để dựng ma trận. CATALOG_WRITE và ACCESS_WRITE giữ tương thích giới hạn, không thành toàn quyền. Xem [ma trận quyền và schema cấu hình](SCHEMA_VA_PHAN_QUYEN.md). Bảng auth_permissions là registry; auth_role_permissions gán quyền cho role. ADMIN có quyền cứu hộ cố định; role thường không tự có các quyền quản trị mới.
-
-JWT filter kiểm chữ ký/thời hạn rồi đọc active/tokenVersion/roles/permissions từ DB mỗi request. Authorities gồm ROLE_... và mã Permission. Không cache quyền và không tin claim role/quyền từ client. Thay mapping role có hiệu lực từ request tiếp theo, kể cả JWT cũ; request đang chạy có thể đã qua kiểm quyền. Service dùng AccessResource/AccessOperation; một meta-PreAuthorize gọi DatabaseAccessGuard với MethodInvocation thật và đọc DB hiện hành. Resource + action sinh mã, không thêm AccessRules hoặc hằng riêng cho từng quyền mới. Role/Permission là value object chuỗi nhận registry DB, constants/values() chỉ bootstrap; gọi bean thiếu quyền vẫn bị chặn, không chỉ URL. Xem [hợp đồng guard hiện hành](SCHEMA_VA_PHAN_QUYEN.md#guard-chung-theo-metadata-hàm--access08).
-
-| API | Quyền | Quy tắc |
-|---|---|---|
-| GET /api/v1/admin/access/permissions | ACCESS_READ | Registry quyền có tên vi/en |
-| GET /api/v1/admin/access/roles | ACCESS_READ | Tập quyền, version và audit của từng role |
-| PUT /api/v1/admin/access/roles/{role}/permissions | ACCESS_ASSIGN hoặc ACCESS_WRITE cũ | Body permissions + version; ADMIN không sửa; người được ủy quyền không gán quyền vượt tập của mình |
-| PUT /api/v1/admin/access/users/{id}/roles | ACCESS_ASSIGN hoặc ACCESS_WRITE cũ + giới hạn ủy quyền | Body roles + version; không tự sửa role, không bỏ admin cuối |
-| POST /api/v1/admin/catalogs | CATALOG_CREATE hoặc CATALOG_WRITE cũ | Tạo; đọc quản trị/sửa/xóa có permission riêng |
-
-API `/api/v1/admin/**` yêu cầu xác thực ở URL và quyền cụ thể ở service; không đồng nghĩa mọi API dưới đó chỉ chấp nhận role ADMIN. Trang `/admin` danh mục kiểm CATALOG_VIEW và dữ liệu cần CATALOG_READ; custom role DB có thể dùng khi được cấp, không bắt buộc ADMIN. Các màn nhạy cảm ADMIN-only giữ guard riêng. `/auth/me` có field permissions để UI quyết định hiển thị, còn backend luôn kiểm lại quyền.
-
-Sửa mapping lấy khóa role qua UPDATE có version, rồi xóa/chèn mapping cùng transaction. Version cũ trả COM008/409. Gán role cho user dùng advisory transaction lock chung, khóa user, kiểm admin cuối, cập nhật version/audit/tokenVersion và mapping cùng transaction; token cũ của user đích bị thu hồi. Tự sửa role bị chặn để tránh tự làm mất đường quản trị. Seed giữ nguyên quyền role thường đã chỉnh sau restart; ADMIN cố định được bổ sung quyền mới của hệ thống.
-
-Quyền chức năng **không thay quyền trên dữ liệu**. Khi có nhà xe/chuyến/booking, service phải tra quan hệ nhà xe/owner từ DB theo principal, đưa scope vào WHERE, kiểm quan hệ cha/con và tenant ở cả đọc/ghi. Nền scope/membership/role scoped đã được tách tại [SCOPE01](SCHEMA_VA_PHAN_QUYEN.md#nền-phạm-vi-dữ-liệu--scope01); module nghiệp vụ chưa có không được dựng companyId giả hoặc tin companyId HTTP. DataScopeGuard bổ sung kiểm quyền đúng scope, DAO vẫn phải bind ID + scope_id và kiểm owner/tài xế. UI phải giao quyền scoped với capabilities/policy chung. Không dùng permission để bỏ qua kiểm quyền đối tượng. Thêm Permission mới phải có bundle vi/en, migration khi cần đổi cấu trúc và kiểm thử deny/allow ở service cùng kiểm tra scope của module.
-
-
-## Registry động, chính sách menu/endpoint
-
-`Role` và `Permission` là value object JSON chuỗi, giữ hằng lõi cho source cũ. `values()` chỉ liệt kê hằng bootstrap; danh sách quản trị phải đọc registry DB. Role tùy chỉnh có mã in hoa 2–24 ký tự; quyền tối đa 40 ký tự dạng RESOURCE_ACTION (READ/CREATE/UPDATE/DELETE/ASSIGN/RETRY/SEND). Không cho mã quyền `ROLE_...` giả authority role, hoặc WRITE tùy chỉnh; CATALOG_WRITE/ACCESS_WRITE cũ giữ phạm vi đã mô tả. Tên vi/en nằm trên DB, khóa dịch quyền tùy chỉnh dùng `permission.custom`; không cần build lại để đổi tên.
-
-| API dưới `/api/v1/admin/access` | Quyền thêm vào role ADMIN | Hợp đồng |
-|---|---|---|
-| GET `/registry/{kind}` | ACCESS_READ | kind chỉ roles/permissions, tối đa 512 mã mỗi loại, gồm active/builtIn/registry version/audit |
-| POST `/registry/{kind}/{code}` | ACCESS_CREATE | Tạo mã bất biến; quyền mới tự gán ADMIN trong cùng transaction |
-| PUT `/registry/{kind}/{code}` | ACCESS_UPDATE | Sửa tên/trạng thái với version; không vô hiệu hóa mã lõi; giữ FK/lịch sử thay vì xóa vật lý |
-| GET `/targets` | ACCESS_READ | Inventory từ RequestMappingHandlerMapping, chỉ menu/endpoint có thật và được phép cấu hình |
-| GET `/policies` | ACCESS_READ | Tối đa 256 chính sách bổ sung |
-| POST `/policies` | ACCESS_CREATE | MENU hoặc ENDPOINT, target nguyên dạng inventory, all-of permissions và any-of roles |
-| PUT `/policies/{id}` | ACCESS_UPDATE | Version chống ghi đè; enabled=false chặn target với user thường |
-| DELETE `/policies/{id}?version=...` | ACCESS_DELETE | Xóa điều kiện bổ sung, giữ nguyên guard bắt buộc của code |
-
-Mapping role/quyền và gán role user tiếp tục dùng ACCESS_ASSIGN (ACCESS_WRITE chỉ alias tương thích cho gán). Quản trị registry/chính sách không nhận quyền từ ACCESS_ASSIGN. Cùng advisory lock bảo vệ quota/cập nhật registry và mapping trên nhiều node; registry version tách permission_version của mapping. Tắt role/quyền có hiệu lực ở request kế tiếp vì JWT filter join registry active từ DB; claim role/token cũ không tự cấp quyền. User system và admin cuối vẫn được bảo vệ.
-
-`AccessPolicyInterceptor` chạy ở MVC servlet context, so khớp method + template server, không so path do client tự khai báo. Snapshot policy dùng lại cho layout/menu trong một request. Nhập URL trực tiếp vẫn bị chặn; UI chỉ phản ánh quyết định đó. Route public/auth/metrics và trang/API cấu hình quyền không nhận chính sách tùy biến để tránh khóa đường đăng nhập/cứu hộ. ADMIN bỏ qua điều kiện tùy biến nhưng **vẫn phải có quyền nền ở service/controller**. Cần cho role tùy chỉnh dùng chức năng hiện có thì gán cả quyền nền của chức năng đó; policy rỗng không mở chức năng vốn bị chặn. Không tạo route hoặc handler mới chỉ bằng bản ghi DB.
-
-Thư viện ảnh cũng có `@PreAuthorize(MEDIA_READ)` trên page controller, bảo vệ cả nhập URL trực tiếp. Regression Java dựng root/servlet context riêng, kiểm ẩn menu, role policy, endpoint policy, bật/tắt live và người thiếu quyền nền. SQL/Docker kiểm riêng bằng PostgreSQL tạm; không suy từ test giả ra khả năng tải production.
+EndpointAccess thu thập method/template và kiểm DB trước handler. User → Role → Function → Menu/API là mapping hiện hành; endpoint chưa gán mặc định deny, source constants/annotation Operation không cấp quyền. Service kiểm context/actor/nghiệp vụ; repo lọc scope/owner trên cùng connection, all_scopes phải thuộc chính role cấp endpoint. Không giữ rule AccessFunction/PreAuthorize(action)/permission enum cũ. [Luồng và ranh giới](SCHEMA_VA_PHAN_QUYEN.md#luồng-xác-thực-và-kiểm-endpoint), [scope](SCHEMA_VA_PHAN_QUYEN.md#phạm-vi-dữ-liệu-và-ownership) và [UI cấp quyền](../04-van-hanh/QUAN_TRI_HE_THONG.md#cấp-quyền-cho-một-nhân-viên) mô tả cách mở rộng.
 
 ## Worker, lịch và transaction outbox
 
@@ -111,32 +64,32 @@ Hệ thống có ngữ nghĩa **at least once**. Nếu Gmail đã nhận thư nh
 
 | API | Quyền | Hành vi |
 |---|---|---|
-| GET /api/v1/admin/jobs?page=0&size=20 | JOB_READ | Phân trang, không trả payload/dedup/email |
-| GET /api/v1/admin/jobs/{uuid} | JOB_READ | Trạng thái, audit, mã lỗi đã làm sạch |
-| POST /api/v1/admin/jobs/{uuid}/retry | JOB_RETRY | Body version, chỉ DEAD; giữ UUID/dedup, reset attempts |
-| GET /api/v1/admin/system/status | SYSTEM_READ | Kiểm DB thật, queue counts và pool/worker của instance |
+| GET /api/v1/admin/jobs?page=0&size=20 | Grant GET đúng template | Phân trang, không trả payload/dedup/email |
+| GET /api/v1/admin/jobs/{uuid} | Grant GET đúng template | Trạng thái, audit, mã lỗi đã làm sạch |
+| POST /api/v1/admin/jobs/{uuid}/retry | Grant POST đúng template | Body version, chỉ DEAD; giữ UUID/dedup, reset attempts |
+| GET /api/v1/admin/system/status | Grant GET đúng template | Kiểm DB thật, queue counts và pool/worker của instance |
 
 SYSTEM_CLEANUP là handler bảo trì có thật để làm mẫu handler idempotent; không có handler gửi mail giả để che kết quả test. `/health` tiếp tục chỉ kiểm web, không dùng endpoint system/status làm health check Render Free.
 
 ## Gmail/Workspace và SMTP
 
-Provider mặc định `gmail`: OAuth2 refresh access token qua HTTPS rồi gọi Gmail messages.send. MIME dựng bằng Jakarta Mail, UTF-8, một recipient; email tài khoản dùng multipart/alternative (chữ thuần trước, HTML sau), job cũ và mail quản trị vẫn có bản chữ thuần. Không nối header tự do, không nhận sender/credential từ client. Access token chỉ cache RAM, refresh được đồng bộ giữa các worker; client secret/refresh token ở Environment. Provider không tự retry gửi; worker quyết định retry để không nhân số lần gửi. Gmail 401 xóa token cache; 429/5xx và 403 có reason quota được retry; OAuth 400/config lỗi đưa DEAD để sửa cấu hình. Xem [Gmail errors](https://developers.google.com/workspace/gmail/api/guides/handle-errors).
+Provider mặc định `gmail`: OAuth2 refresh access token qua HTTPS rồi gọi Gmail messages.send. MIME dựng bằng Jakarta Mail, UTF-8, một recipient; mail quản trị hiện dùng bản chữ thuần; không còn composer/template email tài khoản. Không nối header tự do, không nhận sender/credential từ client. Access token chỉ cache RAM, refresh được đồng bộ giữa các worker; client secret/refresh token ở Environment. Provider không tự retry gửi; worker quyết định retry để không nhân số lần gửi. Gmail 401 xóa token cache; 429/5xx và 403 có reason quota được retry; OAuth 400/config lỗi đưa DEAD để sửa cấu hình. Xem [Gmail errors](https://developers.google.com/workspace/gmail/api/guides/handle-errors).
 
 Các bước cấu hình Gmail một lần:
 
 1. Tạo Google Cloud project, bật Gmail API, cấu hình OAuth consent (Workspace có thể dùng Internal nếu tổ chức cho phép). Chọn mailbox gửi của dự án và scope tối thiểu `https://www.googleapis.com/auth/gmail.send`.
 2. Tạo OAuth client kiểu Web application; nếu lấy token qua [OAuth Playground](https://developers.google.com/oauthplayground/), thêm redirect URI `https://developers.google.com/oauthplayground`. Trong cấu hình Playground chọn **Use your own OAuth credentials**, nhập client của chính dự án, **Access type: Offline**; authorize duy nhất scope gmail.send bằng đúng mailbox gửi, rồi **Exchange authorization code for tokens**. Giữ client secret/refresh token ở máy/Environment, không dán lên issue/chat/source. Xem [Gmail server authorization](https://developers.google.com/workspace/gmail/api/auth/web-server). Không dùng client mặc định Playground: token có thể bị thu hồi sau 24 giờ.
 3. Trên Render/IDE, đặt VIETROUTE_GMAIL_CLIENT_ID, VIETROUTE_GMAIL_CLIENT_SECRET, VIETROUTE_GMAIL_REFRESH_TOKEN; đặt VIETROUTE_MAIL_FROM bằng mailbox hoặc send-as alias đã được Gmail cho phép. Sender chủ dự án yêu cầu ngày 24/10/2026 là `hieuv526034@gmail.com`, cấu hình trong Environment, không hardcode ở adapter hoặc template. Mật khẩu đăng nhập Google không thay được bộ OAuth này. Chế độ External/Testing cấp refresh token cho scope Gmail hết hạn sau 7 ngày; chỉ bật vận hành sau khi kiểm chính sách publishing/verification của Google phù hợp. Đổi mật khẩu Google hoặc thu hồi quyền cũng có thể vô hiệu token; xem [vòng đời refresh token](https://developers.google.com/identity/protocols/oauth2#expiration). Workspace có thể cần admin chấp thuận scope.
-4. Đặt VIETROUTE_MAIL_ENABLED=true, VIETROUTE_MAIL_PROVIDER=gmail, VIETROUTE_WORKER_ENABLED=true; luồng tài khoản cần thêm VIETROUTE_AUTH_SELF_SERVICE_ENABLED=true. Restart rồi xem system/status và trạng thái job. Thiếu credentials khi mail bật sẽ chặn startup; mail tắt không yêu cầu Google credentials. Local launcher đọc `.env`, nhưng biến OS/IDE trong `.run` ưu tiên hơn: cần bật/tắt đồng bộ, không đưa secret vào file `.run` chia sẻ.
-5. Nghiệm thu bằng một mail thử tới địa chỉ đã được chủ hộp thư cho phép, đối chiếu job SUCCEEDED và inbox (cả Spam), xác nhận From, UTF-8, template và mã dùng một lần/hết hạn trên môi trường thử riêng. SUCCEEDED chỉ chứng minh provider chấp nhận; không bảo đảm vào Inbox hoặc đến đúng hạn khi Render ngủ. Không chạy migration/seed/register/reset trên Neon chỉ để kiểm build. Chưa có bước này thì ghi rõ provider chưa nghiệm thu, dù `/options` báo đã đủ cấu hình.
+4. Đặt VIETROUTE_MAIL_ENABLED=true, VIETROUTE_MAIL_PROVIDER=gmail, VIETROUTE_WORKER_ENABLED=true; cờ này không mở luồng email auth đã bỏ. Restart rồi xem system/status và trạng thái job. Thiếu credentials khi mail bật sẽ chặn startup; mail tắt không yêu cầu Google credentials. Local launcher đọc `.env`, nhưng biến OS/IDE trong `.run` ưu tiên hơn: cần bật/tắt đồng bộ, không đưa secret vào file `.run` chia sẻ.
+5. Nghiệm thu bằng một mail thử tới địa chỉ đã được chủ hộp thư cho phép, đối chiếu job SUCCEEDED và inbox (cả Spam), xác nhận From, UTF-8 và nội dung mail nghiệp vụ trên môi trường thử riêng. SUCCEEDED chỉ chứng minh provider chấp nhận; không bảo đảm vào Inbox hoặc đến đúng hạn khi Render ngủ. Không chạy migration/seed/register/reset trên Neon chỉ để kiểm build. Chưa có bước này thì ghi rõ provider chưa nghiệm thu, dù `/options` báo đã đủ cấu hình.
 
-`POST /api/v1/admin/mail` yêu cầu MAIL_SEND và header `Idempotency-Key` 8–64 ký tự chữ/số/_/-. Body gồm to, subject, text. HTTP 202/OK005 nghĩa là đã lưu việc, không có nghĩa mail đã được giao. Response chỉ có JobResponse; xem job SUCCEEDED/DEAD. Key được gắn với actor để hai user không dùng trùng receipt của nhau. Không có API gửi mail tùy ý công khai; mã tài khoản đi qua API auth và outbox mã hóa riêng, không qua API quản trị này. Mail tắt trả MAIL001/503.
+`POST /api/v1/admin/mail` yêu cầu grant endpoint POST này và header `Idempotency-Key` 8–64 ký tự chữ/số/_/-. Body gồm to, subject, text. HTTP 202/OK005 nghĩa là đã lưu việc, không có nghĩa mail đã được giao. Response chỉ có JobResponse; xem job SUCCEEDED/DEAD. Key được gắn với actor để hai user không dùng trùng receipt của nhau. Không có API gửi mail tùy ý công khai; không có API phát mã tài khoản hoặc auth outbox ở phiên bản hiện hành. Mail tắt trả MAIL001/503.
 
 Provider `smtp` là tùy chọn cho local/hạ tầng cho SMTP, STARTTLS bắt buộc, TLS 1.2/1.3, kiểm hostname và timeout mạng. Gmail dùng smtp.gmail.com:587, tài khoản và App Password khi chính sách Google cho phép; không dùng mật khẩu đăng nhập thường. **Không dùng SMTP này trên Render Free**. Không ghi password/token vào Properties debug hoặc log. Khi cần số lượng email lớn, Gmail/Workspace còn có quota; thay adapter MailTransport sang dịch vụ email phù hợp sau khi chọn nhà cung cấp, không tăng thread để vượt quota.
 
 ### SMTP tài khoản và mật khẩu — MAIL03
 
-Ngày 25/10/2026 chủ dự án chọn tạm hoãn OAuth và dùng SMTP. Adapter SmtpTransport đã có, dùng cùng MailMessages/template MAIL02; chỉ cần chọn provider trong môi trường phù hợp, không viết bộ gửi mail mới hoặc đổi mặc định Render Free. Cấu hình local trong `.env` bị ignore:
+Ngày 25/10/2026 chủ dự án chọn tạm hoãn OAuth và dùng SMTP. Adapter SmtpTransport đã có, dùng MailMessages chung; chỉ cần chọn provider trong môi trường phù hợp, không viết bộ gửi mail mới hoặc đổi mặc định Render Free. Tên key cấu hình local trong `.env` (không sao chép giá trị credential vào docs):
 
 ```dotenv
 VIETROUTE_MAIL_PROVIDER=smtp
@@ -149,19 +102,13 @@ VIETROUTE_SMTP_PASSWORD=<Gmail_App_Password>
 
 Chủ mailbox bật Xác minh 2 bước, mở [Mật khẩu ứng dụng Google](https://myaccount.google.com/apppasswords), tạo mật khẩu cho VietRoute rồi nhập trực tiếp vào SMTP_PASSWORD ở môi trường riêng. Đây là mật khẩu ứng dụng 16 ký tự, không phải mật khẩu đăng nhập Gmail; xem [hướng dẫn Google](https://support.google.com/mail/answer/185833?hl=vi). Không điền giá trị thật vào `.env.example`, `.run`, source, PR hoặc ảnh/log.
 
-Giữ MAIL_ENABLED=false khi chưa xác thực thành công. Khi có credential hợp lệ và hạ tầng cho phép kết nối SMTP, bật MAIL_ENABLED/WORKER_ENABLED; bật thêm AUTH_SELF_SERVICE_ENABLED nếu muốn mở đăng ký/xác minh/quên mật khẩu, đồng bộ cờ OS/IDE đang ưu tiên hơn `.env`. Nghiệm thu riêng thư thử tới chính mailbox được phép và đối chiếu inbox. Render Free vẫn chặn SMTP 25/465/587 kể cả có App Password; thay cấu hình Java không gỡ được giới hạn mạng này.
+Giữ MAIL_ENABLED=false khi chưa xác thực thành công. Khi có credential hợp lệ và hạ tầng cho phép kết nối SMTP, bật MAIL_ENABLED/WORKER_ENABLED; đồng bộ cờ OS/IDE đang ưu tiên hơn `.env`. Auth email/reset đã bỏ, không bật lại bằng cờ môi trường. Nghiệm thu riêng thư thử tới chính mailbox được phép và đối chiếu inbox. Render Free vẫn chặn SMTP 25/465/587 kể cả có App Password; thay cấu hình Java không gỡ được giới hạn mạng này.
 
 Kết quả chẩn đoán và phần còn thiếu ghi tại [tiến độ MAIL03](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md#mail03--chuyển-smtp-local-đang-chờ-mật-khẩu-ứng-dụng). Một lỗi xác thực không được coi là provider hoạt động, không tự retry credential bị từ chối hoặc bật worker để thử tiếp.
 
-### Template email tài khoản — MAIL02
+### Email tài khoản đã bỏ trong AUTHDB04
 
-`AccountMailComposer` dựng nội dung bằng template cố định `src/main/resources/mail/account-code.html` và message bundle vi/en. Kích hoạt/gắn email dùng ACTIVATE (24 giờ), đặt lại mật khẩu dùng RESET (15 phút). Giữ token 256 bit và chính sách dùng một lần; không đổi thành OTP ngắn chỉ để hiển thị đẹp. Bảng 600px tối đa, inline CSS, mã tự xuống dòng ở màn hình hẹp, không ảnh/font ngoài hoặc link chứa mã. Mọi biến dùng th:text để escape; không th:utext hoặc template do client chọn. Request mail quản trị tiếp tục chỉ nhận to/subject/text, không nhận HTML.
-
-`AccountLifecycleService.issue` dựng HTML/chữ thuần rồi mã hóa chung bằng AccountSecrets trong transaction challenge/outbox hiện có; worker chỉ giải mã sau commit và bỏ thư hết hạn. Không lưu bản HTML/mã rõ thêm ở bảng, API hay log. MailPayload thêm html tùy chọn, bỏ field này khi null; outbox ba field cũ vẫn đọc và gửi chữ thuần. Gmail/SMTP cùng MailMessages nên giữ Message-ID qua retry. Không thêm migration hay gửi mạng trong transaction. Khi nâng cấp nhiều node, dừng/drain worker cũ trước khi producer mới tạo mail HTML: worker cũ không hiểu field mới trong payload mã hóa. Không tuyên bố hỗ trợ chạy lẫn hai phiên bản.
-
-Preview: sau `mvnw verify`, biên dịch/chạy fixture `src/test/resources/dev/RenderMailTemplates.java` với classpath test như RenderSystemUi để xuất bốn HTML thật trong `target/mail-preview`. Fixture chỉ dùng mã giả, không khởi tạo application/DB/.env/provider. Formatter đã khóa bao phủ thêm thư mục resource mail; không đổi phiên bản/rule. Preview trình duyệt và MIME không thay nghiệm thu Gmail/Outlook thực; trạng thái/bằng chứng ở [tiến độ MAIL02](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md#mail02--template-email-tài-khoản-và-sender-gmail).
-
-Ảnh preview với mã giả: [desktop](../images/mail02-desktop.jpg), [điện thoại](../images/mail02-mobile.jpg). Đây là HTML render thật trong trình duyệt, chưa phải ảnh hộp thư nhận thực.
+Không còn template account-code, mail composer/job handler auth hoặc API đăng ký/xác minh/reset. MailService/system_jobs/provider Gmail/SMTP chung vẫn phục vụ nghiệp vụ được cấp quyền, không tự khôi phục email lifecycle auth. Nếu cần tính năng này sau này phải chốt thiết kế, credential/challenge và test riêng; có provider không có nghĩa flow auth đã tồn tại.
 
 ## Cấu hình và cách học/mở rộng
 
@@ -171,8 +118,8 @@ Tất cả biến có mẫu trong `.env.example`. WAR không tự đọc .env; l
 - JobSettings: WORKER_THREADS 1–8, POLL_SECONDS 1–300, LEASE_SECONDS 120–900, RETENTION_DAYS 1–90. Khi tắt worker không có polling DB; khi bật, poller sẽ giữ Neon hoạt động hơn và tính chi phí tương ứng.
 - MailSettings: bật/tắt, gmail/smtp, sender và credentials; lỗi cấu hình không ghi giá trị secret. SMTP_PORT 1–65535, mặc định 587 STARTTLS.
 
-Học code theo thứ tự TrafficGuardFilter → Memory/RedisRateLimitStore → JwtAuthenticationFilter/UserRepository → CatalogService/AccessService → JobRepository/JobWorker → MailService/MailJobHandler/MailTransport. Comment tiếng Việt giải thích thứ tự khóa, transaction, chỗ commit, ACK và xử lý lỗi; không chỉ diễn giải tên hàm.
+Học code theo thứ tự TrafficGuardFilter → Memory/RedisRateLimitStore → JwtAuthenticationFilter/UserRepo/EndpointAccess → UserService/RoleService/FunctionService/CatalogService → JobRepository/JobWorker → MailService/MailJobHandler/MailTransport. Comment tiếng Việt giải thích thứ tự khóa, transaction, chỗ commit, ACK và xử lý lỗi; không chỉ diễn giải tên hàm.
 
-Khi thêm module: tạo permission hành động, endpoint @Operation, DTO @Schema/validate, service method security và scope dữ liệu, SQL có schema/metadata/index và migration mới; nếu cần mail, enqueue cùng transaction. Kiểm thử quyền thiếu/đủ, cạnh tranh version, rollback/outbox và dữ liệu ngoài phạm vi trước PR. Không gửi email trực tiếp trong controller, không tin audit/role/companyId từ HTTP và không dùng Thread mới cho từng request.
+Khi thêm module: khai báo endpoint @Operation, gán Function/Role theo DB, DTO @Schema/validate, service kiểm principal/nghiệp vụ và SQL scope dữ liệu, SQL có schema/metadata/index và migration mới; nếu cần mail, enqueue cùng transaction. Kiểm thử quyền thiếu/đủ, cạnh tranh version, rollback/outbox và dữ liệu ngoài phạm vi trước PR. Không gửi email trực tiếp trong controller, không tin audit/role/companyId từ HTTP và không dùng Thread mới cho từng request.
 
-Kiểm chứng tự động: bộ test Java không dùng DB thật; Gmail client giả không gửi mail; CI PostgreSQL tạm kiểm V001→V003/fresh/legacy, quyền có hiệu lực và thu hồi với JWT cũ, optimistic update, hai worker chia việc, lease hết hạn, DEAD/retry, rollback enqueue, pool/baseline. Redis container tạm kiểm quota hai instance, giả XFF và fail closed khi mất Redis. Production WAR/image không chứa test/fixtures/Node. Sau khi cấu hình mailbox thực, cần nghiệm thu riêng một email được chủ tài khoản cho phép; CI không chứng minh tài khoản Google/Render đã cấu hình thành công.
+Kiểm chứng tự động: unit/H2 không dùng DB bên ngoài; regression dialect/migration dùng PostgreSQL test riêng; Gmail client giả không gửi mail; CI PostgreSQL tạm kiểm V001–V026/fresh/legacy, quyền có hiệu lực và thu hồi với JWT cũ, optimistic update, hai worker chia việc, lease hết hạn, DEAD/retry, rollback enqueue, pool/baseline. Redis container tạm kiểm quota hai instance, giả XFF và fail closed khi mất Redis. Production WAR/image không chứa test/fixtures/Node. Sau khi cấu hình mailbox thực, cần nghiệm thu riêng một email được chủ tài khoản cho phép; CI không chứng minh tài khoản Google/Render đã cấu hình thành công.
