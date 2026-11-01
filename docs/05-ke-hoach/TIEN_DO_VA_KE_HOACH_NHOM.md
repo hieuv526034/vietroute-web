@@ -12,7 +12,7 @@ Kiểm tra đã đạt: npm ci/format/format:check, rules/docs/diff; `mvnw clean
 
 Đánh giá: cấu trúc phù hợp quy ước nhóm và đủ nền phát triển tiếp, không kết luận không còn lỗi hoặc sẵn sàng phát hành chỉ từ kiểm local. HTTP permission boundary là EndpointAccess; service kiểm approved principal/nghiệp vụ/transaction và SQL kiểm scope/owner, không có annotation tự bảo vệ mọi lời gọi bean nội bộ. Request JWT private hiện đọc snapshot hai lần; chưa đo tải production. Account legacy chưa xác minh và các key env còn placeholder phải được xử lý trước chuyển đổi. Chưa chạy PostgreSQL/Docker/PgBouncer/backup-restore, browser hoặc CI remote trong lượt này.
 
-Bàn giao: chốt trên nhánh thành viên, chưa merge dev/main/deploy. Push `.env` tới repo/nhánh đã được cho phép ở AUTHDTO02 vẫn có hiệu lực; GitHub credentials chưa sẵn sàng ở lần push trước. Còn bước đăng nhập Git trên máy, push/PR vào dev và review/CI phù hợp; chỉ phát hành main khi có lệnh mới. `.tools/`/process localhost không là công cụ hoặc bằng chứng bàn giao qua Git.
+Bàn giao: source/docs đã commit local **29a5ce9** trên nhánh thành viên, chưa merge dev/main/deploy. Push `.env` tới repo/nhánh đã được cho phép ở AUTHDTO02 vẫn có hiệu lực. Đã thử push lại AUTHDOC01 ngày 01/11/2026; Git dừng **exit1** vì chưa có GitHub credentials và prompt tương tác bị tắt, chưa thay đổi remote/PR. Còn bước đăng nhập Git trên máy, push/PR vào dev và review/CI phù hợp; chỉ phát hành main khi có lệnh mới. `.tools/`/process localhost không là công cụ hoặc bằng chứng bàn giao qua Git.
 
 ## AUTHDTO02 — Chuyển DTO auth về package gốc và theo dõi cấu hình local
 
