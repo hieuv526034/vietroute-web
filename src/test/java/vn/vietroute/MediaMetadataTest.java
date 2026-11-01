@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.sql.Connection;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
-import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.config.integration.MediaSettings;
 import vn.vietroute.common.constant.ErrorCode;
@@ -59,10 +58,10 @@ class MediaMetadataTest {
         var service = new MediaService(repository, null, transactions, null, new MediaSettings(key -> null), null);
         var body = new MediaUpdateRequest("Ảnh xe", "Mô tả xe", 2);
         var denied = assertThrows(BusinessException.class, () ->
-            service.update(7, body, new UserPrincipal(9L, "other", Set.of(Role.OPERATOR), 0))
+            service.update(7, body, new UserPrincipal(9L, "other", Set.of("OPERATOR"), 0))
         );
         assertEquals(ErrorCode.NOT_FOUND, denied.getErrorCode());
-        var result = service.update(7, body, new UserPrincipal(8L, "owner", Set.of(Role.OPERATOR), 0));
+        var result = service.update(7, body, new UserPrincipal(8L, "owner", Set.of("OPERATOR"), 0));
         assertEquals("Ảnh xe", result.getTitle());
         assertEquals(3, result.getVersion());
         assertEquals(8, result.getCreatedBy());

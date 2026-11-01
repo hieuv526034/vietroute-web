@@ -21,7 +21,7 @@ test('Dashboard chỉ lập kế hoạch từ endpoint hiệu lực, VIEW hoặc
     assert.deepEqual(plan([cap('MY_BOOKING', 'GET /api/v1/my-bookings', false)], ['CUSTOMER']), ['customer']);
     assert.deepEqual(
         plan([cap('MY_BOOKING', 'GET /api/v1/my-bookings'), cap('DRIVER_TRIP', 'GET /api/v1/driver/trips')], ['ADMIN']),
-        [],
+        ['customer', 'driver'],
     );
 });
 

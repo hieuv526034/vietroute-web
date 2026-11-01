@@ -18,7 +18,8 @@ import java.util.UUID;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
-import vn.vietroute.auth.entity.Role;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.config.integration.MediaSettings;
 import vn.vietroute.common.constant.ErrorCode;
@@ -31,6 +32,7 @@ import vn.vietroute.common.media.repository.MediaRepository;
 import vn.vietroute.common.media.service.MediaService;
 import vn.vietroute.common.media.storage.MediaStorage;
 import vn.vietroute.common.traffic.MemoryRateLimitStore;
+import vn.vietroute.support.NativeSecurityFixture;
 
 /** Kiểm thứ tự commit/provider và scope qua fake port; SQL thực chạy bằng PostgreSQL tạm trong CI. */
 class MediaFlowTest {
@@ -53,7 +55,7 @@ class MediaFlowTest {
 
     private boolean referenced;
 
-    private final UserPrincipal actor = new UserPrincipal(2L, "operator", Set.of(Role.OPERATOR), 0);
+    private final UserPrincipal actor = new UserPrincipal(2L, "operator", Set.of("OPERATOR"), 0);
 
     private MediaService service() {
         var settings = new MediaSettings(
@@ -216,7 +218,7 @@ class MediaFlowTest {
 
     @Test
     void hidesOtherOwnersAndAllowsAdminOnlyThroughExplicitScope() {
-        var stranger = new UserPrincipal(3L, "stranger", Set.of(Role.OPERATOR), 0);
+        var stranger = new UserPrincipal(3L, "stranger", Set.of("OPERATOR"), 0);
         var service = service();
         assertEquals(
             ErrorCode.NOT_FOUND,
@@ -226,6 +228,28 @@ class MediaFlowTest {
             ErrorCode.NOT_FOUND,
             assertThrows(BusinessException.class, () -> service.delete(7, 0, stranger)).getErrorCode()
         );
-        assertEquals(7L, service.find(7, new UserPrincipal(1L, "admin", Set.of(Role.ADMIN), 0)).getId());
+        var user = NativeSecurityFixture.snapshot(
+            1,
+            "admin",
+            "Admin",
+            null,
+            true,
+            false,
+            false,
+            true,
+            0,
+            Set.of("CUSTOM"),
+            Set.of("GET /api/v1/media/{id}"),
+            Set.of("GET /api/v1/media/{id}")
+        );
+        var approved = new UserPrincipal(user, "GET /api/v1/media/{id}");
+        SecurityContextHolder.getContext().setAuthentication(
+            UsernamePasswordAuthenticationToken.authenticated(approved, null, List.of())
+        );
+        try {
+            assertEquals(7L, service.find(7, approved).getId());
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
     }
 }

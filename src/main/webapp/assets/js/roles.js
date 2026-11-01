@@ -1,4 +1,4 @@
-/* Role CRUD và modal gán chức năng; mọi mutation dùng version, lỗi giữ bản nháp và không tự gửi lại. */
+/* RoleCode CRUD và modal gán chức năng; mọi mutation dùng version, lỗi giữ bản nháp và không tự gửi lại. */
 (() => {
     'use strict';
     const root = document.querySelector('[data-role-workspace]');
@@ -73,12 +73,12 @@
     };
     const pager = table.pager('roles', { busy: () => busy, onChange: (params) => perform(() => load(params)) });
     const load = async (params = pager.query) => {
-        if (!can('GET', '/registry/{kind}/page')) {
+        if (!can('GET', '/registry/roles/page')) {
             node('roles-status').textContent = labels.readonly;
             return;
         }
         const page = await table.readPage(
-            async (values) => (await get('/registry/roles/page?' + new URLSearchParams({ ...values, query }))).page,
+            async (values) => await get('/registry/roles/page?' + new URLSearchParams({ ...values, query })),
             params,
         );
         const body = node('roles-body');
@@ -91,7 +91,7 @@
                 buttons = text('div');
             actions.className = 'table-actions';
             buttons.className = 'row-actions';
-            if (!role.builtIn && can('PUT', '/registry/{kind}/{code}'))
+            if (!role.protectedRole && can('PUT', '/registry/roles/{code}'))
                 buttons.append(table.actionButton(labels.edit, 'edit', () => edit(role)));
             if (can('GET', '/roles/{role}/functions') && can('GET', '/functions')) {
                 const assign = table.actionButton(
@@ -101,7 +101,7 @@
                 );
                 buttons.append(assign);
             }
-            if (!role.builtIn && can('DELETE', '/registry/roles/{code}'))
+            if (!role.protectedRole && can('DELETE', '/registry/roles/{code}'))
                 buttons.append(
                     table.actionButton(
                         labels.delete,
@@ -173,7 +173,7 @@
             input.value = item.code;
             input.checked = state.has(item.code);
             input.disabled =
-                grantRole.builtIn || !can('PUT', '/roles/{role}/functions') || (!item.active && !input.checked);
+                grantRole.protectedRole || !can('PUT', '/roles/{role}/functions') || (!item.active && !input.checked);
             input.addEventListener('change', () => {
                 if (input.checked) state.add(item.code);
                 else state.delete(item.code);
@@ -205,7 +205,7 @@
         node('grants-count').textContent = '';
         node('grants-changes').textContent = '';
         node('grants-search').value = '';
-        node('grants-save').hidden = role.builtIn || !can('PUT', '/roles/{role}/functions');
+        node('grants-save').hidden = role.protectedRole || !can('PUT', '/roles/{role}/functions');
         node('grants-save').disabled = true;
         app.feedback('', false, 'grants-feedback');
         grantModal.open(opener);
@@ -255,7 +255,7 @@
     });
     node('grants-form').addEventListener('submit', (event) => {
         event.preventDefault();
-        if (busy || !state || !grantReady || grantRole.builtIn || !can('PUT', '/roles/{role}/functions')) return;
+        if (busy || !state || !grantReady || grantRole.protectedRole || !can('PUT', '/roles/{role}/functions')) return;
         const body = { functionCodes: [...state], version };
         void perform(async () => {
             await app.mutate(`${base}/roles/${encodeURIComponent(grantRole.code)}/functions`, body, 'put');
@@ -267,7 +267,7 @@
     void perform(async () => {
         const capabilities = (await app.api.get('/api/v1/auth/capabilities')).data.data;
         allowed = new Set(capabilities.flatMap((item) => item.targets));
-        node('role-create').hidden = !can('POST', '/registry/{kind}/{code}');
+        node('role-create').hidden = !can('POST', '/registry/roles/{code}');
         await load();
     });
 })();

@@ -10,13 +10,10 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.crypto.Mac;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.entity.PermissionAction;
-import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.monitoring.ActivitySettings;
-import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.monitoring.dto.response.ActivitySnapshot;
 import vn.vietroute.common.monitoring.dto.response.OnlineVisitorResponse;
 import vn.vietroute.common.monitoring.dto.response.RequestAnomalyResponse;
@@ -111,7 +108,6 @@ public class ActivityService {
     }
 
     /** Đọc số liệu chia sẻ; lỗi DB được trả ra ngoài để UI không hiển thị số 0 giả. */
-    @AccessOperation(resource = Groups.SYSTEM, action = PermissionAction.READ, adminOnly = true)
     public ActivitySnapshot snapshot() {
         return enabled()
             ? repository.snapshot(missed.get())
@@ -119,13 +115,11 @@ public class ActivityService {
     }
 
     /** Danh sách online phân trang SQL, userId là đối tượng quan sát đã xác thực. */
-    @AccessOperation(resource = Groups.SYSTEM, action = PermissionAction.READ, adminOnly = true)
     public PageResponse<OnlineVisitorResponse> online(PageRequest page) {
         return enabled() ? repository.online(page) : PageResponse.of(List.of(), page, 0);
     }
 
     /** Lấy tín hiệu vượt ngưỡng, không tự khóa user hoặc kết luận đây là tấn công. */
-    @AccessOperation(resource = Groups.SYSTEM, action = PermissionAction.READ, adminOnly = true)
     public List<RequestAnomalyResponse> anomalies() {
         return enabled() ? repository.anomalies(settings.getRequestThreshold()) : List.of();
     }

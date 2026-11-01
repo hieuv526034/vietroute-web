@@ -31,11 +31,9 @@ import org.springframework.mock.web.MockServletContext;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import vn.vietroute.auth.dto.request.session.LoginRequest;
-import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.entity.UserAccount;
-import vn.vietroute.auth.repo.UserRepository;
+import vn.vietroute.auth.dto.request.UserRequest;
+import vn.vietroute.auth.entity.User;
+import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.auth.security.AuthCookies;
 import vn.vietroute.auth.security.JwtAuthenticationFilter;
 import vn.vietroute.auth.security.UserPrincipal;
@@ -61,6 +59,7 @@ import vn.vietroute.common.web.response.FieldViolation;
 import vn.vietroute.support.AccessTestConfig;
 import vn.vietroute.support.JournalTestConfig;
 import vn.vietroute.support.JournalTestConfig.FakeJournalRepository;
+import vn.vietroute.support.TestJpa;
 
 /** Chứng minh không giữ credential/PII, kiểm quyền/service/filter thật và không queue lịch sử trong RAM; không DB production. */
 class ApiJournalTest {
@@ -93,10 +92,10 @@ class ApiJournalTest {
     void databaseFailureDuringJwtValidationRecordsSqlStateWithoutCredentialOrController() throws Exception {
         try (var context = context()) {
             var jwt = context.getBean(JwtService.class);
-            var user = UserAccount.builder().id(1L).username("private-user").roles(Set.of(Role.ADMIN)).build();
-            var users = new UserRepository(null) {
+            var user = User.builder().id(1L).username("private-user").roles(Set.of("ADMIN")).build();
+            var users = new UserRepo(TestJpa.MANAGER, null) {
                 @Override
-                public UserAccount findById(Long id) {
+                public User load(Long id) {
                     throw BaseRepository.translate(new SQLException("private JDBC credential", "08001"));
                 }
             };
@@ -109,7 +108,7 @@ class ApiJournalTest {
             var store = context.getBean(ApiJournalStore.class);
             var filter = new ApiJournalFilter(store, context.getBean(Clock.class));
             var request = new MockHttpServletRequest("GET", Routes.AUTH + Routes.ME_ACTION);
-            request.addHeader("Authorization", "Bearer " + jwt.issue(user).accessToken());
+            request.addHeader("Authorization", "Bearer " + jwt.issue(user).getAccessToken());
             var response = new MockHttpServletResponse();
             filter.doFilter(request, response, (httpRequest, httpResponse) ->
                 jwtFilter.doFilter(httpRequest, httpResponse, (ignoredRequest, ignoredResponse) -> {
@@ -175,7 +174,7 @@ class ApiJournalTest {
             assertEquals(
                 403,
                 mvc
-                    .perform(get(Routes.API_JOURNAL_PAGE).with(authentication(actor("SYSTEM_READ"))))
+                    .perform(get(Routes.API_JOURNAL_PAGE).with(authentication(actor("ROLE_ADMIN"))))
                     .andReturn()
                     .getResponse()
                     .getStatus()
@@ -183,7 +182,17 @@ class ApiJournalTest {
             assertEquals(
                 200,
                 mvc
-                    .perform(get(Routes.API_JOURNAL_PAGE).with(authentication(actor("ROLE_ADMIN", "SYSTEM_READ"))))
+                    .perform(
+                        get(Routes.API_JOURNAL_PAGE).with(
+                            authentication(
+                                actor(
+                                    "GET " + Routes.API_JOURNAL_PAGE,
+                                    "GET " + Routes.API_JOURNAL,
+                                    "GET " + Routes.API_JOURNAL + "/{id}"
+                                )
+                            )
+                        )
+                    )
                     .andReturn()
                     .getResponse()
                     .getStatus()
@@ -205,7 +214,7 @@ class ApiJournalTest {
             new UserPrincipal(
                 2L,
                 "isolated",
-                Set.of(List.of(authorities).contains("ROLE_ADMIN") ? Role.ADMIN : Role.OPERATOR),
+                Set.of(List.of(authorities).contains("ROLE_ADMIN") ? "ADMIN" : "OPERATOR"),
                 0
             ),
             null,
@@ -255,7 +264,7 @@ class ApiJournalTest {
             item = store.page(search).records().content().get(0);
             var detail = store.find(item.id());
             assertEquals(Routes.ADMIN_CATALOGS, item.endpoint());
-            assertTrue(item.controller().contains("CatalogController#create"));
+            assertTrue(item.controller().contains("CatalogItemAPI#create"));
             assertTrue(detail.requestBody().contains("REDACTED"));
             assertTrue(detail.requestBody().contains("VEHICLE_TYPE"));
             assertFalse(json.writeValueAsString(detail).contains(secret));
@@ -265,7 +274,7 @@ class ApiJournalTest {
             assertEquals(
                 403,
                 mvc
-                    .perform(get(Routes.API_JOURNAL).with(authentication(actor("SYSTEM_READ"))))
+                    .perform(get(Routes.API_JOURNAL).with(authentication(actor("ROLE_ADMIN"))))
                     .andReturn()
                     .getResponse()
                     .getStatus()
@@ -278,7 +287,11 @@ class ApiJournalTest {
                     .getResponse()
                     .getStatus()
             );
-            var admin = actor("ROLE_ADMIN", "SYSTEM_READ");
+            var admin = actor(
+                "GET " + Routes.API_JOURNAL_PAGE,
+                "GET " + Routes.API_JOURNAL,
+                "GET " + Routes.API_JOURNAL + "/{id}"
+            );
             assertEquals(
                 200,
                 mvc
@@ -352,7 +365,7 @@ class ApiJournalTest {
     void projectionIsDenyByDefaultAndBoundsResponseAndClassifiesSqlWithoutRawMessage() throws Exception {
         var mapper = new RootConfig().objectMapper();
         var projection = new ApiJournalProjection(mapper);
-        var login = new LoginRequest();
+        var login = new UserRequest();
         login.setUsername("secretperson");
         login.setPassword("secretpassword");
         assertFalse(projection.request(login).contains("secret"));
@@ -399,7 +412,7 @@ class ApiJournalTest {
             "trace-safe",
             "GET",
             Routes.AUTH + "/me",
-            "AuthController#me",
+            "UserSessionAPI#me",
             200,
             10,
             "OK000",
@@ -473,7 +486,7 @@ class ApiJournalTest {
             assertEquals(
                 403,
                 mvc
-                    .perform(get(Routes.API_JOURNAL_PAGE).with(authentication(actor("SYSTEM_READ"))))
+                    .perform(get(Routes.API_JOURNAL_PAGE).with(authentication(actor("ROLE_ADMIN"))))
                     .andReturn()
                     .getResponse()
                     .getStatus()
@@ -483,7 +496,15 @@ class ApiJournalTest {
                     .perform(
                         get(Routes.API_JOURNAL_PAGE)
                             .param("lang", locale)
-                            .with(authentication(actor("ROLE_ADMIN", "SYSTEM_READ")))
+                            .with(
+                                authentication(
+                                    actor(
+                                        "GET " + Routes.API_JOURNAL_PAGE,
+                                        "GET " + Routes.API_JOURNAL,
+                                        "GET " + Routes.API_JOURNAL + "/{id}"
+                                    )
+                                )
+                            )
                     )
                     .andReturn()
                     .getResponse();

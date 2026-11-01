@@ -7,7 +7,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -25,8 +24,7 @@ import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
-import vn.vietroute.auth.repo.UserRepository;
-import vn.vietroute.auth.security.AccessMethodExpressionHandler;
+import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.auth.security.AuthCookies;
 import vn.vietroute.auth.security.JwtAuthenticationFilter;
 import vn.vietroute.auth.service.JwtService;
@@ -52,12 +50,6 @@ import vn.vietroute.common.web.routing.WebRoutePolicy;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
-
-    /** Cấu hình sớm ở root context: mọi service dùng chung một biểu thức và MethodInvocation thật. */
-    @Bean
-    public static MethodSecurityExpressionHandler methodSecurityExpressionHandler() {
-        return new AccessMethodExpressionHandler();
-    }
 
     /** Chain riêng chỉ đọc metrics; không chạy JWT/DB/quota nên vẫn scrape được khi DB hoặc quota lỗi. */
     @Bean
@@ -88,7 +80,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
         HttpSecurity http,
         JwtService jwt,
-        UserRepository users,
+        UserRepo users,
         ApiErrorWriter errors,
         AuthCookies cookies,
         AppSettings settings,

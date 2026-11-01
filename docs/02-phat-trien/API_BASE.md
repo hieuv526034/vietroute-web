@@ -1,5 +1,43 @@
 # Hợp đồng API nền tảng
 
+## AUTHDB04 — Hợp đồng hiện hành
+
+Theo yêu cầu 01/11/2026, toàn bộ auth còn 40 class và tám bảng, cắt chức năng phụ. Cấu trúc/lý do/luồng và phần đã lược bỏ nằm tại [AUTHDB04 trong quy ước phát triển](QUY_UOC_PHAT_TRIEN.md#authdb04--auth-gọn-40-class-tám-bảng-01112026); bằng chứng kiểm tại [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md). Các mốc AUTHDB02/03, ACCESS và lifecycle bên dưới là lịch sử khi khác hợp đồng này.
+
+
+| API chính | Payload/hành vi hiện hành |
+|---|---|
+| GET /api/v1/auth/csrf; POST /api/v1/auth/login | username/password; cookie HttpOnly hoặc Bearer, CSRF cho cookie |
+| GET /api/v1/auth/me; POST /api/v1/auth/logout | Danh tính hiện tại; logout tăng tokenVersion |
+| POST /api/v1/auth/change-password | currentPassword/newPassword; thu hồi phiên, client đăng nhập lại |
+| PUT /api/v1/auth/profile | displayName/avatarMediaId/version; kiểm owner/READY |
+| GET /api/v1/auth/capabilities; GET /api/v1/auth/scopes | Chức năng/endpoint và phạm vi hiện hành của chính user |
+| /api/v1/admin/accounts | UserAPI CRUD, UserRequest/UserDTO/UserSearch; DELETE soft-delete có version |
+| /api/v1/admin/access/registry/roles | RoleAPI CRUD, RoleRequest/RoleDTO/RoleSearch |
+| /api/v1/admin/access/functions | FunctionAPI CRUD, FunctionRequest/FunctionDTO/FunctionSearch |
+| PUT /api/v1/admin/access/roles/{role}/functions | functionCodes/version; rỗng thu hồi, trần endpoint/all_scopes |
+| PUT /api/v1/admin/access/users/{id}/roles | roles/version; giữ mapping không đổi, thu hồi scoped role và token nguyên tử |
+| GET /api/v1/admin/access/resource-catalog | Danh bạ MVC, không tự cấp quyền |
+| /api/v1/admin/access/scopes/{id}/members | Danh sách và gán role theo nhà xe qua RoleAPI; không có bảng scope riêng |
+
+Swagger /docs và /v3/api-docs là nguồn đầy đủ cho từng method/path/query/body/response. Request dùng chung theo tài nguyên, không phải mọi field đều bắt buộc cho mọi thao tác; @Operation và service nêu điều kiện riêng. Không còn các endpoint tự đăng ký/email/reset/recovery/history hoặc role resources/permissions cũ; quản trị qua Function rồi gán Function cho Role. Dữ liệu seed nghiệp vụ do dự án tự tạo để khởi động, chưa được xác minh là thông tin hoạt động thật của một đơn vị vận tải.
+
+
+## AUTHDB03 — JPA CRUD và phân quyền theo endpoint (01/11/2026)
+
+Chủ dự án xác nhận dùng Spring Data JPA/Hibernate cho CRUD auth, JDBC cho batch/query phức tạp, giữ Spring MVC/WAR. Đây là thay đổi nghiệm thu thay các quy tắc action/annotation/permission projection AUTHDB02 trước đó. Trạng thái và bằng chứng kiểm thực tế nằm trong [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md); đoạn này mô tả hợp đồng đang triển khai, không nhận toàn bộ là đã kiểm đạt.
+
+- Tám bảng giữ nguyên tên: auth_users, auth_roles, auth_user_roles, auth_functions, auth_role_functions, auth_function_resources, auth_account_challenges, auth_access_changes. V025 bỏ cột operation/policy cũ; V001–V024 giữ checksum. Dừng các node cũ trước nâng cấp và đăng nhập lại sau thu hồi tokenVersion.
+- Entity ánh xạ đầy đủ cột bằng JPA, không hậu tố Entity; DTO class trong dto/request và dto/response. UserRepo/RoleRepo/FunctionRepo là JPA CRUD. Repo có hậu tố Batch/Query hoặc tên mapping chỉ chứa SQL batch, aggregate, atomic hoặc phức tạp; SQL không nằm trong controller/service ngoài phần đang chuyển đổi chưa chốt.
+- Controller page ở controller, tên UserPageController; REST ở controller/api, tên UserAPI. Các tên Role/Function/UserRole/FunctionResource dùng cùng gốc bảng; không dùng lớp Access chung để che vai trò khác nhau.
+- EndpointCatalog đọc RequestMappingHandlerMapping, lấy HTTP method + route template. Không còn AccessFunction/AccessOperation/AccessResource hoặc enum Permission/PermissionAction. Danh bạ không đồng nghĩa grant. User → active Role → active Function → exact Menu/API target trong DB quyết định truy cập; endpoint chưa gán bị từ chối. HEAD dùng quyền GET. Public/self-service do WebRoutePolicy xác định tường minh, DB không mở route public.
+- JWT chỉ xác minh danh tính; trạng thái/tokenVersion/grant đọc lại ở DB, không tin role trong token. Backend tiếp tục kiểm owner, tài xế được liên kết và scope. Cờ all_scopes chỉ áp dụng cho endpoint thuộc chính role có cờ đó; scoped role phải là tập con global role của cùng user.
+- Bootstrap/default role/function được khai báo bằng dữ liệu JSON, không tạo bypass theo tên ADMIN trong runtime. Mapping ordinary role chỉ init một lần, không tự gán lại khi đã thu hồi. Bootstrap recovery vẫn chỉ danh tính cấu hình, mật khẩu đúng, CSRF/quota/khóa chống dò và lịch sử nguyên tử.
+- JpaTransactionManager và JDBC dùng cùng datasource/connection; SQL batch/history lỗi phải rollback CRUD JPA. Hibernate không tạo/sửa schema tự động. Schema từ VIETROUTE_DB_SCHEMA và LOCAL search_path trên connection, không ghi schema cứng vào entity.
+
+Nguồn kỹ thuật: [Spring Data JPA trong ứng dụng Spring thuần](https://docs.spring.io/spring-data/jpa/reference/3.5/repositories/create-instances.html), [JpaTransactionManager chia sẻ JDBC connection](https://docs.spring.io/spring-framework/docs/6.2.x/javadoc-api/org/springframework/orm/jpa/JpaTransactionManager.html). Không dùng Spring Boot hoặc Open Session in View; DTO được dựng trong transaction.
+
+
 ## Auth hiện hành AUTHDB02
 
 Auth DTO là class trong request/response; không dùng record. User → Role → Function → Menu/API dùng tám bảng theo [hợp đồng schema](SCHEMA_VA_PHAN_QUYEN.md#hợp-đồng-hiện-hành-authdb02--tám-bảng-từ-01112026). Các mục action/policy trước V024 bên dưới dùng để tra lịch sử, không là ma trận quản trị hiện hành.

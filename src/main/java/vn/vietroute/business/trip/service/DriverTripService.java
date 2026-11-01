@@ -1,13 +1,10 @@
 package vn.vietroute.business.trip.service;
 
 import java.time.Instant;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.entity.PermissionAction;
-import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.auth.security.annotation.AccessOperation;
-import vn.vietroute.auth.security.annotation.AccessResource;
 import vn.vietroute.business.booking.dto.response.DriverPassengerResponse;
 import vn.vietroute.business.booking.repository.BookingLifecycleRepository;
 import vn.vietroute.business.booking.repository.BookingRepository;
@@ -16,13 +13,14 @@ import vn.vietroute.business.tracking.repository.TrackingRepository;
 import vn.vietroute.business.trip.dto.request.DriverProgressRequest;
 import vn.vietroute.business.trip.dto.request.TripSearchRequest;
 import vn.vietroute.business.trip.dto.response.TripResponse;
+import vn.vietroute.business.trip.dto.response.TripStopResponse;
 import vn.vietroute.business.trip.entity.TripStatus;
 import vn.vietroute.business.trip.repository.DriverProgressRepository;
 import vn.vietroute.business.trip.repository.TripRepository;
 import vn.vietroute.business.trip.repository.TripTemplateRepository;
+import vn.vietroute.business.trip.repository.TripTemplateRepository.Assets;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
-import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.validation.BusinessRules;
@@ -30,7 +28,6 @@ import vn.vietroute.common.validation.BusinessRules;
 /** DRIVER chỉ thao tác chuyến được giao; tiến độ có thứ tự, thời gian server và lịch sử nguyên tử. */
 @Service
 @RequiredArgsConstructor
-@AccessResource(Groups.DRIVER_TRIP)
 public class DriverTripService {
 
     private final TripRepository trips;
@@ -43,47 +40,41 @@ public class DriverTripService {
     private final TrackingRepository tracking;
 
     /** Driver không cần BOOKING_READ; chỉ projection đón/trả sau kiểm chính phân công hiện hành. */
-    @AccessOperation(action = PermissionAction.READ)
     public PageResponse<DriverPassengerResponse> passengers(long id, PageRequest page, UserPrincipal actor) {
-        AccessActors.requireCurrent(actor);
+        UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
-            trips.assigned(connection, id, PermissionAction.READ, false, actor.id());
+            trips.assigned(connection, id, false, actor.id());
             return passengerBookings.passengers(connection, id, page);
         });
     }
 
     /** SQL count/page cùng ràng buộc người được phân công, không có bypass ADMIN. */
-    @AccessOperation(action = PermissionAction.READ)
     public PageResponse<TripResponse> page(TripSearchRequest search, UserPrincipal actor) {
-        AccessActors.requireCurrent(actor);
+        UserPrincipal.requireCurrent(actor);
         return trips.assignedPage(search, actor.id());
     }
 
     /** ID chuyến người khác trả 404, kể cả cùng nhà xe. */
-    @AccessOperation(action = PermissionAction.READ)
     public TripResponse find(long id, UserPrincipal actor) {
-        AccessActors.requireCurrent(actor);
-        return transactions.execute(connection ->
-            trips.assigned(connection, id, PermissionAction.READ, false, actor.id())
-        );
+        UserPrincipal.requireCurrent(actor);
+        return transactions.execute(connection -> trips.assigned(connection, id, false, actor.id()));
     }
 
     /** Khóa trip trước, kiểm trạng thái/điểm, ghi actual/state/event cùng transaction. */
-    @AccessOperation(action = PermissionAction.UPDATE)
     public TripResponse update(long id, DriverProgressRequest body, UserPrincipal actor) {
-        AccessActors.requireCurrent(actor);
+        UserPrincipal.requireCurrent(actor);
         BusinessRules.require(body.action() != null, ErrorCode.INVALID_REQUEST);
         return transactions.execute(connection -> {
-            var trip = trips.assigned(connection, id, PermissionAction.UPDATE, true, actor.id());
+            TripResponse trip = trips.assigned(connection, id, true, actor.id());
             BusinessRules.require(body.version() != null && body.version() == trip.version(), ErrorCode.STALE_VERSION);
-            var stops = trip.stops();
+            List<TripStopResponse> stops = trip.stops();
             int count = stops.size();
             Instant now = Instant.now();
             BusinessRules.require(
                 count >= 2 && body.stopOrder() >= 1 && body.stopOrder() <= count,
                 ErrorCode.TRIP_STATE_CONFLICT
             );
-            var stop = stops.get(body.stopOrder() - 1);
+            TripStopResponse stop = stops.get(body.stopOrder() - 1);
             TripStatus state = trip.status();
             String event;
             switch (body.action()) {
@@ -95,7 +86,7 @@ public class DriverTripService {
                             !now.isBefore(trip.departureAt().minusSeconds(1800)),
                         ErrorCode.TRIP_STATE_CONFLICT
                     );
-                    var assets = templates.assets(
+                    Assets assets = templates.assets(
                         connection,
                         trip.carrierId(),
                         trip.scopeId(),
@@ -175,7 +166,7 @@ public class DriverTripService {
                 body.note().strip(),
                 actor.id()
             );
-            return trips.assigned(connection, id, PermissionAction.UPDATE, false, actor.id());
+            return trips.assigned(connection, id, false, actor.id());
         });
     }
 }

@@ -5,6 +5,8 @@ import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import vn.vietroute.business.booking.repository.BookingRepository;
+import vn.vietroute.business.booking.repository.BookingRepository.Stop;
+import vn.vietroute.business.booking.repository.BookingRepository.Trip;
 import vn.vietroute.business.booking.repository.TripCapacityRepository;
 import vn.vietroute.business.booking.service.BookingAvailability;
 import vn.vietroute.business.journey.dto.request.JourneyQuoteRequest;
@@ -32,9 +34,9 @@ public class JourneyService {
     public JourneyQuoteResponse quote(long id, JourneyQuoteRequest body) {
         return transactions.execute(connection -> {
             journeys.find(connection, id);
-            var trip = bookings.trip(connection, id, false);
-            var pickup = bookings.stop(connection, id, body.getPickupStopId());
-            var dropoff = bookings.stop(connection, id, body.getDropoffStopId());
+            Trip trip = bookings.trip(connection, id, false);
+            Stop pickup = bookings.stop(connection, id, body.getPickupStopId());
+            Stop dropoff = bookings.stop(connection, id, body.getDropoffStopId());
             BusinessRules.require(
                 body.getSeats() > 0 &&
                     body.getSeats() <= 200 &&
@@ -45,7 +47,7 @@ public class JourneyService {
                 ErrorCode.BOOKING_INVALID
             );
             int available = capacity.available(connection, id, pickup.order(), dropoff.order());
-            var unit = dropoff.fare().subtract(pickup.fare());
+            BigDecimal unit = dropoff.fare().subtract(pickup.fare());
             return new JourneyQuoteResponse(
                 unit,
                 unit.multiply(BigDecimal.valueOf(body.getSeats())),

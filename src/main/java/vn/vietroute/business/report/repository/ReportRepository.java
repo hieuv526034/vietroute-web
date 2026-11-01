@@ -1,14 +1,16 @@
 package vn.vietroute.business.report.repository;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.stereotype.Repository;
-import vn.vietroute.auth.entity.PermissionAction;
-import vn.vietroute.auth.security.DataScopeGuard;
+import vn.vietroute.auth.repo.UserRoleRepo;
 import vn.vietroute.business.booking.entity.BookingStatus;
 import vn.vietroute.business.report.dto.request.ReportCarrierSearchRequest;
 import vn.vietroute.business.report.dto.request.ReportSearchRequest;
@@ -17,7 +19,6 @@ import vn.vietroute.business.report.dto.response.ReportStatusResponse;
 import vn.vietroute.business.report.dto.response.ReportSummaryResponse;
 import vn.vietroute.business.trip.entity.TripStatus;
 import vn.vietroute.common.base.PageResponse;
-import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ApplicationConstants.Business;
 
 /** Tổng hợp bằng một statement/snapshot; không join nhân chéo tổng chuyến với nhiều đơn. */
@@ -29,32 +30,32 @@ public class ReportRepository {
         throws SQLException {
         String filter =
             " FROM carriers owner WHERE " +
-            DataScopeGuard.visibleSql() +
+            UserRoleRepo.visibleSql() +
             " AND lower(owner.code || ' ' || owner.name) LIKE ? ESCAPE '!'";
         String text = body.getQuery() == null ? "" : body.getQuery().strip().toLowerCase(Locale.ROOT);
         String pattern = "%" + text.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
         long total;
-        try (var query = connection.prepareStatement("SELECT count(*)" + filter)) {
-            int at = DataScopeGuard.bindVisible(query, 1, Groups.REPORT, PermissionAction.READ);
+        try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + filter)) {
+            int at = UserRoleRepo.bindVisible(query, 1);
             query.setString(at, pattern);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 row.next();
                 total = row.getLong(1);
             }
         }
-        var content = new ArrayList<ReportCarrierResponse>();
+        ArrayList<ReportCarrierResponse> content = new ArrayList<ReportCarrierResponse>();
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT owner.id,owner.code,owner.name,owner.active" +
                     filter +
                     " ORDER BY owner.name,owner.id LIMIT ? OFFSET ?"
             )
         ) {
-            int at = DataScopeGuard.bindVisible(query, 1, Groups.REPORT, PermissionAction.READ);
+            int at = UserRoleRepo.bindVisible(query, 1);
             query.setString(at++, pattern);
             query.setInt(at++, body.getSize());
             query.setLong(at, body.offset());
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 while (row.next())
                     content.add(
                         new ReportCarrierResponse(row.getLong(1), row.getString(2), row.getString(3), row.getBoolean(4))
@@ -69,17 +70,17 @@ public class ReportRepository {
         StringBuilder sql = new StringBuilder(
             "WITH selected AS MATERIALIZED (SELECT t.id,t.carrier_id,t.scope_id,t.status FROM carrier_trips t JOIN carriers owner ON owner.id=t.carrier_id AND owner.scope_id=t.scope_id WHERE "
         )
-            .append(DataScopeGuard.visibleSql())
+            .append(UserRoleRepo.visibleSql())
             .append(" AND t.departure_at>=? AND t.departure_at<?");
         if (body.getCarrierId() != null) sql.append(" AND owner.id=?");
         sql.append("), trip_totals AS (SELECT count(*) AS trip_count");
-        for (var status : TripStatus.values())
+        for (TripStatus status : TripStatus.values())
             sql.append(",count(*) FILTER(WHERE status='")
                 .append(status.name())
                 .append("') AS trip_")
                 .append(status.name());
         sql.append(" FROM selected), booking_totals AS (SELECT count(*) AS booking_count");
-        for (var status : BookingStatus.values())
+        for (BookingStatus status : BookingStatus.values())
             sql.append(",count(*) FILTER(WHERE b.status='")
                 .append(status.name())
                 .append("') AS booking_")
@@ -94,22 +95,22 @@ public class ReportRepository {
             SELECT CURRENT_TIMESTAMP AS as_of,trip_totals.*,booking_totals.* FROM trip_totals CROSS JOIN booking_totals
             """
         );
-        try (var query = connection.prepareStatement(sql.toString())) {
-            int at = DataScopeGuard.bindVisible(query, 1, Groups.REPORT, PermissionAction.READ);
-            var zone = ZoneId.of(Business.TIME_ZONE);
+        try (PreparedStatement query = connection.prepareStatement(sql.toString())) {
+            int at = UserRoleRepo.bindVisible(query, 1);
+            ZoneId zone = ZoneId.of(Business.TIME_ZONE);
             query.setObject(at++, body.getFromDate().atStartOfDay(zone).toOffsetDateTime());
             query.setObject(at++, body.getToDate().plusDays(1).atStartOfDay(zone).toOffsetDateTime());
             if (body.getCarrierId() != null) query.setLong(at, body.getCarrierId());
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 row.next();
-                var trips = new ArrayList<ReportStatusResponse>();
-                var bookings = new ArrayList<ReportStatusResponse>();
-                for (var status : TripStatus.values())
+                ArrayList<ReportStatusResponse> trips = new ArrayList<ReportStatusResponse>();
+                ArrayList<ReportStatusResponse> bookings = new ArrayList<ReportStatusResponse>();
+                for (TripStatus status : TripStatus.values())
                     trips.add(new ReportStatusResponse(status.name(), row.getLong("trip_" + status.name())));
-                for (var status : BookingStatus.values())
+                for (BookingStatus status : BookingStatus.values())
                     bookings.add(new ReportStatusResponse(status.name(), row.getLong("booking_" + status.name())));
-                var paid = row.getBigDecimal("paid_amount");
-                var refunded = row.getBigDecimal("refunded_amount");
+                BigDecimal paid = row.getBigDecimal("paid_amount");
+                BigDecimal refunded = row.getBigDecimal("refunded_amount");
                 return new ReportSummaryResponse(
                     body.getFromDate(),
                     body.getToDate(),

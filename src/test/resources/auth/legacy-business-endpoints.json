@@ -1,0 +1,889 @@
+[ {
+  "target" : "DELETE /api/v1/admin/access/functions/{code}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_DELETE" ],
+  "description" : "Xóa mềm chức năng chưa sử dụng"
+}, {
+  "target" : "DELETE /api/v1/admin/access/registry/roles/{code}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_DELETE" ],
+  "description" : "Xóa role chưa sử dụng"
+}, {
+  "target" : "DELETE /api/v1/admin/accounts/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCOUNT_DELETE" ],
+  "description" : "Xóa mềm tài khoản"
+}, {
+  "target" : "DELETE /api/v1/admin/booking-sources/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "BOOKING_SOURCE_DELETE", "CATALOG_DELETE" ],
+  "description" : "Ngừng dùng nguồn đặt chỗ"
+}, {
+  "target" : "DELETE /api/v1/admin/catalogs/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "CATALOG_DELETE" ],
+  "description" : "Xóa mềm danh mục"
+}, {
+  "target" : "DELETE /api/v1/admin/vehicle-types/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "CATALOG_DELETE", "VEHICLE_TYPE_DELETE" ],
+  "description" : "Ngừng dùng loại xe"
+}, {
+  "target" : "DELETE /api/v1/media/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "MEDIA_DELETE" ],
+  "description" : "Yêu cầu xóa ảnh"
+}, {
+  "target" : "GET /admin",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "CATALOG_VIEW" ],
+  "description" : "AuthPageController#admin"
+}, {
+  "target" : "GET /api/v1/admin/access/functions",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_READ" ],
+  "description" : "Tìm và phân trang chức năng"
+}, {
+  "target" : "GET /api/v1/admin/access/functions/{code}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_READ" ],
+  "description" : "Chi tiết chức năng và Menu/API"
+}, {
+  "target" : "GET /api/v1/admin/access/history",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_READ" ],
+  "description" : "Tra lịch sử thay đổi quyền"
+}, {
+  "target" : "GET /api/v1/admin/access/permissions",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_READ" ],
+  "description" : "Liệt kê quyền chức năng"
+}, {
+  "target" : "GET /api/v1/admin/access/registry/{kind}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_READ" ],
+  "description" : "Danh sách registry roles/permissions"
+}, {
+  "target" : "GET /api/v1/admin/access/registry/{kind}/page",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_READ" ],
+  "description" : "Tìm và phân trang registry"
+}, {
+  "target" : "GET /api/v1/admin/access/resource-catalog",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_READ" ],
+  "description" : "Danh bạ menu/API hiện tại cho cây gán role"
+}, {
+  "target" : "GET /api/v1/admin/access/resources",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_READ" ],
+  "description" : "Danh bạ tài nguyên UI/API đã đồng bộ"
+}, {
+  "target" : "GET /api/v1/admin/access/roles",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_READ" ],
+  "description" : "Xem quyền các role"
+}, {
+  "target" : "GET /api/v1/admin/access/roles/{role}/functions",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_READ" ],
+  "description" : "Đọc chức năng của role"
+}, {
+  "target" : "GET /api/v1/admin/access/roles/{role}/resources",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_READ" ],
+  "description" : "Xem menu/API của role"
+}, {
+  "target" : "GET /api/v1/admin/access/scopes",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_READ" ],
+  "description" : "Tra phạm vi bảo mật"
+}, {
+  "target" : "GET /api/v1/admin/access/scopes/{id}/members",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_READ" ],
+  "description" : "Tra membership trong phạm vi"
+}, {
+  "target" : "GET /api/v1/admin/access/targets",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_READ" ],
+  "description" : "Inventory menu/endpoint có thể cấu hình"
+}, {
+  "target" : "GET /api/v1/admin/access/tree",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_READ" ],
+  "description" : "Cây chức năng, hành động và endpoint"
+}, {
+  "target" : "GET /api/v1/admin/access/users",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_READ" ],
+  "description" : "Tra tài khoản để gán role"
+}, {
+  "target" : "GET /api/v1/admin/access/users/{id}/effective",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_READ" ],
+  "description" : "Xem nguồn cấp quyền của user"
+}, {
+  "target" : "GET /api/v1/admin/accounts",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCOUNT_READ" ],
+  "description" : "Tìm tài khoản"
+}, {
+  "target" : "GET /api/v1/admin/accounts/{id}/access",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCOUNT_READ" ],
+  "description" : "Xem menu và thao tác của tài khoản"
+}, {
+  "target" : "GET /api/v1/admin/booking-sources",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "BOOKING_SOURCE_READ", "CATALOG_READ" ],
+  "description" : "Danh sách nguồn đặt chỗ"
+}, {
+  "target" : "GET /api/v1/admin/booking-sources/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "BOOKING_SOURCE_READ", "CATALOG_READ" ],
+  "description" : "Chi tiết nguồn đặt chỗ"
+}, {
+  "target" : "GET /api/v1/admin/bookings",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "BOOKING_READ" ],
+  "description" : "Tra đơn trong phạm vi nhà xe"
+}, {
+  "target" : "GET /api/v1/admin/bookings/trips",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "BOOKING_CREATE" ],
+  "description" : "Chọn chuyến nhận đặt PHONE"
+}, {
+  "target" : "GET /api/v1/admin/bookings/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "BOOKING_READ" ],
+  "description" : "Chi tiết đơn và lịch sử"
+}, {
+  "target" : "GET /api/v1/admin/carriers",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "CARRIER_READ" ],
+  "description" : "Danh sách nhà xe theo phạm vi"
+}, {
+  "target" : "GET /api/v1/admin/carriers/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "CARRIER_READ" ],
+  "description" : "Chi tiết nhà xe"
+}, {
+  "target" : "GET /api/v1/admin/catalogs/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "CATALOG_READ" ],
+  "description" : "Đọc danh mục quản trị"
+}, {
+  "target" : "GET /api/v1/admin/drivers",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "DRIVER_READ" ],
+  "description" : "Danh sách tài xế theo phạm vi"
+}, {
+  "target" : "GET /api/v1/admin/drivers/carriers",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "DRIVER_CREATE" ],
+  "description" : "Chọn nhà xe để tạo tài xế"
+}, {
+  "target" : "GET /api/v1/admin/drivers/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "DRIVER_READ" ],
+  "description" : "Chi tiết tài xế"
+}, {
+  "target" : "GET /api/v1/admin/jobs",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "JOB_READ" ],
+  "description" : "Danh sách job có phân trang"
+}, {
+  "target" : "GET /api/v1/admin/jobs/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "JOB_READ" ],
+  "description" : "Xem trạng thái job"
+}, {
+  "target" : "GET /api/v1/admin/locations",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "LOCATION_READ" ],
+  "description" : "Danh sách địa điểm quản trị"
+}, {
+  "target" : "GET /api/v1/admin/locations/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "LOCATION_READ" ],
+  "description" : "Đọc địa điểm quản trị"
+}, {
+  "target" : "GET /api/v1/admin/provinces",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "LOCATION_READ", "PROVINCE_READ" ],
+  "description" : "Danh sách tỉnh/thành quản trị"
+}, {
+  "target" : "GET /api/v1/admin/provinces/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "LOCATION_READ", "PROVINCE_READ" ],
+  "description" : "Đọc tỉnh/thành quản trị"
+}, {
+  "target" : "GET /api/v1/admin/reports",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "REPORT_READ" ],
+  "description" : "Tổng hợp chuyến và đơn trong phạm vi"
+}, {
+  "target" : "GET /api/v1/admin/reports/carriers",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "REPORT_READ" ],
+  "description" : "Chọn nhà xe báo cáo"
+}, {
+  "target" : "GET /api/v1/admin/routes",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ROUTE_READ" ],
+  "description" : "Tra tuyến một chiều"
+}, {
+  "target" : "GET /api/v1/admin/routes/carriers",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ROUTE_CREATE" ],
+  "description" : "Chọn nhà xe để tạo tuyến"
+}, {
+  "target" : "GET /api/v1/admin/routes/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ROUTE_READ" ],
+  "description" : "Chi tiết tuyến và điểm"
+}, {
+  "target" : "GET /api/v1/admin/system/activity",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "SYSTEM_READ" ],
+  "description" : "Tổng quan online và request"
+}, {
+  "target" : "GET /api/v1/admin/system/activity/anomalies",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "SYSTEM_READ" ],
+  "description" : "Tín hiệu request bất thường"
+}, {
+  "target" : "GET /api/v1/admin/system/activity/online",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "SYSTEM_READ" ],
+  "description" : "Phân trang trình duyệt online"
+}, {
+  "target" : "GET /api/v1/admin/system/api-journal",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "SYSTEM_READ" ],
+  "description" : "Tra nhật ký API"
+}, {
+  "target" : "GET /api/v1/admin/system/api-journal/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "SYSTEM_READ" ],
+  "description" : "Xem request/response đã lọc"
+}, {
+  "target" : "GET /api/v1/admin/system/configuration",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "CONFIGURATION_READ" ],
+  "description" : "Xem cấu hình hệ thống an toàn"
+}, {
+  "target" : "GET /api/v1/admin/system/runtime",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "SYSTEM_READ" ],
+  "description" : "Đọc tài nguyên và lưu lượng instance"
+}, {
+  "target" : "GET /api/v1/admin/system/status",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "SYSTEM_READ" ],
+  "description" : "Kiểm tra readiness và tình trạng instance"
+}, {
+  "target" : "GET /api/v1/admin/trips",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "TRIP_READ" ],
+  "description" : "Tra chuyến theo scope"
+}, {
+  "target" : "GET /api/v1/admin/trips/choices",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "TRIP_CREATE", "TRIP_UPDATE" ],
+  "description" : "Chọn nhà xe/tuyến/xe/tài xế của chuyến"
+}, {
+  "target" : "GET /api/v1/admin/trips/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "TRIP_READ" ],
+  "description" : "Chi tiết chuyến và snapshot điểm"
+}, {
+  "target" : "GET /api/v1/admin/trips/{id}/tracking",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "TRIP_READ" ],
+  "description" : "Xem vị trí trong nhà xe"
+}, {
+  "target" : "GET /api/v1/admin/vehicle-types",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "CATALOG_READ", "VEHICLE_TYPE_READ" ],
+  "description" : "Danh sách loại xe"
+}, {
+  "target" : "GET /api/v1/admin/vehicle-types/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "CATALOG_READ", "VEHICLE_TYPE_READ" ],
+  "description" : "Chi tiết loại xe"
+}, {
+  "target" : "GET /api/v1/admin/vehicles",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "VEHICLE_READ" ],
+  "description" : "Danh sách xe theo phạm vi"
+}, {
+  "target" : "GET /api/v1/admin/vehicles/carriers",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "VEHICLE_CREATE" ],
+  "description" : "Chọn nhà xe để tạo xe"
+}, {
+  "target" : "GET /api/v1/admin/vehicles/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "VEHICLE_READ" ],
+  "description" : "Chi tiết xe"
+}, {
+  "target" : "GET /api/v1/driver/trips",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "DRIVER_TRIP_READ" ],
+  "description" : "Chuyến được giao cho tài xế"
+}, {
+  "target" : "GET /api/v1/driver/trips/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "DRIVER_TRIP_READ" ],
+  "description" : "Chi tiết chuyến được giao"
+}, {
+  "target" : "GET /api/v1/driver/trips/{id}/passengers",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "DRIVER_TRIP_READ" ],
+  "description" : "Danh sách đón/trả chuyến được giao"
+}, {
+  "target" : "GET /api/v1/driver/trips/{id}/tracking",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "DRIVER_TRIP_READ" ],
+  "description" : "Xem vị trí chuyến được giao"
+}, {
+  "target" : "GET /api/v1/media",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "MEDIA_READ" ],
+  "description" : "Đọc thư viện ảnh"
+}, {
+  "target" : "GET /api/v1/media/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "MEDIA_READ" ],
+  "description" : "Đọc metadata ảnh"
+}, {
+  "target" : "GET /api/v1/my-bookings",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "MY_BOOKING_READ" ],
+  "description" : "Tra đơn của chính khách hàng"
+}, {
+  "target" : "GET /api/v1/my-bookings/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "MY_BOOKING_READ" ],
+  "description" : "Chi tiết đơn và lịch sử"
+}, {
+  "target" : "GET /api/v1/my-bookings/{id}/tracking",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "MY_BOOKING_READ" ],
+  "description" : "Xem vị trí cho đơn của chính khách"
+}, {
+  "target" : "GET /catalogs/booking-sources",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "BOOKING_SOURCE_VIEW", "CATALOG_VIEW" ],
+  "description" : "CatalogPageController#bookingSources"
+}, {
+  "target" : "GET /catalogs/locations",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "LOCATION_VIEW" ],
+  "description" : "LocationPageController#places"
+}, {
+  "target" : "GET /catalogs/provinces",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "LOCATION_VIEW", "PROVINCE_VIEW" ],
+  "description" : "LocationPageController#provinces"
+}, {
+  "target" : "GET /catalogs/vehicle-types",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "CATALOG_VIEW", "VEHICLE_TYPE_VIEW" ],
+  "description" : "CatalogPageController#vehicleTypes"
+}, {
+  "target" : "GET /driver/trips",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "DRIVER_TRIP_VIEW" ],
+  "description" : "TripPageController#driverPage"
+}, {
+  "target" : "GET /media",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "MEDIA_VIEW" ],
+  "description" : "MediaPageController#library"
+}, {
+  "target" : "GET /monitoring",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "SYSTEM_VIEW" ],
+  "description" : "MonitoringPageController#monitoring"
+}, {
+  "target" : "GET /my-bookings",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "MY_BOOKING_VIEW" ],
+  "description" : "BookingPageController#customer"
+}, {
+  "target" : "GET /operations/access",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_VIEW" ],
+  "description" : "AccessPageController#access"
+}, {
+  "target" : "GET /operations/access/resources",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_VIEW" ],
+  "description" : "AccessPageController#resources"
+}, {
+  "target" : "GET /operations/accounts",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "ACCOUNT_VIEW" ],
+  "description" : "ManagedAccountPageController#accounts"
+}, {
+  "target" : "GET /operations/api-journal",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "JOURNAL_VIEW" ],
+  "description" : "ApiJournalPageController#journal"
+}, {
+  "target" : "GET /operations/bookings",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "BOOKING_VIEW" ],
+  "description" : "BookingPageController#staff"
+}, {
+  "target" : "GET /operations/carriers",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "CARRIER_VIEW" ],
+  "description" : "CarrierPageController#carriers"
+}, {
+  "target" : "GET /operations/configuration",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "CONFIGURATION_VIEW" ],
+  "description" : "ConfigurationPageController#configuration"
+}, {
+  "target" : "GET /operations/demo",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "DEMO_VIEW" ],
+  "description" : "DemoPageController#page"
+}, {
+  "target" : "GET /operations/drivers",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "DRIVER_VIEW" ],
+  "description" : "CarrierPageController#drivers"
+}, {
+  "target" : "GET /operations/jobs",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "JOB_VIEW" ],
+  "description" : "JobPageController#jobs"
+}, {
+  "target" : "GET /operations/locations",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "LOCATION_VIEW" ],
+  "description" : "LocationPageController#locations"
+}, {
+  "target" : "GET /operations/reports",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "REPORT_VIEW" ],
+  "description" : "ReportPageController#page"
+}, {
+  "target" : "GET /operations/routes",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "ROUTE_VIEW" ],
+  "description" : "RoutePageController#page"
+}, {
+  "target" : "GET /operations/trips",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "TRIP_VIEW" ],
+  "description" : "TripPageController#page"
+}, {
+  "target" : "GET /operations/vehicles",
+  "kind" : "MENU",
+  "match" : "ANY",
+  "codes" : [ "VEHICLE_VIEW" ],
+  "description" : "CarrierPageController#vehicles"
+}, {
+  "target" : "POST /api/v1/admin/access/functions",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_CREATE" ],
+  "description" : "Tạo chức năng"
+}, {
+  "target" : "POST /api/v1/admin/access/registry/{kind}/{code}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_CREATE" ],
+  "description" : "Tạo role hoặc quyền hành động"
+}, {
+  "target" : "POST /api/v1/admin/accounts",
+  "kind" : "ENDPOINT",
+  "match" : "ALL",
+  "codes" : [ "ACCESS_ASSIGN", "ACCOUNT_CREATE" ],
+  "description" : "Cấp tài khoản và gán role"
+}, {
+  "target" : "POST /api/v1/admin/booking-sources",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "BOOKING_SOURCE_CREATE", "CATALOG_CREATE", "CATALOG_WRITE" ],
+  "description" : "Tạo nguồn đặt chỗ"
+}, {
+  "target" : "POST /api/v1/admin/bookings",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "BOOKING_CREATE" ],
+  "description" : "Gửi yêu cầu đặt PHONE"
+}, {
+  "target" : "POST /api/v1/admin/carriers",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "CARRIER_CREATE" ],
+  "description" : "Tạo nhà xe"
+}, {
+  "target" : "POST /api/v1/admin/catalogs",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "CATALOG_CREATE", "CATALOG_WRITE" ],
+  "description" : "Tạo mục danh mục"
+}, {
+  "target" : "POST /api/v1/admin/demo",
+  "kind" : "ENDPOINT",
+  "match" : "ALL",
+  "codes" : [ "BOOKING_SOURCE_CREATE", "CARRIER_CREATE", "DEMO_CREATE", "DRIVER_CREATE", "LOCATION_CREATE", "PROVINCE_CREATE", "VEHICLE_CREATE", "VEHICLE_TYPE_CREATE" ],
+  "description" : "Khởi tạo dữ liệu nghiệp vụ"
+}, {
+  "target" : "POST /api/v1/admin/drivers",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "DRIVER_CREATE" ],
+  "description" : "Tạo tài xế"
+}, {
+  "target" : "POST /api/v1/admin/drivers/{id}/account",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "DRIVER_ASSIGN" ],
+  "description" : "Cấp tài khoản DRIVER cho hồ sơ chưa liên kết"
+}, {
+  "target" : "POST /api/v1/admin/jobs/{id}/retry",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "JOB_RETRY" ],
+  "description" : "Chạy lại job DEAD"
+}, {
+  "target" : "POST /api/v1/admin/locations",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "LOCATION_CREATE" ],
+  "description" : "Tạo địa điểm"
+}, {
+  "target" : "POST /api/v1/admin/mail",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "MAIL_SEND" ],
+  "description" : "Xếp email vào hàng đợi"
+}, {
+  "target" : "POST /api/v1/admin/provinces",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "LOCATION_CREATE", "PROVINCE_CREATE" ],
+  "description" : "Tạo tỉnh/thành"
+}, {
+  "target" : "POST /api/v1/admin/routes",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ROUTE_CREATE" ],
+  "description" : "Tạo tuyến và thứ tự điểm"
+}, {
+  "target" : "POST /api/v1/admin/trips",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "TRIP_CREATE" ],
+  "description" : "Tạo chuyến nháp từ tuyến"
+}, {
+  "target" : "POST /api/v1/admin/vehicle-types",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "CATALOG_CREATE", "CATALOG_WRITE", "VEHICLE_TYPE_CREATE" ],
+  "description" : "Tạo loại xe"
+}, {
+  "target" : "POST /api/v1/admin/vehicles",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "VEHICLE_CREATE" ],
+  "description" : "Tạo xe"
+}, {
+  "target" : "POST /api/v1/driver/trips/{id}/tracking/samples",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "DRIVER_TRIP_UPDATE" ],
+  "description" : "Gửi mẫu thiết bị trong consent hiện hành"
+}, {
+  "target" : "POST /api/v1/driver/trips/{id}/tracking/start",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "DRIVER_TRIP_UPDATE" ],
+  "description" : "Bật chia sẻ vị trí có consent"
+}, {
+  "target" : "POST /api/v1/driver/trips/{id}/tracking/stop",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "DRIVER_TRIP_UPDATE" ],
+  "description" : "Dừng chia sẻ và xóa snapshot tọa độ"
+}, {
+  "target" : "POST /api/v1/media",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "MEDIA_CREATE" ],
+  "description" : "Upload một ảnh công khai"
+}, {
+  "target" : "POST /api/v1/my-bookings",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "MY_BOOKING_CREATE" ],
+  "description" : "Gửi yêu cầu đặt WEB"
+}, {
+  "target" : "PUT /api/v1/admin/access/functions/{code}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_UPDATE" ],
+  "description" : "Sửa chức năng"
+}, {
+  "target" : "PUT /api/v1/admin/access/registry/{kind}/{code}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_UPDATE" ],
+  "description" : "Sửa tên/trạng thái role hoặc quyền"
+}, {
+  "target" : "PUT /api/v1/admin/access/roles/{role}/functions",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_ASSIGN" ],
+  "description" : "Gán chức năng cho role"
+}, {
+  "target" : "PUT /api/v1/admin/access/roles/{role}/permissions",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_ASSIGN", "ACCESS_WRITE" ],
+  "description" : "Thay quyền chức năng của role"
+}, {
+  "target" : "PUT /api/v1/admin/access/roles/{role}/resources",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_ASSIGN" ],
+  "description" : "Gán menu/API cho role"
+}, {
+  "target" : "PUT /api/v1/admin/access/scopes/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_UPDATE" ],
+  "description" : "Sửa trạng thái/tên phạm vi"
+}, {
+  "target" : "PUT /api/v1/admin/access/scopes/{id}/members/{userId}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_ASSIGN" ],
+  "description" : "Gán/tắt role riêng tại phạm vi"
+}, {
+  "target" : "PUT /api/v1/admin/access/users/{id}/roles",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCESS_ASSIGN", "ACCESS_WRITE" ],
+  "description" : "Gán role cho tài khoản"
+}, {
+  "target" : "PUT /api/v1/admin/accounts/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCOUNT_UPDATE" ],
+  "description" : "Sửa thông tin tài khoản"
+}, {
+  "target" : "PUT /api/v1/admin/accounts/{id}/state",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ACCOUNT_UPDATE" ],
+  "description" : "Khóa hoặc mở tài khoản"
+}, {
+  "target" : "PUT /api/v1/admin/booking-sources/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "BOOKING_SOURCE_UPDATE", "CATALOG_UPDATE", "CATALOG_WRITE" ],
+  "description" : "Sửa nguồn đặt chỗ"
+}, {
+  "target" : "PUT /api/v1/admin/bookings/{id}/payment",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "BOOKING_UPDATE" ],
+  "description" : "Ghi nhận thu hoặc hoàn trực tiếp"
+}, {
+  "target" : "PUT /api/v1/admin/bookings/{id}/state",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "BOOKING_UPDATE" ],
+  "description" : "Xác nhận, từ chối hoặc hủy đơn"
+}, {
+  "target" : "PUT /api/v1/admin/carriers/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "CARRIER_UPDATE" ],
+  "description" : "Sửa/ngừng sử dụng nhà xe"
+}, {
+  "target" : "PUT /api/v1/admin/catalogs/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "CATALOG_UPDATE", "CATALOG_WRITE" ],
+  "description" : "Sửa danh mục"
+}, {
+  "target" : "PUT /api/v1/admin/drivers/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "DRIVER_UPDATE" ],
+  "description" : "Sửa/ngừng sử dụng tài xế"
+}, {
+  "target" : "PUT /api/v1/admin/locations/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "LOCATION_UPDATE" ],
+  "description" : "Sửa/ngừng sử dụng địa điểm"
+}, {
+  "target" : "PUT /api/v1/admin/provinces/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "LOCATION_UPDATE", "PROVINCE_UPDATE" ],
+  "description" : "Sửa/ngừng sử dụng tỉnh/thành"
+}, {
+  "target" : "PUT /api/v1/admin/routes/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "ROUTE_UPDATE" ],
+  "description" : "Sửa hoặc ngừng dùng mẫu tuyến"
+}, {
+  "target" : "PUT /api/v1/admin/trips/{id}/assignment",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "TRIP_UPDATE" ],
+  "description" : "Đổi phân công và số chỗ"
+}, {
+  "target" : "PUT /api/v1/admin/trips/{id}/notice",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "TRIP_UPDATE" ],
+  "description" : "Đăng thông báo vận hành chuyến"
+}, {
+  "target" : "PUT /api/v1/admin/trips/{id}/state",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "TRIP_UPDATE" ],
+  "description" : "Mở bán hoặc hủy chuyến trước khi chạy"
+}, {
+  "target" : "PUT /api/v1/admin/vehicle-types/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "CATALOG_UPDATE", "CATALOG_WRITE", "VEHICLE_TYPE_UPDATE" ],
+  "description" : "Sửa loại xe"
+}, {
+  "target" : "PUT /api/v1/admin/vehicles/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "VEHICLE_UPDATE" ],
+  "description" : "Sửa/ngừng sử dụng xe"
+}, {
+  "target" : "PUT /api/v1/driver/trips/{id}/progress",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "DRIVER_TRIP_UPDATE" ],
+  "description" : "Cập nhật tiến độ chuyến đúng tài xế"
+}, {
+  "target" : "PUT /api/v1/media/{id}",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "MEDIA_UPDATE" ],
+  "description" : "Sửa tên và mô tả ảnh"
+}, {
+  "target" : "PUT /api/v1/my-bookings/{id}/state",
+  "kind" : "ENDPOINT",
+  "match" : "ANY",
+  "codes" : [ "MY_BOOKING_UPDATE" ],
+  "description" : "Hủy đơn của chính khách hàng"
+} ]

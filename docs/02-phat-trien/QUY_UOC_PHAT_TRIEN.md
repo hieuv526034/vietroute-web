@@ -1,12 +1,62 @@
 # Quy ước nền tảng VietRoute
 
+## AUTHDB04 — Auth gọn: 40 class, tám bảng (01/11/2026)
+
+Theo xác nhận của chủ dự án, giới hạn 30–40 class tính **toàn bộ package auth**, ưu tiên cắt chức năng phụ. Hợp đồng này thay các phần lifecycle/action/DTO AUTHDB02–AUTHDB03 bên dưới. Trạng thái nghiệm thu thật chỉ ghi tại [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
+
+| Thư mục trong auth | Class hiện hành | Số file |
+|---|---|---:|
+| entity | User, Role, UserRole, Function, RoleFunction, FunctionResource, AccountChallenge, AccessChange | 8 |
+| repo | UserRepo, RoleRepo, UserRoleRepo, FunctionRepo, RoleFunctionRepo, FunctionResourceRepo, AccountChallengeRepo, AccessChangeRepo | 8 |
+| service | UserService, RoleService, FunctionService, JwtService | 4 |
+| controller/api | UserAPI, RoleAPI, FunctionAPI | 3 |
+| controller | UserPageController | 1 |
+| dto/request | UserRequest, RoleRequest, FunctionRequest | 3 |
+| dto/response | UserDTO, RoleDTO, FunctionDTO | 3 |
+| dto/search | UserSearch, RoleSearch, FunctionSearch | 3 |
+| config | SecurityConfig, SecurityInitializer | 2 |
+| security | UserPrincipal, EndpointAccess, JwtAuthenticationFilter, AuthCookies | 4 |
+| initializer | AuthInitializer | 1 |
+| **Tổng** | Mỗi file một class top-level, không giấu class DTO/ID bên trong | **40** |
+
+- Mỗi class dưới 1000 dòng. Không dùng `var` trong source production. Không record trong auth. Search chỉ ở dto/search và tên `*Search`, không `*SearchRequest`; không chia thêm package feature. Nếu có package nhiều từ, dùng dấu gạch dưới. Initializer ngang cấp service. Không tạo API/service riêng cho bảng nối, challenge hoặc history khi không có hành vi công khai cần thiết.
+- Tám entity JPA đủ cột, Instant/audit/version; không hậu tố Entity, không schema cứng. V026 thêm identity kỹ thuật duy nhất cho bốn bảng nối/challenge để tránh bốn class composite ID; PK/FK ghép của DB vẫn giữ nguyên. Giữ V001–V025, dừng node cũ trước nâng cấp. CRUD dùng Spring Data SimpleJpaRepository qua repo cụ thể theo tên bảng; JDBC trong chính repo cho aggregate, batch và atomic SQL. Không thêm Spring Boot.
+- Ba request tái sử dụng cho các thao tác trên cùng tài nguyên; các field bắt buộc theo endpoint được nêu tại @Operation và kiểm trong service. Field password WRITE_ONLY, không toString; response là whitelist, không entity/hash/tokenVersion. Swagger xuất path/query/header/body và @Schema, có phân trang DB. Không query/save mỗi phần tử; vòng lặp chỉ bind batch hoặc xử lý dữ liệu đã tải.
+- Giữ đăng nhập/JWT 30 phút/BCrypt/CSRF/quota, khóa 5 lần sai trong 15 phút, đổi mật khẩu tránh hash hiện tại và hai hash trước, profile/avatar, CRUD User/Role/Function, gán role/function/endpoint, phạm vi nhà xe và lịch sử mutation nguyên tử. Đổi mật khẩu và logout thu hồi tokenVersion; sau đổi mật khẩu cần đăng nhập lại.
+- Bỏ tự đăng ký, gửi/xác minh email tự phục vụ, quên/reset mật khẩu, auth mail outbox, recovery quản trị riêng và màn/API xem history. Không chuyển những chức năng này sang common để che số class. AccountChallenge giữ bảng/entity/repo để quản lý và vô hiệu hóa dữ liệu đã tồn tại; không có API phát challenge mới. AccessChange vẫn ghi cùng transaction và cleanup có giới hạn, không queue RAM.
+- Tài khoản do người quản trị tạo được coi đã xác minh và phải đổi mật khẩu khởi tạo. Bootstrap admin cấu hình riêng; ba tài khoản mặc định trong JSON/env được tạo một lần, verified/active theo yêu cầu. Account đã có giữ password/hash/lock/trạng thái. Tài khoản cũ chưa xác minh không tự nhận quyền; người vận hành phải xử lý dữ liệu trước chuyển đổi vì luồng xác minh email đã cắt.
+
+### Luồng auth và quyền endpoint
+
+1. Startup chỉ migrate/init khi bật cờ. AuthInitializer đọc auth/default-access.json và env, batch dữ liệu thiếu, không đặt lại mật khẩu. EndpointAccess thu thập method + route template sau servlet refresh; inventory không tự cấp quyền. Sync bootstrap phải bật riêng hoặc theo DB_INIT; ordinary role/function mapping chỉ init một lần, không khôi phục quyền đã thu hồi.
+2. Client lấy CSRF rồi login. UserService khóa dòng tài khoản, so BCrypt, lưu số lần sai/khóa hoặc hoàn tất login trong transaction. JWT chỉ chứng minh danh tính; website dùng cookie HttpOnly, không localStorage.
+3. Mỗi request private: filter xác minh JWT, interceptor đọc lại account/tokenVersion và tập endpoint DB. User → active Role → active Function → FunctionResource quyết định đúng method + template. HEAD dùng GET; endpoint chưa gán mặc định từ chối, kể cả bootstrap. Public/self-service do WebRoutePolicy quản lý, không nhận từ DB/client.
+4. Sau khi kiểm, UserPrincipal mang target được duyệt trong SecurityContext. Controller gọi service, service kiểm principal server và transaction. Phạm vi/owner/tài xế liên kết tiếp tục lọc trong SQL; all_scopes phải thuộc chính role cấp target đó. Cờ sửa/gán trên bảng kiểm endpoint mutation riêng; quyền GET không tự cấp PUT/POST.
+5. Mutation dùng version, audit actor server và whitelist history trong cùng JpaTransactionManager/JDBC connection. Lỗi history/batch rollback cả CRUD JPA. Menu/capabilities/preview đọc cùng mapping; không bypass theo tên ADMIN hoặc enum quyền. Trần ủy quyền kiểm cả mapping tắt và all_scopes để không cấp gián tiếp khi bật lại.
+
+
+## AUTHDB03 — Hợp đồng trước khi thu gọn (lịch sử)
+
+Chủ dự án xác nhận dùng Spring Data JPA/Hibernate cho CRUD auth, JDBC cho batch/query phức tạp, giữ Spring MVC/WAR. Đây là thay đổi nghiệm thu thay các quy tắc action/annotation/permission projection AUTHDB02 trước đó. Trạng thái và bằng chứng kiểm thực tế nằm trong [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md); đoạn này mô tả hợp đồng đang triển khai, không nhận toàn bộ là đã kiểm đạt.
+
+- Tám bảng giữ nguyên tên: auth_users, auth_roles, auth_user_roles, auth_functions, auth_role_functions, auth_function_resources, auth_account_challenges, auth_access_changes. V025 bỏ cột operation/policy cũ; V001–V024 giữ checksum. Dừng các node cũ trước nâng cấp và đăng nhập lại sau thu hồi tokenVersion.
+- Entity ánh xạ đầy đủ cột bằng JPA, không hậu tố Entity; DTO class trong dto/request và dto/response. UserRepo/RoleRepo/FunctionRepo là JPA CRUD. Repo có hậu tố Batch/Query hoặc tên mapping chỉ chứa SQL batch, aggregate, atomic hoặc phức tạp; SQL không nằm trong controller/service ngoài phần đang chuyển đổi chưa chốt.
+- Controller page ở controller, tên UserPageController; REST ở controller/api, tên UserAPI. Các tên Role/Function/UserRole/FunctionResource dùng cùng gốc bảng; không dùng lớp Access chung để che vai trò khác nhau.
+- EndpointCatalog đọc RequestMappingHandlerMapping, lấy HTTP method + route template. Không còn AccessFunction/AccessOperation/AccessResource hoặc enum Permission/PermissionAction. Danh bạ không đồng nghĩa grant. User → active Role → active Function → exact Menu/API target trong DB quyết định truy cập; endpoint chưa gán bị từ chối. HEAD dùng quyền GET. Public/self-service do WebRoutePolicy xác định tường minh, DB không mở route public.
+- JWT chỉ xác minh danh tính; trạng thái/tokenVersion/grant đọc lại ở DB, không tin role trong token. Backend tiếp tục kiểm owner, tài xế được liên kết và scope. Cờ all_scopes chỉ áp dụng cho endpoint thuộc chính role có cờ đó; scoped role phải là tập con global role của cùng user.
+- Bootstrap/default role/function được khai báo bằng dữ liệu JSON, không tạo bypass theo tên ADMIN trong runtime. Mapping ordinary role chỉ init một lần, không tự gán lại khi đã thu hồi. Bootstrap recovery vẫn chỉ danh tính cấu hình, mật khẩu đúng, CSRF/quota/khóa chống dò và lịch sử nguyên tử.
+- JpaTransactionManager và JDBC dùng cùng datasource/connection; SQL batch/history lỗi phải rollback CRUD JPA. Hibernate không tạo/sửa schema tự động. Schema từ VIETROUTE_DB_SCHEMA và LOCAL search_path trên connection, không ghi schema cứng vào entity.
+
+Nguồn kỹ thuật: [Spring Data JPA trong ứng dụng Spring thuần](https://docs.spring.io/spring-data/jpa/reference/3.5/repositories/create-instances.html), [JpaTransactionManager chia sẻ JDBC connection](https://docs.spring.io/spring-framework/docs/6.2.x/javadoc-api/org/springframework/orm/jpa/JpaTransactionManager.html). Không dùng Spring Boot hoặc Open Session in View; DTO được dựng trong transaction.
+
+
 ## Phạm vi và thứ tự triển khai
 
 Người mới theo [mục lục và lộ trình đọc](../README.md), bắt đầu từ [tổng quan hệ thống](../01-bat-dau/TONG_QUAN_HE_THONG.md). Package job/mail đã chia controller, DTO, service và phần thực thi theo trách nhiệm; root wiring tách DatabaseConfig, IntegrationConfig, TrafficConfig, MonitoringConfig. Theo [giám sát/vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md) khi thêm metrics hoặc handler. Không bật Kafka/Redis trong giai đoạn hiện tại; quota memory có phạm vi từng node.
 
 Lượt nền tảng: common → auth/JWT/bootstrap → danh mục mẫu → layout/Swagger → kiểm thử và CI. Sau đó mới triển khai lần lượt các nghiệp vụ theo `PHAN_CONG.md`. Không coi các module đặt vé, tuyến/chuyến hoặc Maps là đã hoàn thành khi mới có package.
 
-Giữ Spring MVC 6, Thymeleaf, JDBC thuần, PostgreSQL và WAR/Tomcat 10.1. Spring Security xử lý bảo mật; Hibernate Validator chỉ dùng Bean Validation, không sử dụng Hibernate ORM/JPA. Không chuyển sang Spring Boot.
+Giữ Spring MVC 6, Thymeleaf, PostgreSQL và WAR/Tomcat 10.1. Auth CRUD dùng Spring Data JPA/Hibernate; JDBC phục vụ batch/query phức tạp và module nghiệp vụ hiện có. Spring Security xử lý bảo mật; không dùng Spring Boot.
 
 Đọc [nền tảng mở rộng](NEN_TANG_MO_RONG.md) trước khi thêm permission, job hoặc email. Quyền chức năng kiểm ở service bằng authority; scope nhà xe/owner kiểm riêng ở SQL/service khi module có dữ liệu. Email đi qua outbox cùng transaction nghiệp vụ; worker chỉ nhận việc khi có slot, không tự tạo thread cho từng request. Giữ stack theo quy ước hiện tại, không tự đổi major để lấy nhãn mới nhất.
 
@@ -47,13 +97,7 @@ API auth/nghiệp vụ kế thừa `BaseController`, dùng `execute(...)` có tr
 
 ### Quy hoạch auth DTO theo chức năng
 
-AUTHDB02 (01/11/2026) theo yêu cầu mới: **auth dùng class DTO, không dùng Java record**. Request nằm trong dto/request/<chức-năng>, response trong dto/response/<chức-năng>; có getter/setter, constructor binding và validation/Schema tường minh. Không còn dto/record hoặc class ở package cũ. Tên Request/Response giữ ý nghĩa chiều dữ liệu; entity không có hậu tố Entity. Không trả entity/credential ra API; DTO credential dùng WRITE_ONLY và không có toString in secret.
-
-Auth gồm config, controller, dto/{request,response}, entity, repo, service, security/annotation. Auth dùng package repo theo yêu cầu; các module nghiệp vụ hiện có giữ repository. SQL auth nằm trong repo; service quản lý transaction và quyền. JDBC batch/array/INSERT SELECT thay thao tác từng dòng, không query DB trong for. Các vòng duyệt bind batch hoặc xử lý dữ liệu đã tải trong bộ nhớ vẫn được dùng. Controller kế thừa BaseController, dùng ApiResult; Swagger có Operation/Tag, input path/query/header/body, Schema field, validation và field ModelAttribute kế thừa. Principal/servlet là server-injected, không phải payload.
-
-DTO auth chia các nhóm session, lifecycle, account, role, function, history; nhóm resource/capability/registry/scope giữ projection cho inventory, giao diện và adapter API hiện có. Response policy chỉ còn diễn giải lịch sử/adapter đọc, không còn request CRUD hoặc bảng policy. Nội bộ security/service cũng dùng class, giữ snapshot collection an toàn; từ vựng Permission/Role không phải credential hoặc lớp CRUD chung. Cấu trúc DB và chuyển tiếp ở [schema/phân quyền](SCHEMA_VA_PHAN_QUYEN.md#hợp-đồng-hiện-hành-authdb02--tám-bảng-từ-01112026).
-
-Sau đổi package phải clean build và restart để không nạp class package cũ. Kiểm Jackson serialization/deserialization, validation, Swagger, helper Java CI, hai context WAR và gọi service trực tiếp; formatter không thay review logic.
+Cấu trúc hiện hành nằm trong [AUTHDB04](#authdb04--auth-gọn-40-class-tám-bảng-01112026). Chỉ có dto/request, dto/response và dto/search, mỗi nhóm ba class theo User/Role/Function. Source cũ đã gộp phải clean build/restart, không để bytecode cũ trong WAR.
 
 ## Hợp đồng API và locale
 

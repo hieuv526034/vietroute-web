@@ -1,19 +1,21 @@
 package vn.vietroute.business.tracking.repository;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Repository;
-import vn.vietroute.auth.entity.PermissionAction;
-import vn.vietroute.auth.security.DataScopeGuard;
+import vn.vietroute.auth.repo.UserRoleRepo;
 import vn.vietroute.business.tracking.dto.request.TrackingSampleRequest;
 import vn.vietroute.business.tracking.dto.response.TrackingPointResponse;
 import vn.vietroute.business.tracking.dto.response.TrackingResponse;
+import vn.vietroute.business.tracking.repository.TrackingRepository.State;
 import vn.vietroute.business.trip.dto.response.TripResponse;
 import vn.vietroute.common.config.integration.TrackingSettings;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
@@ -34,9 +36,9 @@ public class TrackingRepository {
 
     /** Caller đã khóa trip; không khóa ngược state → trip. */
     public State state(Connection connection, long tripId) throws SQLException {
-        try (var query = connection.prepareStatement("SELECT * FROM trip_tracking WHERE trip_id=?")) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT * FROM trip_tracking WHERE trip_id=?")) {
             query.setLong(1, tripId);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 return row.next()
                     ? new State(
                           row.getObject("session_key", UUID.class),
@@ -53,7 +55,7 @@ public class TrackingRepository {
     /** Bật lại luôn cấp nonce mới, xóa snapshot cũ; không tái công bố mẫu của lần consent hoặc tài xế trước. */
     public void start(Connection connection, TripResponse trip, UUID key, Instant now, long actor) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 """
                 INSERT INTO trip_tracking(trip_id,carrier_id,scope_id,driver_user_id,session_key,sharing,started_at,created_by,updated_by)
                 VALUES(?,?,?,?,?,true,?,?,?) ON CONFLICT(trip_id) DO UPDATE SET
@@ -78,7 +80,7 @@ public class TrackingRepository {
     /** Dừng/đóng chuyến xóa tọa độ snapshot trong cùng transaction; history chỉ còn phục vụ retention nội bộ. */
     public void stop(Connection connection, long tripId, long actor) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "UPDATE trip_tracking SET sharing=false,latitude=NULL,longitude=NULL,accuracy=NULL,measured_at=NULL,received_at=NULL,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE trip_id=? AND sharing"
             )
         ) {
@@ -93,7 +95,7 @@ public class TrackingRepository {
         throws SQLException {
         prune(connection, trip.id(), now);
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "UPDATE trip_tracking SET latitude=?,longitude=?,accuracy=?,measured_at=?,received_at=?,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE trip_id=? AND session_key=? AND sharing AND driver_user_id=?"
             )
         ) {
@@ -109,7 +111,7 @@ public class TrackingRepository {
             if (query.executeUpdate() != 1) throw new BusinessException(ErrorCode.TRACKING_SESSION);
         }
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "INSERT INTO trip_locations(trip_id,carrier_id,scope_id,driver_user_id,session_key,source,latitude,longitude,accuracy,measured_at,received_at,created_by,updated_by) VALUES(?,?,?,?,?,'BROWSER',?,?,?,?,?,?,?)"
             )
         ) {
@@ -133,32 +135,21 @@ public class TrackingRepository {
     public TrackingResponse view(
         Connection connection,
         long tripId,
-        String resource,
+        boolean scoped,
         Long bookingId,
         Long customerId,
         boolean enabled,
         Instant now
     ) throws SQLException {
         String driverEligible = """
-        EXISTS(SELECT 1 FROM carrier_drivers cd
-            JOIN auth_users du ON du.id=cd.user_id AND du.active AND NOT du.activation_pending
-                AND NOT du.must_change_password AND du.email_verified_at IS NOT NULL
-            JOIN auth_user_roles ur ON ur.user_id=du.id AND ur.role_code='DRIVER'
-            JOIN auth_roles rr ON rr.code=ur.role_code AND rr.active AND NOT rr.deleted
-            JOIN (SELECT scope_id,user_id,bool_and(active) AS active,max(version) AS version FROM auth_user_roles WHERE scope_id>0 GROUP BY scope_id,user_id) sm ON sm.scope_id=t.scope_id AND sm.user_id=du.id AND sm.active
-            JOIN (SELECT scope_id,user_id,role_code FROM auth_user_roles WHERE scope_id>0 AND active) sr ON sr.scope_id=sm.scope_id AND sr.user_id=sm.user_id AND sr.role_code=rr.code
-            WHERE cd.id=t.driver_id AND cd.carrier_id=t.carrier_id AND cd.scope_id=t.scope_id
-                AND cd.active AND cd.user_id=t.driver_user_id
-                AND (EXISTS(SELECT 1 FROM auth_user_roles au JOIN auth_roles ar ON ar.code=au.role_code
-                    WHERE au.user_id=du.id AND ar.code='ADMIN' AND ar.active AND NOT ar.deleted)
-                OR EXISTS(SELECT 1 FROM (SELECT scope_id,user_id,role_code FROM auth_user_roles WHERE scope_id>0 AND active) sx
-                    JOIN auth_user_roles ux ON ux.user_id=sx.user_id AND ux.role_code=sx.role_code
-                    JOIN auth_roles rx ON rx.code=sx.role_code AND rx.active AND NOT rx.deleted
-                    JOIN (SELECT DISTINCT rf.role_code,op.code AS permission_code FROM auth_role_functions rf JOIN auth_functions f ON f.code=rf.function_code AND f.active AND NOT f.deleted CROSS JOIN LATERAL unnest(rf.operation_codes) op(code)) rp ON rp.role_code=rx.code
-                    JOIN auth_functions p ON p.code=rp.permission_code AND p.active
-                    WHERE sx.scope_id=sm.scope_id AND sx.user_id=sm.user_id AND p.code='DRIVER_TRIP_UPDATE'
-                      AND (NOT EXISTS(SELECT 1 FROM (SELECT code AS role_code FROM auth_roles WHERE NOT deleted) rs WHERE rs.role_code=rx.code)
-                        OR EXISTS(SELECT 1 FROM (SELECT DISTINCT rf.role_code,fr.kind,fr.target FROM auth_role_functions rf JOIN auth_functions f ON f.code=rf.function_code AND f.active AND NOT f.deleted JOIN auth_function_resources fr ON fr.function_code=f.code WHERE NOT fr.public_route) rg WHERE rg.role_code=rx.code AND rg.target=?)))))
+        EXISTS(SELECT 1 FROM carrier_drivers cd JOIN auth_users du ON du.id=cd.user_id AND du.active AND NOT du.deleted AND NOT du.activation_pending
+          AND NOT du.must_change_password AND du.email_verified_at IS NOT NULL
+          JOIN auth_user_roles ur ON ur.user_id=du.id AND ur.scope_id=0 AND ur.active
+          JOIN auth_roles rr ON rr.code=ur.role_code AND rr.active AND NOT rr.deleted
+          JOIN auth_role_functions rf ON rf.role_code=rr.code JOIN auth_functions f ON f.code=rf.function_code AND f.active AND NOT f.deleted
+          JOIN auth_function_resources fr ON fr.function_code=f.code
+          WHERE cd.id=t.driver_id AND cd.carrier_id=t.carrier_id AND cd.scope_id=t.scope_id AND cd.active AND cd.user_id=t.driver_user_id
+            AND fr.target=? AND (rr.all_scopes OR EXISTS(SELECT 1 FROM auth_user_roles sr WHERE sr.user_id=du.id AND sr.role_code=rr.code AND sr.scope_id=t.scope_id AND sr.active)))
         """;
         String sql =
             "SELECT t.status,t.driver_user_id AS assigned_user," +
@@ -168,13 +159,13 @@ public class TrackingRepository {
             " AS eligible," +
             driverEligible +
             " AS driver_eligible FROM carrier_trips t JOIN carriers owner ON owner.id=t.carrier_id AND owner.scope_id=t.scope_id JOIN (SELECT scope_id AS id,scope_code AS code,scope_name_vi AS name_vi,scope_name_en AS name_en,scope_active AS active,scope_version AS version,updated_at,updated_by FROM carriers) ds ON ds.id=t.scope_id AND ds.active WHERE t.id=?" +
-            (resource == null ? "" : " AND " + DataScopeGuard.visibleSql()) +
+            (!scoped ? "" : " AND " + UserRoleRepo.visibleSql()) +
             " FOR SHARE OF t";
         String status;
         long assigned;
         boolean eligible;
         boolean driverReady;
-        try (var query = connection.prepareStatement(sql)) {
+        try (PreparedStatement query = connection.prepareStatement(sql)) {
             int at = 1;
             if (bookingId != null) {
                 query.setLong(at++, bookingId);
@@ -182,8 +173,8 @@ public class TrackingRepository {
             }
             query.setString(at++, "POST " + Routes.DRIVER_TRIPS + Routes.TRIP_TRACKING_SAMPLES);
             query.setLong(at++, tripId);
-            if (resource != null) DataScopeGuard.bindVisible(query, at, resource, PermissionAction.READ);
-            try (var row = query.executeQuery()) {
+            if (scoped) UserRoleRepo.bindVisible(query, at);
+            try (ResultSet row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
                 status = row.getString("status");
                 assigned = row.getLong("assigned_user");
@@ -199,7 +190,7 @@ public class TrackingRepository {
         );
         if (!eligible) return empty("UNAVAILABLE", now, null);
         if (!driverReady) return empty("OFF", now, null);
-        var state = state(connection, tripId);
+        State state = state(connection, tripId);
         if (state == null || !state.sharing() || state.driverUserId() != assigned) return empty("OFF", now, null);
         Instant latest = state.latest() == null ? state.startedAt() : state.latest().receivedAt();
         if (now.isAfter(latest.plusSeconds(TrackingSettings.LEASE_SECONDS))) return empty(
@@ -208,16 +199,16 @@ public class TrackingRepository {
             state.latest() == null ? null : latest
         );
         if (state.latest() == null) return empty("WAITING", now, null);
-        var points = new ArrayList<TrackingPointResponse>();
+        ArrayList<TrackingPointResponse> points = new ArrayList<TrackingPointResponse>();
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT latitude,longitude,accuracy,measured_at,received_at FROM trip_locations WHERE trip_id=? AND session_key=? AND received_at>=? ORDER BY id DESC LIMIT 100"
             )
         ) {
             query.setLong(1, tripId);
             query.setObject(2, state.key());
             query.setObject(3, now.minusSeconds(TrackingSettings.RETENTION_DAYS * 86400L).atOffset(ZoneOffset.UTC));
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 while (row.next()) points.add(point(row));
             }
         }
@@ -236,7 +227,7 @@ public class TrackingRepository {
     }
 
     private static TrackingPointResponse point(ResultSet row) throws SQLException {
-        var measured = row.getTimestamp("measured_at");
+        Timestamp measured = row.getTimestamp("measured_at");
         return measured == null
             ? null
             : new TrackingPointResponse(
@@ -251,7 +242,7 @@ public class TrackingRepository {
     /** Cắt trace theo trip trước INSERT; cleanup chung theo lô có advisory lock, không chờ node khác hoặc giữ hàng đợi RAM. */
     private void prune(Connection connection, long tripId, Instant now) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "DELETE FROM trip_locations WHERE id IN(SELECT id FROM trip_locations WHERE trip_id=? ORDER BY id DESC OFFSET ? LIMIT ?)"
             )
         ) {
@@ -261,14 +252,14 @@ public class TrackingRepository {
             query.executeUpdate();
         }
         try (
-            var query = connection.prepareStatement("SELECT pg_try_advisory_xact_lock(781205622)");
-            var row = query.executeQuery()
+            PreparedStatement query = connection.prepareStatement("SELECT pg_try_advisory_xact_lock(781205622)");
+            ResultSet row = query.executeQuery()
         ) {
             row.next();
             if (!row.getBoolean(1)) return;
         }
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "DELETE FROM trip_locations WHERE id IN(SELECT id FROM trip_locations WHERE received_at<? ORDER BY received_at,id LIMIT ?)"
             )
         ) {
@@ -277,7 +268,7 @@ public class TrackingRepository {
             query.executeUpdate();
         }
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "DELETE FROM trip_locations WHERE id IN(SELECT id FROM trip_locations ORDER BY received_at,id LIMIT LEAST(?,GREATEST(0,(SELECT count(*) FROM trip_locations)-?)))"
             )
         ) {

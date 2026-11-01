@@ -1,5 +1,6 @@
 package vn.vietroute.business.carrier.service;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -25,14 +26,14 @@ public class PublicCarrierService {
     /** Đọc trang và logo READY theo lô trên cùng connection; không tạo N+1 hoặc gọi CDN khi truy vấn. */
     public PageResponse<PublicCarrierResponse> page(PublicCarrierSearchRequest body) {
         return transactions.execute(connection -> {
-            var page = carriers.page(connection, body);
-            var ids = page
+            PageResponse<Published> page = carriers.page(connection, body);
+            Set<Long> ids = page
                 .content()
                 .stream()
                 .map(Published::logoId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-            var urls = media.publishedUrls(connection, ids);
+            Map<Long, String> urls = media.publishedUrls(connection, ids);
             return new PageResponse<>(
                 page
                     .content()
@@ -52,8 +53,11 @@ public class PublicCarrierService {
     /** ID đã kiểm publication trước khi đọc URL; API không cho anonymous tra thư viện bằng media ID. */
     public PublicCarrierResponse find(long id) {
         return transactions.execute(connection -> {
-            var row = carriers.find(connection, id);
-            var urls = media.publishedUrls(connection, row.logoId() == null ? Set.of() : Set.of(row.logoId()));
+            Published row = carriers.find(connection, id);
+            Map<Long, String> urls = media.publishedUrls(
+                connection,
+                row.logoId() == null ? Set.of() : Set.of(row.logoId())
+            );
             return response(row, row.logoId() == null ? null : urls.get(row.logoId()));
         });
     }

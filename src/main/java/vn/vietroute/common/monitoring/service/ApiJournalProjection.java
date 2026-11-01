@@ -7,8 +7,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import vn.vietroute.auth.dto.request.access.RolePermissionsRequest;
-import vn.vietroute.auth.dto.request.account.UserRolesRequest;
 import vn.vietroute.business.catalog.dto.request.CatalogCreateRequest;
 import vn.vietroute.business.catalog.dto.request.CatalogDeleteRequest;
 import vn.vietroute.business.catalog.dto.request.CatalogUpdateRequest;
@@ -32,8 +30,7 @@ public class ApiJournalProjection {
         CatalogCreateRequest.class,
         CatalogUpdateRequest.class,
         CatalogDeleteRequest.class,
-        RolePermissionsRequest.class,
-        UserRolesRequest.class,
+
         RetryJobRequest.class
     );
     private static final Set<String> NUMBERS = Set.of(

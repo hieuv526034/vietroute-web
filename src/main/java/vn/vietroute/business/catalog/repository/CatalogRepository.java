@@ -36,23 +36,23 @@ public class CatalogRepository extends BaseRepository {
         String filter =
             " WHERE type=? AND (?::boolean IS NULL OR active=?) AND lower(code || ' ' || name_vi || ' ' || name_en) LIKE ? ESCAPE '\\'";
         long total;
-        try (var query = connection.prepareStatement("SELECT count(*) FROM catalog_items" + filter)) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT count(*) FROM catalog_items" + filter)) {
             bindSearch(query, type, page);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 row.next();
                 total = row.getLong(1);
             }
         }
-        var content = new ArrayList<CatalogItem>();
+        ArrayList<CatalogItem> content = new ArrayList<CatalogItem>();
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT * FROM catalog_items" + filter + " ORDER BY sort_order,id LIMIT ? OFFSET ?"
             )
         ) {
             bindSearch(query, type, page);
             query.setInt(5, page.getSize());
             query.setLong(6, page.offset());
-            try (var rows = query.executeQuery()) {
+            try (ResultSet rows = query.executeQuery()) {
                 while (rows.next()) content.add(map(rows));
             }
         }
@@ -76,7 +76,7 @@ public class CatalogRepository extends BaseRepository {
         long actor
     ) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "UPDATE catalog_items SET name_vi=?,name_en=?,sort_order=?,active=?,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=? AND type=? AND version=? RETURNING *"
             )
         ) {
@@ -88,7 +88,7 @@ public class CatalogRepository extends BaseRepository {
             query.setLong(6, id);
             query.setString(7, type.name());
             query.setLong(8, body.getVersion());
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (row.next()) return map(row);
             }
         }
@@ -182,7 +182,7 @@ public class CatalogRepository extends BaseRepository {
                     total = count.getLong(1);
                 }
             }
-            var content = new ArrayList<CatalogItem>();
+            ArrayList<CatalogItem> content = new ArrayList<CatalogItem>();
             // ORDER BY cố định: không nối trực tiếp sort từ request vào SQL.
             try (
                 PreparedStatement query = connection.prepareStatement(
@@ -239,5 +239,30 @@ public class CatalogRepository extends BaseRepository {
             .createdBy(result.getObject("created_by", Long.class))
             .updatedBy(result.getObject("updated_by", Long.class))
             .build();
+    }
+
+    /** Seed danh mục nền bằng UNIQUE(type, code); không thêm dữ liệu chuyến/đơn giả. */
+    public void seedCatalogs(Connection connection) throws SQLException {
+        String[][] values = {
+            { "VEHICLE_TYPE", "SEAT", "Ghế ngồi", "Seated coach" },
+            { "VEHICLE_TYPE", "SLEEPER", "Giường nằm", "Sleeper coach" },
+            { "VEHICLE_TYPE", "LIMOUSINE", "Limousine", "Limousine" },
+            { "BOOKING_SOURCE", "WEB", "Đặt trên website", "Website" },
+            { "BOOKING_SOURCE", "PHONE", "Đặt qua điện thoại", "Phone" },
+        };
+        try (
+            PreparedStatement insert = connection.prepareStatement(
+                "INSERT INTO catalog_items(type,code,name_vi,name_en,sort_order) VALUES (?,?,?,?,?) ON CONFLICT (type,code) DO NOTHING"
+            )
+        ) {
+            for (int i = 0; i < values.length; i++) {
+                for (int j = 0; j < values[i].length; j++) {
+                    insert.setString(j + 1, values[i][j]);
+                }
+                insert.setInt(5, i);
+                insert.addBatch();
+            }
+            insert.executeBatch();
+        }
     }
 }

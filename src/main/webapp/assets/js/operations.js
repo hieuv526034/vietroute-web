@@ -16,8 +16,7 @@
     });
     let busy = false;
     let me;
-    let currentCapabilities = { actions: [] };
-    const has = (permission) => me?.permissions?.includes(permission);
+    let currentCapabilities = { targets: [] };
     const get = async (path, params) => (await app.api.get(path, { params, timeout: 10000 })).data.data;
     const text = (tag, value, className) => {
         const element = document.createElement(tag);
@@ -126,8 +125,9 @@
                     ),
                 );
             }
-            node('job-retry').disabled = !currentCapabilities.actions.includes('RETRY') || job.status !== 'DEAD';
-            node('job-retry').hidden = !currentCapabilities.actions.includes('RETRY');
+            node('job-retry').disabled =
+                !currentCapabilities.targets.includes('POST /api/v1/admin/jobs/{id}/retry') || job.status !== 'DEAD';
+            node('job-retry').hidden = !currentCapabilities.targets.includes('POST /api/v1/admin/jobs/{id}/retry');
         };
         const show = async (id) => {
             const job = await get(`${routes.jobs}/${encodeURIComponent(id)}`);
@@ -261,10 +261,7 @@
         ]);
         me = profile;
         currentCapabilities = capabilities;
-        if (
-            !capabilities.actions.includes('READ') ||
-            (feature === 'JOBS' && !capabilities.targets.includes('GET /api/v1/admin/jobs'))
-        ) {
+        if (!capabilities.targets.includes('GET ' + (feature === 'JOBS' ? routes.jobs : routes.config))) {
             app.feedback(
                 document.getElementById('access-tree-labels')?.dataset.noRead ||
                     document.querySelector('meta[name="access-no-read"]')?.content ||

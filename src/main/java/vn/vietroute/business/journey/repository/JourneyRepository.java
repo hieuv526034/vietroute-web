@@ -2,6 +2,7 @@ package vn.vietroute.business.journey.repository;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.ZoneId;
@@ -40,16 +41,16 @@ public class JourneyRepository extends BaseRepository {
                 PUBLISHED +
                 " AND (t.status='IN_PROGRESS' OR (t.status='OPEN' AND t.departure_at>CURRENT_TIMESTAMP)) AND pick.scheduled_departure_at>=? AND pick.scheduled_departure_at<? AND ((?::bigint IS NOT NULL AND pick.location_id=?) OR (?::bigint IS NULL AND pick.province_id=?)) AND ((?::bigint IS NOT NULL AND dropoff.location_id=?) OR (?::bigint IS NULL AND dropoff.province_id=?)) AND (?::bigint IS NULL OR c.id=?) AND (?::bigint IS NULL OR t.vehicle_type_id=?) AND avail.remaining>=? AND (?::numeric IS NULL OR dropoff.cumulative_fare-pick.cumulative_fare>=?) AND (?::numeric IS NULL OR dropoff.cumulative_fare-pick.cumulative_fare<=?)";
             long total;
-            try (var query = connection.prepareStatement("SELECT count(*)" + filter)) {
+            try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + filter)) {
                 bind(query, body);
-                try (var row = query.executeQuery()) {
+                try (ResultSet row = query.executeQuery()) {
                     row.next();
                     total = row.getLong(1);
                 }
             }
-            var result = new ArrayList<JourneyMatchResponse>();
+            ArrayList<JourneyMatchResponse> result = new ArrayList<JourneyMatchResponse>();
             try (
-                var query = connection.prepareStatement(
+                PreparedStatement query = connection.prepareStatement(
                     "SELECT t.id,t.code,c.id,c.name,t.vehicle_type_name_vi,t.vehicle_type_name_en,pick.id,dropoff.id,pick.name_vi,pick.name_en,dropoff.name_vi,dropoff.name_en,pick.scheduled_departure_at,dropoff.scheduled_arrival_at,dropoff.cumulative_fare-pick.cumulative_fare,avail.remaining,t.status" +
                         filter +
                         " ORDER BY pick.scheduled_departure_at,t.id,pick.stop_order,dropoff.stop_order LIMIT ? OFFSET ?"
@@ -58,7 +59,7 @@ public class JourneyRepository extends BaseRepository {
                 int at = bind(query, body);
                 query.setInt(at++, body.getSize());
                 query.setLong(at, body.offset());
-                try (var row = query.executeQuery()) {
+                try (ResultSet row = query.executeQuery()) {
                     while (row.next())
                         result.add(
                             new JourneyMatchResponse(
@@ -89,7 +90,7 @@ public class JourneyRepository extends BaseRepository {
 
     private int bind(PreparedStatement query, JourneySearchRequest body) throws SQLException {
         int at = 1;
-        var zone = ZoneId.of(Business.TIME_ZONE);
+        ZoneId zone = ZoneId.of(Business.TIME_ZONE);
         query.setTimestamp(at++, Timestamp.from(body.getDate().atStartOfDay(zone).toInstant()));
         query.setTimestamp(at++, Timestamp.from(body.getDate().plusDays(1).atStartOfDay(zone).toInstant()));
         for (int i = 0; i < 3; i++) query.setObject(at++, body.getFromLocationId());
@@ -111,22 +112,22 @@ public class JourneyRepository extends BaseRepository {
     /** Sau công bố vẫn xem được thông báo hủy/hoàn thành; DRAFT hoặc chưa từng mở không xuất hiện. */
     public JourneyResponse find(Connection connection, long id) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT t.id,t.code,t.carrier_id,c.name,c.phone,t.name_vi,t.name_en,t.vehicle_type_name_vi,t.vehicle_type_name_en,t.plate_number,t.departure_at,t.end_at,t.status,t.operation_note FROM carrier_trips t JOIN carriers c ON c.id=t.carrier_id AND c.scope_id=t.scope_id JOIN (SELECT scope_id AS id,scope_code AS code,scope_name_vi AS name_vi,scope_name_en AS name_en,scope_active AS active,scope_version AS version,updated_at,updated_by FROM carriers) ds ON ds.id=t.scope_id AND ds.active WHERE t.id=? AND t.status<>'DRAFT' AND " +
                     PUBLISHED
             )
         ) {
             query.setLong(1, id);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
-                var segments = new ArrayList<JourneySegmentResponse>();
+                ArrayList<JourneySegmentResponse> segments = new ArrayList<JourneySegmentResponse>();
                 try (
-                    var sub = connection.prepareStatement(
+                    PreparedStatement sub = connection.prepareStatement(
                         "SELECT segment_order,capacity-reserved_seats FROM trip_segments WHERE trip_id=? ORDER BY segment_order"
                     )
                 ) {
                     sub.setLong(1, id);
-                    try (var part = sub.executeQuery()) {
+                    try (ResultSet part = sub.executeQuery()) {
                         while (part.next()) segments.add(new JourneySegmentResponse(part.getInt(1), part.getInt(2)));
                     }
                 }

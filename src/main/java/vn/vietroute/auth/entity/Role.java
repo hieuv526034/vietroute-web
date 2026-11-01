@@ -1,74 +1,63 @@
 package vn.vietroute.auth.entity;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
-import io.swagger.v3.oas.annotations.media.Schema;
-import vn.vietroute.common.constant.ApplicationConstants.Regex;
-import vn.vietroute.common.jdbc.JdbcIndex;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import java.time.Instant;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import vn.vietroute.common.jdbc.JdbcTable;
 
-/** Quyền hệ thống; phạm vi nhà xe/chuyến phải được kiểm tra thêm tại service nghiệp vụ. */
-@JdbcTable(
-    name = "auth_roles",
-    primaryKey = { "code" },
-    indexes = {
-        @JdbcIndex(name = "auth_roles_pkey", columns = { "code" }, unique = true),
-        @JdbcIndex(name = "idx_roles_created_by", columns = { "created_by" }),
-        @JdbcIndex(name = "idx_roles_updated_by", columns = { "updated_by" }),
-    }
-)
-@Schema(type = "string", description = "Mã Role ổn định từ registry, JSON dạng chuỗi")
-public final class Role {
+/** Model đầy đủ cột bảng auth_roles; chỉ DTO mới được nhận/trả ở API. */
+@Entity
+@Table(name = "auth_roles")
+@JdbcTable(name = "auth_roles", primaryKey = { "code" })
+@Getter
+@Setter
+@NoArgsConstructor
+public class Role {
 
-    public static final Role ADMIN = new Role("ADMIN");
+    @Id
+    @Column(name = "code", length = 24)
+    private String code;
 
-    public static final Role OPERATOR = new Role("OPERATOR");
+    @Column(name = "name_vi", length = 120)
+    private String nameVi;
 
-    public static final Role DRIVER = new Role("DRIVER");
+    @Column(name = "name_en", length = 120)
+    private String nameEn;
 
-    public static final Role CUSTOMER = new Role("CUSTOMER");
+    @Column(name = "active")
+    private boolean active;
 
-    private final String code;
+    @Column(name = "deleted")
+    private boolean deleted;
 
-    private Role(String code) {
-        this.code = code;
-    }
+    @Column(name = "functions_initialized")
+    private boolean functionsInitialized;
 
-    @JsonValue
-    public String name() {
-        return code;
-    }
+    @Column(name = "all_scopes")
+    private boolean allScopes;
 
-    public static Role[] values() {
-        return new Role[] { ADMIN, OPERATOR, DRIVER, CUSTOMER };
-    }
+    @Column(name = "protected_role")
+    private boolean protectedRole;
 
-    /** Chỉ dựng mã; service còn phải kiểm role tồn tại/đang bật trong DB trước khi gán. */
-    @JsonCreator
-    public static Role valueOf(String code) {
-        if (code == null || !code.matches(Regex.ROLE_CODE)) {
-            throw new IllegalArgumentException("Mã role không hợp lệ.");
-        }
-        for (Role role : values()) {
-            if (role.code.equals(code)) {
-                return role;
-            }
-        }
-        return new Role(code);
-    }
+    @Version
+    @Column(name = "version")
+    private long version;
 
-    @Override
-    public boolean equals(Object other) {
-        return other instanceof Role role && code.equals(role.code);
-    }
+    @Column(name = "created_at")
+    private Instant createdAt;
 
-    @Override
-    public int hashCode() {
-        return code.hashCode();
-    }
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 
-    @Override
-    public String toString() {
-        return code;
-    }
+    @Column(name = "created_by")
+    private long createdBy;
+
+    @Column(name = "updated_by")
+    private long updatedBy;
 }

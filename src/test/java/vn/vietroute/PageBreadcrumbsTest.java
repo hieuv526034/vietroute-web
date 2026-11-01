@@ -7,26 +7,33 @@ import java.util.List;
 import java.util.Locale;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.StaticMessageSource;
-import vn.vietroute.auth.dto.response.capability.NavigationItemResponse;
+import vn.vietroute.auth.dto.response.FunctionDTO;
 import vn.vietroute.common.web.response.PageBreadcrumbs;
 
 /** Kiểm breadcrumb dùng cây đã lọc quyền, có link nhóm và giữ đường dẫn tương thích địa lý. */
 class PageBreadcrumbsTest {
 
+    private static FunctionDTO menu(String name, String path, String icon, boolean active, List<FunctionDTO> children) {
+        var value = new FunctionDTO();
+        value.setName(name);
+        value.setPath(path);
+        value.setIcon(icon);
+        value.setActive(active);
+        value.setChildren(children);
+        return value;
+    }
+
     @Test
     void groupsLinkOnlyToVisibleChildrenAndCurrentPageIsLast() {
         var messages = new StaticMessageSource();
         messages.addMessage("ui.home", Locale.ENGLISH, "Home");
-        var leaf = new NavigationItemResponse("Trips", "/operations/trips", "", true, List.of());
-        var group = new NavigationItemResponse("Operations", null, "", true, List.of(leaf));
+        var leaf = menu("Trips", "/operations/trips", "", true, List.of());
+        var group = menu("Operations", null, "", true, List.of(leaf));
         var result = PageBreadcrumbs.build(List.of(group), "/operations/trips", Locale.ENGLISH, messages);
-        assertEquals(
-            List.of("Home", "Operations", "Trips"),
-            result.stream().map(NavigationItemResponse::name).toList()
-        );
+        assertEquals(List.of("Home", "Operations", "Trips"), result.stream().map(FunctionDTO::name).toList());
         assertEquals(
             List.of("/", "/operations/trips", "/operations/trips"),
-            result.stream().map(NavigationItemResponse::path).toList()
+            result.stream().map(FunctionDTO::path).toList()
         );
         assertFalse(result.get(1).active());
         assertEquals(true, result.get(2).active());
@@ -42,7 +49,7 @@ class PageBreadcrumbsTest {
             "Find a trip",
             PageBreadcrumbs.build(List.of(), "/journeys", Locale.ENGLISH, messages).get(1).name()
         );
-        var places = new NavigationItemResponse("Places", "/catalogs/locations", "", true, List.of());
+        var places = menu("Places", "/catalogs/locations", "", true, List.of());
         assertEquals(
             "/catalogs/locations",
             PageBreadcrumbs.build(List.of(places), "/operations/locations", Locale.ENGLISH, messages).get(1).path()

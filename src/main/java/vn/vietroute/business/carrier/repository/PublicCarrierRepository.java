@@ -1,12 +1,14 @@
 package vn.vietroute.business.carrier.repository;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Locale;
 import org.springframework.stereotype.Repository;
 import vn.vietroute.business.carrier.dto.request.PublicCarrierSearchRequest;
+import vn.vietroute.business.carrier.repository.PublicCarrierRepository.Published;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
@@ -28,23 +30,23 @@ public class PublicCarrierRepository {
         // LIKE tương thích index trigram; escape để %, _ và ! vẫn là ký tự nguyên văn như strpos trước đây.
         String pattern = "%" + text.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
         long total;
-        try (var query = connection.prepareStatement("SELECT count(*)" + where)) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + where)) {
             query.setString(1, pattern);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 row.next();
                 total = row.getLong(1);
             }
         }
-        var result = new ArrayList<Published>();
+        ArrayList<Published> result = new ArrayList<Published>();
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT " + COLUMNS + where + " ORDER BY c.name,c.id LIMIT ? OFFSET ?"
             )
         ) {
             query.setString(1, pattern);
             query.setInt(2, body.getSize());
             query.setLong(3, body.offset());
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 while (row.next()) result.add(map(row));
             }
         }
@@ -53,9 +55,9 @@ public class PublicCarrierRepository {
 
     /** Nhà xe/scope ngừng công bố trả 404; không dùng membership để lọc mất lựa chọn công khai. */
     public Published find(Connection connection, long id) throws SQLException {
-        try (var query = connection.prepareStatement("SELECT " + COLUMNS + FROM + " AND c.id=?")) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT " + COLUMNS + FROM + " AND c.id=?")) {
             query.setLong(1, id);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
                 return map(row);
             }

@@ -11,6 +11,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -77,7 +78,7 @@ public final class ApiJournalFilter extends OncePerRequestFilter {
                 String replay = endpoint;
                 Object variables = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
                 if (variables instanceof Map<?, ?> values) {
-                    for (var entry : values.entrySet()) {
+                    for (Entry<?, ?> entry : values.entrySet()) {
                         String value = String.valueOf(entry.getValue());
                         if (value.matches(Regex.JOURNAL_PATH_VALUE)) replay = replay.replace(
                             "{" + entry.getKey() + "}",
@@ -85,7 +86,7 @@ public final class ApiJournalFilter extends OncePerRequestFilter {
                         );
                     }
                 }
-                var e = new ApiJournalEntry(
+                ApiJournalEntry e = new ApiJournalEntry(
                     UUID.randomUUID(),
                     started,
                     trace,

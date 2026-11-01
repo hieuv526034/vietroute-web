@@ -4,8 +4,6 @@ import java.time.Clock;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.entity.PermissionAction;
-import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.database.DatabaseSettings;
 import vn.vietroute.common.config.integration.JobSettings;
@@ -15,7 +13,6 @@ import vn.vietroute.common.config.integration.TrackingSettings;
 import vn.vietroute.common.config.monitoring.ActivitySettings;
 import vn.vietroute.common.config.monitoring.MonitoringSettings;
 import vn.vietroute.common.config.traffic.TrafficSettings;
-import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.monitoring.dto.response.SystemConfigurationResponse;
 import vn.vietroute.common.monitoring.dto.response.SystemConfigurationResponse.Application;
 import vn.vietroute.common.monitoring.dto.response.SystemConfigurationResponse.Database;
@@ -50,7 +47,6 @@ public class SystemConfigurationService {
     private final Clock clock;
 
     /** Đọc cấu hình startup không cần DB, không serialize trực tiếp bất kỳ Settings nào. */
-    @AccessOperation(resource = Groups.CONFIGURATION, action = PermissionAction.READ)
     public SystemConfigurationResponse read() {
         return new SystemConfigurationResponse(
             Instant.now(clock),

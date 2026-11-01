@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
-const grants = require('../../../main/webapp/assets/js/resource-grants.js');
+const grants = require('../../../main/webapp/assets/js/function-selection.js');
 const requestsState = require('../../../main/webapp/assets/js/request-state.js');
 
 const settle = async () => {
@@ -40,7 +40,7 @@ function fixture(page) {
     node('role-form').elements = { code: node('code'), nameVi: node('vi'), nameEn: node('en'), active: node('active') };
     node('function-form').elements = { code: node('function-code'), nameVi: node('function-vi'), nameEn: node('function-en'), active: node('function-active') };
     const allow = [
-        'GET /api/v1/admin/access/registry/{kind}/page', 'GET /api/v1/admin/access/tree',
+        'GET /api/v1/admin/access/registry/roles/page', 'GET /api/v1/admin/access/tree',
         'GET /api/v1/admin/access/resource-catalog', 'GET /api/v1/admin/access/roles/{role}/resources',
         'PUT /api/v1/admin/access/roles/{role}/resources', 'POST /api/v1/admin/accounts',
         'PUT /api/v1/admin/access/users/{id}/roles', 'GET /api/v1/admin/accounts',
@@ -56,7 +56,7 @@ function fixture(page) {
         if (path === '/api/v1/auth/me') return { id: 1, permissions: ['ACCESS_ASSIGN'] };
         if (path === '/api/v1/auth/capabilities') return [{ targets: allow }];
         if (path === '/api/v1/admin/accounts') return { content, totalElements: 1 };
-        if (path.includes('/registry/roles/page?')) return { page: { content, totalElements: 1 } };
+        if (path.includes('/registry/roles/page?')) return { content, totalElements: 1 };
         if (path.endsWith('/roles') || path.endsWith('/registry/roles')) return [role];
         if (path.endsWith('/resources')) return { targets: [], version: 2 };
         if (path.endsWith('/roles/CUSTOMER/functions')) return { functionCodes: [], version: 2 };
@@ -87,14 +87,14 @@ function fixture(page) {
             modals.set(id, options);
             return { open() { node(id).open = true; }, focus() {} };
         } },
-        VietRouteResourceGrants: { model: grants.model, render() {} },
+        VietRouteFunctionSelection: grants,
     };
     const document = { querySelector: () => root, getElementById: node, createElement: element, documentElement: { lang: 'vi' } };
     vm.runInNewContext(fs.readFileSync(`src/main/webapp/assets/js/${page}.js`, 'utf8'), { window, document, Date, FormData, URLSearchParams, MutationObserver: class { observe() {} } });
     return { node, requests, errors, buttons, modals, state, user };
 }
 
-test('Role tải bảng trước metadata; modal lỗi giữ mở và chặn lưu, mở lại tải snapshot mới', async () => {
+test('RoleCode tải bảng trước metadata; modal lỗi giữ mở và chặn lưu, mở lại tải snapshot mới', async () => {
     const ui = fixture('roles');
     await settle();
     assert.equal(ui.requests.length, 2);
@@ -121,7 +121,7 @@ test('Role tải bảng trước metadata; modal lỗi giữ mở và chặn lư
     assert.equal(ui.requests.filter((path) => path.endsWith('/tree')).length, 0);
 });
 
-test('Role không lưu snapshot khi danh sách Function lỗi sau khi đã đọc mapping', async () => {
+test('RoleCode không lưu snapshot khi danh sách Function lỗi sau khi đã đọc mapping', async () => {
     const ui = fixture('roles');
     await settle();
     ui.state.override = (path, read) => path.includes('/functions?') ? Promise.reject({ response: { status: 503 } }) : read(path);
@@ -189,7 +189,7 @@ test('Chi tiết tài khoản tải tree trong modal và preview đúng target; 
     const ui = fixture('accounts');
     await settle();
     const rows = ui.node('accounts-body').children.length, wait = deferred();
-    ui.state.override = (path, read) => path.endsWith('/tree') ? wait.promise : read(path);
+    ui.state.override = (path, read) => path.endsWith('/2/access') ? wait.promise : read(path);
     ui.buttons.find((item) => item.icon === 'view').click();
     assert.equal(ui.node('account-detail-dialog').open, true);
     assert.ok(ui.requests.includes('/api/v1/admin/accounts/2/access'));

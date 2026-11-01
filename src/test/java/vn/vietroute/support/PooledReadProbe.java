@@ -17,12 +17,13 @@ import java.util.concurrent.atomic.AtomicLong;
 import javax.sql.DataSource;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import vn.vietroute.auth.repo.AuthorizationRepository;
-import vn.vietroute.auth.security.AccessGuard;
+import vn.vietroute.auth.repo.UserRepo;
+import vn.vietroute.auth.security.EndpointAccess;
 import vn.vietroute.common.jdbc.BaseRepository.SqlWork;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.jdbc.JdbcTransactions;
+import vn.vietroute.support.TestJpa;
 
 /** Hai node pool logic trong JVM test: dữ liệu/DAO/guard thật, chỉ DB loopback test, không phải tải HTTP/Render. */
 public final class PooledReadProbe {
@@ -40,7 +41,7 @@ public final class PooledReadProbe {
         ) {
             var nodes = List.of(first, second);
             for (var node : nodes) {
-                SecurityContextHolder.getContext().setAuthentication(actor);
+                approve(node.guard, actor);
                 node.transactions.execute(read);
             }
             for (int concurrency : new int[] { 2, 4, 8 }) {
@@ -60,7 +61,7 @@ public final class PooledReadProbe {
                                     var durations = new ArrayList<Long>();
                                     for (int index = 0; index < 25; index++) {
                                         long at = System.nanoTime();
-                                        if (!node.guard.has(actor, "REPORT_READ")) throw new IllegalStateException(
+                                        if (approve(node.guard, actor) == null) throw new IllegalStateException(
                                             "Guard DB phải cho fixture ADMIN đọc"
                                         );
                                         node.transactions.execute(read);
@@ -135,11 +136,17 @@ public final class PooledReadProbe {
         }
     }
 
+    private static Authentication approve(EndpointAccess guard, Authentication actor) {
+        var approved = guard.authorize(actor, "GET /api/v1/admin/reports", false);
+        SecurityContextHolder.getContext().setAuthentication(approved);
+        return approved;
+    }
+
     private static final class Node implements AutoCloseable {
 
         private final HikariDataSource pool;
         private final JdbcTransactions transactions;
-        private final AccessGuard guard;
+        private final EndpointAccess guard;
         private final AtomicLong borrowNanos = new AtomicLong();
         private final AtomicLong maxBorrow = new AtomicLong();
         private final AtomicLong borrows = new AtomicLong();
@@ -183,7 +190,7 @@ public final class PooledReadProbe {
             );
             var connections = new JdbcConnectionFactory(source, new JdbcSchema(schema));
             transactions = new JdbcTransactions(connections);
-            guard = new AccessGuard(new AuthorizationRepository(connections));
+            guard = new EndpointAccess(null, new UserRepo(TestJpa.MANAGER, transactions), null);
         }
 
         @Override

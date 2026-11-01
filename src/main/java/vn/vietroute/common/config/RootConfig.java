@@ -21,6 +21,7 @@ import vn.vietroute.auth.config.SecurityConfig;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.application.ConfigurationEnvironment;
 import vn.vietroute.common.config.database.DatabaseConfig;
+import vn.vietroute.common.config.database.JpaConfig;
 import vn.vietroute.common.config.integration.IntegrationConfig;
 import vn.vietroute.common.config.monitoring.MonitoringConfig;
 import vn.vietroute.common.config.traffic.TrafficConfig;
@@ -38,6 +39,7 @@ import vn.vietroute.common.web.locale.SupportedLocaleResolver;
 @Import({
     SecurityConfig.class,
     DatabaseConfig.class,
+    JpaConfig.class,
     IntegrationConfig.class,
     TrafficConfig.class,
     MonitoringConfig.class,

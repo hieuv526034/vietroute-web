@@ -36,15 +36,15 @@ public class MediaRepository extends BaseRepository {
             "Danh sách ảnh công bố không hợp lệ"
         );
         String placeholders = String.join(",", Collections.nCopies(ids.size(), "?"));
-        var urls = new HashMap<Long, String>();
+        HashMap<Long, String> urls = new HashMap<Long, String>();
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT id,url FROM media_assets WHERE status='READY' AND id IN(" + placeholders + ")"
             )
         ) {
             int at = 1;
             for (long id : ids) query.setLong(at++, id);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 while (row.next()) urls.put(row.getLong(1), row.getString(2));
             }
         }
@@ -102,7 +102,7 @@ public class MediaRepository extends BaseRepository {
                     total = row.getLong(1);
                 }
             }
-            var content = new ArrayList<MediaAsset>();
+            ArrayList<MediaAsset> content = new ArrayList<MediaAsset>();
             try (
                 PreparedStatement query = connection.prepareStatement(
                     "SELECT * FROM media_assets" + where + " ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?"
@@ -192,13 +192,13 @@ public class MediaRepository extends BaseRepository {
     /** FOR UPDATE đồng bộ với xóa ảnh; cả ADMIN cũng không gắn avatar từ ảnh thuộc user khác. */
     public void requireAvatar(Connection connection, long id, long actor) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT id FROM media_assets WHERE id=? AND created_by=? AND status='READY' FOR UPDATE"
             )
         ) {
             query.setLong(1, id);
             query.setLong(2, actor);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
             }
         }
@@ -207,14 +207,14 @@ public class MediaRepository extends BaseRepository {
     /** Caller đã khóa ảnh: hồ sơ đang tham chiếu phải gỡ/thay ảnh trước; lỗi rollback cả trạng thái DELETING. */
     public void requireUnreferenced(Connection connection, long id) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT 1 FROM auth_users WHERE avatar_media_id=? UNION ALL SELECT 1 FROM carriers WHERE logo_media_id=? UNION ALL SELECT 1 FROM carrier_vehicles WHERE photo_media_id=? LIMIT 1"
             )
         ) {
             query.setLong(1, id);
             query.setLong(2, id);
             query.setLong(3, id);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (row.next()) throw new BusinessException(ErrorCode.RESOURCE_IN_USE);
             }
         }

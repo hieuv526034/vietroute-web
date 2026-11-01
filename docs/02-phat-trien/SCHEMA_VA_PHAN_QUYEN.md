@@ -1,5 +1,39 @@
 # Cấu hình schema, role và tài nguyên menu/API
 
+## AUTHDB04 — Hợp đồng hiện hành
+
+Theo yêu cầu 01/11/2026, toàn bộ auth còn 40 class và tám bảng, cắt chức năng phụ. Cấu trúc/lý do/luồng và phần đã lược bỏ nằm tại [AUTHDB04 trong quy ước phát triển](QUY_UOC_PHAT_TRIEN.md#authdb04--auth-gọn-40-class-tám-bảng-01112026); bằng chứng kiểm tại [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md). Các mốc AUTHDB02/03, ACCESS và lifecycle bên dưới là lịch sử khi khác hợp đồng này.
+
+
+| Bảng auth hiện hành | Trách nhiệm |
+|---|---|
+| auth_users | Danh tính, credential/hash history, lockout/tokenVersion, audit/version và marker scope |
+| auth_roles | Nhóm quyền do DB quản lý; active/all_scopes/protected_role |
+| auth_user_roles | Role của user, global scope 0 hoặc nhà xe, active/version và FK subset |
+| auth_functions | Nhóm chức năng, tên/menu metadata, active/version |
+| auth_role_functions | Gán function cho role |
+| auth_function_resources | Đích MENU/ENDPOINT chính xác, HTTP method + template và nhãn |
+| auth_account_challenges | Dữ liệu challenge cũ và vô hiệu hóa; không còn phát challenge qua API |
+| auth_access_changes | Whitelist lịch sử thay đổi trong transaction, giữ 7 ngày/mục tiêu 1000 dòng |
+
+V025 bỏ action/policy/permission projection; V026 thêm identity duy nhất cho bốn bảng mapping/challenge, giữ composite PK/FK và dữ liệu. Không thêm bảng auth. Các bảng nghiệp vụ nhà xe/xe/tuyến/chuyến/đặt chỗ độc lập với tám bảng này.
+
+
+## AUTHDB03 — JPA CRUD và phân quyền theo endpoint (01/11/2026)
+
+Chủ dự án xác nhận dùng Spring Data JPA/Hibernate cho CRUD auth, JDBC cho batch/query phức tạp, giữ Spring MVC/WAR. Đây là thay đổi nghiệm thu thay các quy tắc action/annotation/permission projection AUTHDB02 trước đó. Trạng thái và bằng chứng kiểm thực tế nằm trong [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md); đoạn này mô tả hợp đồng đang triển khai, không nhận toàn bộ là đã kiểm đạt.
+
+- Tám bảng giữ nguyên tên: auth_users, auth_roles, auth_user_roles, auth_functions, auth_role_functions, auth_function_resources, auth_account_challenges, auth_access_changes. V025 bỏ cột operation/policy cũ; V001–V024 giữ checksum. Dừng các node cũ trước nâng cấp và đăng nhập lại sau thu hồi tokenVersion.
+- Entity ánh xạ đầy đủ cột bằng JPA, không hậu tố Entity; DTO class trong dto/request và dto/response. UserRepo/RoleRepo/FunctionRepo là JPA CRUD. Repo có hậu tố Batch/Query hoặc tên mapping chỉ chứa SQL batch, aggregate, atomic hoặc phức tạp; SQL không nằm trong controller/service ngoài phần đang chuyển đổi chưa chốt.
+- Controller page ở controller, tên UserPageController; REST ở controller/api, tên UserAPI. Các tên Role/Function/UserRole/FunctionResource dùng cùng gốc bảng; không dùng lớp Access chung để che vai trò khác nhau.
+- EndpointCatalog đọc RequestMappingHandlerMapping, lấy HTTP method + route template. Không còn AccessFunction/AccessOperation/AccessResource hoặc enum Permission/PermissionAction. Danh bạ không đồng nghĩa grant. User → active Role → active Function → exact Menu/API target trong DB quyết định truy cập; endpoint chưa gán bị từ chối. HEAD dùng quyền GET. Public/self-service do WebRoutePolicy xác định tường minh, DB không mở route public.
+- JWT chỉ xác minh danh tính; trạng thái/tokenVersion/grant đọc lại ở DB, không tin role trong token. Backend tiếp tục kiểm owner, tài xế được liên kết và scope. Cờ all_scopes chỉ áp dụng cho endpoint thuộc chính role có cờ đó; scoped role phải là tập con global role của cùng user.
+- Bootstrap/default role/function được khai báo bằng dữ liệu JSON, không tạo bypass theo tên ADMIN trong runtime. Mapping ordinary role chỉ init một lần, không tự gán lại khi đã thu hồi. Bootstrap recovery vẫn chỉ danh tính cấu hình, mật khẩu đúng, CSRF/quota/khóa chống dò và lịch sử nguyên tử.
+- JpaTransactionManager và JDBC dùng cùng datasource/connection; SQL batch/history lỗi phải rollback CRUD JPA. Hibernate không tạo/sửa schema tự động. Schema từ VIETROUTE_DB_SCHEMA và LOCAL search_path trên connection, không ghi schema cứng vào entity.
+
+Nguồn kỹ thuật: [Spring Data JPA trong ứng dụng Spring thuần](https://docs.spring.io/spring-data/jpa/reference/3.5/repositories/create-instances.html), [JpaTransactionManager chia sẻ JDBC connection](https://docs.spring.io/spring-framework/docs/6.2.x/javadoc-api/org/springframework/orm/jpa/JpaTransactionManager.html). Không dùng Spring Boot hoặc Open Session in View; DTO được dựng trong transaction.
+
+
 ## Hợp đồng hiện hành AUTHDB02 — tám bảng, từ 01/11/2026
 
 Yêu cầu mới của chủ dự án thay mô hình ACCESS24 ở giao diện quản trị bằng **User → Role → Function → Menu/API**. Các mục V001–V023 bên dưới là lịch sử/giải thích chuyển tiếp; source V024 dùng bảng sau:

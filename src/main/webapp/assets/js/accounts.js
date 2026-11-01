@@ -76,7 +76,7 @@
             root.querySelectorAll('[data-account-controls]').forEach((item) => {
                 item.disabled = false;
             });
-            node('accounts-create').disabled = !(can('CREATE') && me?.permissions?.includes('ACCESS_ASSIGN'));
+            node('accounts-create').disabled = !can('CREATE');
             node('account-save').disabled = !editorReady;
             node('accounts-refresh').disabled = false;
             node('accounts-status').textContent = '';
@@ -143,9 +143,9 @@
                 buttons.append(
                     tables.actionButton(`${labels.assign}: ${user.username}`, 'assign', () => openEditor(user), false),
                 );
-            if (can('UPDATE') && user.id !== me.id && !user.roles.includes('ADMIN'))
+            if (can('UPDATE') && user.id !== me.id)
                 buttons.append(tables.actionButton(`${labels.edit}: ${user.username}`, 'edit', () => openName(user)));
-            if (can('DELETE') && user.id !== me.id && !user.roles.includes('ADMIN'))
+            if (can('DELETE') && user.id !== me.id)
                 buttons.append(
                     tables.actionButton(
                         `${labels.remove}: ${user.username}`,
@@ -235,9 +235,7 @@
         editModal.open();
         void perform(async () => {
             await loadRoleMetadata();
-            renderRoles(
-                user?.roles || (roles.some((role) => role.role === 'CUSTOMER' && role.active) ? ['CUSTOMER'] : []),
-            );
+            renderRoles(user?.roles || []);
             editorReady = true;
         });
     };
@@ -273,10 +271,7 @@
         node('account-protection').textContent = '';
         app.feedback('', false, 'account-detail-feedback');
         detailModal.open();
-        const [result, features] = await window.VietRouteRequests.allReads([
-            get(`${base}/${user.id}/access`),
-            get(`${access}/tree`),
-        ]);
+        const result = await get(`${base}/${user.id}/access`);
         selected = result.user;
         node('account-detail-target').textContent =
             `${selected.displayName} · @${selected.username} · v${selected.version}`;
@@ -296,46 +291,23 @@
         head.append(heading);
         table.append(head);
         const body = document.createElement('tbody');
-        for (const feature of features.filter((item) => item.path || item.actions.length)) {
-            const value = result.capabilities.find((item) => item.function === feature.code);
-            const row = document.createElement('tr'),
-                title = document.createElement('td');
-            title.append(text('strong', feature.name), text('small', feature.path || 'API', 'd-block muted'));
-            const actions = document.createElement('td');
-            actions.append(
-                chips(
-                    value?.targets?.filter((target) => !target.startsWith('GET ' + (feature.path || '__'))) || [],
-                    labels.noActions,
-                ),
-            );
-            row.append(
-                title,
-                text(
-                    'td',
-                    feature.path ? (value?.view ? labels.allowed : labels.denied) : labels.apiOnly,
-                    feature.path && value?.view ? 'text-success' : 'muted',
-                ),
-                actions,
-            );
+        for (const value of result.capabilities) {
+            const row = document.createElement('tr');
+            row.append(text('td', value.function), text('td', value.view ? labels.allowed : labels.apiOnly));
+            const targets = text('td', '');
+            targets.append(chips(value.targets, labels.noActions));
+            row.append(targets);
             body.append(row);
         }
         table.append(body);
         node('account-effective').replaceChildren(table);
-        const protectedAccount =
-            selected.id === me.id || selected.roles.includes('ADMIN') || selected.activationPending;
+        const protectedAccount = selected.id === me.id || selected.activationPending;
         node('account-state-open').hidden = protectedAccount || !has('PUT', `${base}/{id}/state`);
         node('account-state-open').textContent = selected.active ? labels.disable : labels.enable;
         node('account-protection').textContent = protectedAccount ? labels.fixed : '';
         app.feedback('', false, 'account-detail-feedback');
     };
     node('accounts-create').addEventListener('click', () => openEditor());
-    for (const [id, role] of [
-        ['preset-driver', 'DRIVER'],
-        ['preset-customer', 'CUSTOMER'],
-    ])
-        node(id).addEventListener('click', () => {
-            if (!busy && roles.some((item) => item.active && item.role === role)) renderRoles([role]);
-        });
     node('accounts-refresh').addEventListener('click', () => void perform(() => load()));
     node('accounts-search').addEventListener('submit', (event) => {
         event.preventDefault();
@@ -399,23 +371,12 @@
     );
     // Bộ lọc và modal cần role; bảng chỉ cần me/capabilities. Không để metadata chặn lần tải bảng đầu tiên.
     const loadRoleMetadata = async () => {
-        const [currentRoles, registry] = await window.VietRouteRequests.allReads([
-            get(`${access}/roles`),
-            get(`${access}/registry/roles`),
-        ]);
-        roles = currentRoles;
+        const registry = await get(`${access}/registry/roles`);
+        roles = registry.filter((item) => !item.protectedRole).map((item) => ({ ...item, role: item.code }));
         rolesLoaded = true;
         roleNames = new Map(
             registry.map((role) => [role.code, document.documentElement.lang === 'en' ? role.nameEn : role.nameVi]),
         );
-        for (const [id, role] of [
-            ['preset-driver', 'DRIVER'],
-            ['preset-customer', 'CUSTOMER'],
-        ]) {
-            const available = roles.some((item) => item.role === role && item.active);
-            node(id).disabled = !available;
-            if (!available) node(id).title = labels.off;
-        }
         const filter = node('account-role-filter'),
             previous = filter.value;
         filter.querySelectorAll('option[data-role-choice]').forEach((item) => item.remove());

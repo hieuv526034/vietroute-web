@@ -5,14 +5,14 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import org.springframework.stereotype.Repository;
-import vn.vietroute.auth.entity.PermissionAction;
-import vn.vietroute.auth.security.DataScopeGuard;
+import vn.vietroute.auth.repo.UserRoleRepo;
 import vn.vietroute.business.booking.dto.request.BookingCreateRequest;
 import vn.vietroute.business.booking.dto.request.BookingSearchRequest;
 import vn.vietroute.business.booking.dto.request.BookingTripSearchRequest;
@@ -24,7 +24,7 @@ import vn.vietroute.business.booking.entity.BookingStatus;
 import vn.vietroute.business.trip.entity.TripStatus;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
-import vn.vietroute.common.constant.AccessConstants.Groups;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.BaseRepository;
@@ -69,16 +69,16 @@ public class BookingRepository extends BaseRepository {
         throws SQLException {
         String filter = FROM + " WHERE b.trip_id=? AND b.status IN('CONFIRMED','COMPLETED')";
         long total;
-        try (var query = connection.prepareStatement("SELECT count(*)" + filter)) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + filter)) {
             query.setLong(1, tripId);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 row.next();
                 total = row.getLong(1);
             }
         }
-        var result = new ArrayList<DriverPassengerResponse>();
+        ArrayList<DriverPassengerResponse> result = new ArrayList<DriverPassengerResponse>();
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT b.code,b.pickup_order,b.dropoff_order,pick.name_vi,pick.name_en,dropoff.name_vi,dropoff.name_en,b.seats,b.contact_name,b.contact_phone,b.status" +
                     filter +
                     " ORDER BY b.pickup_order,b.dropoff_order,b.id LIMIT ? OFFSET ?"
@@ -87,7 +87,7 @@ public class BookingRepository extends BaseRepository {
             query.setLong(1, tripId);
             query.setInt(2, page.getSize());
             query.setLong(3, page.offset());
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 while (row.next())
                     result.add(
                         new DriverPassengerResponse(
@@ -114,31 +114,31 @@ public class BookingRepository extends BaseRepository {
         throws SQLException {
         String filter =
             " FROM carrier_trips t JOIN carriers owner ON owner.id=t.carrier_id AND owner.scope_id=t.scope_id WHERE " +
-            DataScopeGuard.visibleSql() +
+            UserRoleRepo.visibleSql() +
             " AND owner.active AND (t.status='IN_PROGRESS' OR (t.status='OPEN' AND t.departure_at>CURRENT_TIMESTAMP)) AND strpos(lower(concat_ws(' ',t.code,t.name_vi,t.name_en,owner.name)),?)>0";
         String text = body.getQuery() == null ? "" : body.getQuery().strip().toLowerCase(Locale.ROOT);
         long total;
-        try (var query = connection.prepareStatement("SELECT count(*)" + filter)) {
-            int at = DataScopeGuard.bindVisible(query, 1, Groups.BOOKING, PermissionAction.CREATE);
+        try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + filter)) {
+            int at = UserRoleRepo.bindVisible(query, 1);
             query.setString(at, text);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 row.next();
                 total = row.getLong(1);
             }
         }
-        var result = new ArrayList<BookingTripChoiceResponse>();
+        ArrayList<BookingTripChoiceResponse> result = new ArrayList<BookingTripChoiceResponse>();
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT t.id,t.code,owner.name,t.name_vi,t.name_en,t.departure_at" +
                     filter +
                     " ORDER BY t.departure_at,t.id LIMIT ? OFFSET ?"
             )
         ) {
-            int at = DataScopeGuard.bindVisible(query, 1, Groups.BOOKING, PermissionAction.CREATE);
+            int at = UserRoleRepo.bindVisible(query, 1);
             query.setString(at++, text);
             query.setInt(at++, body.getSize());
             query.setLong(at, body.offset());
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 while (row.next())
                     result.add(
                         new BookingTripChoiceResponse(
@@ -158,14 +158,14 @@ public class BookingRepository extends BaseRepository {
     /** Không có scope staff thay thế owner; actor đã được kiểm CUSTOMER/ready ở cùng connection. */
     public void requireCustomer(Connection connection, long user, long tokenVersion, boolean lock) throws SQLException {
         try (
-            var query = connection.prepareStatement(
-                "SELECT u.id FROM auth_users u WHERE u.id=? AND u.token_version=? AND u.active AND NOT u.activation_pending AND NOT u.must_change_password AND u.email_verified_at IS NOT NULL AND EXISTS(SELECT 1 FROM auth_user_roles ur JOIN auth_roles r ON r.code=ur.role_code AND r.active AND NOT r.deleted WHERE ur.user_id=u.id AND r.code='CUSTOMER')" +
+            PreparedStatement query = connection.prepareStatement(
+                "SELECT u.id FROM auth_users u WHERE u.id=? AND u.token_version=? AND u.active AND NOT u.activation_pending AND NOT u.must_change_password AND u.email_verified_at IS NOT NULL AND NOT u.deleted" +
                     (lock ? " FOR UPDATE OF u" : "")
             )
         ) {
             query.setLong(1, user);
             query.setLong(2, tokenVersion);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.ACCESS_DENIED);
             }
         }
@@ -174,13 +174,13 @@ public class BookingRepository extends BaseRepository {
     /** Trip là khóa đầu tiên ở mọi mutation booking/progress/cancel; scope/nhà xe lấy từ DB. */
     public Trip trip(Connection connection, long id, boolean lock) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT t.id,t.carrier_id,t.scope_id,t.status,t.departure_at,owner.active AND scope.active AS accepting FROM carrier_trips t JOIN carriers owner ON owner.id=t.carrier_id AND owner.scope_id=t.scope_id JOIN (SELECT scope_id AS id,scope_code AS code,scope_name_vi AS name_vi,scope_name_en AS name_en,scope_active AS active,scope_version AS version,updated_at,updated_by FROM carriers) scope ON scope.id=t.scope_id WHERE t.id=?" +
                     (lock ? " FOR UPDATE OF t" : "")
             )
         ) {
             query.setLong(1, id);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
                 return new Trip(
                     row.getLong(1),
@@ -197,15 +197,15 @@ public class BookingRepository extends BaseRepository {
     /** Tra cặp điểm trên chính trip; thứ tự/giá/quyền đón-trả chỉ server quyết định. */
     public Stop stop(Connection connection, long tripId, long id) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT id,stop_order,cumulative_fare,pickup_allowed,dropoff_allowed,scheduled_departure_at,actual_departure_at FROM trip_stops WHERE id=? AND trip_id=?"
             )
         ) {
             query.setLong(1, id);
             query.setLong(2, tripId);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.BOOKING_INVALID);
-                var actual = row.getTimestamp(7);
+                Timestamp actual = row.getTimestamp(7);
                 return new Stop(
                     row.getLong(1),
                     row.getInt(2),
@@ -220,38 +220,31 @@ public class BookingRepository extends BaseRepository {
     }
 
     /** Minimal parent lookup trước khóa trip, không trả thông tin riêng tư ra caller HTTP. */
-    public long parent(Connection connection, long id, Long customerId, PermissionAction action) throws SQLException {
+    public long parent(Connection connection, long id, Long customerId) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT b.trip_id FROM bookings b JOIN carriers owner ON owner.id=b.carrier_id AND owner.scope_id=b.scope_id WHERE b.id=? AND " +
-                    (customerId == null ? DataScopeGuard.visibleSql() : "b.customer_id=?")
+                    (customerId == null ? UserRoleRepo.visibleSql() : "b.customer_id=?")
             )
         ) {
             query.setLong(1, id);
-            if (customerId == null) DataScopeGuard.bindVisible(query, 2, Groups.BOOKING, action);
+            if (customerId == null) UserRoleRepo.bindVisible(query, 2);
             else query.setLong(2, customerId);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
                 return row.getLong(1);
             }
         }
     }
 
-    public Row find(
-        Connection connection,
-        long id,
-        Long customerId,
-        PermissionAction action,
-        boolean lock,
-        boolean detail
-    ) throws SQLException {
-        String permission = customerId == null ? DataScopeGuard.visibleSql() : "b.customer_id=?";
+    public Row find(Connection connection, long id, Long customerId, boolean lock, boolean detail) throws SQLException {
+        String permission = customerId == null ? UserRoleRepo.visibleSql() : "b.customer_id=?";
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT " +
                     COLUMNS +
                     ",(" +
-                    (customerId == null ? DataScopeGuard.visibleSql() : "b.customer_id=?") +
+                    (customerId == null ? UserRoleRepo.visibleSql() : "b.customer_id=?") +
                     ") AS can_update" +
                     FROM +
                     " WHERE b.id=? AND " +
@@ -259,19 +252,21 @@ public class BookingRepository extends BaseRepository {
                     (lock ? " FOR UPDATE OF b" : "")
             )
         ) {
-            int at = bindScope(query, 1, customerId, PermissionAction.UPDATE);
+            int at =
+                customerId == null
+                    ? UserRoleRepo.bindVisible(query, 1, "PUT " + Routes.ADMIN_BOOKINGS + Routes.BOOKING_STATE)
+                    : bindScope(query, 1, customerId);
             query.setLong(at++, id);
-            bindScope(query, at, customerId, action);
-            try (var row = query.executeQuery()) {
+            bindScope(query, at, customerId);
+            try (ResultSet row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
                 return map(row, detail ? events(connection, id) : List.of());
             }
         }
     }
 
-    private int bindScope(PreparedStatement query, int at, Long customerId, PermissionAction action)
-        throws SQLException {
-        if (customerId == null) return DataScopeGuard.bindVisible(query, at, Groups.BOOKING, action);
+    private int bindScope(PreparedStatement query, int at, Long customerId) throws SQLException {
+        if (customerId == null) return UserRoleRepo.bindVisible(query, at);
         query.setLong(at++, customerId);
         return at;
     }
@@ -282,33 +277,36 @@ public class BookingRepository extends BaseRepository {
         String where =
             FROM +
             " WHERE " +
-            (customerId == null ? DataScopeGuard.visibleSql() : "b.customer_id=?") +
+            (customerId == null ? UserRoleRepo.visibleSql() : "b.customer_id=?") +
             " AND (?::bigint IS NULL OR b.trip_id=?) AND (?::text IS NULL OR b.status=?) AND strpos(lower(concat_ws(' ',b.code,t.code,b.contact_name,b.contact_phone)),?)>0";
         long total;
-        try (var query = connection.prepareStatement("SELECT count(*)" + where)) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + where)) {
             bindSearch(query, 1, search, customerId);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 row.next();
                 total = row.getLong(1);
             }
         }
-        var result = new ArrayList<BookingResponse>();
+        ArrayList<BookingResponse> result = new ArrayList<BookingResponse>();
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT " +
                     COLUMNS +
                     ",(" +
-                    (customerId == null ? DataScopeGuard.visibleSql() : "b.customer_id=?") +
+                    (customerId == null ? UserRoleRepo.visibleSql() : "b.customer_id=?") +
                     ") AS can_update" +
                     where +
                     " ORDER BY b.id DESC LIMIT ? OFFSET ?"
             )
         ) {
-            int at = bindScope(query, 1, customerId, PermissionAction.UPDATE);
+            int at =
+                customerId == null
+                    ? UserRoleRepo.bindVisible(query, 1, "PUT " + Routes.ADMIN_BOOKINGS + Routes.BOOKING_STATE)
+                    : bindScope(query, 1, customerId);
             at = bindSearch(query, at, search, customerId);
             query.setInt(at++, search.getSize());
             query.setLong(at, search.offset());
-            try (var rows = query.executeQuery()) {
+            try (ResultSet rows = query.executeQuery()) {
                 while (rows.next()) result.add(map(rows, List.of()).response());
             }
         }
@@ -317,7 +315,7 @@ public class BookingRepository extends BaseRepository {
 
     private int bindSearch(PreparedStatement query, int at, BookingSearchRequest search, Long customerId)
         throws SQLException {
-        at = bindScope(query, at, customerId, PermissionAction.READ);
+        at = bindScope(query, at, customerId);
         query.setObject(at++, search.getTripId());
         query.setObject(at++, search.getTripId());
         String status = search.getStatus() == null ? null : search.getStatus().name();
@@ -330,21 +328,21 @@ public class BookingRepository extends BaseRepository {
     /** Customer row đã khóa sau trip để tuần tự hóa gửi yêu cầu sang nhiều trip; partial unique là rào cuối. */
     public void requireNoActive(Connection connection, long customerId) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT 1 FROM bookings WHERE customer_id=? AND source_code='WEB' AND status IN('PENDING','CONFIRMED') LIMIT 1"
             )
         ) {
             query.setLong(1, customerId);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (row.next()) throw new BusinessException(ErrorCode.BOOKING_ACTIVE);
             }
         }
     }
 
     public Long requestId(Connection connection, UUID key) throws SQLException {
-        try (var query = connection.prepareStatement("SELECT id FROM bookings WHERE request_key=?")) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT id FROM bookings WHERE request_key=?")) {
             query.setObject(1, key);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 return row.next() ? row.getLong(1) : null;
             }
         }
@@ -353,12 +351,12 @@ public class BookingRepository extends BaseRepository {
     /** Danh mục source active được khóa chia sẻ, không tin source_id từ client. */
     public long source(Connection connection, String code) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT id FROM catalog_items WHERE type='BOOKING_SOURCE' AND code=? AND active FOR SHARE"
             )
         ) {
             query.setString(1, code);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.BOOKING_INVALID);
                 return row.getLong(1);
             }
@@ -378,7 +376,7 @@ public class BookingRepository extends BaseRepository {
     ) throws SQLException {
         BigDecimal price = dropoff.fare().subtract(pickup.fare());
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "INSERT INTO bookings(trip_id,carrier_id,scope_id,customer_id,source_code,source_id,pickup_stop_id,dropoff_stop_id,pickup_order,dropoff_order,seats,unit_price,total_price,contact_name,contact_phone,request_key,created_by,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id"
             )
         ) {
@@ -400,7 +398,7 @@ public class BookingRepository extends BaseRepository {
             query.setObject(16, body.requestKey());
             query.setLong(17, actor);
             query.setLong(18, actor);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 row.next();
                 return row.getLong(1);
             }
@@ -410,7 +408,7 @@ public class BookingRepository extends BaseRepository {
     /** CAS đơn, không nhận trip/scope/source/giá mới; caller kiểm graph và chỗ trước cập nhật. */
     public void state(Connection connection, BookingResponse row, BookingStatus state, long actor) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "UPDATE bookings SET status=?,updated_at=CURRENT_TIMESTAMP,updated_by=?,version=version+1 WHERE id=? AND trip_id=? AND carrier_id=? AND scope_id=? AND version=?"
             )
         ) {
@@ -428,12 +426,12 @@ public class BookingRepository extends BaseRepository {
     /** Caller đã khóa trip; lifecycle nội bộ lấy đơn active tăng ID và khóa trước segments. */
     public void lockActiveForTrip(Connection connection, long tripId) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT count(*) FROM (SELECT id FROM bookings WHERE trip_id=? AND status IN('PENDING','CONFIRMED') ORDER BY id FOR UPDATE) locked"
             )
         ) {
             query.setLong(1, tripId);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 row.next(); // count buộc PostgreSQL khóa hết tập, không tải DTO/PII của mọi đơn lên heap.
             }
         }
@@ -444,12 +442,12 @@ public class BookingRepository extends BaseRepository {
     /** Chỉ trả metadata nội bộ chống lặp, không có projection public hoặc lookup qua request key. */
     public PaymentEvent paymentEvent(Connection connection, UUID key) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT booking_id,created_by,event_type,amount,note FROM booking_events WHERE request_key=?"
             )
         ) {
             query.setObject(1, key);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 return row.next()
                     ? new PaymentEvent(
                           row.getLong(1),
@@ -467,7 +465,7 @@ public class BookingRepository extends BaseRepository {
     public void money(Connection connection, BookingResponse row, BigDecimal paid, BigDecimal refunded, long actor)
         throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "UPDATE bookings SET paid_amount=?,refunded_amount=?,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=? AND trip_id=? AND carrier_id=? AND scope_id=? AND version=?"
             )
         ) {
@@ -495,7 +493,7 @@ public class BookingRepository extends BaseRepository {
         long actor
     ) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "INSERT INTO booking_events(booking_id,trip_id,carrier_id,scope_id,from_status,to_status,event_type,note,amount,request_key,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?)"
             )
         ) {
@@ -515,14 +513,14 @@ public class BookingRepository extends BaseRepository {
     }
 
     private List<BookingEventResponse> events(Connection connection, long id) throws SQLException {
-        var result = new ArrayList<BookingEventResponse>();
+        ArrayList<BookingEventResponse> result = new ArrayList<BookingEventResponse>();
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT id,event_type,from_status,to_status,amount,note,created_at FROM (SELECT id,event_type,from_status,to_status,amount,note,created_at FROM booking_events WHERE booking_id=? ORDER BY id DESC LIMIT 100) e ORDER BY id"
             )
         ) {
             query.setLong(1, id);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 while (row.next())
                     result.add(
                         new BookingEventResponse(
@@ -541,10 +539,10 @@ public class BookingRepository extends BaseRepository {
     }
 
     private Row map(ResultSet r, List<BookingEventResponse> events) throws SQLException {
-        var status = BookingStatus.valueOf(r.getString("status"));
+        BookingStatus status = BookingStatus.valueOf(r.getString("status"));
         BigDecimal paid = r.getBigDecimal("paid_amount"),
             refunded = r.getBigDecimal("refunded_amount");
-        var response = new BookingResponse(
+        BookingResponse response = new BookingResponse(
             r.getLong("id"),
             r.getString("code"),
             r.getLong("trip_id"),

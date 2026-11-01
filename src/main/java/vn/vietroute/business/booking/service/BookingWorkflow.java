@@ -6,8 +6,7 @@ import java.sql.SQLException;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import vn.vietroute.auth.entity.PermissionAction;
-import vn.vietroute.auth.security.DataScopeGuard;
+import vn.vietroute.auth.repo.UserRoleRepo;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.booking.dto.request.BookingCreateRequest;
 import vn.vietroute.business.booking.dto.request.BookingPaymentRequest;
@@ -15,10 +14,11 @@ import vn.vietroute.business.booking.dto.request.BookingStateRequest;
 import vn.vietroute.business.booking.dto.response.BookingResponse;
 import vn.vietroute.business.booking.entity.BookingStatus;
 import vn.vietroute.business.booking.repository.BookingRepository;
+import vn.vietroute.business.booking.repository.BookingRepository.PaymentEvent;
+import vn.vietroute.business.booking.repository.BookingRepository.Row;
 import vn.vietroute.business.booking.repository.BookingRepository.Stop;
 import vn.vietroute.business.booking.repository.BookingRepository.Trip;
 import vn.vietroute.business.booking.repository.TripCapacityRepository;
-import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
@@ -31,7 +31,7 @@ class BookingWorkflow {
 
     private final BookingRepository bookings;
     private final TripCapacityRepository capacity;
-    private final DataScopeGuard scopes;
+    private final UserRoleRepo scopes;
 
     /** Một connection trip → customer (WEB) → booking/segment; PENDING chỉ kiểm chỗ, không giữ chỗ. */
     BookingResponse create(Connection connection, BookingCreateRequest body, UserPrincipal actor, boolean staff)
@@ -47,15 +47,15 @@ class BookingWorkflow {
                 body.contactPhone().matches(Regex.PHONE_NUMBER),
             ErrorCode.BOOKING_INVALID
         );
-        var trip = bookings.trip(connection, body.tripId(), true);
+        Trip trip = bookings.trip(connection, body.tripId(), true);
         Long owner = staff ? null : actor.id();
         String source = staff ? "PHONE" : "WEB";
-        if (staff) scopes.require(connection, trip.scopeId(), Groups.BOOKING, PermissionAction.CREATE);
+        if (staff) scopes.require(connection, trip.scopeId());
         else bookings.requireCustomer(connection, actor.id(), actor.tokenVersion(), true);
         Long previous = bookings.requestId(connection, body.requestKey());
         if (previous != null) {
-            var row = bookings.find(connection, previous, owner, PermissionAction.CREATE, true, true);
-            var existing = row.response();
+            Row row = bookings.find(connection, previous, owner, true, true);
+            BookingResponse existing = row.response();
             BusinessRules.require(
                 row.createdBy() == actor.id() &&
                     existing.tripId() == trip.id() &&
@@ -69,8 +69,8 @@ class BookingWorkflow {
             );
             return existing;
         }
-        var pickup = bookings.stop(connection, trip.id(), body.pickupStopId());
-        var dropoff = bookings.stop(connection, trip.id(), body.dropoffStopId());
+        Stop pickup = bookings.stop(connection, trip.id(), body.pickupStopId());
+        Stop dropoff = bookings.stop(connection, trip.id(), body.dropoffStopId());
         requireBookable(trip, pickup);
         BusinessRules.require(
             pickup.pickup() &&
@@ -95,9 +95,9 @@ class BookingWorkflow {
             bookings.source(connection, source),
             actor.id()
         );
-        var row = bookings.find(connection, id, owner, PermissionAction.CREATE, false, false).response();
+        BookingResponse row = bookings.find(connection, id, owner, false, false).response();
         bookings.event(connection, row, BookingStatus.PENDING, "CREATED", "", BigDecimal.ZERO, null, actor.id());
-        return bookings.find(connection, id, owner, PermissionAction.CREATE, false, true).response();
+        return bookings.find(connection, id, owner, false, true).response();
     }
 
     /** Xác nhận/hủy dùng cùng mutex trip, CAS booking và segment tăng dần, history lỗi rollback. */
@@ -106,13 +106,13 @@ class BookingWorkflow {
         BusinessRules.require(body.note() != null && body.note().length() <= 2000, ErrorCode.BOOKING_INVALID);
         Long owner = staff ? null : actor.id();
         if (!staff) bookings.requireCustomer(connection, actor.id(), actor.tokenVersion(), false);
-        long parent = bookings.parent(connection, id, owner, PermissionAction.UPDATE);
-        var trip = bookings.trip(connection, parent, true);
-        var row = bookings.find(connection, id, owner, PermissionAction.UPDATE, true, false).response();
+        long parent = bookings.parent(connection, id, owner);
+        Trip trip = bookings.trip(connection, parent, true);
+        BookingResponse row = bookings.find(connection, id, owner, true, false).response();
         BusinessRules.require(body.version() != null && body.version() == row.version(), ErrorCode.STALE_VERSION);
-        var current = row.status();
-        var target = body.status();
-        var pickup = bookings.stop(connection, parent, row.pickupStopId());
+        BookingStatus current = row.status();
+        BookingStatus target = body.status();
+        Stop pickup = bookings.stop(connection, parent, row.pickupStopId());
         BusinessRules.require(
             target != null && (staff || target == BookingStatus.CANCELLED),
             ErrorCode.BOOKING_STATE_CONFLICT
@@ -157,15 +157,15 @@ class BookingWorkflow {
         }
         bookings.state(connection, row, target, actor.id());
         bookings.event(connection, row, target, target.name(), body.note().strip(), BigDecimal.ZERO, null, actor.id());
-        return bookings.find(connection, id, owner, PermissionAction.UPDATE, false, true).response();
+        return bookings.find(connection, id, owner, false, true).response();
     }
 
     /** Tiền thủ công có request UUID riêng; replay cùng actor/nội dung không tăng số tiền lần nữa. */
     BookingResponse payment(Connection connection, long id, BookingPaymentRequest body, UserPrincipal actor)
         throws SQLException {
-        long parent = bookings.parent(connection, id, null, PermissionAction.UPDATE);
+        long parent = bookings.parent(connection, id, null);
         bookings.trip(connection, parent, true);
-        var row = bookings.find(connection, id, null, PermissionAction.UPDATE, true, false).response();
+        BookingResponse row = bookings.find(connection, id, null, true, false).response();
         BusinessRules.require(
             body.kind() != null &&
                 body.requestKey() != null &&
@@ -176,7 +176,7 @@ class BookingWorkflow {
                 !body.note().isBlank(),
             ErrorCode.BOOKING_INVALID
         );
-        var old = bookings.paymentEvent(connection, body.requestKey());
+        PaymentEvent old = bookings.paymentEvent(connection, body.requestKey());
         if (old != null) {
             BusinessRules.require(
                 old.bookingId() == id &&
@@ -186,7 +186,7 @@ class BookingWorkflow {
                     old.note().equals(body.note().strip()),
                 ErrorCode.BOOKING_REQUEST_CONFLICT
             );
-            return bookings.find(connection, id, null, PermissionAction.UPDATE, false, true).response();
+            return bookings.find(connection, id, null, false, true).response();
         }
         BusinessRules.require(body.version() != null && body.version() == row.version(), ErrorCode.STALE_VERSION);
         BigDecimal paid = row.paidAmount(),
@@ -214,7 +214,7 @@ class BookingWorkflow {
             body.requestKey(),
             actor.id()
         );
-        return bookings.find(connection, id, null, PermissionAction.UPDATE, false, true).response();
+        return bookings.find(connection, id, null, false, true).response();
     }
 
     private void requireBookable(Trip trip, Stop pickup) {

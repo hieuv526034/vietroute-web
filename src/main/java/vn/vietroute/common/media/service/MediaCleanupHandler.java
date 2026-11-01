@@ -7,6 +7,7 @@ import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.job.handler.JobHandler;
 import vn.vietroute.common.job.model.Job;
 import vn.vietroute.common.job.model.JobFailure;
+import vn.vietroute.common.media.entity.MediaAsset;
 import vn.vietroute.common.media.repository.MediaRepository;
 import vn.vietroute.common.media.storage.MediaStorage;
 
@@ -34,7 +35,7 @@ public class MediaCleanupHandler implements JobHandler {
         if (id < 1) {
             throw new JobFailure("MEDIA_PAYLOAD_INVALID", false);
         }
-        var image = transactions.execute(connection -> images.claimCleanup(connection, id));
+        MediaAsset image = transactions.execute(connection -> images.claimCleanup(connection, id));
         if (image == null) {
             return;
         } // READY/DELETED không bị ảnh hưởng bởi job dọn upload cũ.

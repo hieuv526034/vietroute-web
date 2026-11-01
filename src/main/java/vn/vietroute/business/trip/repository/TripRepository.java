@@ -11,8 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.stereotype.Repository;
-import vn.vietroute.auth.entity.PermissionAction;
-import vn.vietroute.auth.security.DataScopeGuard;
+import vn.vietroute.auth.repo.UserRoleRepo;
 import vn.vietroute.business.trip.dto.request.TripCreateRequest;
 import vn.vietroute.business.trip.dto.request.TripSearchRequest;
 import vn.vietroute.business.trip.dto.response.TripEventResponse;
@@ -20,10 +19,11 @@ import vn.vietroute.business.trip.dto.response.TripResponse;
 import vn.vietroute.business.trip.dto.response.TripStopResponse;
 import vn.vietroute.business.trip.entity.TripStatus;
 import vn.vietroute.business.trip.repository.TripTemplateRepository.Assets;
+import vn.vietroute.business.trip.repository.TripTemplateRepository.SourceStop;
 import vn.vietroute.business.trip.repository.TripTemplateRepository.Template;
 import vn.vietroute.common.base.PageResponse;
-import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ApplicationConstants.Business;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.BaseRepository;
@@ -37,7 +37,7 @@ public class TripRepository extends BaseRepository {
         " FROM carrier_trips t JOIN carriers owner ON owner.id=t.carrier_id AND owner.scope_id=t.scope_id ";
     private static final String COLUMNS =
         "t.id,t.carrier_id,t.scope_id,owner.name AS carrier_name,owner.phone AS carrier_phone,t.route_id,t.code,t.name_vi,t.name_en,t.vehicle_id,t.plate_number,t.vehicle_type_id,t.vehicle_type_name_vi,t.vehicle_type_name_en,t.driver_id,t.driver_user_id,t.driver_name,t.driver_phone,t.departure_at,t.end_at,t.capacity,t.status,t.operation_note,t.version,(" +
-        DataScopeGuard.visibleSql() +
+        UserRoleRepo.visibleSql() +
         ") AS can_update";
     private static final String ASSIGNED = """
     AND t.status<>'DRAFT' AND t.driver_user_id=?
@@ -47,7 +47,7 @@ public class TripRepository extends BaseRepository {
                 JOIN (SELECT scope_id,user_id,role_code FROM auth_user_roles WHERE scope_id>0 AND active) dr ON dr.scope_id=dm.scope_id AND dr.user_id=dm.user_id
                 JOIN auth_user_roles du ON du.user_id=dr.user_id AND du.role_code=dr.role_code
                 JOIN auth_roles role ON role.code=du.role_code AND role.active AND NOT role.deleted
-                WHERE dm.scope_id=t.scope_id AND dm.user_id=t.driver_user_id AND dm.active AND role.code='DRIVER')
+                WHERE dm.scope_id=t.scope_id AND dm.user_id=t.driver_user_id AND dm.active)
     """;
 
     public TripRepository(JdbcConnectionFactory connections) {
@@ -56,41 +56,41 @@ public class TripRepository extends BaseRepository {
 
     /** Count và trang cùng bộ lọc ngày xuất phát Việt Nam, không lọc lại trong RAM. */
     public PageResponse<TripResponse> page(TripSearchRequest search) {
-        return page(search, Groups.TRIP, null);
+        return page(search, null);
     }
 
     /** Chỉ chuyến được giao và hồ sơ DRIVER/membership hiện hành, kể cả người gọi cũng có ADMIN. */
     public PageResponse<TripResponse> assignedPage(TripSearchRequest search, long driverUserId) {
-        return page(search, Groups.DRIVER_TRIP, driverUserId);
+        return page(search, driverUserId);
     }
 
-    private PageResponse<TripResponse> page(TripSearchRequest search, String resource, Long driverUserId) {
+    private PageResponse<TripResponse> page(TripSearchRequest search, Long driverUserId) {
         return read(connection -> {
             String filter =
                 FROM +
                 " WHERE " +
-                DataScopeGuard.visibleSql() +
+                UserRoleRepo.visibleSql() +
                 " AND (?::bigint IS NULL OR owner.id=?) AND (?::text IS NULL OR t.status=?) AND (?::timestamptz IS NULL OR (t.departure_at>=? AND t.departure_at<?)) AND strpos(lower(concat_ws(' ',t.code,t.name_vi,t.name_en,t.plate_number,owner.name)),?)>0" +
                 (driverUserId == null ? "" : " " + ASSIGNED);
             long total;
-            try (var query = connection.prepareStatement("SELECT count(*)" + filter)) {
-                bindSearch(query, 1, search, resource, driverUserId);
-                try (var row = query.executeQuery()) {
+            try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + filter)) {
+                bindSearch(query, 1, search, driverUserId);
+                try (ResultSet row = query.executeQuery()) {
                     row.next();
                     total = row.getLong(1);
                 }
             }
-            var result = new ArrayList<TripResponse>();
+            ArrayList<TripResponse> result = new ArrayList<TripResponse>();
             try (
-                var query = connection.prepareStatement(
+                PreparedStatement query = connection.prepareStatement(
                     "SELECT " + COLUMNS + filter + " ORDER BY t.departure_at DESC,t.id DESC LIMIT ? OFFSET ?"
                 )
             ) {
-                int at = DataScopeGuard.bindVisible(query, 1, resource, PermissionAction.UPDATE);
-                at = bindSearch(query, at, search, resource, driverUserId);
+                int at = UserRoleRepo.bindVisible(query, 1, "PUT " + Routes.ADMIN_TRIPS + Routes.BY_ID);
+                at = bindSearch(query, at, search, driverUserId);
                 query.setInt(at++, search.getSize());
                 query.setLong(at, search.offset());
-                try (var row = query.executeQuery()) {
+                try (ResultSet row = query.executeQuery()) {
                     while (row.next()) result.add(map(row, List.of(), List.of()));
                 }
             }
@@ -98,9 +98,9 @@ public class TripRepository extends BaseRepository {
         });
     }
 
-    private int bindSearch(PreparedStatement query, int at, TripSearchRequest body, String resource, Long driverUserId)
+    private int bindSearch(PreparedStatement query, int at, TripSearchRequest body, Long driverUserId)
         throws SQLException {
-        at = DataScopeGuard.bindVisible(query, at, resource, PermissionAction.READ);
+        at = UserRoleRepo.bindVisible(query, at);
         query.setObject(at++, body.getCarrierId());
         query.setObject(at++, body.getCarrierId());
         String status = body.getStatus() == null ? null : body.getStatus().name();
@@ -123,47 +123,33 @@ public class TripRepository extends BaseRepository {
     }
 
     /** ID ngoài scope trả 404; UPDATE khóa trip trước khi service khóa tài nguyên phân công. */
-    public TripResponse find(Connection connection, long id, PermissionAction action, boolean lock, boolean detail)
-        throws SQLException {
-        return find(connection, id, action, lock, detail, Groups.TRIP, null);
+    public TripResponse find(Connection connection, long id, boolean lock, boolean detail) throws SQLException {
+        return find(connection, id, lock, detail, null);
     }
 
     /** Tài xế ngoài phân công hiện hành nhận 404 trước đọc điểm/lịch sử hoặc khóa mutation. */
-    public TripResponse assigned(
-        Connection connection,
-        long id,
-        PermissionAction action,
-        boolean lock,
-        long driverUserId
-    ) throws SQLException {
-        return find(connection, id, action, lock, true, Groups.DRIVER_TRIP, driverUserId);
+    public TripResponse assigned(Connection connection, long id, boolean lock, long driverUserId) throws SQLException {
+        return find(connection, id, lock, true, driverUserId);
     }
 
-    private TripResponse find(
-        Connection connection,
-        long id,
-        PermissionAction action,
-        boolean lock,
-        boolean detail,
-        String resource,
-        Long driverUserId
-    ) throws SQLException {
+    private TripResponse find(Connection connection, long id, boolean lock, boolean detail, Long driverUserId)
+        throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT " +
                     COLUMNS +
                     FROM +
                     " WHERE t.id=? AND " +
-                    DataScopeGuard.visibleSql() +
+                    UserRoleRepo.visibleSql() +
                     (driverUserId == null ? "" : ASSIGNED) +
                     (lock ? " FOR UPDATE OF t" : "")
             )
         ) {
-            int at = DataScopeGuard.bindVisible(query, 1, resource, PermissionAction.UPDATE);
+            int at = UserRoleRepo.bindVisible(query, 1, "PUT " + Routes.ADMIN_TRIPS + Routes.BY_ID);
             query.setLong(at++, id);
-            at = DataScopeGuard.bindVisible(query, at, resource, action);
+            at = UserRoleRepo.bindVisible(query, at);
             if (driverUserId != null) query.setLong(at, driverUserId);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
                 return map(
                     row,
@@ -176,14 +162,14 @@ public class TripRepository extends BaseRepository {
 
     /** Chỉ caller đã xác minh trip/scope mới đọc snapshot điểm; thời gian đổi Timestamp tại ranh JDBC. */
     public List<TripStopResponse> stops(Connection connection, long tripId) throws SQLException {
-        var result = new ArrayList<TripStopResponse>();
+        ArrayList<TripStopResponse> result = new ArrayList<TripStopResponse>();
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT id,location_id,province_id,stop_order,name_vi,name_en,address,latitude,longitude,scheduled_arrival_at,scheduled_departure_at,actual_arrival_at,actual_departure_at,cumulative_fare,pickup_allowed,dropoff_allowed FROM trip_stops WHERE trip_id=? ORDER BY stop_order"
             )
         ) {
             query.setLong(1, tripId);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 while (row.next())
                     result.add(
                         new TripStopResponse(
@@ -212,14 +198,14 @@ public class TripRepository extends BaseRepository {
 
     /** Lịch sử mới nhất giới hạn 100, xếp thời gian thuận cho UI, không join email/account credentials. */
     private List<TripEventResponse> events(Connection connection, long tripId) throws SQLException {
-        var result = new ArrayList<TripEventResponse>();
+        ArrayList<TripEventResponse> result = new ArrayList<TripEventResponse>();
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT id,event_type,stop_order,note,created_at FROM (SELECT id,event_type,stop_order,note,created_at FROM trip_events WHERE trip_id=? ORDER BY id DESC LIMIT 100) e ORDER BY id"
             )
         ) {
             query.setLong(1, tripId);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 while (row.next())
                     result.add(
                         new TripEventResponse(
@@ -246,7 +232,7 @@ public class TripRepository extends BaseRepository {
     ) throws SQLException {
         long id;
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "INSERT INTO carrier_trips(carrier_id,scope_id,route_id,vehicle_id,driver_id,driver_user_id,code,name_vi,name_en,plate_number,vehicle_type_id,vehicle_type_name_vi,vehicle_type_name_en,driver_name,driver_phone,departure_at,end_at,capacity,created_by,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id"
             )
         ) {
@@ -270,17 +256,17 @@ public class TripRepository extends BaseRepository {
             query.setInt(18, body.getCapacity());
             query.setLong(19, actor);
             query.setLong(20, actor);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 row.next();
                 id = row.getLong(1);
             }
         }
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "INSERT INTO trip_stops(trip_id,carrier_id,scope_id,location_id,province_id,stop_order,name_vi,name_en,address,latitude,longitude,scheduled_arrival_at,scheduled_departure_at,cumulative_fare,pickup_allowed,dropoff_allowed,created_by,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
             )
         ) {
-            for (var stop : template.stops()) {
+            for (SourceStop stop : template.stops()) {
                 query.setLong(1, id);
                 query.setLong(2, template.carrierId());
                 query.setLong(3, template.scopeId());
@@ -304,7 +290,7 @@ public class TripRepository extends BaseRepository {
             query.executeBatch();
         }
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "INSERT INTO trip_segments(trip_id,carrier_id,scope_id,segment_order,capacity,updated_by) VALUES(?,?,?,?,?,?)"
             )
         ) {
@@ -327,12 +313,12 @@ public class TripRepository extends BaseRepository {
     public int peakReserved(Connection connection, long id) throws SQLException {
         int peak = 0;
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT reserved_seats FROM trip_segments WHERE trip_id=? ORDER BY segment_order FOR UPDATE"
             )
         ) {
             query.setLong(1, id);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 while (row.next()) peak = Math.max(peak, row.getInt(1));
             }
         }
@@ -342,12 +328,12 @@ public class TripRepository extends BaseRepository {
     /** Kiểm active của các địa điểm snapshot gốc, kể cả mẫu tuyến đã thay sang địa điểm khác. */
     public void requireStopsActive(Connection connection, long id) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT l.active AND p.active FROM trip_stops s JOIN location_places l ON l.id=s.location_id JOIN location_provinces p ON p.id=s.province_id WHERE s.trip_id=? ORDER BY s.stop_order FOR SHARE OF l,p"
             )
         ) {
             query.setLong(1, id);
-            try (var rows = query.executeQuery()) {
+            try (ResultSet rows = query.executeQuery()) {
                 while (rows.next()) if (!rows.getBoolean(1)) throw new BusinessException(ErrorCode.TRIP_STATE_CONFLICT);
             }
         }
@@ -364,7 +350,7 @@ public class TripRepository extends BaseRepository {
         long actor
     ) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "UPDATE carrier_trips SET vehicle_id=?,driver_id=?,driver_user_id=?,plate_number=?,vehicle_type_id=?,vehicle_type_name_vi=?,vehicle_type_name_en=?,driver_name=?,driver_phone=?,capacity=?,departure_at=?,end_at=?,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=? AND carrier_id=? AND scope_id=? AND version=?"
             )
         ) {
@@ -389,7 +375,7 @@ public class TripRepository extends BaseRepository {
         }
         long delta = departure.getEpochSecond() - trip.departureAt().getEpochSecond();
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "UPDATE trip_stops SET scheduled_arrival_at=scheduled_arrival_at+(?*INTERVAL '1 second'),scheduled_departure_at=scheduled_departure_at+(?*INTERVAL '1 second'),updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE trip_id=?"
             )
         ) {
@@ -400,7 +386,7 @@ public class TripRepository extends BaseRepository {
             query.executeUpdate();
         }
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "UPDATE trip_segments SET capacity=?,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE trip_id=?"
             )
         ) {
@@ -415,7 +401,7 @@ public class TripRepository extends BaseRepository {
     public void state(Connection connection, TripResponse trip, TripStatus status, String note, long actor)
         throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "UPDATE carrier_trips SET status=?,operation_note=?,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=? AND carrier_id=? AND scope_id=? AND version=?"
             )
         ) {
@@ -442,7 +428,7 @@ public class TripRepository extends BaseRepository {
         long actor
     ) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "INSERT INTO trip_events(trip_id,carrier_id,scope_id,event_type,stop_order,note,created_by) VALUES(?,?,?,?,?,?,?)"
             )
         ) {
@@ -458,7 +444,7 @@ public class TripRepository extends BaseRepository {
     }
 
     private static Instant instant(ResultSet row, int at) throws SQLException {
-        var value = row.getTimestamp(at);
+        Timestamp value = row.getTimestamp(at);
         return value == null ? null : value.toInstant();
     }
 

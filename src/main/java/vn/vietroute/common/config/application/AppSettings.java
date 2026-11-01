@@ -56,8 +56,13 @@ public final class AppSettings {
     /** JWT hết hạn sau 30 phút; chưa có refresh token. */
     private final Duration accessTokenLifetime = Duration.ofMinutes(30);
 
+    private final int authRegistryCapacity;
+    private final int scopeCapacity;
+
     public AppSettings(Function<String, String> source) {
         ConfigValues values = new ConfigValues(source);
+        authRegistryCapacity = values.number(Env.ACCESS_REGISTRY_CAPACITY, 512, 64, 2048);
+        scopeCapacity = values.number(Env.ACCESS_SCOPE_CAPACITY, 2048, 2, 10000);
         String environment = values.text(Env.ENV, "development").toLowerCase(Locale.ROOT);
         if (!environment.equals("development") && !environment.equals("production")) {
             throw new IllegalStateException(Env.ENV.key() + " must be development or production");

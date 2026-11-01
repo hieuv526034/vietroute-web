@@ -4,6 +4,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Iterator;
 import java.util.Locale;
 import javax.imageio.ImageIO;
@@ -27,12 +28,12 @@ public final class ImageValidator {
         if (file.getSize() > MediaSettings.MAX_FILE_BYTES) {
             throw new BusinessException(ErrorCode.PAYLOAD_TOO_LARGE);
         }
-        try (var source = file.getInputStream()) {
+        try (InputStream source = file.getInputStream()) {
             byte[] bytes = source.readNBytes(MediaSettings.MAX_FILE_BYTES + 1);
             if (bytes.length > MediaSettings.MAX_FILE_BYTES) {
                 throw new BusinessException(ErrorCode.PAYLOAD_TOO_LARGE);
             }
-            try (var input = new MemoryCacheImageInputStream(new ByteArrayInputStream(bytes))) {
+            try (MemoryCacheImageInputStream input = new MemoryCacheImageInputStream(new ByteArrayInputStream(bytes))) {
                 Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
                 if (!readers.hasNext()) {
                     throw new BusinessException(ErrorCode.MEDIA_INVALID);

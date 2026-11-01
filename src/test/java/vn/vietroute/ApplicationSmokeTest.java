@@ -71,7 +71,7 @@ class ApplicationSmokeTest {
             assertEquals("Idempotency-Key", idempotency.get("name").asText());
             assertEquals("header", idempotency.get("in").asText());
             assertTrue(idempotency.get("required").asBoolean());
-            assertTrue(document.get("paths").has("/api/v1/admin/access/roles/{role}/permissions"));
+            assertTrue(document.get("paths").has("/api/v1/admin/access/roles/{role}/functions"));
             var errorExample = document.at(
                 "/paths/~1api~1v1~1auth~1login/post/responses/401/content/application~1json/example"
             );

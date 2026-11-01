@@ -1,6 +1,9 @@
 package vn.vietroute.business.booking.repository;
 
+import java.sql.Array;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import org.springframework.stereotype.Repository;
@@ -21,16 +24,16 @@ public class TripCapacityRepository {
         boolean reserve,
         long actor
     ) throws SQLException {
-        var orders = new ArrayList<Integer>();
+        ArrayList<Integer> orders = new ArrayList<Integer>();
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT segment_order,capacity,reserved_seats FROM trip_segments WHERE trip_id=? AND segment_order>=? AND segment_order<? ORDER BY segment_order FOR UPDATE"
             )
         ) {
             query.setLong(1, tripId);
             query.setInt(2, pickup);
             query.setInt(3, dropoff);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 while (row.next()) {
                     BusinessRules.require(row.getInt(1) == pickup + orders.size(), ErrorCode.BOOKING_INVALID);
                     BusinessRules.require(
@@ -46,7 +49,7 @@ public class TripCapacityRepository {
             ErrorCode.BOOKING_INVALID
         );
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "UPDATE trip_segments SET reserved_seats=reserved_seats+?,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE trip_id=? AND segment_order>=? AND segment_order<?"
             )
         ) {
@@ -61,11 +64,11 @@ public class TripCapacityRepository {
 
     /** Hủy trip đã khóa booking: cộng chỗ cần trả theo đoạn trước, khóa đoạn tăng dần và cập nhật một lần. */
     public void releaseTrip(Connection connection, long tripId, long actor) throws SQLException {
-        var orders = new ArrayList<Integer>();
-        var seats = new ArrayList<Long>();
-        var changes = new ArrayList<Long>();
+        ArrayList<Integer> orders = new ArrayList<Integer>();
+        ArrayList<Long> seats = new ArrayList<Long>();
+        ArrayList<Long> changes = new ArrayList<Long>();
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 """
                 SELECT part.segment_order,sum(b.seats),count(*) FROM bookings b
                 CROSS JOIN LATERAL generate_series(b.pickup_order,b.dropoff_order-1) part(segment_order)
@@ -75,7 +78,7 @@ public class TripCapacityRepository {
             )
         ) {
             query.setLong(1, tripId);
-            try (var rows = query.executeQuery()) {
+            try (ResultSet rows = query.executeQuery()) {
                 while (rows.next()) {
                     orders.add(rows.getInt(1));
                     seats.add(rows.getLong(2));
@@ -84,12 +87,12 @@ public class TripCapacityRepository {
             }
         }
         if (orders.isEmpty()) return;
-        var orderArray = connection.createArrayOf("integer", orders.toArray(Integer[]::new));
-        var seatArray = connection.createArrayOf("bigint", seats.toArray(Long[]::new));
-        var changeArray = connection.createArrayOf("bigint", changes.toArray(Long[]::new));
+        Array orderArray = connection.createArrayOf("integer", orders.toArray(Integer[]::new));
+        Array seatArray = connection.createArrayOf("bigint", seats.toArray(Long[]::new));
+        Array changeArray = connection.createArrayOf("bigint", changes.toArray(Long[]::new));
         try {
             try (
-                var query = connection.prepareStatement(
+                PreparedStatement query = connection.prepareStatement(
                     """
                     SELECT segment_order,reserved_seats FROM trip_segments
                     WHERE trip_id=? AND segment_order=ANY(?) ORDER BY segment_order FOR UPDATE
@@ -99,7 +102,7 @@ public class TripCapacityRepository {
                 query.setLong(1, tripId);
                 query.setArray(2, orderArray);
                 int count = 0;
-                try (var rows = query.executeQuery()) {
+                try (ResultSet rows = query.executeQuery()) {
                     while (rows.next()) {
                         BusinessRules.require(rows.getInt(1) == orders.get(count), ErrorCode.BOOKING_INVALID);
                         BusinessRules.require(rows.getLong(2) >= seats.get(count), ErrorCode.BOOKING_CAPACITY);
@@ -110,7 +113,7 @@ public class TripCapacityRepository {
             }
             // Version vẫn tăng bằng số đơn chạm đoạn như vòng lặp cũ; chỉ giảm lượt JDBC, không đổi audit lịch sử.
             try (
-                var query = connection.prepareStatement(
+                PreparedStatement query = connection.prepareStatement(
                     """
                     UPDATE trip_segments s SET reserved_seats=s.reserved_seats-needed.seats,
                         version=s.version+needed.changes,updated_by=?,updated_at=CURRENT_TIMESTAMP
@@ -138,14 +141,14 @@ public class TripCapacityRepository {
         int result = 200,
             count = 0;
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT segment_order,capacity-reserved_seats FROM trip_segments WHERE trip_id=? AND segment_order>=? AND segment_order<? ORDER BY segment_order"
             )
         ) {
             query.setLong(1, tripId);
             query.setInt(2, pickup);
             query.setInt(3, dropoff);
-            try (var rows = query.executeQuery()) {
+            try (ResultSet rows = query.executeQuery()) {
                 while (rows.next()) {
                     BusinessRules.require(rows.getInt(1) == pickup + count, ErrorCode.BOOKING_INVALID);
                     result = Math.min(result, rows.getInt(2));

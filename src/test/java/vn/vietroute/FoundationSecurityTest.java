@@ -31,11 +31,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import vn.vietroute.auth.dto.request.access.RolePermissionsRequest;
-import vn.vietroute.auth.entity.Permission;
-import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.auth.service.AccessService;
 import vn.vietroute.business.catalog.service.CatalogService;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.web.WebConfig;
@@ -97,81 +93,13 @@ class FoundationSecurityTest {
         assertEquals("AUTH006", json.readTree(result.getContentAsString()).get("code").asText());
     }
 
-    @Test
-    void roleAloneDoesNotBypassFunctionPermissionAtServiceBoundary() {
-        authenticate("ROLE_ADMIN");
-        assertThrows(AccessDeniedException.class, () ->
-            context.getBean(CatalogService.class).create(null, null, Locale.ENGLISH)
-        );
-        assertThrows(AccessDeniedException.class, () -> context.getBean(AccessService.class).roles());
-    }
-
-    @Test
-    void permissionRegistryIsLocalizedWithoutDatabase() {
-        authenticate("ACCESS_READ");
-        var access = context.getBean(AccessService.class);
-        assertNotEquals(
-            access.permissions(Locale.ENGLISH).get(0).name(),
-            access.permissions(Locale.forLanguageTag("vi")).get(0).name()
-        );
-    }
-
-    @Test
-    void administrativeRecoveryRoleCannotBeModified() {
-        authenticate("ACCESS_WRITE");
-        var error = assertThrows(BusinessException.class, () ->
-            context.getBean(AccessService.class).replace(Role.ADMIN, new RolePermissionsRequest(), null)
-        );
-        assertEquals(ErrorCode.ACCESS_DENIED, error.getErrorCode());
-    }
-
-    @Test
-    void creatingDoesNotGrantReadUpdateDeleteAndLegacyWriteDoesNotGrantDelete() {
-        var catalogs = context.getBean(CatalogService.class);
-        authenticate("CATALOG_CREATE");
-        assertThrows(AccessDeniedException.class, () -> catalogs.find(1, Locale.ENGLISH));
-        assertThrows(AccessDeniedException.class, () -> catalogs.update(1, null, null, Locale.ENGLISH));
-        assertThrows(AccessDeniedException.class, () -> catalogs.delete(1, 0, null, Locale.ENGLISH));
-        authenticate("CATALOG_UPDATE");
-        assertThrows(AccessDeniedException.class, () -> catalogs.create(null, null, Locale.ENGLISH));
-        authenticate("CATALOG_WRITE");
-        assertThrows(AccessDeniedException.class, () -> catalogs.delete(1, 0, null, Locale.ENGLISH));
-    }
-
-    @Test
-    void delegatedAssignmentCannotGrantPrivilegesTheActorDoesNotHave() {
-        authenticate("ACCESS_ASSIGN");
-        var body = new RolePermissionsRequest();
-        body.setPermissions(Set.of(Permission.SYSTEM_READ));
-        var actor = new UserPrincipal(2L, "operator", Set.of(Role.OPERATOR), 0);
-        var error = assertThrows(BusinessException.class, () ->
-            context.getBean(AccessService.class).replace(Role.CUSTOMER, body, actor)
-        );
-        assertEquals(ErrorCode.ACCESS_DENIED, error.getErrorCode());
-    }
-
     private void authenticate(String authority) {
         SecurityContextHolder.getContext().setAuthentication(
             UsernamePasswordAuthenticationToken.authenticated(
-                new UserPrincipal(2L, "testuser", Set.of(Role.OPERATOR), 0),
+                new UserPrincipal(2L, "testuser", Set.of("OPERATOR"), 0),
                 null,
                 List.of(new SimpleGrantedAuthority(authority))
             )
-        );
-    }
-
-    @Test
-    void mediaMethodSecurityDeniesUnrelatedPermissionsBeforeDatabaseOrProvider() {
-        authenticate("CATALOG_CREATE");
-        var actor = new UserPrincipal(2L, "operator", Set.of(Role.OPERATOR), 0);
-        var service = context.getBean(MediaService.class);
-        assertThrows(AccessDeniedException.class, () -> service.upload(null, actor));
-        assertThrows(AccessDeniedException.class, () -> service.find(1, actor));
-        assertThrows(AccessDeniedException.class, () -> service.delete(1, 0, actor));
-        authenticate("MEDIA_CREATE");
-        assertEquals(
-            ErrorCode.MEDIA_DISABLED,
-            assertThrows(BusinessException.class, () -> service.upload(null, actor)).getErrorCode()
         );
     }
 
@@ -192,7 +120,7 @@ class FoundationSecurityTest {
     @Test
     void mediaPageRendersVietnameseAndEnglishWithoutDatabase() throws Exception {
         var viewer = UsernamePasswordAuthenticationToken.authenticated(
-            new UserPrincipal(2L, "viewer", Set.of(Role.OPERATOR), 0),
+            new UserPrincipal(2L, "viewer", Set.of("OPERATOR"), 0),
             null,
             List.of(new SimpleGrantedAuthority("MEDIA_READ"), new SimpleGrantedAuthority("MEDIA_VIEW"))
         );

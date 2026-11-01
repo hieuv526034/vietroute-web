@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import vn.vietroute.auth.dto.request.session.LoginRequest;
+import vn.vietroute.auth.dto.request.UserRequest;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.constant.ErrorCode;
@@ -206,7 +206,7 @@ class BaseControllerTest {
 
         @PostMapping
         @ResponseStatus(HttpStatus.CREATED)
-        public ApiResult<String> create(@RequestBody LoginRequest body, HttpServletRequest request) {
+        public ApiResult<String> create(@RequestBody UserRequest body, HttpServletRequest request) {
             return execute(HttpStatus.CREATED, SuccessCode.CREATED, request, () -> data(body.getUsername()));
         }
 

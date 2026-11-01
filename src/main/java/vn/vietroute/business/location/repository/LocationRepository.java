@@ -45,23 +45,23 @@ public class LocationRepository extends BaseRepository {
             String from =
                 " FROM location_provinces WHERE (?::boolean IS NULL OR active=?) AND concat_ws(' ',code,name_vi,name_en) ILIKE ? ESCAPE '!'";
             long total;
-            try (var query = connection.prepareStatement("SELECT count(*)" + from)) {
+            try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + from)) {
                 bindProvinceSearch(query, page, active);
-                try (var rows = query.executeQuery()) {
+                try (ResultSet rows = query.executeQuery()) {
                     rows.next();
                     total = rows.getLong(1);
                 }
             }
-            var content = new ArrayList<Province>();
+            ArrayList<Province> content = new ArrayList<Province>();
             try (
-                var query = connection.prepareStatement(
+                PreparedStatement query = connection.prepareStatement(
                     "SELECT " + PROVINCE_COLUMNS + from + " ORDER BY sort_order,id LIMIT ? OFFSET ?"
                 )
             ) {
                 bindProvinceSearch(query, page, active);
                 query.setInt(4, page.getSize());
                 query.setLong(5, page.offset());
-                try (var rows = query.executeQuery()) {
+                try (ResultSet rows = query.executeQuery()) {
                     while (rows.next()) content.add(province(rows));
                 }
             }
@@ -76,23 +76,23 @@ public class LocationRepository extends BaseRepository {
                 LOCATION_FROM +
                 " WHERE (?::bigint IS NULL OR l.province_id=?) AND (?::boolean IS NULL OR l.active=?) AND (NOT ? OR p.active) AND concat_ws(' ',l.code,l.name_vi,l.name_en,l.address,p.name_vi,p.name_en) ILIKE ? ESCAPE '!'";
             long total;
-            try (var query = connection.prepareStatement("SELECT count(*)" + from)) {
+            try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + from)) {
                 bindLocationSearch(query, page, active, publicOnly);
-                try (var rows = query.executeQuery()) {
+                try (ResultSet rows = query.executeQuery()) {
                     rows.next();
                     total = rows.getLong(1);
                 }
             }
-            var content = new ArrayList<Location>();
+            ArrayList<Location> content = new ArrayList<Location>();
             try (
-                var query = connection.prepareStatement(
+                PreparedStatement query = connection.prepareStatement(
                     "SELECT " + LOCATION_COLUMNS + from + " ORDER BY l.sort_order,l.id LIMIT ? OFFSET ?"
                 )
             ) {
                 bindLocationSearch(query, page, active, publicOnly);
                 query.setInt(7, page.getSize());
                 query.setLong(8, page.offset());
-                try (var rows = query.executeQuery()) {
+                try (ResultSet rows = query.executeQuery()) {
                     while (rows.next()) content.add(location(rows));
                 }
             }
@@ -110,12 +110,12 @@ public class LocationRepository extends BaseRepository {
 
     public Province province(Connection connection, long id) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT " + PROVINCE_COLUMNS + " FROM location_provinces WHERE id=?"
             )
         ) {
             query.setLong(1, id);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
                 return province(row);
             }
@@ -123,9 +123,13 @@ public class LocationRepository extends BaseRepository {
     }
 
     public Location location(Connection connection, long id) throws SQLException {
-        try (var query = connection.prepareStatement("SELECT " + LOCATION_COLUMNS + LOCATION_FROM + " WHERE l.id=?")) {
+        try (
+            PreparedStatement query = connection.prepareStatement(
+                "SELECT " + LOCATION_COLUMNS + LOCATION_FROM + " WHERE l.id=?"
+            )
+        ) {
             query.setLong(1, id);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
                 return location(row);
             }
@@ -134,9 +138,13 @@ public class LocationRepository extends BaseRepository {
 
     /** Khóa tỉnh trước khi tạo/bật địa điểm để không chạy lọt cập nhật trạng thái tỉnh đồng thời. Caller sở hữu transaction. */
     public void requireActiveProvince(Connection connection, long id) throws SQLException {
-        try (var query = connection.prepareStatement("SELECT active FROM location_provinces WHERE id=? FOR SHARE")) {
+        try (
+            PreparedStatement query = connection.prepareStatement(
+                "SELECT active FROM location_provinces WHERE id=? FOR SHARE"
+            )
+        ) {
             query.setLong(1, id);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
                 if (!row.getBoolean(1)) throw new BusinessException(ErrorCode.LOCATION_PROVINCE_INACTIVE);
             }
@@ -146,7 +154,7 @@ public class LocationRepository extends BaseRepository {
     /** INSERT lấy audit từ principal; code trùng chốt bằng UNIQUE và mapper COM005. */
     public Province createProvince(Connection connection, ProvinceCreateRequest body, long actor) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "INSERT INTO location_provinces(code,name_vi,name_en,sort_order,active,created_by,updated_by) VALUES (?,?,?,?,?,?,?) RETURNING " +
                     PROVINCE_COLUMNS
             )
@@ -158,7 +166,7 @@ public class LocationRepository extends BaseRepository {
             query.setBoolean(5, body.isActive());
             query.setLong(6, actor);
             query.setLong(7, actor);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 row.next();
                 return province(row);
             }
@@ -169,7 +177,7 @@ public class LocationRepository extends BaseRepository {
     public Province updateProvince(Connection connection, long id, ProvinceUpdateRequest body, long actor)
         throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "UPDATE location_provinces SET name_vi=?,name_en=?,sort_order=?,active=?,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=? AND version=? RETURNING " +
                     PROVINCE_COLUMNS
             )
@@ -181,7 +189,7 @@ public class LocationRepository extends BaseRepository {
             query.setLong(5, actor);
             query.setLong(6, id);
             query.setLong(7, body.getVersion());
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (row.next()) return province(row);
             }
         }
@@ -192,14 +200,14 @@ public class LocationRepository extends BaseRepository {
     public Location createLocation(Connection connection, LocationCreateRequest body, long actor) throws SQLException {
         long id;
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "INSERT INTO location_places(name_vi,name_en,address,latitude,longitude,sort_order,active,created_by,updated_by,province_id,code) VALUES (?,?,?,?,?,?,?,?,?,?,?) RETURNING id"
             )
         ) {
             bindLocationWrite(query, body, actor);
             query.setLong(10, body.getProvinceId());
             query.setString(11, body.getCode());
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 row.next();
                 id = row.getLong(1);
             }
@@ -211,7 +219,7 @@ public class LocationRepository extends BaseRepository {
     public Location updateLocation(Connection connection, long id, LocationUpdateRequest body, long actor)
         throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "UPDATE location_places SET name_vi=?,name_en=?,address=?,latitude=?,longitude=?,sort_order=?,active=?,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=? AND version=? RETURNING id"
             )
         ) {
@@ -219,7 +227,7 @@ public class LocationRepository extends BaseRepository {
             query.setLong(8, actor);
             query.setLong(9, id);
             query.setLong(10, body.getVersion());
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (row.next()) return location(connection, id);
             }
         }

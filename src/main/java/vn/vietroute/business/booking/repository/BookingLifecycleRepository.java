@@ -1,6 +1,8 @@
 package vn.vietroute.business.booking.repository;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -79,13 +81,13 @@ public class BookingLifecycleRepository {
             )
             SELECT (SELECT count(*) FROM targets),(SELECT count(*) FROM changed),(SELECT count(*) FROM logged)
             """;
-        try (var query = connection.prepareStatement(sql)) {
+        try (PreparedStatement query = connection.prepareStatement(sql)) {
             query.setString(1, state.name());
             query.setString(2, note);
             query.setLong(3, actor);
             query.setLong(4, tripId);
             if (state != BookingStatus.CANCELLED) query.setInt(5, order);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 row.next();
                 BusinessRules.require(
                     row.getLong(1) == row.getLong(2) && row.getLong(1) == row.getLong(3),

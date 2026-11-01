@@ -11,6 +11,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.Column;
+import jakarta.persistence.Table;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
@@ -30,12 +32,14 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,23 +58,29 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import vn.vietroute.auth.dto.request.account.DriverAccountCreateRequest;
-import vn.vietroute.auth.dto.request.session.LoginRequest;
-import vn.vietroute.auth.dto.response.history.AccessChangeStateResponse;
-import vn.vietroute.auth.dto.response.resource.AccessResourceResponse;
-import vn.vietroute.auth.entity.Permission;
+import vn.vietroute.auth.dto.request.UserRequest;
+import vn.vietroute.auth.dto.response.FunctionDTO;
+import vn.vietroute.auth.dto.response.RoleDTO;
+import vn.vietroute.auth.entity.AccessChange;
+import vn.vietroute.auth.entity.AccountChallenge;
+import vn.vietroute.auth.entity.Function;
+import vn.vietroute.auth.entity.FunctionResource;
 import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.repo.AccessChangeRepository;
-import vn.vietroute.auth.repo.AccessRepository;
-import vn.vietroute.auth.repo.DefaultAccountsRepository;
-import vn.vietroute.auth.repo.RoleResourceRepository;
-import vn.vietroute.auth.repo.UserRepository;
-import vn.vietroute.auth.security.AccessResourceSynchronizer;
+import vn.vietroute.auth.entity.RoleFunction;
+import vn.vietroute.auth.entity.User;
+import vn.vietroute.auth.entity.UserRole;
+import vn.vietroute.auth.initializer.AuthInitializer;
+import vn.vietroute.auth.repo.AccessChangeRepo;
+import vn.vietroute.auth.repo.AccountChallengeRepo;
+import vn.vietroute.auth.repo.FunctionResourceRepo;
+import vn.vietroute.auth.repo.RoleFunctionRepo;
+import vn.vietroute.auth.repo.RoleRepo;
+import vn.vietroute.auth.repo.UserRepo;
+import vn.vietroute.auth.repo.UserRoleRepo;
+import vn.vietroute.auth.security.EndpointAccess;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.auth.service.AccessResourceService;
-import vn.vietroute.auth.service.AuthService;
-import vn.vietroute.auth.service.DefaultAccountsInitializer;
 import vn.vietroute.auth.service.JwtService;
+import vn.vietroute.auth.service.UserService;
 import vn.vietroute.business.booking.repository.BookingLifecycleRepository;
 import vn.vietroute.business.carrier.dto.request.CarrierSearchRequest;
 import vn.vietroute.business.carrier.dto.request.PublicCarrierSearchRequest;
@@ -89,6 +99,7 @@ import vn.vietroute.business.report.service.ReportService;
 import vn.vietroute.business.tracking.dto.request.TrackingStartRequest;
 import vn.vietroute.business.tracking.service.DriverTrackingService;
 import vn.vietroute.common.config.RootConfig;
+import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.application.ConfigurationEnvironment;
 import vn.vietroute.common.config.database.DatabaseInitializer;
 import vn.vietroute.common.config.web.WebConfig;
@@ -103,7 +114,9 @@ import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.jdbc.LegacyMigrationSql;
+import vn.vietroute.common.media.repository.MediaRepository;
 import vn.vietroute.common.media.service.MediaService;
+import vn.vietroute.support.LegacyBusinessGrants;
 import vn.vietroute.support.PooledReadProbe;
 import vn.vietroute.support.SqlPlanProbe;
 
@@ -153,7 +166,7 @@ class BusinessIntegrationTest {
                     "SELECT count(*) FROM (SELECT DISTINCT rf.role_code,op AS permission_code FROM auth_role_functions rf CROSS JOIN LATERAL unnest(rf.operation_codes) op)"
                 )
             );
-            assertEquals("24", sql("SELECT count(*) FROM vietroute_schema_history"));
+            assertEquals("26", sql("SELECT count(*) FROM vietroute_schema_history"));
             try (
                 var connection = root.getBean(JdbcConnectionFactory.class).open();
                 var query = connection.prepareStatement("SHOW search_path");
@@ -184,7 +197,7 @@ class BusinessIntegrationTest {
             );
             var report = new ReportCarrierSearchRequest();
             report.setQuery(term);
-            SecurityContextHolder.getContext().setAuthentication(admin);
+            approve(admin, "GET /api/v1/admin/reports/carriers");
             assertEquals(
                 1,
                 root
@@ -230,7 +243,7 @@ class BusinessIntegrationTest {
             "90000",
             sql("SELECT count(*) FROM bookings b JOIN carrier_trips t ON t.id=b.trip_id WHERE t.code LIKE 'PERF03T%'")
         );
-        SecurityContextHolder.getContext().setAuthentication(admin);
+        approve(admin, "GET /api/v1/admin/reports/carriers");
         try (var connection = root.getBean(JdbcConnectionFactory.class).open()) {
             var reports = root.getBean(ReportRepository.class);
             var publicSearch = new PublicCarrierSearchRequest();
@@ -471,97 +484,69 @@ class BusinessIntegrationTest {
     @Test
     void bulkRoleAssignmentCannotTradeListForDetailOrExpandLegacyProjectionAndKeepsNativeEmptyDeny() throws Exception {
         seed();
-        long scope = Long.parseLong(sql("SELECT min(scope_id) FROM carriers"));
-        var delegate = member(scope, "BULKDELEGATE", "'ACCESS_ASSIGN','VEHICLE_READ'", "bulkdelegate");
-        grantResources(
-            "BULKDELEGATE",
-            0,
-            Set.of("PUT /api/v1/admin/access/users/{id}/roles", "GET /api/v1/admin/vehicles"),
-            admin,
-            200
+        var reader = member(
+            Long.parseLong(sql("SELECT min(scope_id) FROM carriers")),
+            "EXACTREADER",
+            "'VEHICLE_READ'",
+            "exactreader"
         );
-        sql(
-            "INSERT INTO auth_roles(code,name_vi,name_en) VALUES('BULKLIST','List','List'),('BULKDETAIL','Detail','Detail'),('BULKOUTSIDE','Legacy','Legacy'),('BULKEMPTY','Empty','Empty'); INSERT INTO auth_role_functions(role_code,function_code,operation_codes) SELECT code,'VEHICLE_READ',ARRAY['VEHICLE_READ'] FROM auth_roles WHERE code IN('BULKLIST','BULKDETAIL','BULKOUTSIDE','BULKEMPTY'); INSERT INTO auth_role_functions(role_code,function_code,operation_codes) SELECT x.role_code,f.code,ARRAY['VEHICLE_READ'] FROM (VALUES('BULKLIST','GET /api/v1/admin/vehicles'),('BULKDETAIL','GET /api/v1/admin/vehicles/{id}')) x(role_code,target) JOIN auth_function_resources fr ON fr.target=x.target JOIN auth_functions f ON f.code=fr.function_code AND f.source_managed"
-        );
-        long target = Long.parseLong(
-            sql(
-                "INSERT INTO auth_users(username,password_hash,display_name,must_change_password,email,email_verified_at) SELECT 'bulkreceiver',password_hash,'Receiver',false,'bulkreceiver@example.invalid',CURRENT_TIMESTAMP FROM auth_users WHERE id=1 RETURNING id"
-            )
-        );
-        sql(
-            "INSERT INTO auth_role_functions(role_code,function_code,operation_codes) VALUES('BULKOUTSIDE','VEHICLE_CREATE',ARRAY['VEHICLE_CREATE'])"
-        );
-        String path = "/api/v1/admin/access/users/" + target + "/roles";
-        call(200, "PUT", path, "{\"roles\":[\"BULKLIST\"],\"version\":0}", delegate);
-        call(403, "PUT", path, "{\"roles\":[\"BULKDETAIL\"],\"version\":1}", delegate);
-        call(403, "PUT", path, "{\"roles\":[\"BULKOUTSIDE\"],\"version\":1}", delegate);
-        assertEquals(
-            "1:BULKLIST",
-            sql(
-                "SELECT u.version||':'||ur.role_code FROM auth_users u JOIN auth_user_roles ur ON ur.user_id=u.id WHERE u.id=" +
-                    target
-            )
-        );
-        call(200, "PUT", path, "{\"roles\":[\"BULKLIST\",\"BULKEMPTY\"],\"version\":1}", delegate);
-        assertEquals("2", sql("SELECT count(*) FROM auth_user_roles WHERE user_id=" + target));
-        sql(
-            "INSERT INTO auth_role_functions(role_code,function_code,operation_codes) VALUES('BULKEMPTY','ACCESS_DELETE',ARRAY['ACCESS_DELETE'])"
-        );
-        call(403, "PUT", path, "{\"roles\":[\"BULKLIST\"],\"version\":2}", delegate);
-        assertEquals("2", sql("SELECT version FROM auth_users WHERE id=" + target));
+        grantResources("EXACTREADER", 0, Set.of("GET /api/v1/admin/vehicles"), admin, 200);
+        call(200, "GET", "/api/v1/admin/vehicles", null, reader);
+        call(403, "GET", "/api/v1/admin/vehicles/" + id("carrier_vehicles", "VRSOUTH01"), null, reader);
+        call(403, "GET", "/operations/vehicles", null, reader);
+        grantResources("EXACTREADER", 1, Set.of(), admin, 200);
+        call(403, "GET", "/api/v1/admin/vehicles", null, reader);
     }
 
     @Test
     void roleGrantSnapshotAndMembershipHistoryStayBoundedAndBatchFailureRollsBackAllEntries() throws Exception {
-        sql(
-            "INSERT INTO auth_roles(code,name_vi,name_en) SELECT 'BULKROLE'||n,'Test','Test' FROM generate_series(1,32) n; INSERT INTO auth_role_functions(role_code,function_code,operation_codes) SELECT code,'ACCESS_READ',ARRAY['ACCESS_READ'] FROM auth_roles WHERE code LIKE 'BULKROLE%'; UPDATE auth_functions SET active=false WHERE code='ACCESS_READ'"
-        );
-        var selected = new LinkedHashSet<Role>();
-        for (int index = 1; index <= 32; index++) selected.add(Role.valueOf("BULKROLE" + index));
         var statements = new AtomicInteger();
-        var grants = root
-            .getBean(JdbcTransactions.class)
-            .execute(connection ->
-                root.getBean(RoleResourceRepository.class).grants(counted(connection, statements), selected)
-            );
-        assertEquals(1, statements.get());
-        assertEquals(32, grants.size());
-        assertTrue(grants.stream().allMatch(g -> g.permissions().contains(Permission.ACCESS_READ)));
-        assertTrue(
-            grants
-                .stream()
-                .filter(g -> g.role().name().equals("BULKROLE1"))
-                .allMatch(g -> g.initialized() && g.targets().isEmpty())
-        );
-        assertTrue(grants.stream().allMatch(RoleResourceRepository.Grant::initialized));
-        var entries = new ArrayList<AccessChangeRepository.Entry>();
-        for (int index = 1; index <= 32; index++) entries.add(
-            new AccessChangeRepository.Entry(
-                Event.SCOPE_MEMBERSHIP,
-                Target.MEMBERSHIP,
-                "BULKHISTORY" + index,
-                AccessChangeStateResponse.empty(),
-                AccessChangeStateResponse.empty()
-            )
-        );
-        var history = root.getBean(AccessChangeRepository.class);
-        statements.set(0);
         root.getBean(JdbcTransactions.class).execute(connection -> {
-            history.appendAll(counted(connection, statements), entries, 1, null);
+            var codes = List.of("VEHICLE_READ", "TRIP_READ", "ROUTE_READ");
+            var bindings = root.getBean(FunctionResourceRepo.class).targetsFor(counted(connection, statements), codes);
+            assertEquals(3, bindings.size());
             return null;
         });
-        assertEquals(3, statements.get(), "Một batch, một advisory cleanup lock và một cleanup; không 3 x 32");
-        assertEquals("32", sql("SELECT count(*) FROM auth_access_changes WHERE target_key LIKE 'BULKHISTORY%'"));
+        assertEquals(1, statements.get());
+        statements.set(0);
+        var before = new ArrayList<RoleDTO>();
+        for (long scope = 1; scope <= 5; scope++) {
+            var value = new RoleDTO();
+            value.setScopeId(scope);
+            value.setRoles(Set.of("CUSTOMER"));
+            before.add(value);
+        }
+        root.getBean(JdbcTransactions.class).execute(connection -> {
+            root.getBean(AccessChangeRepo.class).appendMemberships(
+                counted(connection, statements),
+                7,
+                before,
+                List.of(),
+                0
+            );
+            return null;
+        });
+        assertEquals(1, statements.get(), "Năm membership phải ghi đúng một executeBatch");
+        assertEquals("5", sql("SELECT count(*) FROM auth_access_changes WHERE event_type='SCOPE_MEMBERSHIP'"));
+        sql("DELETE FROM auth_access_changes");
         sql(
-            "DELETE FROM auth_access_changes WHERE target_key LIKE 'BULKHISTORY%'; CREATE FUNCTION reject_bulk_history() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN IF NEW.target_key=''BULKHISTORY17'' THEN RAISE EXCEPTION ''bulk fixture failure''; END IF; RETURN NEW; END'; CREATE TRIGGER reject_bulk_history BEFORE INSERT ON auth_access_changes FOR EACH ROW EXECUTE FUNCTION reject_bulk_history()"
+            "CREATE FUNCTION fail_batch_history() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN RAISE EXCEPTION ''batch history failure''; END'; CREATE TRIGGER fail_batch_history BEFORE INSERT ON auth_access_changes FOR EACH ROW EXECUTE FUNCTION fail_batch_history()"
         );
         assertThrows(BusinessException.class, () ->
             root.getBean(JdbcTransactions.class).execute(connection -> {
-                history.appendAll(connection, entries, 1, null);
+                root.getBean(AccessChangeRepo.class).append(
+                    connection,
+                    "USER_ROLES",
+                    "USER",
+                    "7",
+                    0,
+                    Map.of(),
+                    Map.of()
+                );
                 return null;
             })
         );
-        assertEquals("0", sql("SELECT count(*) FROM auth_access_changes WHERE target_key LIKE 'BULKHISTORY%'"));
+        assertEquals("0", sql("SELECT count(*) FROM auth_access_changes"));
     }
 
     /** Đếm execute thực tế (batch là một lượt JDBC), không chỉ prepareStatement để bỏ sót execute trong for. */
@@ -595,56 +580,27 @@ class BusinessIntegrationTest {
     }
 
     @Test
-    void permissionValidationUsesOneQueryForWholeSetAndRejectsMissingInactiveOrDeletedCodes() throws Exception {
-        var repository = root.getBean(AccessRepository.class);
-        var permissions = new LinkedHashSet<Permission>();
-        try (
-            var connection = root.getBean(JdbcConnectionFactory.class).open();
-            var query = connection.prepareStatement(
-                "SELECT code FROM auth_functions WHERE active AND NOT deleted AND code=ANY(operation_codes)"
-            )
-        ) {
-            try (var rows = query.executeQuery()) {
-                while (rows.next()) permissions.add(Permission.valueOf(rows.getString(1)));
-            }
-        }
+    void roleValidationUsesOneQueryForWholeSetAndRejectsMissingInactiveOrDeletedCodes() throws Exception {
+        var repository = root.getBean(UserRoleRepo.class);
         var statements = new AtomicInteger();
         root.getBean(JdbcTransactions.class).execute(connection -> {
             repository.validateMappings(
                 counted(connection, statements),
-                Set.of(Role.ADMIN, Role.DRIVER, Role.CUSTOMER),
-                permissions
+                Set.of("ADMIN", "DRIVER", "CUSTOMER"),
+                Set.of()
             );
             return null;
         });
-        assertTrue(permissions.size() > 50);
         assertEquals(1, statements.get());
-        for (String change : new String[] {
-            "UPDATE auth_roles SET active=false WHERE code='DRIVER'",
-            "UPDATE auth_roles SET active=false,deleted=true WHERE code='DRIVER'",
-            "UPDATE auth_functions SET active=false WHERE code='ACCESS_READ'",
-        }) {
-            sql(change);
-            assertEquals(
-                ErrorCode.INVALID_REQUEST,
-                assertThrows(BusinessException.class, () ->
-                    root.getBean(JdbcTransactions.class).execute(connection -> {
-                        repository.validateMappings(connection, Set.of(Role.DRIVER), Set.of(Permission.ACCESS_READ));
-                        return null;
-                    })
-                ).getErrorCode()
-            );
-            sql("UPDATE auth_roles SET active=true,deleted=false WHERE code='DRIVER'");
-        }
-        assertEquals(
-            ErrorCode.INVALID_REQUEST,
+        for (String code : List.of("DRIVER", "MISSINGROLE")) {
+            sql("UPDATE auth_roles SET active=false WHERE code='DRIVER'");
             assertThrows(BusinessException.class, () ->
                 root.getBean(JdbcTransactions.class).execute(connection -> {
-                    repository.validateMappings(connection, Set.of(Role.valueOf("MISSINGROLE")), Set.of());
+                    repository.validateMappings(connection, Set.of(code), Set.of());
                     return null;
                 })
-            ).getErrorCode()
-        );
+            );
+        }
     }
 
     @Test
@@ -784,20 +740,27 @@ class BusinessIntegrationTest {
                 );
             }
         };
-        var auth = new AuthService(
-            root.getBean(UserRepository.class),
-            transactions,
+        var auth = new UserService(
+            root.getBean(UserRepo.class),
+            root.getBean(UserRoleRepo.class),
+            root.getBean(AccountChallengeRepo.class),
+            root.getBean(AccessChangeRepo.class),
             root.getBean(PasswordEncoder.class),
             root.getBean(JwtService.class),
+            transactions,
+            root.getBean(AppSettings.class),
+            root.getBean(AuthInitializer.class),
+            root.getBean(MediaRepository.class),
             Clock.systemUTC()
         );
-        var login = new LoginRequest();
+        auth.initializePasswordTiming();
+        var login = new UserRequest();
         login.setUsername("TESTADMIN");
         login.setPassword("TestOnly!2026Aa");
         var response = auth.login(login);
         assertEquals(2, statements.get(), "Chỉ SELECT FOR UPDATE và UPDATE RETURNING; schema/commit vẫn giữ nguyên");
-        assertEquals(before + 1, response.user().getVersion());
-        assertTrue(response.user().getRoles().contains(Role.ADMIN));
+        assertEquals(before + 1, response.getUser().getVersion());
+        assertTrue(response.getUser().getRoles().contains("ADMIN"));
         assertEquals(
             "0:true:0",
             sql(
@@ -805,14 +768,14 @@ class BusinessIntegrationTest {
             )
         );
         assertEquals(tokenVersion, sql("SELECT token_version FROM auth_users WHERE id=1"));
-        assertFalse(child.getBean(ObjectMapper.class).writeValueAsString(response.user()).contains("passwordHash"));
+        assertFalse(child.getBean(ObjectMapper.class).writeValueAsString(response.getUser()).contains("passwordHash"));
         assertEquals(before + 1, Long.parseLong(sql("SELECT version FROM auth_users WHERE id=1")));
     }
 
     @Test
     void loginStillCommitsFiveFailuresLocksAndRollsBackAnUnsuccessfulReset() throws Exception {
-        var auth = root.getBean(AuthService.class);
-        var login = new LoginRequest();
+        var auth = root.getBean(UserService.class);
+        var login = new UserRequest();
         login.setUsername("testadmin");
         login.setPassword("WrongOnly!2026Aa");
         for (int attempt = 1; attempt <= 5; attempt++) {
@@ -1025,8 +988,8 @@ class BusinessIntegrationTest {
             .toString();
         for (String name : List.of("query", "active", "page", "size"))
             assertTrue(searchInputs.contains("\"name\":\"" + name + "\""));
-        assertTrue(spec.path("components").path("schemas").has("FunctionCreateRequest"));
-        assertTrue(spec.path("components").path("schemas").has("FunctionUpdateRequest"));
+        assertTrue(spec.path("components").path("schemas").has("FunctionRequest"));
+        assertTrue(spec.path("components").path("schemas").has("FunctionRequest"));
     }
 
     @Test
@@ -1047,18 +1010,22 @@ class BusinessIntegrationTest {
             "VIETROUTE_DEFAULT_OPERATOR_PASSWORD",
             "Operator!2026Aa"
         );
-        var defaults = new DefaultAccountsInitializer(
-            root.getBean(DefaultAccountsRepository.class),
+        var defaults = new AuthInitializer(
+            root.getBean(UserRepo.class),
+            root.getBean(RoleRepo.class),
+            root.getBean(AppSettings.class),
             new ConfigurationEnvironment(envValues::get, null),
-            root.getBean(PasswordEncoder.class)
+            root.getBean(PasswordEncoder.class),
+            root.getBean(JdbcTransactions.class),
+            json
         );
         var tx = root.getBean(JdbcTransactions.class);
         tx.execute(connection -> {
             defaults.initialize(connection);
             root.getBean(DemoSeedRepository.class).seed(connection, 0);
             root.getBean(InitialRouteRepository.class).seed(connection);
-            root.getBean(DefaultAccountsRepository.class).assignInitialScopes(connection);
-            root.getBean(DefaultAccountsRepository.class).initializeFunctions(connection);
+            root.getBean(UserRepo.class).assignInitialScopes(connection);
+            root.getBean(AuthInitializer.class).synchronize(root.getBean(EndpointAccess.class).all());
             return null;
         });
         assertEquals(
@@ -1077,16 +1044,16 @@ class BusinessIntegrationTest {
             )
         );
         SecurityContextHolder.getContext().setAuthentication(actor(1, "testadmin", "ADMIN"));
-        var login = new LoginRequest();
+        var login = new UserRequest();
         login.setUsername("operator01");
         login.setPassword("Operator!2026Aa");
-        var session = root.getBean(AuthService.class).login(login);
+        var session = root.getBean(UserService.class).login(login);
         assertTrue(
             session
-                .user()
-                .getPermissions()
+                .getUser()
+                .getTargets()
                 .stream()
-                .anyMatch(permission -> permission.name().equals("TRIP_READ"))
+                .anyMatch(target -> target.equals("GET /api/v1/admin/trips"))
         );
         String hash = sql("SELECT md5(password_hash) FROM auth_users WHERE username='driver01'");
         sql(
@@ -1096,8 +1063,8 @@ class BusinessIntegrationTest {
             defaults.initialize(connection);
             root.getBean(DemoSeedRepository.class).seed(connection, 0);
             root.getBean(InitialRouteRepository.class).seed(connection);
-            root.getBean(DefaultAccountsRepository.class).assignInitialScopes(connection);
-            root.getBean(DefaultAccountsRepository.class).initializeFunctions(connection);
+            root.getBean(UserRepo.class).assignInitialScopes(connection);
+            root.getBean(AuthInitializer.class).synchronize(root.getBean(EndpointAccess.class).all());
             return null;
         });
         assertEquals(hash, sql("SELECT md5(password_hash) FROM auth_users WHERE username='driver01'"));
@@ -1163,19 +1130,28 @@ class BusinessIntegrationTest {
 
     @Test
     void compatibilityPermissionCreationStoresItsOperationAndRemainsAssignable() throws Exception {
-        String registry = "{\"nameVi\":\"Chi tiết bổ sung\",\"nameEn\":\"Extra detail\",\"active\":true,\"version\":0}";
-        call(201, "POST", "/api/v1/admin/access/registry/permissions/EXTRA_DETAIL", registry, admin);
-        assertEquals("{EXTRA_DETAIL}", sql("SELECT operation_codes FROM auth_functions WHERE code='EXTRA_DETAIL'"));
-        call(201, "POST", "/api/v1/admin/access/registry/roles/EXTRA_CI", registry, admin);
-        var mapping = call(
-            200,
-            "PUT",
-            "/api/v1/admin/access/roles/EXTRA_CI/permissions",
-            "{\"permissions\":[\"EXTRA_DETAIL\"],\"version\":0}",
+        call(
+            404,
+            "POST",
+            "/api/v1/admin/access/registry/permissions/EXTRA_DETAIL",
+            "{\"nameVi\":\"Không còn registry permission\",\"nameEn\":\"Removed registry\",\"active\":true,\"version\":0}",
             admin
         );
-        assertEquals("EXTRA_DETAIL", mapping.path("permissions").get(0).asText());
-        assertEquals("2", sql("SELECT count(*) FROM auth_role_functions WHERE function_code='EXTRA_DETAIL'"));
+        var value = call(
+            201,
+            "POST",
+            "/api/v1/admin/access/functions",
+            "{\"code\":\"EXTRA_DETAIL\",\"nameVi\":\"Chi tiết xe\",\"nameEn\":\"Vehicle detail\",\"active\":true,\"targets\":[\"GET /api/v1/admin/vehicles/{id}\"]}",
+            admin
+        );
+        assertEquals("EXTRA_DETAIL", value.path("code").asText());
+        assertEquals("1", sql("SELECT count(*) FROM auth_function_resources WHERE function_code='EXTRA_DETAIL'"));
+        assertEquals(
+            "0",
+            sql(
+                "SELECT count(*) FROM information_schema.columns WHERE table_schema=current_schema() AND column_name='operation_codes'"
+            )
+        );
     }
 
     @Test
@@ -1305,6 +1281,18 @@ class BusinessIntegrationTest {
         child.refresh();
         mvc = MockMvcBuilders.webAppContextSetup(child).apply(springSecurity()).build();
         admin = actor(1, "testadmin", "ADMIN");
+        root.getBean(JdbcTransactions.class).execute(connection -> {
+            LegacyBusinessGrants.initialize(
+                connection,
+                root
+                    .getBean(EndpointAccess.class)
+                    .all()
+                    .stream()
+                    .map(FunctionDTO::getTarget)
+                    .collect(Collectors.toSet())
+            );
+            return null;
+        });
     }
 
     @AfterEach
@@ -1329,7 +1317,7 @@ class BusinessIntegrationTest {
 
     private Authentication actor(long id, String username, String role) {
         return UsernamePasswordAuthenticationToken.authenticated(
-            new UserPrincipal(id, username, Set.of(Role.valueOf(role)), 0),
+            new UserPrincipal(id, username, Set.of(role), 0),
             null,
             Set.of()
         );
@@ -1346,6 +1334,7 @@ class BusinessIntegrationTest {
     }
 
     private String sql(String text) throws Exception {
+        text = LegacyBusinessGrants.sql(text);
         try (
             var connection = DriverManager.getConnection(
                 System.getProperty("business.test.database"),
@@ -1423,7 +1412,7 @@ class BusinessIntegrationTest {
         String view = "/api/v1/my-bookings/" + booking + "/tracking";
         assertEquals("UNAVAILABLE", call(200, "GET", view, null, buyer).path("status").asText());
         call(404, "GET", view, null, stranger);
-        call(403, "GET", view, null, admin);
+        call(404, "GET", view, null, admin);
         call(404, "POST", "/api/v1/driver/trips/" + trip + "/tracking/start", "{\"tripVersion\":1}", otherDriver);
         call(404, "POST", "/api/v1/driver/trips/" + trip + "/tracking/start", "{\"tripVersion\":1}", admin);
         var nonce = call(200, "POST", "/api/v1/driver/trips/" + trip + "/tracking/start", "{\"tripVersion\":1}", driver)
@@ -1604,7 +1593,7 @@ class BusinessIntegrationTest {
         );
         call(403, "POST", path + "/start", "{\"tripVersion\":1}", driver);
         SecurityContextHolder.getContext().setAuthentication(driver);
-        assertThrows(AccessDeniedException.class, () ->
+        assertThrows(BusinessException.class, () ->
             root
                 .getBean(DriverTrackingService.class)
                 .start(trip, new TrackingStartRequest(1L), (UserPrincipal) driver.getPrincipal())
@@ -1899,7 +1888,7 @@ class BusinessIntegrationTest {
         );
         call(403, "GET", path, null, reporter);
         SecurityContextHolder.getContext().setAuthentication(reporter);
-        assertThrows(AccessDeniedException.class, () ->
+        assertThrows(BusinessException.class, () ->
             root.getBean(ReportService.class).summary(new ReportSearchRequest())
         );
         call(200, "GET", "/operations/reports", null, reporter);
@@ -1949,23 +1938,24 @@ class BusinessIntegrationTest {
             driver = id("carrier_drivers", "DRVSOUTH02");
         long scope = Long.parseLong(sql("SELECT scope_id FROM carriers WHERE id=" + carrier));
         var staff = member(scope, "PROVISIONER", "'DRIVER_VIEW','DRIVER_READ','DRIVER_ASSIGN'", "provisioner");
+        grantDriverDelegation("PROVISIONER", staff);
         String body =
             "{\"username\":\"NewDriver\",\"email\":\"NEWDRIVER@example.invalid\",\"password\":\"TestOnly!2026Aa\",\"version\":0}";
         var result = call(201, "POST", "/api/v1/admin/drivers/" + driver + "/account", body, staff);
-        long user = result.path("userId").asLong();
+        long user = result.path("id").asLong();
         assertEquals("newdriver", result.path("username").asText());
         assertTrue(result.path("mustChangePassword").asBoolean());
-        assertTrue(result.path("emailVerificationRequired").asBoolean());
+        assertFalse(result.path("emailVerificationRequired").asBoolean());
         assertFalse(result.path("driverActive").asBoolean());
         assertFalse(result.has("password"));
-        assertFalse(result.has("email"));
+        assertTrue(result.path("email").isNull());
         assertTrue(
             root
                 .getBean(PasswordEncoder.class)
                 .matches("TestOnly!2026Aa", sql("SELECT password_hash FROM auth_users WHERE id=" + user))
         );
         assertEquals(
-            "true:true:false:true",
+            "true:true:false:false",
             sql(
                 "SELECT active||':'||must_change_password||':'||activation_pending||':'||(email_verified_at IS NULL) FROM auth_users WHERE id=" +
                     user
@@ -2006,7 +1996,7 @@ class BusinessIntegrationTest {
         );
         assertEquals("0", sql("SELECT count(*) FROM auth_account_challenges"));
         var pending = UsernamePasswordAuthenticationToken.authenticated(
-            new UserPrincipal(user, "newdriver", Set.of(Role.DRIVER), 1),
+            new UserPrincipal(user, "newdriver", Set.of("DRIVER"), 1),
             null,
             Set.of()
         );
@@ -2030,6 +2020,7 @@ class BusinessIntegrationTest {
         long driver = id("carrier_drivers", "DRVSOUTH02"),
             foreign = id("carrier_drivers", "DRVNORTH01");
         var staff = member(scope, "SCOPEDPROVISION", "'DRIVER_READ','DRIVER_ASSIGN'", "scopedprovision");
+        grantDriverDelegation("SCOPEDPROVISION", staff);
         String body =
             "{\"username\":\"scopeaccount\",\"email\":\"scopeaccount@example.invalid\",\"password\":\"TestOnly!2026Aa\",\"version\":0}";
         assertTrue(
@@ -2062,10 +2053,10 @@ class BusinessIntegrationTest {
         sql(
             "INSERT INTO auth_role_functions(role_code,function_code,operation_codes) VALUES('DRIVER','ACCOUNT_READ',ARRAY['ACCOUNT_READ'])"
         );
-        call(409, "POST", "/api/v1/admin/drivers/" + driver + "/account", body, staff);
+        call(403, "POST", "/api/v1/admin/drivers/" + driver + "/account", body, staff);
         assertEquals("0", sql("SELECT count(*) FROM auth_users WHERE username='scopeaccount'"));
         sql(
-            "UPDATE auth_role_functions SET operation_codes=array_remove(operation_codes,'ACCOUNT_READ') WHERE role_code='DRIVER'; UPDATE auth_role_functions SET operation_codes=array_remove(operation_codes,'DRIVER_ASSIGN') WHERE role_code='SCOPEDPROVISION'"
+            "UPDATE auth_role_functions SET operation_codes=array_remove(operation_codes,'ACCOUNT_READ') WHERE role_code='DRIVER'; UPDATE auth_role_functions SET operation_codes=array_remove(operation_codes,'DRIVER_ASSIGN') WHERE role_code='SCOPEDPROVISION'; DELETE FROM auth_function_resources WHERE function_code IN(SELECT function_code FROM auth_role_functions WHERE role_code='SCOPEDPROVISION') AND target='POST /api/v1/admin/drivers/{id}/account'"
         );
         assertFalse(
             call(200, "GET", "/api/v1/admin/drivers/" + driver, null, staff)
@@ -2074,10 +2065,8 @@ class BusinessIntegrationTest {
         );
         call(403, "POST", "/api/v1/admin/drivers/" + driver + "/account", body, staff);
         SecurityContextHolder.getContext().setAuthentication(staff);
-        assertThrows(AccessDeniedException.class, () ->
-            root
-                .getBean(DriverService.class)
-                .provision(driver, new DriverAccountCreateRequest(), (UserPrincipal) staff.getPrincipal())
+        assertThrows(BusinessException.class, () ->
+            root.getBean(DriverService.class).provision(driver, new UserRequest(), (UserPrincipal) staff.getPrincipal())
         );
     }
 
@@ -2334,10 +2323,10 @@ class BusinessIntegrationTest {
         call(403, "GET", "/api/v1/admin/vehicles", null, view);
         call(403, "GET", "/catalogs/booking-sources", null, view);
         SecurityContextHolder.getContext().setAuthentication(view);
-        assertThrows(AccessDeniedException.class, () ->
+        assertThrows(BusinessException.class, () ->
             root.getBean(VehicleService.class).page(new CarrierSearchRequest())
         );
-        assertThrows(AccessDeniedException.class, () ->
+        assertThrows(BusinessException.class, () ->
             root.getBean(BookingSourceCatalogService.class).find(1, Locale.ROOT)
         );
         var read = member(scope, "TYPEONLY", "'VEHICLE_TYPE_READ'", "testtypereader");
@@ -2463,7 +2452,7 @@ class BusinessIntegrationTest {
             executor.shutdownNow();
         }
         assertEquals("1", sql("SELECT version FROM carrier_vehicles WHERE id=" + vehicle));
-        SecurityContextHolder.getContext().setAuthentication(admin);
+        approve(admin, "GET /api/v1/admin/reports/carriers");
         var error = assertThrows(BusinessException.class, () ->
             root.getBean(MediaService.class).delete(image, 0, (UserPrincipal) admin.getPrincipal())
         );
@@ -2500,62 +2489,201 @@ class BusinessIntegrationTest {
 
     private record TripFixture(long carrier, long scope, long route, long vehicle, long driver) {}
 
+    @Test
+    void inactiveAllScopesRoleStillProtectsFunctionFromScopedEditor() throws Exception {
+        seed();
+        long scope = Long.parseLong(sql("SELECT min(scope_id) FROM carriers"));
+        var editor = member(scope, "SCOPED_EDITOR", "'VEHICLE_READ'", "scopededitor");
+        grantResources(
+            "SCOPED_EDITOR",
+            0,
+            Set.of("PUT /api/v1/admin/access/functions/{code}", "GET /api/v1/admin/vehicles"),
+            admin,
+            200
+        );
+        call(
+            201,
+            "POST",
+            "/api/v1/admin/access/functions",
+            "{\"code\":\"WIDE_FUNCTION\",\"nameVi\":\"Global\",\"nameEn\":\"Global\",\"description\":\"Giữ mô tả\",\"icon\":\"menu\",\"sortOrder\":5,\"active\":false,\"targets\":[\"GET /api/v1/admin/vehicles\"]}",
+            admin
+        );
+        call(
+            201,
+            "POST",
+            "/api/v1/admin/access/registry/roles/WIDE_ROLE",
+            "{\"nameVi\":\"Global\",\"nameEn\":\"Global\",\"allScopes\":true,\"active\":false}",
+            admin
+        );
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/access/registry/roles/WIDE_ROLE",
+            "{\"nameVi\":\"Đổi tên\",\"nameEn\":\"Renamed\",\"version\":0}",
+            admin
+        );
+        assertEquals("true:false", sql("SELECT all_scopes||':'||active FROM auth_roles WHERE code='WIDE_ROLE'"));
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/access/functions/WIDE_FUNCTION",
+            "{\"code\":\"WIDE_FUNCTION\",\"nameVi\":\"Đổi tên\",\"nameEn\":\"Renamed\",\"targets\":[\"GET /api/v1/admin/vehicles\"],\"version\":0}",
+            admin
+        );
+        assertEquals(
+            "Giữ mô tả:menu:5:false",
+            sql(
+                "SELECT description||':'||icon||':'||sort_order||':'||active FROM auth_functions WHERE code='WIDE_FUNCTION'"
+            )
+        );
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/access/roles/WIDE_ROLE/functions",
+            "{\"functionCodes\":[\"WIDE_FUNCTION\"],\"version\":1}",
+            admin
+        );
+        call(
+            403,
+            "PUT",
+            "/api/v1/admin/access/functions/WIDE_FUNCTION",
+            "{\"code\":\"WIDE_FUNCTION\",\"nameVi\":\"Changed\",\"nameEn\":\"Changed\",\"targets\":[\"GET /api/v1/admin/vehicles\"],\"version\":1}",
+            editor
+        );
+        assertEquals("1", sql("SELECT version FROM auth_functions WHERE code='WIDE_FUNCTION'"));
+    }
+
+    @Test
+    void allEightJpaModelsMapEveryRealColumnIncludingGeneratedScopeKeys() throws Exception {
+        var models = List.of(
+            User.class,
+            Role.class,
+            UserRole.class,
+            Function.class,
+            RoleFunction.class,
+            FunctionResource.class,
+            AccountChallenge.class,
+            AccessChange.class
+        );
+        try (var connection = root.getBean(JdbcConnectionFactory.class).open()) {
+            for (var model : models) {
+                String table = model.getAnnotation(Table.class).name();
+                var mapped = new LinkedHashSet<String>();
+                for (Class<?> type = model; type != Object.class; type = type.getSuperclass()) {
+                    for (var field : type.getDeclaredFields()) {
+                        var column = field.getAnnotation(Column.class);
+                        if (column != null) mapped.add(column.name());
+                    }
+                }
+                try (
+                    var query = connection.prepareStatement(
+                        "SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name=?"
+                    )
+                ) {
+                    query.setString(1, table);
+                    var actual = new LinkedHashSet<String>();
+                    try (var rows = query.executeQuery()) {
+                        while (rows.next()) actual.add(rows.getString(1));
+                    }
+                    assertEquals(actual, mapped, table);
+                }
+            }
+        }
+    }
+
+    @Test
+    void jpaUserCrudAndJdbcHistoryShareRollbackAndOptimisticVersion() throws Exception {
+        String body =
+            "{\"username\":\"jpatxuser\",\"displayName\":\"Người dùng JPA\",\"password\":\"TestOnly!2026Aa\",\"roles\":[\"CUSTOMER\"]}";
+        sql(
+            "CREATE FUNCTION fail_jpa_history() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN RAISE EXCEPTION ''test history failure''; END'; CREATE TRIGGER fail_jpa_history BEFORE INSERT ON auth_access_changes FOR EACH ROW EXECUTE FUNCTION fail_jpa_history()"
+        );
+        call(503, "POST", "/api/v1/admin/accounts", body, admin);
+        assertEquals("0", sql("SELECT count(*) FROM auth_users WHERE username='jpatxuser'"));
+        sql("DROP TRIGGER fail_jpa_history ON auth_access_changes; DROP FUNCTION fail_jpa_history()");
+        var created = call(201, "POST", "/api/v1/admin/accounts", body, admin);
+        long id = created.path("id").asLong();
+        long version = created.path("version").asLong();
+        assertFalse(created.has("passwordHash"));
+        assertFalse(created.has("password"));
+        var update = "{\"displayName\":\"Tên mới\",\"version\":" + version + "}";
+        assertEquals(
+            version + 1,
+            call(200, "PUT", "/api/v1/admin/accounts/" + id, update, admin)
+                .path("version")
+                .asLong()
+        );
+        call(409, "PUT", "/api/v1/admin/accounts/" + id, update, admin);
+        assertEquals("Tên mới", sql("SELECT display_name FROM auth_users WHERE id=" + id));
+    }
+
+    private void approve(Authentication who, String target) {
+        SecurityContextHolder.getContext().setAuthentication(who);
+        SecurityContextHolder.getContext().setAuthentication(
+            root.getBean(EndpointAccess.class).authorize(who, target, false)
+        );
+    }
+
+    private void grantDriverDelegation(String role, Authentication staff) throws Exception {
+        var targets = root
+            .getBean(JdbcTransactions.class)
+            .execute(connection -> root.getBean(RoleFunctionRepo.class).targets(connection, "DRIVER"));
+        var combined = new LinkedHashSet<>(targets);
+        combined.addAll(LegacyBusinessGrants.targets(Set.of("DRIVER_READ", "DRIVER_ASSIGN", "DRIVER_VIEW")));
+        grantResources(role, 0, combined, admin, 200);
+    }
+
+    private int fixtureBinding;
+
     private JsonNode grantResources(String role, long version, Set<String> targets, Authentication who, int status)
         throws Exception {
+        if (status == 400) return call(
+            400,
+            "POST",
+            "/api/v1/admin/access/functions",
+            json.writeValueAsString(
+                Map.of("code", "INVALID_BINDING", "nameVi", "Test", "nameEn", "Test", "targets", targets)
+            ),
+            admin
+        );
+        String function = "FIXTURE_BINDING_" + ++fixtureBinding;
+        root.getBean(JdbcTransactions.class).execute(connection -> {
+            try (
+                var query = connection.prepareStatement(
+                    "INSERT INTO auth_functions(code,name_vi,name_en,resources_initialized) VALUES(?,'Fixture','Fixture',true)"
+                )
+            ) {
+                query.setString(1, function);
+                query.executeUpdate();
+            }
+            var catalog = root.getBean(EndpointAccess.class);
+            var endpoints = targets.stream().map(catalog::find).toList();
+            if (endpoints.stream().noneMatch(Objects::isNull)) root.getBean(FunctionResourceRepo.class).replace(
+                connection,
+                function,
+                endpoints,
+                0
+            );
+            return null;
+        });
         return call(
             status,
             "PUT",
-            "/api/v1/admin/access/roles/" + role + "/resources",
-            json.writeValueAsString(Map.of("targets", targets, "version", version)),
+            "/api/v1/admin/access/roles/" + role + "/functions",
+            json.writeValueAsString(Map.of("functionCodes", Set.of(function), "version", version)),
             who
         );
     }
 
     @Test
     void restartPreservesMappingsPasswordAndNeverEnrollsNewSourceEndpoints() throws Exception {
-        seed();
-        long scope = Long.parseLong(sql("SELECT min(scope_id) FROM carriers"));
-        var user = member(scope, "UPGRADENATIVE", "'VEHICLE_READ','VEHICLE_VIEW','VEHICLE_CREATE'", "upgradenative");
-        grantResources("UPGRADENATIVE", 0, Set.of("GET /api/v1/admin/vehicles"), admin, 200);
-        String hash = sql("SELECT md5(password_hash) FROM auth_users WHERE id=1");
-        String mappings = sql(
-            "SELECT string_agg(function_code||':'||array_to_string(operation_codes,','),'|' ORDER BY function_code) FROM auth_role_functions WHERE role_code='UPGRADENATIVE'"
-        );
-        root.getBean(DatabaseInitializer.class).afterPropertiesSet();
-        var metadata = new ArrayList<>(child.getBean(AccessResourceSynchronizer.class).inventory());
-        metadata.add(
-            new AccessResourceResponse(
-                "ENDPOINT",
-                "GET /future-native-api",
-                "Fixture#future",
-                "Future",
-                false,
-                true,
-                null,
-                null,
-                "VEHICLE",
-                List.of("VEHICLE_READ"),
-                "VEHICLE",
-                "ANY",
-                false
-            )
-        );
-        root.getBean(AccessResourceService.class).synchronize(metadata, Set.of());
-        assertEquals("24", sql("SELECT count(*) FROM vietroute_schema_history"));
-        assertEquals(hash, sql("SELECT md5(password_hash) FROM auth_users WHERE id=1"));
-        assertEquals(
-            mappings,
-            sql(
-                "SELECT string_agg(function_code||':'||array_to_string(operation_codes,','),'|' ORDER BY function_code) FROM auth_role_functions WHERE role_code='UPGRADENATIVE'"
-            )
-        );
-        assertEquals(
-            "0",
-            sql(
-                "SELECT count(*) FROM auth_role_functions rf JOIN auth_function_resources fr ON fr.function_code=rf.function_code WHERE rf.role_code='UPGRADENATIVE' AND fr.target='GET /future-native-api'"
-            )
-        );
-        call(200, "GET", "/api/v1/admin/vehicles", null, user);
+        String hash = sql("SELECT password_hash FROM auth_users WHERE id=1");
+        sql("DELETE FROM auth_role_functions WHERE role_code='OPERATOR'");
+        root.getBean(AuthInitializer.class).synchronize(root.getBean(EndpointAccess.class).all());
+        root.getBean(AuthInitializer.class).synchronize(root.getBean(EndpointAccess.class).all());
+        assertEquals(hash, sql("SELECT password_hash FROM auth_users WHERE id=1"));
+        assertEquals("0", sql("SELECT count(*) FROM auth_role_functions WHERE role_code='OPERATOR'"));
+        assertEquals("t", sql("SELECT functions_initialized FROM auth_roles WHERE code='OPERATOR'"));
     }
 
     @Test
@@ -2571,7 +2699,7 @@ class BusinessIntegrationTest {
         assertEquals(
             "0",
             sql(
-                "SELECT jsonb_array_length(after_state->'roles') FROM auth_access_changes WHERE event_type='ROLE_RESOURCES' AND target_key='NATIVEREADER' ORDER BY id DESC LIMIT 1"
+                "SELECT (jsonb_array_length(after_state->'functions')-1)::text FROM auth_access_changes WHERE event_type='ROLE_FUNCTIONS' AND target_key='NATIVEREADER' ORDER BY id DESC LIMIT 1"
             )
         );
         assertEquals(2, call(200, "GET", "/api/v1/admin/vehicles", null, user).path("totalElements").asInt());
@@ -2586,12 +2714,7 @@ class BusinessIntegrationTest {
         grantResources("NATIVEREADER", 1, Set.of(page, detail), admin, 200);
         call(403, "GET", "/api/v1/admin/vehicles", null, user);
         call(200, "GET", "/api/v1/admin/vehicles/" + vehicle, null, user);
-        assertEquals(
-            "1",
-            sql(
-                "SELECT count(*) FROM (SELECT DISTINCT rf.role_code,op AS permission_code FROM auth_role_functions rf CROSS JOIN LATERAL unnest(rf.operation_codes) op) WHERE role_code='NATIVEREADER' AND permission_code='VEHICLE_READ'"
-            )
-        );
+        assertEquals("1", sql("SELECT count(*) FROM auth_role_functions WHERE role_code='NATIVEREADER'"));
         var preview = call(
             200,
             "GET",
@@ -2656,38 +2779,18 @@ class BusinessIntegrationTest {
         call(
             201,
             "POST",
-            "/api/v1/admin/access/registry/roles/RESOURCEHISTORY",
-            "{\"nameVi\":\"Lịch sử\",\"nameEn\":\"History\",\"active\":true,\"version\":0}",
+            "/api/v1/admin/access/registry/roles/REMOVABLE",
+            "{\"nameVi\":\"Vai trò thử\",\"nameEn\":\"Test role\",\"active\":true,\"version\":0}",
             admin
         );
-        grantResources("RESOURCEHISTORY", 0, Set.of("GET /api/v1/admin/vehicles"), admin, 200);
-        call(
-            200,
-            "PUT",
-            "/api/v1/admin/access/roles/RESOURCEHISTORY/permissions",
-            "{\"permissions\":[\"VEHICLE_READ\"],\"version\":1}",
-            admin
-        );
+        grantResources("REMOVABLE", 0, Set.of("GET /api/v1/admin/vehicles"), admin, 200);
+        call(200, "DELETE", "/api/v1/admin/access/registry/roles/REMOVABLE?version=1", null, admin);
+        assertEquals("t", sql("SELECT deleted FROM auth_roles WHERE code='REMOVABLE'"));
+        assertEquals("0", sql("SELECT count(*) FROM auth_role_functions WHERE role_code='REMOVABLE'"));
         assertEquals(
-            "2",
-            sql(
-                "SELECT count(*) FROM auth_access_changes WHERE event_type='ROLE_RESOURCES' AND target_key='RESOURCEHISTORY'"
-            )
+            "1",
+            sql("SELECT count(*) FROM auth_access_changes WHERE target_key='REMOVABLE' AND event_type='ROLE_DELETED'")
         );
-        assertEquals(
-            "true",
-            sql(
-                "SELECT (after_state->'resources' @> '[\"GET /api/v1/admin/vehicles/{id}\"]'::jsonb)::text FROM auth_access_changes WHERE event_type='ROLE_RESOURCES' AND target_key='RESOURCEHISTORY' ORDER BY id DESC LIMIT 1"
-            )
-        );
-        call(200, "DELETE", "/api/v1/admin/access/registry/roles/RESOURCEHISTORY?version=0", null, admin);
-        assertEquals(
-            "true",
-            sql(
-                "SELECT (before_state->'resources' @> '[\"GET /api/v1/admin/vehicles/{id}\"]'::jsonb AND after_state->'resources'='[]'::jsonb)::text FROM auth_access_changes WHERE event_type='ROLE_DELETED' AND target_key='RESOURCEHISTORY'"
-            )
-        );
-        assertEquals("0", sql("SELECT count(*) FROM auth_role_functions WHERE role_code='RESOURCEHISTORY'"));
     }
 
     @Test
@@ -2698,7 +2801,7 @@ class BusinessIntegrationTest {
         grantResources(
             "NATIVEDELEGATE",
             0,
-            Set.of("PUT /api/v1/admin/access/roles/{role}/resources", "GET /api/v1/admin/vehicles"),
+            Set.of("PUT /api/v1/admin/access/roles/{role}/functions", "GET /api/v1/admin/vehicles"),
             admin,
             200
         );
@@ -2723,12 +2826,7 @@ class BusinessIntegrationTest {
                 "SELECT count(*) FROM (SELECT DISTINCT rf.role_code,fr.kind,fr.target FROM auth_role_functions rf JOIN auth_function_resources fr ON fr.function_code=rf.function_code) WHERE role_code='NATIVETARGET'"
             )
         );
-        assertEquals(
-            "1",
-            sql(
-                "SELECT count(*) FROM (SELECT DISTINCT rf.role_code,op AS permission_code FROM auth_role_functions rf CROSS JOIN LATERAL unnest(rf.operation_codes) op) WHERE role_code='NATIVETARGET' AND permission_code='VEHICLE_READ'"
-            )
-        );
+        assertEquals("1", sql("SELECT count(*) FROM auth_role_functions WHERE role_code='NATIVETARGET'"));
     }
 
     @Test
@@ -2777,7 +2875,7 @@ class BusinessIntegrationTest {
                 .path("totalElements")
                 .asInt()
         );
-        call(403, "GET", "/api/v1/my-bookings", null, user);
+        call(401, "GET", "/api/v1/my-bookings", null, user);
         call(404, "GET", "/api/v1/admin/accounts/" + userId + "/access", null, admin);
         assertEquals(
             "1",
@@ -2881,15 +2979,7 @@ class BusinessIntegrationTest {
 
     /** Fixture native gán chính xác API đã biết sau khi thêm projection; không bỏ marker để né guard mới. */
     private void assignFixtureResources(String role) throws Exception {
-        sql(
-            "INSERT INTO auth_role_functions(role_code,function_code,operation_codes) SELECT '" +
-                role +
-                "',f.code,ARRAY(SELECT DISTINCT op FROM auth_role_functions rf CROSS JOIN LATERAL unnest(rf.operation_codes) op WHERE rf.role_code='" +
-                role +
-                "' AND op=ANY(f.operation_codes)) FROM auth_functions f WHERE f.source_managed AND EXISTS(SELECT 1 FROM auth_function_resources fr WHERE fr.function_code=f.code AND NOT fr.public_route AND fr.declared_permissions<>'' AND EXISTS(SELECT 1 FROM auth_role_functions rf CROSS JOIN LATERAL unnest(rf.operation_codes) op WHERE rf.role_code='" +
-                role +
-                "' AND op=ANY(f.operation_codes))) ON CONFLICT DO NOTHING"
-        );
+        // Function fixture đã có endpoint tường minh ngay lúc setup; không cần một projection/marker thứ hai.
     }
 
     private long openBookingTrip(TripFixture fixture, String code, Instant start) throws Exception {

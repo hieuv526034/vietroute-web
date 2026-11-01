@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -102,6 +105,9 @@ public class ApiExceptionMapper {
 
     /** HTTP status phản ánh đúng loại lỗi; không dùng HTTP 200 cho phản hồi thất bại. */
     private ErrorCode classify(Exception error) {
+        if (error instanceof OptimisticLockingFailureException) return ErrorCode.STALE_VERSION;
+        if (error instanceof DataIntegrityViolationException) return ErrorCode.CONFLICT;
+        if (error instanceof DataAccessException) return ErrorCode.DATABASE_UNAVAILABLE;
         if (error instanceof MaxUploadSizeExceededException) {
             return ErrorCode.PAYLOAD_TOO_LARGE;
         }

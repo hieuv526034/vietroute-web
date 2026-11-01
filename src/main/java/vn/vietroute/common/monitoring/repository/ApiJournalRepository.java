@@ -55,7 +55,7 @@ public class ApiJournalRepository {
                 """
             )
         ) {
-            var e = detail.entry();
+            ApiJournalEntry e = detail.entry();
             query.setObject(1, e.id());
             query.setTimestamp(2, Timestamp.from(e.timestamp()));
             query.setString(3, detail.instanceId());
@@ -95,7 +95,7 @@ public class ApiJournalRepository {
                     total = row.getLong(1);
                 }
             }
-            var entries = new ArrayList<ApiJournalEntry>();
+            ArrayList<ApiJournalEntry> entries = new ArrayList<ApiJournalEntry>();
             try (
                 PreparedStatement query = timed(
                     connection,

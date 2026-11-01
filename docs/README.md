@@ -8,7 +8,7 @@ Người mới chỉ cần đi theo **5 bước** dưới đây. Các tài liệ
 |---|---|---|
 | 1 | [Tổng quan hệ thống](01-bat-dau/TONG_QUAN_HE_THONG.md) | Hiểu stack và phần nền tảng/nghiệp vụ đã có, còn thiếu |
 | 2 | [Chạy IntelliJ](01-bat-dau/CHAY_LOCAL_VA_CLOUDINARY.md#nút-rundebug-trong-intellij), [Format](01-bat-dau/FORMAT_INTELLIJ.md) | Chạy app bằng môi trường riêng và dùng format chung; phần Cloudinary đọc khi làm ảnh |
-| 3 | [Luồng request](02-phat-trien/LUONG_XU_LY_BASE.md), [API base](02-phat-trien/API_BASE.md) | Hiểu security → controller → service/transaction → JDBC → response/lỗi |
+| 3 | [Luồng request](02-phat-trien/LUONG_XU_LY_BASE.md), [API base](02-phat-trien/API_BASE.md) | Hiểu security → controller → service/transaction → JPA/JDBC → response/lỗi |
 | 4 | [Quy ước phát triển](02-phat-trien/QUY_UOC_PHAT_TRIEN.md) | Nắm package, DTO/Instant, audit, quyền, validation và cách viết code |
 | 5 | [Tiến độ](05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md), [Phân công](05-ke-hoach/PHAN_CONG.md) | Chọn việc/phụ thuộc và nhánh đúng người trước khi code |
 

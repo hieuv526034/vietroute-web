@@ -61,7 +61,7 @@ public final class HttpMetricsFilter extends OncePerRequestFilter {
             ) {
                 // Nhật ký DB có thể mất lượt ghi khi DB/slot lỗi: log mẫu vẫn giữ nhóm lỗi/SQLState đã lọc.
                 // Không thêm SQL, message driver, request body hoặc dữ liệu tài khoản vào log vận hành.
-                var journal = ApiJournalState.get(request);
+                ApiJournalState journal = ApiJournalState.get(request);
                 LOG.info(
                     "event=http_completed route=" +
                         route +

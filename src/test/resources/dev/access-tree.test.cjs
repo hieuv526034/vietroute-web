@@ -1,91 +1,12 @@
-/* Cây quyền: kiểm thao tác của người dùng, quyền dùng chung và draft; không cần browser/token/DB thật. */
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const vm = require('node:vm');
-const context = { window: {} };
-vm.runInNewContext(fs.readFileSync('src/main/webapp/assets/js/access-tree.js', 'utf8'), context);
-const features = [{ viewPermission: 'CATALOG_VIEW', actions: [{ permission: 'CATALOG_CREATE' }, { permission: 'CATALOG_DELETE' }] }];
-const model = (values = []) => context.window.VietRouteAccessTree.model(values, features);
-test('Chọn CREATE gợi ý VIEW nhưng không cấp UPDATE/DELETE; preview ghi rõ cả hai quyền thêm', () => {
-    const state = model(); state.toggle('CATALOG_CREATE', true);
-    assert.deepEqual(Array.from(state.values()), ['CATALOG_CREATE', 'CATALOG_VIEW']);
-    assert.deepEqual(Array.from(state.changes().added), ['CATALOG_CREATE', 'CATALOG_VIEW']);
-});
-test('Tích một quyền làm cha chọn một phần, không tự chọn các quyền còn lại', () => {
-    const state = model(); state.toggle('CATALOG_CREATE', true);
-    assert.equal(state.state(['CATALOG_CREATE', 'CATALOG_DELETE']).partial, true);
-    assert.equal(state.has('CATALOG_DELETE'), false);
-});
-
-test('Người được ủy quyền chỉ có CREATE vẫn chọn được hành động mà không tự thêm VIEW ngoài quyền', () => {
-    const scoped = [{code:'CATALOG',name:'Danh mục',viewPermission:'CATALOG_VIEW',actions:[{permission:'CATALOG_CREATE'},{permission:'CATALOG_DELETE'}]}];
-    const state = context.window.VietRouteAccessTree.model([], scoped, ['CATALOG_CREATE']);
-    state.toggle('CATALOG_CREATE',true,'CATALOG');
-    assert.deepEqual(Array.from(state.values()),['CATALOG_CREATE']);
-    assert.deepEqual(Array.from(state.missingViews()),['Danh mục']);
-    state.toggle('CATALOG_DELETE',true,'CATALOG');
-    assert.deepEqual(Array.from(state.values()),['CATALOG_CREATE']);
-    state.toggle('CATALOG_CREATE',false,'CATALOG');
-    assert.deepEqual(Array.from(state.values()),[]);
-    assert.deepEqual(Array.from(state.missingViews()),[]);
-});
-
-test('Chọn nhiều hành động và bộ hệ thống không tự thêm VIEW bị cấm', () => {
-    const scoped=[{code:'CUSTOM',systemBundle:true,viewPermission:'CUSTOM_VIEW',actions:[{permission:'CUSTOM_READ',endpoints:[{adminOnly:false}]},{permission:'CUSTOM_UPDATE',endpoints:[{adminOnly:false}]}]}];
-    const state=context.window.VietRouteAccessTree.model(['OTHER_READ'],scoped,['CUSTOM_READ','CUSTOM_UPDATE']);
-    for(const item of context.window.VietRouteAccessTree.systemSelection(scoped))state.toggle(item.code,true,item.feature);
-    assert.deepEqual(Array.from(state.values()),['CUSTOM_READ','CUSTOM_UPDATE','OTHER_READ']);
-    assert.equal(state.has('CUSTOM_VIEW'),false);
-    for(const action of scoped[0].actions)state.toggle(action.permission,false,'CUSTOM');
-    assert.deepEqual(Array.from(state.values()),['OTHER_READ']);
-});
-test('Quyền dùng chung chỉ lưu một mã; bỏ ở một vị trí bỏ mọi bản hiển thị', () => {
-    const state = model(); state.toggle('SYSTEM_READ', true); state.toggle('SYSTEM_READ', true);
-    assert.equal(Array.from(state.values()).filter((code) => code === 'SYSTEM_READ').length, 1);
-    state.toggle('SYSTEM_READ', false); assert.equal(state.has('SYSTEM_READ'), false);
-});
-test('Quyền READ dùng chung chỉ gợi VIEW của chức năng vừa chọn, không mở thêm menu khác', () => {
-    const features = [
-        { code: 'MONITORING', viewPermission: 'SYSTEM_VIEW', actions: [{ permission: 'SYSTEM_READ' }] },
-        { code: 'CONFIGURATION', viewPermission: 'CONFIGURATION_VIEW', actions: [{ permission: 'SYSTEM_READ' }] },
-    ];
-    const state = context.window.VietRouteAccessTree.model([], features);
-    state.toggle('SYSTEM_READ', true, 'MONITORING');
-    assert.equal(state.has('SYSTEM_VIEW'), true);
-    assert.equal(state.has('CONFIGURATION_VIEW'), false);
-    state.toggle('SYSTEM_READ', false, 'CONFIGURATION');
-    assert.equal(state.has('SYSTEM_READ'), false);
-});
-test('Chỉ đổi kết quả đang lọc vẫn giữ quyền ngoài kết quả và bản gốc để xem trước', () => {
-    const state = model(['OTHER_READ', 'CATALOG_DELETE']);
-    state.toggle('CATALOG_CREATE', true); state.toggle('CATALOG_DELETE', false);
-    assert.equal(state.has('OTHER_READ'), true);
-    assert.deepEqual(Array.from(state.changes().removed), ['CATALOG_DELETE']);
-    const draft = Array.from(state.values()); assert.deepEqual(Array.from(state.values()), draft);
-});
-
-test('Bộ hệ thống chỉ chọn endpoint quản trị được khai báo, không gom CRUD nghiệp vụ, WRITE cũ hay ADMIN-only', () => {
-    const definitions = [
-        { code: 'ACCESS', systemBundle: true, actions: [
-            { permission: 'ACCESS_ASSIGN', endpoints: [{ adminOnly: false }] },
-            { permission: 'ACCESS_WRITE', endpoints: [{ adminOnly: false }] },
-        ] },
-        { code: 'JOURNAL', systemBundle: true, actions: [{ permission: 'JOURNAL_VIEW', endpoints: [{ adminOnly: true }] }] },
-        { code: 'CATALOG', systemBundle: false, actions: [{ permission: 'CATALOG_DELETE', endpoints: [{ adminOnly: false }] }] },
-    ];
-    const selection = context.window.VietRouteAccessTree.systemSelection(definitions);
-    assert.deepEqual(Array.from(selection, (item) => item.code), ['ACCESS_ASSIGN']);
-    const state = context.window.VietRouteAccessTree.model(['CATALOG_READ'], definitions);
-    for (const item of selection) state.toggle(item.code, true, item.feature);
-    assert.deepEqual(Array.from(state.values()), ['ACCESS_ASSIGN', 'CATALOG_READ']);
-    assert.deepEqual(Array.from(state.changes().added), ['ACCESS_ASSIGN']);
-});
-
-test('Quyền đã tắt vẫn hiện để gỡ mapping, không lẫn quyền đã gắn chức năng', () => {
-    const rows=context.window.VietRouteAccessTree.unbound([{code:'CATALOG_CREATE',name:'Tạo',actions:['CREATE']},{code:'EXTRA_READ',name:'Bổ sung',actions:['READ']}],['CATALOG_CREATE','ARCHIVE_READ'],features,'Đã tắt');
-    assert.deepEqual(Array.from(rows,row=>row.permission),['EXTRA_READ','ARCHIVE_READ']);
-    assert.equal(rows[1].inactive,true); assert.match(rows[1].name,/Đã tắt/);
-    const state=context.window.VietRouteAccessTree.model(['ARCHIVE_READ'],features);state.toggle(rows[1].permission,false);
-    assert.deepEqual(Array.from(state.values()),[]);assert.deepEqual(Array.from(state.changes().removed),['ARCHIVE_READ']);
-});
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const {model}=require('../../../main/webapp/assets/js/function-selection.js');
+const menu='GET /operations/items', list='GET /api/v1/items', create='POST /api/v1/items', remove='DELETE /api/v1/items/{id}';
+test('Chọn POST không tự cấp menu hoặc API DELETE',()=>{const value=model([],[menu,list,create,remove]);value.toggle(create,true);assert.deepEqual(value.values(),[create]);});
+test('Chọn một endpoint biểu diễn trạng thái chọn một phần',()=>{const value=model([list],[list,create]);assert.deepEqual(value.state([list,create]),{checked:false,partial:true});});
+test('Không thêm endpoint vượt trần kể cả gọi model trực tiếp',()=>{const value=model([],[create]);value.toggle(remove,true);assert.deepEqual(value.values(),[]);});
+test('Endpoint dùng chung chỉ lưu một lần',()=>{const value=model([],[list]);value.toggle(list,true);value.toggle(list,true);assert.deepEqual(value.values(),[list]);value.toggle(list,false);assert.deepEqual(value.values(),[]);});
+test('Chọn API không tự mở menu khác',()=>{const value=model([],[list,menu]);value.toggle(list,true);assert.equal(value.has(menu),false);});
+test('Lọc danh sách vẫn giữ quyền ngoài trang và tính delta chính xác',()=>{const value=model([menu,remove],[list,menu,remove]);value.toggle(list,true);value.toggle(remove,false);assert.deepEqual(value.changes(),{added:[list],removed:[remove]});assert.equal(value.has(menu),true);});
+test('Endpoint đã bỏ khỏi source có thể gỡ và không được thêm lại',()=>{const value=model(['GET /retired'],[list]);value.toggle('GET /retired',false);value.toggle('GET /retired',true);assert.deepEqual(value.values(),[]);});
+test('Menu không tự cấp API hiện tại hoặc tương lai',()=>{const value=model([menu],[menu,list]);assert.equal(value.has(list),false);assert.equal(value.has('GET /api/v1/future'),false);});

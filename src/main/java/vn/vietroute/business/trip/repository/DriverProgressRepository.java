@@ -1,6 +1,7 @@
 package vn.vietroute.business.trip.repository;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -18,7 +19,7 @@ public class DriverProgressRepository {
         throws SQLException {
         String column = arrival ? "actual_arrival_at" : "actual_departure_at";
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "UPDATE trip_stops SET " +
                     column +
                     "=?,updated_at=CURRENT_TIMESTAMP,updated_by=?,version=version+1 WHERE trip_id=? AND carrier_id=? AND scope_id=? AND stop_order=? AND " +

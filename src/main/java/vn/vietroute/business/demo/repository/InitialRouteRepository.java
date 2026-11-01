@@ -1,6 +1,7 @@
 package vn.vietroute.business.demo.repository;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import org.springframework.stereotype.Repository;
 
@@ -11,7 +12,7 @@ public class InitialRouteRepository {
     /** Caller giữ khóa seed/transaction. ON CONFLICT giữ tuyến và điểm dừng đã được người quản trị sửa. */
     public void seed(Connection connection) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 """
                 INSERT INTO carrier_routes(carrier_id,scope_id,code,name_vi,name_en,description)
                 SELECT c.id,c.scope_id,x.code,x.name_vi,x.name_en,'Tuyến nền VietRoute; thời gian và giá chặng do dự án tạo để nghiệm thu, cần xác nhận trước khi công bố chuyến.'
@@ -24,7 +25,7 @@ public class InitialRouteRepository {
             query.executeUpdate();
         }
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 """
                 INSERT INTO carrier_route_stops(route_id,carrier_id,scope_id,location_id,stop_order,arrival_offset_minutes,departure_offset_minutes,cumulative_fare,pickup_allowed,dropoff_allowed)
                 SELECT r.id,r.carrier_id,r.scope_id,l.id,x.position,x.arrival,x.departure,x.fare,x.pickup,x.dropoff

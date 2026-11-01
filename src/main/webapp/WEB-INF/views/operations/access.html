@@ -16,7 +16,7 @@
                 <div>
                     <h1 th:text="#{ui.grants.roles}"></h1>
                     <div
-                        th:replace="~{fragments/help :: guide('roles-guide', #{ui.grants.roles}, ${ {'ui.help.roles.use', 'ui.grants.note', 'ui.help.roles.selection', 'ui.help.roles.scope', 'ui.help.roles.history'} })}"
+                        th:replace="~{fragments/help :: guide('roles-guide', #{ui.grants.roles}, ${ {'ui.help.roles.use', 'ui.grants.note', 'ui.help.roles.selection', 'ui.help.roles.scope'} })}"
                     ></div>
                 </div>
             </div>
@@ -48,15 +48,7 @@
                         id="scopes-tab"
                         type="button"
                         data-tab-target="access-scopes-section"
-                        th:if="${adminUser}"
                         th:text="#{ui.scope.title}"
-                    ></button>
-                    <button
-                        id="history-tab"
-                        type="button"
-                        data-tab-target="access-history-section"
-                        th:if="${adminUser}"
-                        th:text="#{ui.accessHistory.title}"
                     ></button>
                 </div>
                 <section
@@ -205,7 +197,6 @@
                     </fieldset>
                 </section>
                 <section th:replace="~{fragments/access-advanced :: scopes}"></section>
-                <section th:replace="~{fragments/access-advanced :: history}"></section>
             </div>
             <dialog
                 id="role-dialog"
@@ -501,9 +492,7 @@
             <dialog th:replace="~{fragments/access-advanced :: scopeDialog}"></dialog>
             <dialog th:replace="~{fragments/access-advanced :: membersDialog}"></dialog>
             <dialog th:replace="~{fragments/access-advanced :: memberDialog}"></dialog>
-            <dialog th:replace="~{fragments/access-advanced :: historyDialog}"></dialog>
             <div th:replace="~{fragments/access-advanced :: scopeLabels}"></div>
-            <div th:replace="~{fragments/access-advanced :: historyLabels}"></div>
             <div
                 id="grants-labels"
                 hidden
@@ -512,17 +501,11 @@
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
-        <script th:src="@{/assets/js/resource-grants.js}"></script>
+        <script th:src="@{/assets/js/function-selection.js}"></script>
         <script th:src="@{/assets/js/functions.js}"></script>
         <script th:src="@{/assets/js/roles.js}"></script>
         <script th:src="@{/assets/js/role-picker.js}"></script>
-        <script
-            th:if="${adminUser}"
-            th:src="@{/assets/js/access-history.js}"
-        ></script>
-        <script
-            th:if="${adminUser}"
-            th:src="@{/assets/js/data-scopes.js}"
-        ></script>
+
+        <script th:src="@{/assets/js/data-scopes.js}"></script>
     </body>
 </html>

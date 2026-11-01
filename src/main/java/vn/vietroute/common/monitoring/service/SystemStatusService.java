@@ -1,6 +1,7 @@
 package vn.vietroute.common.monitoring.service;
 
 import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.HikariPoolMXBean;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -11,11 +12,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.entity.PermissionAction;
-import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.config.integration.MailSettings;
 import vn.vietroute.common.config.traffic.TrafficSettings;
-import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.jdbc.BaseRepository;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.job.worker.JobWorker;
@@ -38,7 +36,6 @@ public class SystemStatusService {
 
     private final Clock clock;
 
-    @AccessOperation(resource = Groups.SYSTEM, action = PermissionAction.READ)
     public SystemStatusResponse status() {
         Map<String, Long> queues = new LinkedHashMap<>();
         try (
@@ -54,7 +51,7 @@ public class SystemStatusService {
         } catch (SQLException exception) {
             throw BaseRepository.translate(exception);
         }
-        var stats = pool.getHikariPoolMXBean();
+        HikariPoolMXBean stats = pool.getHikariPoolMXBean();
         return new SystemStatusResponse(
             Instant.now(clock),
             traffic.getRedisUrl().isBlank() ? "memory" : "redis",

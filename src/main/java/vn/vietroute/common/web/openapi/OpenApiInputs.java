@@ -1,5 +1,6 @@
 package vn.vietroute.common.web.openapi;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.media.Schema;
@@ -13,31 +14,38 @@ final class OpenApiInputs {
 
     private OpenApiInputs() {}
 
-    record Description(String text, String example, boolean hidden, boolean deprecated) {}
+    record Description(String text, String example, boolean hidden, boolean deprecated, String summary) {}
+
+    static Description operation(AnnotatedElement element) {
+        Operation annotation = element.getAnnotation(Operation.class);
+        return annotation == null
+            ? null
+            : new Description(annotation.description(), "", annotation.hidden(), false, annotation.summary());
+    }
 
     static Description description(AnnotatedElement element) {
-        var annotation = element.getAnnotation(Parameter.class);
+        Parameter annotation = element.getAnnotation(Parameter.class);
         return annotation == null
-            ? new Description("", "", false, false)
+            ? new Description("", "", false, false, "")
             : new Description(
                   annotation.description(),
                   annotation.example(),
                   annotation.hidden(),
-                  annotation.deprecated()
+                  annotation.deprecated(),
+                  ""
               );
     }
 
     /** Giữ các ràng buộc khai báo cho path/query/header, không tự suy quyền hoặc thay validation runtime. */
     static void constraints(AnnotatedElement element, Schema<?> schema) {
-        var parameter = element.getAnnotation(Parameter.class);
+        Parameter parameter = element.getAnnotation(Parameter.class);
         if (parameter == null) return;
-        var declaration = parameter.schema();
-        if (!declaration.format().isBlank()) schema.setFormat(declaration.format());
-        if (!declaration.pattern().isBlank()) schema.setPattern(declaration.pattern());
-        if (!declaration.minimum().isBlank()) schema.setMinimum(new BigDecimal(declaration.minimum()));
-        if (!declaration.maximum().isBlank()) schema.setMaximum(new BigDecimal(declaration.maximum()));
-        if (declaration.minLength() > 0) schema.setMinLength(declaration.minLength());
-        if (declaration.maxLength() < Integer.MAX_VALUE) schema.setMaxLength(declaration.maxLength());
+        if (!parameter.schema().format().isBlank()) schema.setFormat(parameter.schema().format());
+        if (!parameter.schema().pattern().isBlank()) schema.setPattern(parameter.schema().pattern());
+        if (!parameter.schema().minimum().isBlank()) schema.setMinimum(new BigDecimal(parameter.schema().minimum()));
+        if (!parameter.schema().maximum().isBlank()) schema.setMaximum(new BigDecimal(parameter.schema().maximum()));
+        if (parameter.schema().minLength() > 0) schema.setMinLength(parameter.schema().minLength());
+        if (parameter.schema().maxLength() < Integer.MAX_VALUE) schema.setMaxLength(parameter.schema().maxLength());
     }
 
     /** Resolve $ref của object query; giữ đủ field kế thừa và schema/validation từ DTO. */
@@ -53,7 +61,7 @@ final class OpenApiInputs {
     /** ModelAttribute có giá trị mặc định thì caller được bỏ field, kể cả DTO gắn NotNull để từ chối null. */
     static boolean requiredQuery(Class<?> type, String property, List<String> required) {
         if (required == null || !required.contains(property)) return false;
-        var bean = new BeanWrapperImpl(type);
+        BeanWrapperImpl bean = new BeanWrapperImpl(type);
         return !bean.isReadableProperty(property) || bean.getPropertyValue(property) == null;
     }
 }

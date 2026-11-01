@@ -34,7 +34,7 @@
         try {
             await mutate('/api/v1/media/' + selectedImage.id, body, 'put');
             document.getElementById('media-edit-dialog').close();
-            if (permissions.includes('READ')) await load();
+            if (targets.includes('GET /api/v1/media')) await load();
         } catch (error) {
             failure(
                 error,
@@ -46,7 +46,6 @@
         }
     });
     let loading = false;
-    let permissions = [];
     let targets = [];
     let uploading = false;
     const open = document.getElementById('media-open');
@@ -58,7 +57,7 @@
         },
     });
     open.addEventListener('click', () => {
-        if (!uploading && enabled && permissions.includes('CREATE')) uploadModal.open();
+        if (!uploading && enabled && targets.includes('POST /api/v1/media')) uploadModal.open();
     });
 
     const loadPage = async (query) => {
@@ -98,7 +97,7 @@
                 view.className = 'button button-outline button-small';
                 view.textContent = root.dataset.view;
                 card.append(view);
-                if (permissions.includes('UPDATE')) {
+                if (targets.includes('PUT /api/v1/media/{id}')) {
                     const edit = document.createElement('button');
                     edit.type = 'button';
                     edit.className = 'button button-outline button-small';
@@ -114,7 +113,7 @@
                     });
                     card.append(edit);
                 }
-                if (enabled && permissions.includes('DELETE')) {
+                if (enabled && targets.includes('DELETE /api/v1/media/{id}')) {
                     const remove = document.createElement('button');
                     remove.type = 'button';
                     remove.className = 'button button-outline button-small';
@@ -131,7 +130,7 @@
                                 'delete',
                             );
                             feedback(response.data.message, true);
-                            if (permissions.includes('READ')) await load();
+                            if (targets.includes('GET /api/v1/media')) await load();
                         } catch (error) {
                             failure(error);
                         } finally {
@@ -164,7 +163,7 @@
     // File đi qua backend để kiểm pixel/chuẩn hóa; trình duyệt không biết Cloudinary API secret.
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        if (uploading || !enabled || !permissions.includes('CREATE') || !window.VietRouteForms.validate(form)) {
+        if (uploading || !enabled || !targets.includes('POST /api/v1/media') || !window.VietRouteForms.validate(form)) {
             return;
         }
         upload.disabled = true;
@@ -181,7 +180,7 @@
         } catch (error) {
             failure(error, document.getElementById('media-dialog').open ? 'media-upload-feedback' : 'form-feedback');
         } finally {
-            upload.disabled = !enabled || !permissions.includes('CREATE');
+            upload.disabled = !enabled || !targets.includes('POST /api/v1/media');
             uploading = false;
             document.getElementById('media-dialog-controls').disabled = false;
         }
@@ -190,12 +189,11 @@
     api.get('/api/v1/auth/me')
         .then(async (response) => {
             const capability = await window.VietRouteAccess.load('MEDIA');
-            permissions = capability.actions;
             targets = capability.targets;
-            upload.disabled = !enabled || !permissions.includes('CREATE');
+            upload.disabled = !enabled || !targets.includes('POST /api/v1/media');
             open.disabled = upload.disabled;
-            open.hidden = !permissions.includes('CREATE');
-            if (permissions.includes('READ')) await load();
+            open.hidden = !targets.includes('POST /api/v1/media');
+            if (targets.includes('GET /api/v1/media')) await load();
         })
         .catch(failure);
 })();

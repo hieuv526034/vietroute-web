@@ -15,10 +15,7 @@ import java.util.ResourceBundle;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.jwt.JwtException;
-import vn.vietroute.auth.entity.Permission;
-import vn.vietroute.auth.entity.PermissionAction;
-import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.entity.UserAccount;
+import vn.vietroute.auth.entity.User;
 import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
@@ -46,20 +43,6 @@ class FoundationRulesTest {
         for (ValidationCode code : ValidationCode.values()) {
             assertTrue(vi.containsKey(code.getMessageKey()));
         }
-        for (Permission permission : Permission.values()) {
-            assertTrue(vi.containsKey(permission.messageKey()));
-        }
-        for (PermissionAction action : PermissionAction.values()) {
-            assertTrue(vi.containsKey(action.messageKey()));
-        }
-    }
-
-    @Test
-    void legacyWriteCannotImplicitlyGrantDeleteReadOrAssign() {
-        assertEquals(Set.of(PermissionAction.CREATE, PermissionAction.UPDATE), Permission.CATALOG_WRITE.actions());
-        assertEquals(Set.of(PermissionAction.DELETE), Permission.CATALOG_DELETE.actions());
-        assertEquals("CATALOG", Permission.CATALOG_DELETE.resource());
-        assertEquals(Set.of(PermissionAction.ASSIGN), Permission.ACCESS_ASSIGN.actions());
     }
 
     @Test
@@ -78,22 +61,22 @@ class FoundationRulesTest {
         var first = new AppSettings(Map.of("VIETROUTE_JWT_SECRET", "A".repeat(48))::get);
         var second = new AppSettings(Map.of("VIETROUTE_JWT_SECRET", "B".repeat(48))::get);
         var current = new JwtService(first, Clock.systemUTC());
-        var user = UserAccount.builder()
+        var user = User.builder()
             .id(1L)
             .username("admin")
             .displayName("Admin")
-            .roles(Set.of(Role.ADMIN))
+            .roles(Set.of("ADMIN"))
             .active(true)
             .tokenVersion(2)
             .createdAt(Instant.now())
             .updatedAt(Instant.now())
             .build();
-        String token = current.issue(user).accessToken();
+        String token = current.issue(user).getAccessToken();
         assertEquals("1", current.decode(token).getSubject());
         assertThrows(JwtException.class, () -> new JwtService(second, Clock.systemUTC()).decode(token));
         String expired = new JwtService(first, Clock.fixed(Instant.now().minus(Duration.ofDays(1)), ZoneOffset.UTC))
             .issue(user)
-            .accessToken();
+            .getAccessToken();
         assertThrows(JwtException.class, () -> current.decode(expired));
     }
 

@@ -13,15 +13,16 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.h2.tools.RunScript;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import vn.vietroute.auth.repo.AccountRepository;
-import vn.vietroute.auth.repo.DefaultAccountsRepository;
-import vn.vietroute.auth.repo.DefaultAccountsRepository.NewAccount;
-import vn.vietroute.auth.repo.UserRepository;
+import vn.vietroute.auth.entity.User;
+import vn.vietroute.auth.repo.AccountChallengeRepo;
+import vn.vietroute.auth.repo.UserRepo;
+import vn.vietroute.support.TestJpa;
 
 /** H2 in-memory kiểm JDBC thật/rollback cho SQL portable, không giả lập PostgreSQL migration hoặc scope guard. */
 class AuthJdbcH2Test {
@@ -55,13 +56,13 @@ class AuthJdbcH2Test {
             "INSERT INTO auth_users(id,username,display_name,password_hash,previous_password_hash_1,previous_password_hash_2,failed_login_attempts) VALUES(1,'passwordtest','Test','current','previous1','previous2',4)"
         );
         connection.commit();
-        new UserRepository(null).changePassword(connection, 1, "next", 1);
+        new UserRepo(TestJpa.MANAGER, null).changePassword(connection, 1, "next", 1);
         assertEquals("next,current,previous1,1,1,false,0", state());
         connection.rollback();
         assertEquals("current,previous1,previous2,0,0,true,4", state());
-        new UserRepository(null).changePassword(connection, 1, "next", 1);
+        new UserRepo(TestJpa.MANAGER, null).changePassword(connection, 1, "next", 1);
         connection.commit();
-        new UserRepository(null).changePassword(connection, 1, "next2", 1);
+        new UserRepo(TestJpa.MANAGER, null).changePassword(connection, 1, "next2", 1);
         connection.commit();
         assertEquals("next2,next,current,2,2,false,0", state());
     }
@@ -78,7 +79,7 @@ class AuthJdbcH2Test {
             query.executeUpdate();
         }
         connection.commit();
-        var accounts = new AccountRepository(null);
+        var accounts = new AccountChallengeRepo(TestJpa.MANAGER, null);
         assertFalse(accounts.consume(connection, 1, "ACTIVATE", "hashed-code", 7));
         assertFalse(accounts.consume(connection, 1, "RESET", "wrong-code", 7));
         assertFalse(accounts.consume(connection, 1, "RESET", "hashed-code", 6));
@@ -96,7 +97,7 @@ class AuthJdbcH2Test {
         execute(
             "INSERT INTO auth_account_challenges VALUES(1,'RESET','expired',0,TIMESTAMP WITH TIME ZONE '2000-01-01 00:00:00+00'),(1,'ACTIVATE','activation',0,TIMESTAMP WITH TIME ZONE '2099-01-01 00:00:00+00')"
         );
-        var accounts = new AccountRepository(null);
+        var accounts = new AccountChallengeRepo(TestJpa.MANAGER, null);
         assertFalse(accounts.consume(connection, 1, "RESET", "expired", 0));
         accounts.invalidate(connection, 1);
         assertEquals(0, count("auth_account_challenges"));
@@ -104,12 +105,12 @@ class AuthJdbcH2Test {
 
     @Test
     void configuredAccountsAreVerifiedReadyAndRoleMappedUsingBatch() throws Exception {
-        new DefaultAccountsRepository().insert(
+        new UserRepo(TestJpa.MANAGER, null).insertDefaults(
             connection,
             List.of(
-                new NewAccount("custom01", "Customer", "CUSTOMER", "customer@example.invalid", "test-hash-a"),
-                new NewAccount("driver01", "Driver", "DRIVER", "driver@example.invalid", "test-hash-b"),
-                new NewAccount("operator01", "Operator", "OPERATOR", "operator@example.invalid", "test-hash-c")
+                account("custom01", "Customer", "CUSTOMER", "customer@example.invalid", "test-hash-a"),
+                account("driver01", "Driver", "DRIVER", "driver@example.invalid", "test-hash-b"),
+                account("operator01", "Operator", "OPERATOR", "operator@example.invalid", "test-hash-c")
             )
         );
         connection.commit();
@@ -133,11 +134,11 @@ class AuthJdbcH2Test {
         );
         connection.commit();
         assertThrows(SQLException.class, () ->
-            new DefaultAccountsRepository().insert(
+            new UserRepo(TestJpa.MANAGER, null).insertDefaults(
                 connection,
                 List.of(
-                    new NewAccount("first", "First", "DRIVER", "first@example.invalid", "a"),
-                    new NewAccount("second", "Second", "MISSING", "second@example.invalid", "b")
+                    account("first", "First", "DRIVER", "first@example.invalid", "a"),
+                    account("second", "Second", "MISSING", "second@example.invalid", "b")
                 )
             )
         );
@@ -151,6 +152,16 @@ class AuthJdbcH2Test {
             row.next();
             assertEquals("keep-this-hash", row.getString(1));
         }
+    }
+
+    private static User account(String username, String name, String role, String email, String hash) {
+        return User.builder()
+            .username(username)
+            .displayName(name)
+            .roles(Set.of(role))
+            .email(email)
+            .passwordHash(hash)
+            .build();
     }
 
     private void execute(String sql) throws SQLException {

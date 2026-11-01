@@ -36,13 +36,13 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.monitoring.MonitoringSettings;
 import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
+import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.monitoring.filter.HttpMetricsFilter;
 import vn.vietroute.common.monitoring.repository.MonitoringRepository;
 import vn.vietroute.common.monitoring.repository.MonitoringRepository.QueueSample;
@@ -142,7 +142,7 @@ class MonitoringFoundationTest {
             var mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
             assertEquals(404, mvc.perform(get(Routes.METRICS)).andReturn().getResponse().getStatus());
             var denied = UsernamePasswordAuthenticationToken.authenticated(
-                "viewer",
+                new UserPrincipal(2L, "viewer", Set.of("OPERATOR"), 0),
                 null,
                 List.of(new SimpleGrantedAuthority("CATALOG_READ"))
             );
@@ -163,9 +163,13 @@ class MonitoringFoundationTest {
                     .getStatus()
             );
             var allowed = UsernamePasswordAuthenticationToken.authenticated(
-                new UserPrincipal(2L, "operator", Set.of(Role.OPERATOR), 0),
+                new UserPrincipal(2L, "operator", Set.of("OPERATOR"), 0),
                 null,
-                List.of(new SimpleGrantedAuthority("SYSTEM_READ"), new SimpleGrantedAuthority("SYSTEM_VIEW"))
+                List.of(
+                    new SimpleGrantedAuthority("GET " + Routes.SYSTEM_RUNTIME),
+                    new SimpleGrantedAuthority("GET " + Routes.MONITORING_PAGE),
+                    new SimpleGrantedAuthority("SYSTEM_VIEW")
+                )
             );
             var runtime = mvc
                 .perform(get(Routes.SYSTEM_RUNTIME).with(authentication(allowed)))
@@ -182,7 +186,7 @@ class MonitoringFoundationTest {
                 assertTrue(page.getContentAsString().contains("monitoring-dashboard"));
             }
             SecurityContextHolder.clearContext();
-            assertThrows(AccessDeniedException.class, () -> {
+            assertThrows(BusinessException.class, () -> {
                 SecurityContextHolder.getContext().setAuthentication(denied);
                 context.getBean(ApplicationMetrics.class).snapshot();
             });

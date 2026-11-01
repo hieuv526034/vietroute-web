@@ -1,6 +1,7 @@
 package vn.vietroute.common.web.routing;
 
 import java.util.List;
+import org.springframework.util.AntPathMatcher;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 
 /**
@@ -10,6 +11,35 @@ import vn.vietroute.common.constant.ApplicationConstants.Routes;
 public final class WebRoutePolicy {
 
     private WebRoutePolicy() {}
+
+    /** Public/self-service là hợp đồng xác thực của ứng dụng, không phải role hoặc authority được viết cứng. */
+    public static boolean publicEndpoint(String path, String method) {
+        String verb = method.equals("HEAD") ? "GET" : method;
+        AntPathMatcher matcher = new AntPathMatcher();
+        return (
+            publicApi(path, verb) ||
+            publicMatchers()
+                .stream()
+                .anyMatch(pattern -> matcher.match(pattern, path))
+        );
+    }
+
+    /** Các luồng thiết lập chính tài khoản phải còn dùng được trước khi có quyền nghiệp vụ. */
+    public static boolean selfService(String path, String method) {
+        String target = (method.equals("HEAD") ? "GET" : method) + " " + path;
+        return List.of(
+            "GET " + Routes.ACCOUNT,
+            "GET " + Routes.DASHBOARD,
+            "GET " + Routes.AUTH + Routes.ME_ACTION,
+            "POST " + Routes.AUTH + Routes.PASSWORD_ACTION,
+            "POST " + Routes.AUTH + Routes.AUTH_EMAIL,
+            "POST " + Routes.AUTH + Routes.AUTH_ADMIN_RECOVERY,
+            "GET " + Routes.AUTH + Routes.AUTH_CAPABILITIES,
+            "PUT " + Routes.AUTH + Routes.AUTH_PROFILE,
+            "GET " + Routes.AUTH + Routes.ACCESS_SCOPES,
+            "GET " + Routes.AUTH + Routes.ACCESS_SCOPE_PERMISSIONS
+        ).contains(target);
+    }
 
     /** Matcher permitAll của Security; các danh mục tra cứu chỉ công khai cho GET ở cấu hình riêng. */
     public static List<String> publicMatchers() {

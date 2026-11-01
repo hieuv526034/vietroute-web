@@ -17,13 +17,14 @@ VietRoute là ứng dụng Java server render giao diện bằng Thymeleaf, cung
 | Jakarta Servlet | 6.0.0 API, provided | Chuẩn request/response/filter/multipart; Tomcat cung cấp implementation | [khởi tạo WAR](../../src/main/java/vn/vietroute/common/config/WebApplicationInitializer.java) |
 | Apache Tomcat | 10.1; embedded local 10.1.61 | Servlet container; chạy WAR production và Run/Debug local | [Dockerfile](../../Dockerfile), [cấu hình local](CHAY_LOCAL_VA_CLOUDINARY.md) |
 | Jackson | BOM 2.22.4 | JSON request/response, `JavaTimeModule` cho Instant; chặn field lạ/key trùng/JSON dư | [RootConfig](../../src/main/java/vn/vietroute/common/config/RootConfig.java) |
+| Spring Data JPA / Hibernate ORM | 3.5.13 / 6.6.59.Final | CRUD auth, chia sẻ transaction JDBC; không tự sửa schema | [JpaConfig](../../src/main/java/vn/vietroute/common/config/database/JpaConfig.java) |
 | Jakarta Bean Validation / Hibernate Validator | Hibernate Validator 8.0.6.Final | `@NotBlank`, `@Size`, `@Valid` và annotation kiểm mã/mật khẩu; chỉ là validation, không ORM | [validation](../../src/main/java/vn/vietroute/common/validation/BusinessCode.java), [quy ước](../02-phat-trien/QUY_UOC_PHAT_TRIEN.md) |
 | Expressly | 5.0.0 | Jakarta Expression Language phục vụ thư viện validation | [pom](../../pom.xml) |
 | Lombok | 1.18.42, provided | Sinh getter/setter/builder/constructor khi compile; đọc annotation để hiểu code được sinh | [BaseEntity](../../src/main/java/vn/vietroute/common/base/BaseEntity.java) |
-| Swagger Core Jakarta | 2.2.55 | `@Operation`/`@Schema` mô tả hợp đồng API và DTO; bộ generator trong source dựng OpenAPI | [OpenAPI](../../src/main/java/vn/vietroute/common/web/openapi/OpenApiController.java), [API base](../02-phat-trien/API_BASE.md) |
+| Swagger Core Jakarta | 2.2.55 | `@Operation`/`@Schema` mô tả hợp đồng API và DTO; bộ generator trong source dựng OpenAPI | [OpenAPI](../../src/main/java/vn/vietroute/common/web/openapi/OpenApiAPI.java), [API base](../02-phat-trien/API_BASE.md) |
 | SLF4J + JDK logging | slf4j-jdk14 2.0.18 | Bridge log thư viện sang logging JVM; log theo traceId và dữ liệu đã lọc | [trace filter](../../src/main/java/vn/vietroute/common/web/filter/RequestTraceFilter.java) |
 
-Source giữ Spring MVC/JDBC thuần; không có Spring Boot, Spring Data hoặc Hibernate ORM/JPA. `BaseController`, response factory, `BusinessException`, constants, DTO và locale là code nền tảng của dự án, không phải dependency riêng. Mỗi API/nghiệp vụ mới kế thừa và áp dụng quy ước này; đọc [API base](../02-phat-trien/API_BASE.md).
+Source giữ Spring MVC/WAR, auth dùng Spring Data JPA/Hibernate ORM; JDBC cho batch/query phức tạp và các module nghiệp vụ. Không dùng Spring Boot. `BaseController`, response factory, `BusinessException`, constants, DTO và locale là code nền tảng của dự án, không phải dependency riêng. Mỗi API/nghiệp vụ mới kế thừa và áp dụng quy ước này; đọc [API base](../02-phat-trien/API_BASE.md).
 
 ## 3. Xác thực và phân quyền
 
@@ -32,9 +33,8 @@ Source giữ Spring MVC/JDBC thuần; không có Spring Boot, Spring Data hoặc
 | Spring Security | 6.5.11 | Filter chain, method security tại root/servlet context, CSRF, cookie/Bearer và xử lý 401/403 |
 | Nimbus JOSE JWT | Qua `spring-security-oauth2-jose` theo BOM | Ký/xác minh HS256, issuer/audience/exp/iat/jti; không tự viết thuật toán JWT |
 | BCrypt | PasswordEncoder của Spring Security | Hash mật khẩu; không mã hóa hai chiều và không trả hash qua DTO |
-| Quyền chức năng | Role/Permission dạng value object chuỗi + registry/mapping PostgreSQL | READ/CREATE/UPDATE/DELETE/ASSIGN; role gom quyền, scope/owner kiểm riêng ở service/SQL |
+| Quyền endpoint | User → Role → Function → Menu/API trong PostgreSQL | EndpointAccess thu thập method/template MVC và kiểm DB, không permission enum/action cứng; scope/owner kiểm riêng |
 | Thu hồi JWT | tokenVersion và trạng thái tài khoản đọc từ DB | Logout/đổi mật khẩu/đổi role thu hồi token cũ; quyền cập nhật không chờ JWT hết hạn |
-| Mã email và outbox auth | JDK SecureRandom/SHA-256/AES-GCM, code dự án | Token một lần 256 bit, DB lưu hash; nội dung email mã hóa, chỉ worker giải mã; không thay thế JWT |
 
 Điểm bắt đầu: [SecurityConfig](../../src/main/java/vn/vietroute/auth/config/SecurityConfig.java) → [JwtAuthenticationFilter](../../src/main/java/vn/vietroute/auth/security/JwtAuthenticationFilter.java) → [JwtService](../../src/main/java/vn/vietroute/auth/service/JwtService.java). Website dùng cookie HttpOnly; JavaScript không đọc cookie auth hoặc giữ access token trong localStorage. cURL/Postman xuất **URL thực + token placeholder** theo [hướng dẫn debug](../04-van-hanh/NHAT_KY_API_VA_DEBUG.md); không mượn lại token của request lịch sử.
 

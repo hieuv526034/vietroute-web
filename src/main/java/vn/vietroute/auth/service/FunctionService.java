@@ -1,201 +1,211 @@
 package vn.vietroute.auth.service;
 
-import java.sql.Connection;
-import java.sql.SQLException;
+import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.config.AuthSettings;
-import vn.vietroute.auth.dto.request.function.FunctionCreateRequest;
-import vn.vietroute.auth.dto.request.function.FunctionSearchRequest;
-import vn.vietroute.auth.dto.request.role.RoleFunctionsRequest;
-import vn.vietroute.auth.dto.response.function.FunctionResponse;
-import vn.vietroute.auth.dto.response.history.AccessChangeStateResponse;
-import vn.vietroute.auth.dto.response.resource.AccessResourceResponse;
-import vn.vietroute.auth.dto.response.role.RoleFunctionsResponse;
-import vn.vietroute.auth.entity.PermissionAction;
-import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.repo.AccessRepository;
-import vn.vietroute.auth.repo.FunctionRepository;
-import vn.vietroute.auth.security.AccessActors;
-import vn.vietroute.auth.security.AccessAuthorization;
+import vn.vietroute.auth.dto.request.FunctionRequest;
+import vn.vietroute.auth.dto.response.FunctionDTO;
+import vn.vietroute.auth.dto.search.FunctionSearch;
+import vn.vietroute.auth.entity.Function;
+import vn.vietroute.auth.repo.AccessChangeRepo;
+import vn.vietroute.auth.repo.FunctionRepo;
+import vn.vietroute.auth.repo.FunctionResourceRepo;
+import vn.vietroute.auth.repo.RoleFunctionRepo;
+import vn.vietroute.auth.repo.UserRoleRepo;
+import vn.vietroute.auth.security.EndpointAccess;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.auth.security.annotation.AccessOperation;
 import vn.vietroute.common.base.PageResponse;
-import vn.vietroute.common.constant.AccessAuditConstants.Event;
-import vn.vietroute.common.constant.AccessAuditConstants.Target;
-import vn.vietroute.common.constant.AccessConstants.Groups;
+import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.constant.ErrorCode;
-import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.JdbcTransactions;
+import vn.vietroute.common.validation.BusinessRules;
 
-/** User → Role → Function → Menu/API; metadata guard lấy từ source, quyền hiệu lực luôn đọc từ DB. */
+/** Function CRUD, gán resource/menu và khả năng UI lấy cùng tập endpoint DB. */
 @Service
 @RequiredArgsConstructor
 public class FunctionService {
 
-    private final FunctionRepository functions;
-
-    private final AccessRepository roles;
-
-    private final AccessResourceService definitions;
-
+    private final FunctionRepo functions;
+    private final FunctionResourceRepo resources;
+    private final RoleFunctionRepo roles;
+    private final UserRoleRepo mappings;
+    private final AccessChangeRepo changes;
+    private final EndpointAccess catalog;
     private final JdbcTransactions transactions;
+    private final AppSettings settings;
 
-    private final AccessHistoryService history;
-
-    private final AuthSettings settings;
-
-    /** Tìm/đếm/phân trang chức năng ở DB, không nạp toàn bộ registry vào bộ nhớ. */
-    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.READ)
-    public PageResponse<FunctionResponse> page(FunctionSearchRequest search) {
-        return functions.page(search);
-    }
-
-    /** Đọc một chức năng theo mã, giữ projection response không có credential hoặc dữ liệu client audit. */
-    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.READ)
-    public FunctionResponse get(String code) {
-        return transactions.execute(connection -> require(connection, code));
-    }
-
-    /** CAS + binding + projection role + lịch sử cùng transaction; thất bại ở đâu rollback ở đó. */
-    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.UPDATE, createArgument = "create")
-    public FunctionResponse save(FunctionCreateRequest body, long version, UserPrincipal actor, boolean create) {
-        AccessActors.requireCurrent(actor);
-        if (
-            body.getCode().startsWith("ROLE_") ||
-            (create &&
-                (body.getCode().startsWith("HTTP_") ||
-                    body.getCode().startsWith("DEFAULT_") ||
-                    body.getCode().startsWith("MIGRATED_")))
-        ) throw new BusinessException(ErrorCode.INVALID_CODE);
-        var selected = select(body.getTargets(), actor);
+    public PageResponse<FunctionDTO> search(FunctionSearch search) {
+        UserPrincipal.current();
         return transactions.execute(connection -> {
-            roles.lockRoleAssignments(connection);
-            var before = functions.find(connection, body.getCode());
-            if (!create && before == null) throw new BusinessException(ErrorCode.NOT_FOUND);
-            if (create) functions.requireCapacity(connection, settings.getRegistryCapacity());
-            if (before != null) {
-                select(before.getTargets(), actor);
-                if (
-                    before.isSourceManaged() && (!body.isActive() || !before.getTargets().equals(body.getTargets()))
-                ) throw new BusinessException(ErrorCode.ACCESS_DENIED);
-                if (!actor.roles().contains(Role.ADMIN)) functions.requireDelegable(
-                    connection,
-                    Set.of(body.getCode()),
-                    authorities()
-                );
-            }
-            var after = functions.save(connection, body, version, selected, actor.id(), create);
-            history.record(
+            Page<Function> page = functions.search(search);
+            Map<String, Set<String>> targets = resources.targetsFor(
                 connection,
-                create ? Event.FUNCTION_CREATED : Event.FUNCTION_UPDATED,
-                Target.FUNCTION,
-                body.getCode(),
-                actor.id(),
-                AccessChangeStateResponse.function(before),
-                AccessChangeStateResponse.function(after)
+                page.getContent().stream().map(Function::getCode).toList()
             );
-            return after;
+            return PageResponse.of(
+                page
+                    .getContent()
+                    .stream()
+                    .map(value -> FunctionDTO.from(value, targets.getOrDefault(value.getCode(), Set.of())))
+                    .toList(),
+                search,
+                page.getTotalElements()
+            );
         });
     }
 
-    /** Không xóa function source hoặc function còn role tham chiếu; lịch sử giữ trạng thái trước khi tombstone. */
-    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.DELETE)
-    public void delete(String code, long version, UserPrincipal actor) {
-        AccessActors.requireCurrent(actor);
-        transactions.execute(connection -> {
-            roles.lockRoleAssignments(connection);
-            var before = require(connection, code);
-            if (before.isSourceManaged()) throw new BusinessException(ErrorCode.ACCESS_DENIED);
-            select(before.getTargets(), actor);
-            functions.delete(connection, code, version, actor.id());
-            history.record(
+    public FunctionDTO get(String code) {
+        UserPrincipal.current();
+        return transactions.execute(connection -> {
+            Function value = BusinessRules.requireFound(functions.findById(code).orElse(null));
+            BusinessRules.require(!value.isDeleted(), ErrorCode.NOT_FOUND);
+            return FunctionDTO.from(value, resources.targets(connection, code));
+        });
+    }
+
+    /** Khóa/CAS/batch binding/history chung một transaction; endpoint chưa khai báo hoặc ngoài trần đều bị từ chối. */
+    public FunctionDTO save(FunctionRequest body, boolean create, UserPrincipal actor) {
+        UserPrincipal.requireCurrent(actor);
+        BusinessRules.require(
+            body.getCode() != null &&
+                body.getNameVi() != null &&
+                !body.getNameVi().isBlank() &&
+                body.getNameEn() != null &&
+                !body.getNameEn().isBlank() &&
+                body.getTargets() != null,
+            ErrorCode.INVALID_REQUEST
+        );
+        List<FunctionDTO> selected = catalog
+            .all()
+            .stream()
+            .filter(
+                item ->
+                    !item.isPublicEndpoint() && !item.isSelfService() && body.getTargets().contains(item.getTarget())
+            )
+            .toList();
+        BusinessRules.require(selected.size() == body.getTargets().size(), ErrorCode.INVALID_REQUEST);
+        UserPrincipal.requireDelegable(body.getTargets());
+        return transactions.execute(connection -> {
+            mappings.lockRoleAssignments(connection);
+            Function value;
+            Set<String> before = Set.of();
+            if (create) {
+                BusinessRules.require(
+                    !functions.existsById(body.getCode()) && functions.count() < settings.getAuthRegistryCapacity(),
+                    ErrorCode.CONFLICT
+                );
+                value = new Function();
+                value.setCode(body.getCode());
+                value.setCreatedAt(Instant.now());
+                value.setCreatedBy(actor.id());
+            } else {
+                value = BusinessRules.requireFound(functions.lock(body.getCode()));
+                BusinessRules.require(
+                    !value.isDeleted() && body.getVersion() != null && value.getVersion() == body.getVersion(),
+                    ErrorCode.STALE_VERSION
+                );
+                before = resources.targets(connection, value.getCode());
+                UserPrincipal.requireDelegable(before);
+                if (roles.hasAllScopesRole(connection, value.getCode())) {
+                    BusinessRules.require(
+                        UserPrincipal.current().getGlobalTargets().containsAll(body.getTargets()) &&
+                            UserPrincipal.current().getGlobalTargets().containsAll(before),
+                        ErrorCode.ACCESS_DENIED
+                    );
+                }
+            }
+            value.setNameVi(body.getNameVi().strip());
+            value.setNameEn(body.getNameEn().strip());
+            if (create || body.getActive() != null) value.setActive(!Boolean.FALSE.equals(body.getActive()));
+            if (create || body.getDescription() != null) value.setDescription(
+                body.getDescription() == null ? "" : body.getDescription()
+            );
+            if (create || body.getIcon() != null) value.setIcon(body.getIcon() == null ? "shield" : body.getIcon());
+            if (create || body.getSortOrder() != null) value.setSortOrder(
+                body.getSortOrder() == null ? 0 : body.getSortOrder()
+            );
+            value.setResourcesInitialized(true);
+            value.setUpdatedAt(Instant.now());
+            value.setUpdatedBy(actor.id());
+            functions.saveAndFlush(value);
+            resources.replace(connection, value.getCode(), selected, actor.id());
+            if (!create) roles.touchRoles(connection, value.getCode(), actor.id());
+            changes.append(
                 connection,
-                Event.FUNCTION_DELETED,
-                Target.FUNCTION,
+                create ? "FUNCTION_CREATED" : "FUNCTION_UPDATED",
+                "FUNCTION",
+                value.getCode(),
+                actor.id(),
+                Map.of("resources", before),
+                Map.of("resources", body.getTargets())
+            );
+            return FunctionDTO.from(value, body.getTargets());
+        });
+    }
+
+    public void delete(String code, long version, UserPrincipal actor) {
+        UserPrincipal.requireCurrent(actor);
+        transactions.execute(connection -> {
+            mappings.lockRoleAssignments(connection);
+            Function value = BusinessRules.requireFound(functions.lock(code));
+            BusinessRules.require(!value.isDeleted() && value.getVersion() == version, ErrorCode.STALE_VERSION);
+            Set<String> before = resources.targets(connection, code);
+            UserPrincipal.requireDelegable(before);
+            BusinessRules.require(!roles.usesFunction(connection, code), ErrorCode.CONFLICT);
+            value.setActive(false);
+            value.setDeleted(true);
+            value.setUpdatedAt(Instant.now());
+            value.setUpdatedBy(actor.id());
+            functions.saveAndFlush(value);
+            changes.append(
+                connection,
+                "FUNCTION_DELETED",
+                "FUNCTION",
                 code,
                 actor.id(),
-                AccessChangeStateResponse.function(before),
-                AccessChangeStateResponse.empty()
+                Map.of("resources", before),
+                Map.of("deleted", true)
             );
             return null;
         });
     }
 
-    /** Đọc tập chức năng của role và version gán chung để mở modal theo snapshot hiện hành. */
-    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.READ)
-    public RoleFunctionsResponse role(Role role) {
-        return transactions.execute(connection -> functions.role(connection, role));
+    public List<FunctionDTO> capabilities(long user) {
+        return functions.capabilities(user);
     }
 
-    /** Một kiểm tra cả tập, CAS và thay mapping theo tập; giữ ADMIN bất biến và trần ủy quyền hiện hành. */
-    @AccessOperation(resource = Groups.ACCESS, action = PermissionAction.ASSIGN)
-    public RoleFunctionsResponse assign(Role role, RoleFunctionsRequest body, UserPrincipal actor) {
-        AccessActors.requireCurrent(actor);
-        if (role.equals(Role.ADMIN)) throw new BusinessException(ErrorCode.ACCESS_DENIED);
-        return transactions.execute(connection -> {
-            roles.lockRoleAssignments(connection);
-            var before = functions.role(connection, role);
-            if (!actor.roles().contains(Role.ADMIN)) {
-                functions.requireDelegable(connection, before.getFunctionCodes(), authorities());
-                functions.requireDelegable(connection, body.getFunctionCodes(), authorities());
-                select(functions.targets(connection, before.getFunctionCodes()), actor);
-                select(functions.targets(connection, body.getFunctionCodes()), actor);
-            }
-            var after = functions.assign(connection, role, body.getFunctionCodes(), body.getVersion(), actor.id());
-            history.resources(
-                connection,
-                Event.ROLE_FUNCTIONS,
-                Target.ROLE,
-                role.name(),
-                actor.id(),
-                before.getFunctionCodes(),
-                after.getFunctionCodes(),
-                before.getVersion(),
-                after.getVersion(),
-                Set.of(),
-                Set.of()
-            );
-            return after;
-        });
+    public List<FunctionDTO> navigation(UserPrincipal actor, String current, Locale locale) {
+        return actor == null ? List.of() : functions.navigation(actor.id(), current, locale);
     }
 
-    private FunctionResponse require(Connection connection, String code) throws SQLException {
-        var value = functions.find(connection, code);
-        if (value == null) throw new BusinessException(ErrorCode.NOT_FOUND);
-        return value;
+    public List<FunctionDTO> inventory() {
+        UserPrincipal.current();
+        return catalog.all();
     }
 
-    /** Server xác nhận từng route tồn tại/guard ADMIN; không nhận cờ public, handler hoặc authority từ payload. */
-    private List<AccessResourceResponse> select(Set<String> targets, UserPrincipal actor) {
-        var selected = definitions
-            .inventory()
+    public PageResponse<FunctionDTO> resources(FunctionSearch search) {
+        UserPrincipal.current();
+        String keyword = search.getQuery().toLowerCase(Locale.ROOT);
+        List<FunctionDTO> result = catalog
+            .all()
             .stream()
-            .filter(RoleResourceService::assignable)
-            .filter(item -> targets.contains(item.target()))
+            .filter(item -> search.getKind().isBlank() || search.getKind().equals(item.getKind()))
+            .filter(item ->
+                (item.getTarget() + " " + item.getDescription() + " " + item.getHandler())
+                    .toLowerCase(Locale.ROOT)
+                    .contains(keyword)
+            )
             .toList();
-        if (
-            !selected.stream().map(AccessResourceResponse::target).collect(Collectors.toSet()).equals(targets)
-        ) throw new BusinessException(ErrorCode.INVALID_REQUEST);
-        if (!actor.roles().contains(Role.ADMIN)) {
-            var auth = SecurityContextHolder.getContext().getAuthentication();
-            if (
-                selected.stream().anyMatch(item -> !AccessAuthorization.allows(item, auth))
-            ) throw new BusinessException(ErrorCode.ACCESS_DENIED);
-        }
-        return selected;
-    }
-
-    private static Set<String> authorities() {
-        return SecurityContextHolder.getContext()
-            .getAuthentication()
-            .getAuthorities()
-            .stream()
-            .map(Object::toString)
-            .collect(Collectors.toSet());
+        int start = (int) Math.min(search.offset(), result.size());
+        return PageResponse.of(
+            result.subList(start, Math.min(start + search.getSize(), result.size())),
+            search,
+            result.size()
+        );
     }
 }

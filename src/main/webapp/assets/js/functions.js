@@ -17,7 +17,7 @@
     let busy = false,
         allowed = new Set(),
         current,
-        targets = new Set(),
+        targets = window.VietRouteFunctionSelection.model([], allowed),
         inventory = [],
         query = '',
         loaded = false,
@@ -27,7 +27,7 @@
         busy: () => busy,
         onClose: () => {
             current = undefined;
-            targets = new Set();
+            targets = window.VietRouteFunctionSelection.model([], allowed);
             ready = false;
         },
     });
@@ -76,7 +76,7 @@
             actions.className = 'row-actions';
             if (can('PUT', '/functions/{code}'))
                 actions.append(table.actionButton(labels.edit, 'edit', () => void perform(() => edit(value))));
-            if (!value.sourceManaged && can('DELETE', '/functions/{code}'))
+            if (can('DELETE', '/functions/{code}'))
                 actions.append(
                     table.actionButton(
                         labels.deleteFunction,
@@ -115,7 +115,7 @@
         for (const resource of inventory) {
             if (
                 term &&
-                !`${resource.target} ${resource.description} ${resource.group}`.toLocaleLowerCase().includes(term)
+                !`${resource.target} ${resource.description} ${resource.handler}`.toLocaleLowerCase().includes(term)
             )
                 continue;
             const label = text('label');
@@ -124,19 +124,12 @@
             input.type = 'checkbox';
             input.value = resource.target;
             input.checked = targets.has(resource.target);
-            input.disabled = !!current?.sourceManaged || !allowed.has(resource.target);
+            input.disabled = !allowed.has(resource.target);
             input.addEventListener('change', () => {
-                if (input.checked) targets.add(resource.target);
-                else targets.delete(resource.target);
+                targets.toggle(resource.target, input.checked);
                 node('function-target-count').textContent = labels.selected + ': ' + targets.size;
             });
-            label.append(
-                input,
-                text(
-                    'span',
-                    resource.description + ' · ' + resource.target + (resource.adminOnly ? ' · ' + labels.admin : ''),
-                ),
-            );
+            label.append(input, text('span', resource.description + ' · ' + resource.target));
             root.append(label);
         }
         const known = new Set(inventory.map((item) => item.target));
@@ -148,7 +141,7 @@
             input.type = 'checkbox';
             input.checked = true;
             input.addEventListener('change', () => {
-                targets.delete(target);
+                targets.toggle(target, false);
                 renderTargets();
             });
             label.append(input, text('span', labels.stale + ' · ' + target));
@@ -158,8 +151,9 @@
     };
     const edit = async (value) => {
         ready = false;
+        if (value) value = await get('/functions/' + encodeURIComponent(value.code));
         current = value;
-        targets = new Set(value?.targets || []);
+        targets = window.VietRouteFunctionSelection.model(value?.targets || [], allowed);
         const form = node('function-form');
         form.reset();
         window.VietRouteForms.clear(form);
@@ -168,14 +162,12 @@
         form.elements.nameVi.value = value?.nameVi || '';
         form.elements.nameEn.value = value?.nameEn || '';
         form.elements.active.checked = value?.active ?? true;
-        form.elements.active.disabled = !!value?.sourceManaged;
+        form.elements.active.disabled = false;
         node('function-target-query').value = '';
         app.feedback('', false, 'function-form-feedback');
         node('function-target-options').replaceChildren(text('p', labels.loading));
         modal.open();
-        inventory = (await get('/resource-catalog')).filter(
-            (item) => !item.publicRoute && item.declaredPermissions.length,
-        );
+        inventory = (await get('/resource-catalog')).filter((item) => !item.publicEndpoint && !item.selfService);
         ready = true;
         renderTargets();
     };

@@ -3,7 +3,7 @@ package vn.vietroute.business.demo.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;
-import vn.vietroute.auth.repo.DefaultAccountsRepository;
+import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.business.demo.repository.DemoSeedRepository;
 import vn.vietroute.business.demo.repository.InitialRouteRepository;
 import vn.vietroute.common.config.application.AppSettings;
@@ -24,7 +24,7 @@ public class BusinessDataInitializer implements InitializingBean {
     private final ConfigurationEnvironment environment;
     private final DemoSeedRepository seeds;
     private final InitialRouteRepository routes;
-    private final DefaultAccountsRepository accounts;
+    private final UserRepo accounts;
     private final JdbcTransactions transactions;
 
     /** Seed và gắn đúng account mới vào nhà xe cùng transaction; chạy lại giữ dữ liệu quản trị đã sửa. */

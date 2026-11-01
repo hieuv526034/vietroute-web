@@ -3,13 +3,16 @@ package vn.vietroute.business.demo.repository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Repository;
-import vn.vietroute.auth.config.AuthSettings;
 import vn.vietroute.business.demo.dto.response.DemoSeedResponse;
+import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 
@@ -19,19 +22,19 @@ import vn.vietroute.common.exception.BusinessException;
 public class DemoSeedRepository {
 
     private final ObjectMapper json;
-    private final AuthSettings settings;
+    private final AppSettings settings;
 
     /** Một transaction do caller sở hữu, advisory lock serialize mọi lần seed và kiểm quota phạm vi. */
     public DemoSeedResponse seed(Connection connection, long actor) throws SQLException {
         try (
-            var lock = connection.prepareStatement(
+            PreparedStatement lock = connection.prepareStatement(
                 "SELECT pg_advisory_xact_lock(781205611),pg_advisory_xact_lock(781205690)"
             )
         ) {
             lock.execute();
         }
         JsonNode data;
-        try (var input = new ClassPathResource("demo/business.json").getInputStream()) {
+        try (InputStream input = new ClassPathResource("demo/business.json").getInputStream()) {
             data = json.readTree(input);
         } catch (IOException error) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR);
@@ -39,13 +42,13 @@ public class DemoSeedRepository {
         // Cùng mã nhưng đơn vị khác phải dừng thay vì ghép xe/tài xế vào nhầm nhà xe.
         String carriers = data.path("carriers").toString();
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT (SELECT count(*) FROM carriers)+(SELECT count(*) FROM jsonb_to_recordset(?::jsonb) x(code text,name text) WHERE NOT EXISTS(SELECT 1 FROM carriers c WHERE c.code=x.code)),EXISTS(SELECT 1 FROM jsonb_to_recordset(?::jsonb) x(code text,name text) JOIN carriers c USING(code) WHERE c.name<>x.name)"
             )
         ) {
             query.setString(1, carriers);
             query.setString(2, carriers);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 row.next();
                 if (row.getBoolean(2)) throw new BusinessException(ErrorCode.CONFLICT);
                 if (row.getLong(1) > settings.getScopeCapacity()) throw new BusinessException(
@@ -149,12 +152,12 @@ public class DemoSeedRepository {
 
     /** Mỗi loại dữ liệu đúng một INSERT SELECT, số round-trip không tăng theo số dòng. */
     private static int insert(Connection connection, String sql, JsonNode values, long actor) throws SQLException {
-        try (var query = connection.prepareStatement(sql)) {
+        try (PreparedStatement query = connection.prepareStatement(sql)) {
             query.setLong(1, actor);
             query.setLong(2, actor);
             query.setString(3, values.toString());
             if (!query.execute()) return query.getUpdateCount();
-            try (var row = query.getResultSet()) {
+            try (ResultSet row = query.getResultSet()) {
                 row.next();
                 return row.getInt(1);
             }

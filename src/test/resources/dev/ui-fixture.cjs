@@ -422,7 +422,7 @@ const page = (values, query) => {
             }
             if (route === '/api/v1/admin/access/tree')
                 return respond(url.searchParams.get('lang') === 'en' ? enTree : viTree);
-            // Hợp đồng đọc ACCESS24 cho preview Role; không gửi grant tới DB hoặc provider.
+            // Hợp đồng đọc ACCESS24 cho preview RoleCode; không gửi grant tới DB hoặc provider.
             if (route === '/api/v1/admin/access/resource-catalog') return respond(resources);
             if (/^\/api\/v1\/admin\/access\/roles\/[A-Z0-9_]+\/resources$/.test(route) && req.method === 'GET') {
                 const role = registry.find((item) => item.code === route.split('/')[6]);

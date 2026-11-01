@@ -2,6 +2,7 @@ package vn.vietroute.common.mail.transport;
 
 import jakarta.mail.Session;
 import jakarta.mail.Transport;
+import jakarta.mail.internet.MimeMessage;
 import java.util.Properties;
 import java.util.UUID;
 import vn.vietroute.common.config.integration.MailSettings;
@@ -35,7 +36,7 @@ public final class SmtpTransport implements MailTransport {
                 settings.getSmtpUser(),
                 settings.getSmtpPassword()
             );
-            var message = MailMessages.create(session, settings.getFrom(), payload, jobId);
+            MimeMessage message = MailMessages.create(session, settings.getFrom(), payload, jobId);
             transport.sendMessage(message, message.getAllRecipients());
         }
     }

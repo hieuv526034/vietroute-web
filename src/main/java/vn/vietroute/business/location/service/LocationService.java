@@ -4,11 +4,7 @@ import java.util.Locale;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.entity.PermissionAction;
-import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.auth.security.annotation.AccessOperation;
-import vn.vietroute.auth.security.annotation.AccessResource;
 import vn.vietroute.business.location.dto.request.LocationCreateRequest;
 import vn.vietroute.business.location.dto.request.LocationLookupRequest;
 import vn.vietroute.business.location.dto.request.LocationSearchRequest;
@@ -21,14 +17,13 @@ import vn.vietroute.business.location.dto.response.LocationLookupResponse;
 import vn.vietroute.business.location.dto.response.LocationResponse;
 import vn.vietroute.business.location.dto.response.ProvinceLookupResponse;
 import vn.vietroute.business.location.dto.response.ProvinceResponse;
+import vn.vietroute.business.location.entity.Location;
 import vn.vietroute.business.location.repository.LocationRepository;
 import vn.vietroute.common.base.PageResponse;
-import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 
 /** Danh mục địa lý toàn hệ thống, ADMIN quản trị; không cấp OPERATOR quyền sửa danh mục dùng chung bằng membership nhà xe. */
 @Service
-@AccessResource(Groups.LOCATION)
 @RequiredArgsConstructor
 public class LocationService {
 
@@ -47,71 +42,44 @@ public class LocationService {
     }
 
     /** Quản trị xem cả dữ liệu ngừng sử dụng để sửa/bật lại đúng version. */
-    @AccessOperation(
-        resource = Groups.PROVINCE,
-        action = PermissionAction.READ,
-        aliases = { Groups.LOCATION + "_READ" },
-        adminOnly = true
-    )
     public PageResponse<ProvinceResponse> provinces(ProvinceSearchRequest page, Locale locale) {
         return map(locations.provinces(page, page.getActive()), item -> ProvinceResponse.from(item, locale));
     }
 
     /** Đọc trang quản trị theo trạng thái riêng, kể cả địa điểm có tỉnh đã tắt. */
-    @AccessOperation(action = PermissionAction.READ, adminOnly = true)
     public PageResponse<LocationResponse> locations(LocationSearchRequest page, Locale locale) {
         return map(locations.locations(page, page.getActive(), false), item -> LocationResponse.from(item, locale));
     }
 
     /** Đọc tỉnh mới nhất để modal giữ đúng version, không thay bằng lookup công khai. */
-    @AccessOperation(
-        resource = Groups.PROVINCE,
-        action = PermissionAction.READ,
-        aliases = { Groups.LOCATION + "_READ" },
-        adminOnly = true
-    )
     public ProvinceResponse province(long id, Locale locale) {
         return ProvinceResponse.from(locations.province(id), locale);
     }
 
     /** Đọc địa điểm và trạng thái tỉnh hiện hành cho quản trị; không suy quyền từ menu. */
-    @AccessOperation(action = PermissionAction.READ, adminOnly = true)
     public LocationResponse location(long id, Locale locale) {
         return LocationResponse.from(locations.location(id), locale);
     }
 
     /** Transaction tạo mới có actor thật; registry mã duy nhất chốt tại DB. */
-    @AccessOperation(
-        resource = Groups.PROVINCE,
-        action = PermissionAction.CREATE,
-        aliases = { Groups.LOCATION + "_CREATE" },
-        adminOnly = true
-    )
     public ProvinceResponse createProvince(ProvinceCreateRequest body, UserPrincipal actor, Locale locale) {
-        AccessActors.requireCurrent(actor);
+        UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection ->
             ProvinceResponse.from(locations.createProvince(connection, body, actor.id()), locale)
         );
     }
 
     /** Tắt tỉnh chỉ ẩn khỏi tra cứu, không xóa con hoặc lịch sử; version và audit cùng transaction. */
-    @AccessOperation(
-        resource = Groups.PROVINCE,
-        action = PermissionAction.UPDATE,
-        aliases = { Groups.LOCATION + "_UPDATE" },
-        adminOnly = true
-    )
     public ProvinceResponse updateProvince(long id, ProvinceUpdateRequest body, UserPrincipal actor, Locale locale) {
-        AccessActors.requireCurrent(actor);
+        UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection ->
             ProvinceResponse.from(locations.updateProvince(connection, id, body, actor.id()), locale)
         );
     }
 
     /** Khóa tỉnh trước INSERT địa điểm trong cùng connection/transaction, chống lọt trạng thái parent khi ghi đồng thời. */
-    @AccessOperation(action = PermissionAction.CREATE, adminOnly = true)
     public LocationResponse createLocation(LocationCreateRequest body, UserPrincipal actor, Locale locale) {
-        AccessActors.requireCurrent(actor);
+        UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
             locations.requireActiveProvince(connection, body.getProvinceId());
             return LocationResponse.from(locations.createLocation(connection, body, actor.id()), locale);
@@ -119,11 +87,10 @@ public class LocationService {
     }
 
     /** Giữ tỉnh/mã bất biến; chỉ yêu cầu tỉnh active khi địa điểm sẽ bật, vẫn cho ngừng sử dụng khi tỉnh đã tắt. */
-    @AccessOperation(action = PermissionAction.UPDATE, adminOnly = true)
     public LocationResponse updateLocation(long id, LocationUpdateRequest body, UserPrincipal actor, Locale locale) {
-        AccessActors.requireCurrent(actor);
+        UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
-            var current = locations.location(connection, id);
+            Location current = locations.location(connection, id);
             if (body.isActive()) locations.requireActiveProvince(connection, current.getProvinceId());
             return LocationResponse.from(locations.updateLocation(connection, id, body, actor.id()), locale);
         });

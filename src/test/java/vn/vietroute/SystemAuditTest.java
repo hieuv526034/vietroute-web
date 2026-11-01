@@ -25,13 +25,12 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import vn.vietroute.auth.dto.request.session.LoginRequest;
-import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.entity.UserAccount;
-import vn.vietroute.auth.repo.UserRepository;
+import vn.vietroute.auth.dto.request.UserRequest;
+import vn.vietroute.auth.entity.User;
+import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.auth.service.AuthService;
 import vn.vietroute.auth.service.JwtService;
+import vn.vietroute.auth.service.UserService;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.web.WebConfig;
@@ -46,6 +45,7 @@ import vn.vietroute.common.job.repository.JobRepository;
 import vn.vietroute.common.job.service.JobService;
 import vn.vietroute.support.AccessTestConfig;
 import vn.vietroute.support.JournalTestConfig;
+import vn.vietroute.support.TestJpa;
 
 /** Kiểm actor kỹ thuật không có đường đăng nhập/cấp JWT; mọi port giả đều không kết nối DB. */
 class SystemAuditTest {
@@ -66,9 +66,9 @@ class SystemAuditTest {
 
     @Test
     void loginRejectsSystemWithoutChangingItsAuditOrFailureCounter() {
-        var repository = new UserRepository(null) {
+        var repository = new UserRepo(TestJpa.MANAGER, null) {
             @Override
-            public UserAccount findByUsername(Connection connection, String username, boolean lock) {
+            public User findByUsername(Connection connection, String username, boolean lock) {
                 assertEquals(SystemActor.USERNAME, username);
                 return system();
             }
@@ -88,8 +88,21 @@ class SystemAuditTest {
                 }
             }
         };
-        var auth = new AuthService(repository, transactions, new BCryptPasswordEncoder(), null, Clock.systemUTC());
-        var request = new LoginRequest();
+        var auth = new UserService(
+            repository,
+            null,
+            null,
+            null,
+            new BCryptPasswordEncoder(),
+            null,
+            transactions,
+            null,
+            null,
+            null,
+            Clock.systemUTC()
+        );
+        auth.initializePasswordTiming();
+        var request = new UserRequest();
         request.setUsername(SystemActor.USERNAME);
         request.setPassword("Not-A-System-Password-2026!");
         var error = assertThrows(BusinessException.class, () -> auth.login(request));
@@ -112,7 +125,7 @@ class SystemAuditTest {
             servlet.register(WebConfig.class);
             servlet.refresh();
             var mvc = MockMvcBuilders.webAppContextSetup(servlet).apply(springSecurity()).build();
-            var principal = new UserPrincipal(1L, "admin", Set.of(Role.ADMIN), 0);
+            var principal = new UserPrincipal(1L, "admin", Set.of("ADMIN"), 0);
             var admin = UsernamePasswordAuthenticationToken.authenticated(
                 principal,
                 null,
@@ -157,13 +170,13 @@ class SystemAuditTest {
                 }
             }
         };
-        var actor = new UserPrincipal(42L, "operator", Set.of(Role.OPERATOR), 0);
+        var actor = new UserPrincipal(42L, "operator", Set.of("OPERATOR"), 0);
         new JobService(repository, transactions).retry(UUID.randomUUID(), 3, actor);
         assertEquals(actor.id(), recorded.get());
     }
 
-    private UserAccount system() {
+    private User system() {
         // Cố ý active=true để chứng minh lớp Java vẫn chặn dù dữ liệu giả không đúng CHECK của DB.
-        return UserAccount.builder().id(SystemActor.ID).username(SystemActor.USERNAME).active(true).build();
+        return User.builder().id(SystemActor.ID).username(SystemActor.USERNAME).active(true).build();
     }
 }

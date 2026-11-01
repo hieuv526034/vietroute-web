@@ -24,6 +24,8 @@
         <swagger.version>2.2.55</swagger.version>
         <swagger-ui.version>5.34.0</swagger-ui.version>
         <micrometer.version>1.17.2</micrometer.version>
+        <spring-data-jpa.version>3.5.13</spring-data-jpa.version>
+        <hibernate-orm.version>6.6.59.Final</hibernate-orm.version>
         <maven.compiler.parameters>true</maven.compiler.parameters>
     </properties>
 
@@ -61,6 +63,24 @@
     </dependencyManagement>
 
     <dependencies>
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-jpa</artifactId>
+            <version>${spring-data-jpa.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-core</artifactId>
+            <version>${hibernate-orm.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-orm</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-jdbc</artifactId>
+        </dependency>
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>

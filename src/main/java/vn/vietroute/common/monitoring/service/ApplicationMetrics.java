@@ -1,6 +1,7 @@
 package vn.vietroute.common.monitoring.service;
 
 import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.HikariPoolMXBean;
 import io.micrometer.core.instrument.FunctionCounter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Timer;
@@ -12,6 +13,7 @@ import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
 import io.micrometer.core.instrument.binder.system.UptimeMetrics;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -21,12 +23,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.entity.PermissionAction;
-import vn.vietroute.auth.security.annotation.AccessOperation;
+import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.config.monitoring.MonitoringSettings;
-import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.job.worker.JobWorker;
 import vn.vietroute.common.monitoring.dto.response.RuntimeStatusResponse;
+import vn.vietroute.common.monitoring.repository.MonitoringRepository.QueueSample;
+import vn.vietroute.common.monitoring.service.DatabaseProbe.State;
 
 /** Đo bằng RAM với nhãn hữu hạn; scrape đọc registry/cache, tuyệt đối không mở DB hoặc gọi provider. */
 @Service
@@ -116,15 +118,15 @@ public class ApplicationMetrics implements DisposableBean {
             return last == null ? Double.NaN : Math.max(0, Duration.between(last, Instant.now(clock)).toSeconds());
         }).register(registry);
         Gauge.builder("vietroute.jobs.queued", database, value -> {
-            var sample = value.state().queue();
+            QueueSample sample = value.state().queue();
             return sample == null ? Double.NaN : sample.queued();
         }).register(registry);
         Gauge.builder("vietroute.jobs.dead", database, value -> {
-            var sample = value.state().queue();
+            QueueSample sample = value.state().queue();
             return sample == null ? Double.NaN : sample.dead();
         }).register(registry);
         Gauge.builder("vietroute.jobs.oldest.due", database, value -> {
-            var sample = value.state().queue();
+            QueueSample sample = value.state().queue();
             return sample == null ? Double.NaN : sample.oldestDueSeconds();
         }).register(registry);
     }
@@ -152,10 +154,10 @@ public class ApplicationMetrics implements DisposableBean {
     }
 
     /** Quyền xem chỉ số riêng với chức năng nghiệp vụ; JWT vẫn được kiểm như API quản trị khác. */
-    @AccessOperation(resource = Groups.SYSTEM, action = PermissionAction.READ)
     public RuntimeStatusResponse snapshot() {
-        var memory = ManagementFactory.getMemoryMXBean();
-        var state = database.state();
+        UserPrincipal.current();
+        MemoryMXBean memory = ManagementFactory.getMemoryMXBean();
+        State state = database.state();
         return new RuntimeStatusResponse(
             instanceId,
             Instant.now(clock),
@@ -185,12 +187,12 @@ public class ApplicationMetrics implements DisposableBean {
     }
 
     private static double poolActive(HikariDataSource source) {
-        var bean = source.getHikariPoolMXBean();
+        HikariPoolMXBean bean = source.getHikariPoolMXBean();
         return bean == null ? 0 : bean.getActiveConnections();
     }
 
     private static double poolWaiting(HikariDataSource source) {
-        var bean = source.getHikariPoolMXBean();
+        HikariPoolMXBean bean = source.getHikariPoolMXBean();
         return bean == null ? 0 : bean.getThreadsAwaitingConnection();
     }
 

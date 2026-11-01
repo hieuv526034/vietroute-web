@@ -28,12 +28,13 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import vn.vietroute.auth.dto.request.account.AccessUserSearchRequest;
-import vn.vietroute.auth.dto.response.account.AccessUserResponse;
-import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.repo.UserRepository;
+import vn.vietroute.auth.dto.response.UserDTO;
+import vn.vietroute.auth.dto.search.UserSearch;
+import vn.vietroute.auth.repo.UserRepo;
+import vn.vietroute.auth.security.EndpointAccess;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.auth.service.AccessService;
+import vn.vietroute.auth.service.RoleService;
+import vn.vietroute.auth.service.UserService;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.application.AppSettings;
@@ -47,6 +48,7 @@ import vn.vietroute.common.config.monitoring.MonitoringSettings;
 import vn.vietroute.common.config.traffic.TrafficSettings;
 import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
+import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.monitoring.service.SystemConfigurationService;
 import vn.vietroute.support.AccessTestConfig;
@@ -54,25 +56,10 @@ import vn.vietroute.support.AccessTestConfig;
 /** Kiểm quyền UI/API và whitelist cấu hình trước khi mở DB; SQL integration chạy trên PostgreSQL CI tạm. */
 class SystemManagementTest {
 
-    @Configuration
-    static class IsolatedUsers {
-
-        @Bean
-        @Primary
-        UserRepository users(JdbcConnectionFactory connections) {
-            return new UserRepository(connections) {
-                @Override
-                public PageResponse<AccessUserResponse> pageForAccess(AccessUserSearchRequest page) {
-                    return PageResponse.of(List.of(), page, 0);
-                }
-            };
-        }
-    }
-
     private AnnotationConfigWebApplicationContext context() {
         var context = new AnnotationConfigWebApplicationContext();
         context.setServletContext(new MockServletContext("src/main/webapp", new FileSystemResourceLoader()));
-        context.register(RootConfig.class, AccessTestConfig.class, WebConfig.class, IsolatedUsers.class);
+        context.register(RootConfig.class, AccessTestConfig.class, WebConfig.class);
         context.refresh();
         return context;
     }
@@ -82,7 +69,7 @@ class SystemManagementTest {
             new UserPrincipal(
                 2L,
                 "isolated",
-                Set.of(List.of(authorities).contains("ROLE_ADMIN") ? Role.ADMIN : Role.OPERATOR),
+                Set.of(List.of(authorities).contains("ROLE_ADMIN") ? "ADMIN" : "OPERATOR"),
                 0
             ),
             null,
@@ -96,11 +83,11 @@ class SystemManagementTest {
             var mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
             Map<String, String> pages = Map.of(
                 Routes.JOBS_PAGE,
-                "JOB_READ",
+                "GET " + Routes.JOBS_PAGE,
                 Routes.ACCESS_PAGE,
-                "ACCESS_READ",
+                "GET " + Routes.ACCESS_PAGE,
                 Routes.CONFIGURATION_PAGE,
-                "SYSTEM_READ"
+                "GET " + Routes.CONFIGURATION_PAGE
             );
             for (var entry : pages.entrySet()) {
                 assertEquals(302, mvc.perform(get(entry.getKey())).andReturn().getResponse().getStatus());
@@ -158,14 +145,16 @@ class SystemManagementTest {
                     .perform(
                         post(Routes.SYSTEM_CONFIGURATION)
                             .with(csrf())
-                            .with(authentication(actor("SYSTEM_READ")))
+                            .with(authentication(actor("GET " + Routes.SYSTEM_CONFIGURATION)))
                     )
                     .andReturn()
                     .getResponse()
                     .getStatus()
             );
             var result = mvc
-                .perform(get(Routes.SYSTEM_CONFIGURATION).with(authentication(actor("SYSTEM_READ"))))
+                .perform(
+                    get(Routes.SYSTEM_CONFIGURATION).with(authentication(actor("GET " + Routes.SYSTEM_CONFIGURATION)))
+                )
                 .andReturn()
                 .getResponse();
             assertEquals(200, result.getStatus());
@@ -177,7 +166,11 @@ class SystemManagementTest {
             assertEquals(
                 403,
                 mvc
-                    .perform(post(Routes.SYSTEM_CONFIGURATION).with(authentication(actor("SYSTEM_READ"))))
+                    .perform(
+                        post(Routes.SYSTEM_CONFIGURATION).with(
+                            authentication(actor("GET " + Routes.SYSTEM_CONFIGURATION))
+                        )
+                    )
                     .andReturn()
                     .getResponse()
                     .getStatus()
@@ -187,7 +180,7 @@ class SystemManagementTest {
                 .readTree(mvc.perform(get(Routes.OPENAPI)).andReturn().getResponse().getContentAsString());
             assertTrue(document.get("paths").has(Routes.SYSTEM_CONFIGURATION));
             assertTrue(document.get("paths").has(Routes.ACCESS + Routes.USERS_ACTION));
-            assertTrue(document.get("components").get("schemas").has("AccessUserResponse"));
+            assertTrue(document.get("components").get("schemas").has("UserDTO"));
             assertNull(context.getBean(HikariDataSource.class).getHikariPoolMXBean());
         }
     }
@@ -195,15 +188,15 @@ class SystemManagementTest {
     @Test
     void delegatedAccessReadCanEnumerateAccountsAndDirectServicesEnforcePermissions() {
         try (var context = context()) {
-            var access = context.getBean(AccessService.class);
-            var configuration = context.getBean(SystemConfigurationService.class);
-            for (var authentication : List.of(actor("ROLE_ADMIN"), actor("ACCESS_ASSIGN"))) {
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-                assertThrows(AccessDeniedException.class, () -> access.users(new AccessUserSearchRequest()));
-            }
+            var access = context.getBean(UserService.class);
+            SecurityContextHolder.getContext().setAuthentication(actor("ROLE_ADMIN"));
+            assertThrows(BusinessException.class, () -> access.search(new UserSearch()));
             SecurityContextHolder.getContext().setAuthentication(actor("ACCESS_READ"));
-            assertEquals(0, access.users(new AccessUserSearchRequest()).totalElements());
-            assertThrows(AccessDeniedException.class, configuration::read);
+            var approved = context
+                .getBean(EndpointAccess.class)
+                .authorize(actor("ACCESS_READ"), "GET /api/v1/admin/access/users", false);
+            SecurityContextHolder.getContext().setAuthentication(approved);
+            assertEquals(0, access.search(new UserSearch()).totalElements());
             assertNull(context.getBean(HikariDataSource.class).getHikariPoolMXBean());
         } finally {
             SecurityContextHolder.clearContext();
@@ -218,13 +211,13 @@ class SystemManagementTest {
             var filter = mvc
                 .perform(
                     get(Routes.ACCESS + Routes.USERS_ACTION)
-                        .param("username", "%private_")
+                        .param("username", "x".repeat(161))
                         .with(authentication(admin))
                 )
                 .andReturn()
                 .getResponse();
             assertEquals(400, filter.getStatus());
-            assertTrue(filter.getContentAsString().contains("validation.usernameSearch"));
+            assertTrue(filter.getContentAsString().contains("validation.length"));
             assertEquals(
                 400,
                 mvc

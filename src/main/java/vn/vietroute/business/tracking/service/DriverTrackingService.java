@@ -7,11 +7,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.entity.PermissionAction;
-import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.auth.security.annotation.AccessOperation;
-import vn.vietroute.auth.security.annotation.AccessResource;
 import vn.vietroute.business.tracking.dto.request.TrackingSampleRequest;
 import vn.vietroute.business.tracking.dto.request.TrackingStartRequest;
 import vn.vietroute.business.tracking.dto.request.TrackingStopRequest;
@@ -19,11 +15,11 @@ import vn.vietroute.business.tracking.dto.response.TrackingPointResponse;
 import vn.vietroute.business.tracking.dto.response.TrackingResponse;
 import vn.vietroute.business.tracking.dto.response.TrackingSessionResponse;
 import vn.vietroute.business.tracking.repository.TrackingRepository;
+import vn.vietroute.business.tracking.repository.TrackingRepository.State;
 import vn.vietroute.business.trip.dto.response.TripResponse;
 import vn.vietroute.business.trip.entity.TripStatus;
 import vn.vietroute.business.trip.repository.TripRepository;
 import vn.vietroute.common.config.integration.TrackingSettings;
-import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.validation.BusinessRules;
@@ -31,7 +27,6 @@ import vn.vietroute.common.validation.BusinessRules;
 /** Consent chỉ tài xế được giao, khóa trip trước state/sample; vị trí không thay actual chặng hoặc trạng thái đơn. */
 @Service
 @RequiredArgsConstructor
-@AccessResource(Groups.DRIVER_TRIP)
 public class DriverTrackingService {
 
     private final TripRepository trips;
@@ -41,22 +36,20 @@ public class DriverTrackingService {
     private final Clock clock;
 
     /** VIEW/READ hiện hành của chuyến được giao; không trả nonce để tab khác tự tiếp tục consent. */
-    @AccessOperation(action = PermissionAction.READ)
     public TrackingResponse read(long id, UserPrincipal actor) {
-        AccessActors.requireCurrent(actor);
+        UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
-            trips.assigned(connection, id, PermissionAction.READ, false, actor.id());
-            return tracking.view(connection, id, Groups.DRIVER_TRIP, null, null, settings.isEnabled(), clock.instant());
+            trips.assigned(connection, id, false, actor.id());
+            return tracking.view(connection, id, true, null, null, settings.isEnabled(), clock.instant());
         });
     }
 
     /** Bật trước khởi hành tối đa 30 phút hoặc khi đang chạy; mỗi lần bật cấp nonce mới và xóa snapshot cũ. */
-    @AccessOperation(action = PermissionAction.UPDATE)
     public TrackingSessionResponse start(long id, TrackingStartRequest body, UserPrincipal actor) {
-        AccessActors.requireCurrent(actor);
+        UserPrincipal.requireCurrent(actor);
         BusinessRules.require(settings.isEnabled(), ErrorCode.TRACKING_DISABLED);
         return transactions.execute(connection -> {
-            var trip = trips.assigned(connection, id, PermissionAction.UPDATE, true, actor.id());
+            TripResponse trip = trips.assigned(connection, id, true, actor.id());
             BusinessRules.require(
                 body.tripVersion() != null && body.tripVersion() == trip.version(),
                 ErrorCode.STALE_VERSION
@@ -75,12 +68,11 @@ public class DriverTrackingService {
     }
 
     /** Stop cùng nonce lặp lại không tạo mutation; nonce cũ không được tắt consent mới trên thiết bị khác. */
-    @AccessOperation(action = PermissionAction.UPDATE)
     public TrackingResponse stop(long id, TrackingStopRequest body, UserPrincipal actor) {
-        AccessActors.requireCurrent(actor);
+        UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
-            trips.assigned(connection, id, PermissionAction.UPDATE, true, actor.id());
-            var state = tracking.state(connection, id);
+            trips.assigned(connection, id, true, actor.id());
+            State state = tracking.state(connection, id);
             BusinessRules.require(
                 state != null && state.key().equals(body.sessionKey()) && state.driverUserId() == actor.id(),
                 ErrorCode.TRACKING_SESSION
@@ -91,16 +83,15 @@ public class DriverTrackingService {
     }
 
     /** Mẫu cũ/future/sai thứ tự bị chặn; replay chính xác không làm mới lease hoặc thêm trace. */
-    @AccessOperation(action = PermissionAction.UPDATE)
     public TrackingPointResponse sample(long id, TrackingSampleRequest body, UserPrincipal actor) {
-        AccessActors.requireCurrent(actor);
+        UserPrincipal.requireCurrent(actor);
         BusinessRules.require(settings.isEnabled(), ErrorCode.TRACKING_DISABLED);
         return transactions.execute(connection -> {
-            var trip = trips.assigned(connection, id, PermissionAction.UPDATE, true, actor.id());
+            TripResponse trip = trips.assigned(connection, id, true, actor.id());
             Instant now = clock.instant();
             valid(body, now);
             shareable(trip, now);
-            var state = tracking.state(connection, id);
+            State state = tracking.state(connection, id);
             BusinessRules.require(
                 state != null &&
                     state.sharing() &&
@@ -114,7 +105,7 @@ public class DriverTrackingService {
                 ErrorCode.TRACKING_SESSION
             );
             if (state.latest() != null) {
-                var point = state.latest();
+                TrackingPointResponse point = state.latest();
                 BusinessRules.require(
                     !body.measuredAt().isBefore(point.measuredAt()),
                     ErrorCode.TRACKING_SAMPLE_INVALID

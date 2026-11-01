@@ -8,9 +8,7 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Locale;
 import org.springframework.stereotype.Repository;
-import vn.vietroute.auth.entity.PermissionAction;
-import vn.vietroute.auth.repo.BusinessScopeRepository;
-import vn.vietroute.auth.security.DataScopeGuard;
+import vn.vietroute.auth.repo.UserRoleRepo;
 import vn.vietroute.business.carrier.dto.request.CarrierCreateRequest;
 import vn.vietroute.business.carrier.dto.request.CarrierSearchRequest;
 import vn.vietroute.business.carrier.dto.request.CarrierUpdateRequest;
@@ -23,7 +21,7 @@ import vn.vietroute.business.carrier.entity.Driver;
 import vn.vietroute.business.carrier.entity.Vehicle;
 import vn.vietroute.common.base.BaseEntity;
 import vn.vietroute.common.base.PageResponse;
-import vn.vietroute.common.constant.AccessConstants.Groups;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.BaseRepository;
@@ -71,45 +69,42 @@ public class CarrierRepository extends BaseRepository {
         T map(ResultSet row) throws SQLException;
     }
 
-    private final BusinessScopeRepository scopes;
+    private final UserRoleRepo scopes;
 
-    public CarrierRepository(JdbcConnectionFactory connections, BusinessScopeRepository scopes) {
+    public CarrierRepository(JdbcConnectionFactory connections, UserRoleRepo scopes) {
         super(connections);
         this.scopes = scopes;
     }
 
     /** Phân trang cùng predicate scope ở count và dữ liệu; không lọc trong RAM sau khi lấy trang. */
     public PageResponse<Carrier> carriers(CarrierSearchRequest search) {
-        return read(connection -> page(connection, Kind.CARRIER, search, Groups.CARRIER, CarrierRepository::carrier));
+        return read(connection -> page(connection, Kind.CARRIER, search, CarrierRepository::carrier));
     }
 
     /** Picker cho CREATE dùng đúng quyền scoped CREATE của tài nguyên con, không lộ hồ sơ đầy đủ của nhà xe. */
-    public PageResponse<Carrier> choices(CarrierSearchRequest search, String resource) {
-        return read(connection ->
-            page(connection, Kind.CARRIER, search, resource, PermissionAction.CREATE, CarrierRepository::carrier)
-        );
+    public PageResponse<Carrier> choices(CarrierSearchRequest search) {
+        return read(connection -> page(connection, Kind.CARRIER, search, CarrierRepository::carrier));
     }
 
     public PageResponse<Vehicle> vehicles(CarrierSearchRequest search) {
-        return read(connection -> page(connection, Kind.VEHICLE, search, Groups.VEHICLE, CarrierRepository::vehicle));
+        return read(connection -> page(connection, Kind.VEHICLE, search, CarrierRepository::vehicle));
     }
 
     public PageResponse<Driver> drivers(CarrierSearchRequest search) {
-        return read(connection -> page(connection, Kind.DRIVER, search, Groups.DRIVER, CarrierRepository::driver));
+        return read(connection -> page(connection, Kind.DRIVER, search, CarrierRepository::driver));
     }
 
     /** Resource/action là metadata từ service server; scope luôn đọc từ owner trong database. */
-    public Carrier carrier(Connection connection, long id, String resource, PermissionAction action, boolean lock)
-        throws SQLException {
-        return find(connection, Kind.CARRIER, id, resource, action, lock, CarrierRepository::carrier);
+    public Carrier carrier(Connection connection, long id, boolean lock) throws SQLException {
+        return find(connection, Kind.CARRIER, id, lock, CarrierRepository::carrier);
     }
 
-    public Vehicle vehicle(Connection connection, long id, PermissionAction action, boolean lock) throws SQLException {
-        return find(connection, Kind.VEHICLE, id, Groups.VEHICLE, action, lock, CarrierRepository::vehicle);
+    public Vehicle vehicle(Connection connection, long id, boolean lock) throws SQLException {
+        return find(connection, Kind.VEHICLE, id, lock, CarrierRepository::vehicle);
     }
 
-    public Driver driver(Connection connection, long id, PermissionAction action, boolean lock) throws SQLException {
-        return find(connection, Kind.DRIVER, id, Groups.DRIVER, action, lock, CarrierRepository::driver);
+    public Driver driver(Connection connection, long id, boolean lock) throws SQLException {
+        return find(connection, Kind.DRIVER, id, lock, CarrierRepository::driver);
     }
 
     /** Cờ UI chỉ là giao của quyền scoped UPDATE; capabilities/policy chung vẫn bắt buộc trên trình duyệt/API. */
@@ -117,28 +112,26 @@ public class CarrierRepository extends BaseRepository {
         return (
             kind.columns +
             ",(" +
-            DataScopeGuard.visibleSql() +
+            UserRoleRepo.visibleSql() +
             ") AS can_update" +
-            (kind == Kind.DRIVER ? ",(" + DataScopeGuard.visibleSql() + ") AS can_assign" : "")
+            (kind == Kind.DRIVER ? ",(" + UserRoleRepo.visibleSql() + ") AS can_assign" : "")
         );
     }
 
-    private static int bindColumns(PreparedStatement query, Kind kind, String resource) throws SQLException {
-        int next = DataScopeGuard.bindVisible(query, 1, resource, PermissionAction.UPDATE);
+    private static int bindColumns(PreparedStatement query, Kind kind) throws SQLException {
+        String path = switch (kind) {
+            case CARRIER -> Routes.ADMIN_CARRIERS;
+            case VEHICLE -> Routes.ADMIN_VEHICLES;
+            case DRIVER -> Routes.ADMIN_DRIVERS;
+        };
+        int next = UserRoleRepo.bindVisible(query, 1, "PUT " + path + Routes.BY_ID);
         return kind == Kind.DRIVER
-            ? DataScopeGuard.bindVisible(query, next, Groups.DRIVER, PermissionAction.ASSIGN)
+            ? UserRoleRepo.bindVisible(query, next, "POST " + path + Routes.DRIVER_ACCOUNT)
             : next;
     }
 
-    private <T> T find(
-        Connection connection,
-        Kind kind,
-        long id,
-        String resource,
-        PermissionAction action,
-        boolean lock,
-        RowMapper<T> mapper
-    ) throws SQLException {
+    private <T> T find(Connection connection, Kind kind, long id, boolean lock, RowMapper<T> mapper)
+        throws SQLException {
         String sql =
             "SELECT " +
             columns(kind) +
@@ -147,37 +140,21 @@ public class CarrierRepository extends BaseRepository {
             " WHERE " +
             kind.alias +
             ".id=? AND " +
-            DataScopeGuard.visibleSql() +
+            UserRoleRepo.visibleSql() +
             (lock ? " FOR UPDATE OF " + kind.alias : "");
-        try (var query = connection.prepareStatement(sql)) {
-            int index = bindColumns(query, kind, resource);
+        try (PreparedStatement query = connection.prepareStatement(sql)) {
+            int index = bindColumns(query, kind);
             query.setLong(index++, id);
-            DataScopeGuard.bindVisible(query, index, resource, action);
-            try (var row = query.executeQuery()) {
+            UserRoleRepo.bindVisible(query, index);
+            try (ResultSet row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
                 return mapper.map(row);
             }
         }
     }
 
-    private <T> PageResponse<T> page(
-        Connection connection,
-        Kind kind,
-        CarrierSearchRequest page,
-        String resource,
-        RowMapper<T> mapper
-    ) throws SQLException {
-        return page(connection, kind, page, resource, PermissionAction.READ, mapper);
-    }
-
-    private <T> PageResponse<T> page(
-        Connection connection,
-        Kind kind,
-        CarrierSearchRequest page,
-        String resource,
-        PermissionAction action,
-        RowMapper<T> mapper
-    ) throws SQLException {
+    private <T> PageResponse<T> page(Connection connection, Kind kind, CarrierSearchRequest page, RowMapper<T> mapper)
+        throws SQLException {
         String searchText =
             kind == Kind.CARRIER
                 ? "lower(owner.code || ' ' || owner.name || ' ' || owner.phone)"
@@ -186,45 +163,39 @@ public class CarrierRepository extends BaseRepository {
             " FROM " +
             kind.from +
             " WHERE " +
-            DataScopeGuard.visibleSql() +
+            UserRoleRepo.visibleSql() +
             " AND (?::boolean IS NULL OR " +
             kind.alias +
             ".active=?) AND (?::bigint IS NULL OR owner.id=?) AND " +
             searchText +
             " LIKE ? ESCAPE '\\'";
         long total;
-        try (var query = connection.prepareStatement("SELECT count(*)" + filter)) {
-            bindSearch(query, 1, page, resource, action);
-            try (var row = query.executeQuery()) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + filter)) {
+            bindSearch(query, 1, page);
+            try (ResultSet row = query.executeQuery()) {
                 row.next();
                 total = row.getLong(1);
             }
         }
-        var content = new ArrayList<T>();
+        ArrayList<T> content = new ArrayList<T>();
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT " + columns(kind) + filter + " ORDER BY " + kind.alias + ".id DESC LIMIT ? OFFSET ?"
             )
         ) {
-            int index = bindColumns(query, kind, resource);
-            index = bindSearch(query, index, page, resource, action);
+            int index = bindColumns(query, kind);
+            index = bindSearch(query, index, page);
             query.setInt(index++, page.getSize());
             query.setLong(index, page.offset());
-            try (var rows = query.executeQuery()) {
+            try (ResultSet rows = query.executeQuery()) {
                 while (rows.next()) content.add(mapper.map(rows));
             }
         }
         return PageResponse.of(content, page, total);
     }
 
-    private int bindSearch(
-        PreparedStatement query,
-        int start,
-        CarrierSearchRequest page,
-        String resource,
-        PermissionAction action
-    ) throws SQLException {
-        int index = DataScopeGuard.bindVisible(query, start, resource, action);
+    private int bindSearch(PreparedStatement query, int start, CarrierSearchRequest page) throws SQLException {
+        int index = UserRoleRepo.bindVisible(query, start);
         query.setObject(index++, page.getActive(), Types.BOOLEAN);
         query.setObject(index++, page.getActive(), Types.BOOLEAN);
         query.setObject(index++, page.getCarrierId(), Types.BIGINT);
@@ -238,7 +209,7 @@ public class CarrierRepository extends BaseRepository {
     public long insertCarrier(Connection connection, CarrierCreateRequest body, long actor) throws SQLException {
         long scope = scopes.create(connection, body.getName(), actor);
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "INSERT INTO carriers(scope_id,code,name,phone,description,active,logo_media_id,created_by,updated_by,scope_code,scope_name_vi,scope_name_en) VALUES (?,?,?,?,?,?,?,?,?,'CARRIER_'||?::text,?,?) RETURNING id"
             )
         ) {
@@ -254,7 +225,7 @@ public class CarrierRepository extends BaseRepository {
             query.setLong(10, scope);
             query.setString(11, body.getName().strip());
             query.setString(12, body.getName().strip());
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 row.next();
                 return row.getLong(1);
             }
@@ -265,7 +236,7 @@ public class CarrierRepository extends BaseRepository {
     public void updateCarrier(Connection connection, Carrier current, CarrierUpdateRequest body, long actor)
         throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "UPDATE carriers SET name=?,phone=?,description=?,active=?,logo_media_id=?,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=? AND scope_id=? AND version=?"
             )
         ) {
@@ -285,12 +256,12 @@ public class CarrierRepository extends BaseRepository {
     /** Loại xe active được khóa trong transaction; FK ghép cũng chặn nhầm BOOKING_SOURCE. */
     public void requireVehicleType(Connection connection, long id) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT id FROM catalog_items WHERE id=? AND type='VEHICLE_TYPE' AND active FOR SHARE"
             )
         ) {
             query.setLong(1, id);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.INVALID_REQUEST);
             }
         }
@@ -299,10 +270,10 @@ public class CarrierRepository extends BaseRepository {
     /** Account không tự được cấp role: chỉ liên kết DRIVER đã có role global và scope đúng nhà xe. */
     public void requireDriverUser(Connection connection, long id, long scope) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 """
                 SELECT u.id FROM auth_users u
-                JOIN auth_user_roles ur ON ur.user_id=u.id AND ur.role_code='DRIVER'
+                JOIN auth_user_roles ur ON ur.user_id=u.id
                 JOIN auth_roles r ON r.code=ur.role_code AND r.active AND NOT r.deleted
                 JOIN (SELECT scope_id,user_id,bool_and(active) AS active,max(version) AS version FROM auth_user_roles WHERE scope_id>0 GROUP BY scope_id,user_id) sm ON sm.user_id=u.id AND sm.scope_id=? AND sm.active
                 JOIN (SELECT scope_id,user_id,role_code FROM auth_user_roles WHERE scope_id>0 AND active) sr ON sr.scope_id=sm.scope_id AND sr.user_id=sm.user_id AND sr.role_code=ur.role_code
@@ -313,7 +284,7 @@ public class CarrierRepository extends BaseRepository {
         ) {
             query.setLong(1, scope);
             query.setLong(2, id);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (!row.next()) throw new BusinessException(ErrorCode.INVALID_REQUEST);
             }
         }
@@ -322,12 +293,12 @@ public class CarrierRepository extends BaseRepository {
     /** Caller giữ khóa cha trước hồ sơ như luồng tạo/phân công chuyến, tránh thay identity khi đã có nhiệm vụ. */
     public void requireDriverUnassigned(Connection connection, long id) throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "SELECT 1 FROM carrier_trips WHERE driver_id=? AND status IN('DRAFT','OPEN','IN_PROGRESS') LIMIT 1"
             )
         ) {
             query.setLong(1, id);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 if (row.next()) throw new BusinessException(ErrorCode.RESOURCE_IN_USE);
             }
         }
@@ -337,7 +308,7 @@ public class CarrierRepository extends BaseRepository {
     public void linkProvisionedDriver(Connection connection, Driver current, long user, long actor)
         throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "UPDATE carrier_drivers SET user_id=?,active=false,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=? AND carrier_id=? AND scope_id=? AND user_id IS NULL AND version=?"
             )
         ) {
@@ -354,7 +325,7 @@ public class CarrierRepository extends BaseRepository {
     public long insertVehicle(Connection connection, Carrier parent, VehicleCreateRequest body, long actor)
         throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "INSERT INTO carrier_vehicles(carrier_id,scope_id,code,plate_number,vehicle_type_id,capacity,active,photo_media_id,created_by,updated_by) VALUES (?,?,?,?,?,?,?,?,?,?) RETURNING id"
             )
         ) {
@@ -368,7 +339,7 @@ public class CarrierRepository extends BaseRepository {
             query.setObject(8, body.getPhotoMediaId(), Types.BIGINT);
             query.setLong(9, actor);
             query.setLong(10, actor);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 row.next();
                 return row.getLong(1);
             }
@@ -378,7 +349,7 @@ public class CarrierRepository extends BaseRepository {
     public void updateVehicle(Connection connection, Vehicle current, VehicleUpdateRequest body, long actor)
         throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "UPDATE carrier_vehicles SET plate_number=?,vehicle_type_id=?,capacity=?,active=?,photo_media_id=?,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=? AND carrier_id=? AND scope_id=? AND version=?"
             )
         ) {
@@ -399,7 +370,7 @@ public class CarrierRepository extends BaseRepository {
     public long insertDriver(Connection connection, Carrier parent, DriverCreateRequest body, long actor)
         throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "INSERT INTO carrier_drivers(carrier_id,scope_id,code,name,phone,user_id,active,created_by,updated_by) VALUES (?,?,?,?,?,?,?,?,?) RETURNING id"
             )
         ) {
@@ -412,7 +383,7 @@ public class CarrierRepository extends BaseRepository {
             query.setBoolean(7, body.isActive());
             query.setLong(8, actor);
             query.setLong(9, actor);
-            try (var row = query.executeQuery()) {
+            try (ResultSet row = query.executeQuery()) {
                 row.next();
                 return row.getLong(1);
             }
@@ -422,7 +393,7 @@ public class CarrierRepository extends BaseRepository {
     public void updateDriver(Connection connection, Driver current, DriverUpdateRequest body, long actor)
         throws SQLException {
         try (
-            var query = connection.prepareStatement(
+            PreparedStatement query = connection.prepareStatement(
                 "UPDATE carrier_drivers SET name=?,phone=?,user_id=?,active=?,updated_by=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=? AND carrier_id=? AND scope_id=? AND version=?"
             )
         ) {

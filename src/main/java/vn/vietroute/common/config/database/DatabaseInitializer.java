@@ -19,17 +19,16 @@ import vn.vietroute.auth.entity.Function;
 import vn.vietroute.auth.entity.FunctionResource;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.RoleFunction;
-import vn.vietroute.auth.entity.UserAccount;
+import vn.vietroute.auth.entity.User;
 import vn.vietroute.auth.entity.UserRole;
-import vn.vietroute.auth.repo.AuthBootstrapRepository;
-import vn.vietroute.auth.service.BootstrapAdminInitializer;
-import vn.vietroute.auth.service.DefaultAccountsInitializer;
+import vn.vietroute.auth.initializer.AuthInitializer;
 import vn.vietroute.business.booking.entity.Booking;
 import vn.vietroute.business.booking.entity.BookingEvent;
 import vn.vietroute.business.carrier.entity.Carrier;
 import vn.vietroute.business.carrier.entity.Driver;
 import vn.vietroute.business.carrier.entity.Vehicle;
 import vn.vietroute.business.catalog.entity.CatalogItem;
+import vn.vietroute.business.catalog.repository.CatalogRepository;
 import vn.vietroute.business.location.entity.Location;
 import vn.vietroute.business.location.entity.Province;
 import vn.vietroute.business.route.entity.Route;
@@ -41,7 +40,6 @@ import vn.vietroute.business.trip.entity.TripEvent;
 import vn.vietroute.business.trip.entity.TripSegment;
 import vn.vietroute.business.trip.entity.TripStop;
 import vn.vietroute.common.config.application.AppSettings;
-import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.jdbc.JdbcSchemaValidator;
 import vn.vietroute.common.jdbc.JdbcTransactions;
@@ -64,13 +62,11 @@ public class DatabaseInitializer implements InitializingBean {
 
     private final JdbcTransactions transactions;
 
-    private final BootstrapAdminInitializer bootstrap;
+    private final AuthInitializer auth;
 
     private final JdbcSchema schema;
 
-    private final AuthBootstrapRepository foundation;
-
-    private final DefaultAccountsInitializer defaults;
+    private final CatalogRepository catalogs;
 
     @Override
     public void afterPropertiesSet() {
@@ -112,9 +108,11 @@ public class DatabaseInitializer implements InitializingBean {
         migrate(connection, "V022__role_resource_grants.sql");
         migrate(connection, "V023__search_and_report_indexes.sql");
         migrate(connection, "V024__eight_table_authorization.sql");
+        migrate(connection, "V025__endpoint_access.sql");
+        migrate(connection, "V026__auth_mapping_identity.sql");
         JdbcSchemaValidator.verify(
             connection,
-            UserAccount.class,
+            User.class,
             AccountChallenge.class,
             CatalogItem.class,
             Carrier.class,
@@ -144,9 +142,8 @@ public class DatabaseInitializer implements InitializingBean {
             VisitorPresence.class,
             ActivityBucket.class
         );
-        foundation.seed(connection);
-        bootstrap.initialize(connection, SystemActor.ID);
-        defaults.initialize(connection);
+        auth.initialize(connection);
+        catalogs.seedCatalogs(connection);
         return null;
     }
 

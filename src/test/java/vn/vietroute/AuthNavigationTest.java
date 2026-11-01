@@ -18,7 +18,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.web.WebConfig;
@@ -66,11 +65,11 @@ class AuthNavigationTest {
                             .getResponse()
                             .getStatus()
                     );
-                    for (Role role : List.of(Role.ADMIN, Role.CUSTOMER)) {
+                    for (String role : List.of("ADMIN", "CUSTOMER")) {
                         var actor = UsernamePasswordAuthenticationToken.authenticated(
                             new UserPrincipal(1L, "testuser", Set.of(role), 0),
                             null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + role.name()))
+                            List.of(new SimpleGrantedAuthority("ROLE_" + role))
                         );
                         String destination = contextPath + "/dashboard?lang=" + locale;
                         var authenticatedHome = mvc

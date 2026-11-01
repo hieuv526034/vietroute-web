@@ -17,8 +17,6 @@ import org.springframework.mock.web.MockServletContext;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
-import vn.vietroute.auth.entity.Permission;
-import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
@@ -27,16 +25,6 @@ import vn.vietroute.support.JournalTestConfig;
 
 /** Kiểm hợp đồng mà Swagger/Postman thực sự nhận, không mở connection hoặc đọc .env production. */
 class OpenApiContractTest {
-
-    @Test
-    void supportsSeparateListAndDetailCodesForFutureBusinessWithoutGrantingRead() {
-        var list = Permission.valueOf("BOOKING_LIST");
-        var detail = Permission.valueOf("BOOKING_DETAIL");
-        assertEquals(Set.of(PermissionAction.LIST), list.actions());
-        assertEquals(Set.of(PermissionAction.DETAIL), detail.actions());
-        assertFalse(list.equals(detail));
-        assertFalse(list.actions().contains(PermissionAction.READ));
-    }
 
     @Test
     void documentsEveryApiWithInheritedQueryFieldsAndPayloads() throws Exception {
@@ -116,7 +104,7 @@ class OpenApiContractTest {
                 assertFalse(parameter(journal, name).isMissingNode(), name);
             // Client được dùng mã registry mới, Swagger không khóa role/permission thành enum bootstrap.
             assertFalse(schemas.path("Permission").has("enum"));
-            assertEquals("REPORT_READ", json.readValue("\"REPORT_READ\"", Permission.class).name());
+            assertEquals("CUSTOM_ROLE", json.readValue("\"CUSTOM_ROLE\"", String.class));
         }
     }
 

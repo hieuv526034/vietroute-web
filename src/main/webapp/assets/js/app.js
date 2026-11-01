@@ -206,7 +206,7 @@
             document.getElementById('password-dialog').close();
             // Cookie mới đã được server trả về: tải lại document để dựng menu theo quyền DB của phiên mới.
             // Chỉ đọc lại /me sẽ để header mắc ở menu rỗng của phiên mật khẩu tạm dù đổi đã thành công.
-            window.location.assign(`${route('/account')}&passwordChanged=true`);
+            window.location.assign(route('/login'));
         },
         'password-feedback',
     );
@@ -253,10 +253,9 @@
 
 /* Quyền UI lấy cùng guard/policy backend. Lần gọi mới đọc lại DB, không dùng quyền lưu trong localStorage. */
 window.VietRouteAccess = {
-    async load(feature) {
+    async load() {
         const response = await window.VietRoute.api.get('/api/v1/auth/capabilities', { timeout: 10000 });
-        return (
-            response.data.data.find((item) => item.function === feature) || { view: false, actions: [], targets: [] }
-        );
+        const targets = [...new Set(response.data.data.flatMap((item) => item.targets))];
+        return { view: targets.includes('GET ' + window.location.pathname), targets };
     },
 };

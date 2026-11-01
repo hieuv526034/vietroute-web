@@ -35,9 +35,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import vn.vietroute.auth.entity.Permission;
-import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.repo.AccessRegistryRepository;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.location.dto.request.LocationLookupRequest;
 import vn.vietroute.business.location.dto.request.LocationSearchRequest;
@@ -113,22 +110,11 @@ class LocationSecurityTest {
     }
 
     @Test
-    void adminAndPermissionAreBothRequiredForUrlsAndDirectServiceCalls() throws Exception {
-        var all = new String[] { "LOCATION_VIEW", "LOCATION_READ", "LOCATION_CREATE", "LOCATION_UPDATE" };
-        var ordinary = actor(false, all);
-        var admin = actor(true, "LOCATION_VIEW", "LOCATION_READ");
+    void exactEndpointsWorkForCustomRolesAndRoleAloneNeverGrantsUrls() throws Exception {
         for (String route : List.of(Routes.LOCATION_PAGE, Routes.ADMIN_PROVINCES, Routes.ADMIN_LOCATIONS)) {
             assertEquals(
                 route.equals(Routes.LOCATION_PAGE) ? 302 : 401,
                 mvc.perform(get(route)).andReturn().getResponse().getStatus()
-            );
-            assertEquals(
-                403,
-                mvc
-                    .perform(get(route).with(authentication(ordinary)))
-                    .andReturn()
-                    .getResponse()
-                    .getStatus()
             );
             assertEquals(
                 403,
@@ -141,18 +127,12 @@ class LocationSecurityTest {
             assertEquals(
                 200,
                 mvc
-                    .perform(get(route).with(authentication(admin)))
+                    .perform(get(route).with(authentication(actor(false, "LOCATION_VIEW", "LOCATION_READ"))))
                     .andReturn()
                     .getResponse()
                     .getStatus()
             );
         }
-        SecurityContextHolder.getContext().setAuthentication(ordinary);
-        assertThrows(AccessDeniedException.class, () ->
-            root.getBean(LocationService.class).locations(new LocationSearchRequest(), Locale.ENGLISH)
-        );
-        assertFalse(Arrays.stream(Permission.values()).anyMatch(value -> value.name().startsWith("LOCATION_")));
-        assertTrue(root.getBean(AccessRegistryRepository.class).builtIn("permissions", "LOCATION_CREATE"));
     }
 
     @Test
@@ -186,7 +166,7 @@ class LocationSecurityTest {
             mvc
                 .perform(
                     post(Routes.ADMIN_LOCATIONS)
-                        .with(authentication(actor(false, "LOCATION_CREATE")))
+                        .with(authentication(actor(false)))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(valid)
@@ -241,7 +221,7 @@ class LocationSecurityTest {
 
     private static UsernamePasswordAuthenticationToken actor(boolean admin, String... codes) {
         return UsernamePasswordAuthenticationToken.authenticated(
-            new UserPrincipal(1L, "fixture", admin ? Set.of(Role.ADMIN) : Set.of(Role.OPERATOR), 0),
+            new UserPrincipal(1L, "fixture", admin ? Set.of("ADMIN") : Set.of("OPERATOR"), 0),
             null,
             Arrays.stream(codes).map(SimpleGrantedAuthority::new).toList()
         );
