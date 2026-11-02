@@ -7,7 +7,7 @@ import vn.vietroute.common.constant.ApplicationConstants.Env;
 
 /**
  * Ranh giới cấu hình driver và chọn schema theo hệ DB; không tự dịch SQL repository/migration.
- * Chỉ bật một adapter khi đã có migration và regression transaction/quyền của hệ DB đó.
+ * Cấu hình kết nối không thay thế migration và regression transaction/quyền của hệ DB đó.
  */
 public interface JdbcDialect {
     /** Adapter mặc định cho các caller PostgreSQL hiện hành. */
@@ -15,21 +15,36 @@ public interface JdbcDialect {
         return PostgreSqlDialect.INSTANCE;
     }
 
-    /** Chọn adapter đã hỗ trợ trước khi tạo pool, không đưa URL/credential vào lỗi. */
+    /** Chỉ nhận tên cố định; không dùng cấu hình từ bên ngoài làm đường dẫn classpath. */
+    static JdbcDialect forVendor(String vendor) {
+        if ("postgresql".equals(vendor)) {
+            return PostgreSqlDialect.INSTANCE;
+        }
+        if ("oracle".equals(vendor)) {
+            return OracleJdbcDialect.INSTANCE;
+        }
+        throw new IllegalStateException(Env.DB_VENDOR.key() + " must be postgresql or oracle");
+    }
+
+    /** Chọn cấu hình driver trước khi tạo pool, không đưa URL/credential vào lỗi. */
     static JdbcDialect forUrl(String url) {
         if (url != null && url.startsWith("jdbc:postgresql://")) {
             return PostgreSqlDialect.INSTANCE;
         }
-        if (url != null && url.startsWith("jdbc:oracle:")) {
-            throw new IllegalStateException(
-                "Oracle chưa được hỗ trợ: cần adapter SQL, migration và kiểm thử Oracle trước khi cấu hình " +
-                    Env.DB_URL.key()
-            );
+        if (url != null && url.startsWith("jdbc:oracle:thin:@")) {
+            return OracleJdbcDialect.INSTANCE;
         }
         throw new IllegalStateException(Env.DB_URL.key() + " uses an unsupported JDBC database");
     }
 
     String driverClassName();
+
+    String vendor();
+
+    String hibernateDialectClassName();
+
+    /** Chặn runtime chưa có migration/repository tương ứng, kể cả khi các cờ init đã tắt. */
+    default void requireApplicationSupport() {}
 
     Properties connectionProperties(
         int connectTimeoutSeconds,

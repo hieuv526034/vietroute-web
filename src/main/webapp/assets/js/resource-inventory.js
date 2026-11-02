@@ -7,8 +7,7 @@
         app = window.VietRoute,
         labels = node('inventory-labels').dataset;
     let busy = false,
-        filters = { kind: '', query: '' },
-        names = new Map();
+        filters = { kind: '', query: '' };
     const text = (tag, value) => {
         const item = document.createElement(tag);
         item.textContent = value;
@@ -37,26 +36,14 @@
                 const row = text('tr', ''),
                     target = text('td', '');
                 target.append(
-                    text(
-                        'strong',
-                        item.kind === 'MENU' ? names.get(item.function) || item.description : item.description,
-                    ),
+                    text('strong', item.kind === 'MENU' ? item.description : item.description),
                     text('code', item.target),
                 );
                 row.append(
                     text('td', item.kind === 'MENU' ? labels.menu : labels.api),
-                    text('td', names.get(item.function) || item.function || '—'),
+                    text('td', item.httpMethod),
                     target,
-                    text(
-                        'td',
-                        item.publicRoute
-                            ? labels.public
-                            : !item.declaredPermissions.length
-                              ? labels.self
-                              : item.adminOnly
-                                ? labels.admin
-                                : labels.private,
-                    ),
+                    text('td', item.publicEndpoint ? labels.public : item.selfService ? labels.self : labels.private),
                 );
                 host.append(row);
             }
@@ -90,10 +77,6 @@
             if (!caps.includes('GET /api/v1/admin/access/resources')) {
                 node('inventory-status').textContent = labels.readonly;
                 return;
-            }
-            if (caps.includes('GET /api/v1/admin/access/tree')) {
-                const features = (await app.api.get('/api/v1/admin/access/tree')).data.data;
-                names = new Map(features.map((item) => [item.code, item.name]));
             }
             await load();
         } catch (error) {

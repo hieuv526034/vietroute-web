@@ -33,9 +33,7 @@ public final class ConfigurationEnvironment implements Function<String, String> 
             }
             Path path = Path.of(file).toAbsolutePath().normalize();
             if (!Files.isRegularFile(path)) {
-                throw new IllegalStateException(
-                    "Tạo file .env riêng hoặc khai báo đường dẫn local hợp lệ; không ghi secret vào Git."
-                );
+                throw new IllegalStateException("Tạo file .env ở gốc hoặc khai báo đường dẫn local hợp lệ.");
             }
             try {
                 for (String line : Files.readAllLines(path, StandardCharsets.UTF_8)) {

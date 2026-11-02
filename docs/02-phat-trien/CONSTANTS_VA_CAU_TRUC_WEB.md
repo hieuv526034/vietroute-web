@@ -1,94 +1,58 @@
-# ApplicationConstants và cấu trúc web
+# Common gọn và cấu trúc web — COMMON01
 
-Phụ trách: hieuv526034. Lượt này quy hoạch source để nhóm tìm đúng nơi sửa; giữ nguyên tên key Environment, URL/API, mã lỗi, schema và cơ chế phân quyền đang dùng. Không có migration hoặc thay đổi Neon production.
+Common hiện có **61 file Java**, giảm từ 148 trước quy hoạch và gồm một class chuẩn bị JDBC Oracle 26ai theo ORACLECFG01. Auth giữ 40 file; business 121 vì đã gỡ module GPS. Mọi class production dưới 1000 dòng; không record/var.
 
-## Hằng số đặt ở đâu
+## Phần giữ và phần bỏ
 
-`common/constant/ApplicationConstants.java` thay lớp `Constants` cũ và chia thành các nhóm:
+| Nhóm | File Java | Trách nhiệm |
+|---|---:|---|
+| api_journal | 10 | Xem request, user đã xác thực, thời gian, payload/response đã lọc; UI xuất cURL/Postman |
+| config | 10 | Root/WAR, cấu hình ứng dụng, datasource/JPA và Spring MVC |
+| initializer | 2 | DatabaseInitializer và MigrationCatalog: chuẩn bị schema/history, manifest/checksum, migration/seed startup |
+| jdbc | 9 | Connection/schema/transaction, metadata/index, PostgreSQL và cấu hình JDBC Oracle 26ai |
+| base | 7 | Controller, entity/audit DTO, JPA repo, JDBC BaseRepository và phân trang |
+| web | 13 | Home, model/menu/breadcrumb, trace/body guard, locale, Swagger và envelope |
+| constant | 4 | ApplicationConstants và mã lỗi/thành công/validation |
+| exception | 3 | BusinessException, mapper và MVC advice |
+| validation | 3 | BusinessCode, BusinessRules và RequestGroups |
 
-| Nhóm | Trách nhiệm | Ví dụ sử dụng |
-|---|---|---|
-| `Env` | Enum tên key môi trường, không chứa giá trị/secret | `values.flag(Env.MEDIA_ENABLED, false)` |
-| `Routes` | Route đầy đủ, phần con và matcher compile-time | `@RequestMapping(Routes.MEDIA)` |
-| `Regex` | Pattern kiểm mã, username, schema, trace, dedup, ảnh | `@Pattern(regexp = Regex.USERNAME)` |
-| `Http` | Cookie/header riêng, Bearer prefix, media type có charset | `Http.AUTH_COOKIE`, `Http.LOCALE_HEADER` |
-| `DatabaseProperties` | Key của file mặc định database.properties | `DatabaseProperties.SCHEMA` |
-| `LocaleCode`, `CatalogType` | Enum giá trị dùng trong hợp đồng hiện hành | `CatalogType.VEHICLE_TYPE` |
+Đã bỏ toàn bộ job/mail/media/monitoring/traffic cùng settings/wiring/provider; không chuyển adapter cũ sang package khác. Bỏ upload/avatar/logo/photo, thống kê online, quota IP/Redis, Prometheus/metrics và màn cấu hình vận hành. Giữ bộ đếm failedWrites của journal, không có collector bên ngoài. Tiến độ chuyến và phân quyền/scope/ownership của business vẫn giữ.
 
-Header có sẵn trong Spring dùng `HttpHeaders.AUTHORIZATION`, `CONTENT_LANGUAGE`, `RETRY_AFTER`... Không tạo thêm tên khác cho header chuẩn. Mã lỗi/thành công ở enum chuyên trách `ErrorCode`, `SuccessCode`; `Permission` là value object mã quyền với hằng lõi và registry DB; không gom các trách nhiệm nghiệp vụ khác nhau thành một enum khổng lồ.
+## Vì sao common.web còn cần
 
-`common/constant/AccessConstants.java` giữ `Groups` (mã nhóm/tài nguyên) và `Permissions` (mã quyền lõi) dùng chung cho `@AccessFunction` và `Permission`. Annotation dùng chuỗi compile-time, không gọi `Permission.name()` trong annotation. Đây là mã định danh ổn định, không chứa danh sách role/user được cấp quyền; mapping hiệu lực vẫn ở DB. Quyền tùy chỉnh không bị giới hạn bởi các constants lõi. Đổi mã đã lưu cần migration tương thích, không chỉ sửa một hằng rồi làm mất mapping cũ. Nhóm metadata hiện tại chưa phải quan hệ cha-con của cây chức năng; thiết kế tiếp theo ở [schema và phân quyền](SCHEMA_VA_PHAN_QUYEN.md#phân-tích-cây-chức-năng-và-quyền-hành-động--access02).
+Spring MVC cần controller trang, locale, converter/error envelope, layout/menu và Swagger. Bỏ chúng sẽ làm API và Thymeleaf mất hợp đồng dùng chung. Chỉ giữ 13 file có caller thật; ApiErrorWriter gộp vào ApiResponses, PageBreadcrumbs gộp vào PageModelAdvice. Request-body advice gộp vào GlobalExceptionHandler. Ba lớp OpenAPI tách theo kiểu thư viện để tránh trùng tên Schema/Operation/Parameter và tránh tên lớp đầy đủ trong thân hàm.
 
-`Env` lưu tên key thực bằng `key()`. Các Settings nhận `ConfigValues`, chỉ truyền enum; không dùng chuỗi tùy ý hoặc đọc `System.getenv` rải rác trong service/controller. Giá trị mặc định, giới hạn và điều kiện bắt buộc vẫn thuộc Settings của module. Điều này giữ mỗi module có trách nhiệm kiểm cấu hình riêng. `ConfigValues` chỉ đưa tên key vào lỗi, không đưa giá trị bị từ chối hoặc secret vào log.
+ApiResponse, PageResponse, FieldViolation và journal DTO là class có getter/constructor. BaseResponse và BaseRequest rỗng đã bỏ; response có audit kế thừa BaseDTO trực tiếp. Request không nhận audit, actor hoặc scope tin từ client. BusinessRules chứa quy tắc mật khẩu/email/sinh mã; không tạo annotation password hoặc util chỉ để bọc một method.
 
-Ví dụ:
-
-```java
-import vn.vietroute.common.config.application.ConfigValues;
-import vn.vietroute.common.constant.ApplicationConstants.Env;
-
-ConfigValues values = new ConfigValues(System::getenv);
-boolean enabled = values.flag(Env.WORKER_ENABLED, false);
-```
-
-Route/regex phải là `static final String` compile-time để dùng được trong annotation; không thay bằng `enum.name()` hoặc hàm getter vì Java không cho gọi hàm trong giá trị annotation. Các route con ghép từ cùng gốc để controller, matcher và Swagger dùng chung. Regex được tách theo nghĩa, không dùng pattern mã nghiệp vụ để kiểm tên người/địa chỉ.
-
-## Chính sách matcher
-
-`common/web/routing/WebRoutePolicy.java` gom phân loại route cho Security/JWT/quota/OpenAPI. Các chính sách phục vụ mục đích khác nhau: được mở công khai không tự đồng nghĩa bỏ JWT hoặc miễn quota. Catalog công khai chỉ GET; mutation vẫn kiểm quyền ở service. Khai báo thêm route vào constants không tự đưa vào permitAll. Không đổi matcher thành `/**` để làm endpoint mới chạy được.
-
-## Thư mục sau quy hoạch
+## Cấu trúc nhật ký
 
 ```text
-common/
-  constant/ApplicationConstants.java
-  config/                      Settings, ConfigValues, RootConfig, WebConfig
-  web/
-    controller/HomeController
-    response/                  ApiResponse, FieldViolation, ApiResponses, ApiErrorWriter
-    filter/RequestTraceFilter
-    locale/SupportedLocaleResolver
-    advice/PageModelAdvice
-    openapi/                   OpenApiController, OpenApiModels
-    routing/WebRoutePolicy
-  monitoring/
-    controller/                SystemStatusController, MonitoringPageController
-    dto/response/              SystemStatusResponse, RuntimeStatusResponse
-    filter/                    HTTP metrics và token scrape
-    repository/                Tổng hợp DB/queue có timeout
-    service/                   SystemStatusService, ApplicationMetrics, DatabaseProbe
-  exception/                   BusinessException, mapper và MVC exception advice
+common/api_journal/
+  controller/ApiJournalPageController
+  controller/api/ApiJournalAPI
+  dto/response/ApiJournalEntry, ApiJournalDetail, ApiJournalResponse
+  dto/search/ApiJournalSearch
+  entity/ApiJournal
+  repo/ApiJournalRepo
+  service/ApiJournalService
+  filter/ApiJournalFilter
 ```
 
-`web.response` quản lý envelope và việc xuất phản hồi HTTP. `web.openapi` giữ controller và helper model cùng package để tránh trùng tên annotation/model thư viện. `web.advice` là model giao diện; exception advice ở `common.exception` tiếp tục dùng cùng mapper với BaseController. Monitoring là tính năng hạ tầng có controller/DTO/service, không đặt service vào thư mục web. Component scan vẫn quét common/auth/business và tách root/MVC để không tạo bean trùng.
+Repo giữ SQL; service giữ truy vấn có principal/target đã duyệt, projection và ghi trực tiếp có backoff. Filter giữ state nội bộ theo request. Pool journal một connection được cấu hình ngay DatabaseConfig. Cleanup journal/history chạy theo lô cùng lần bảo trì, không worker hoặc RAM queue. Xem [hợp đồng nhật ký](../04-van-hanh/NHAT_KY_API_VA_DEBUG.md).
 
-Job/mail được chia theo trách nhiệm như [tổng quan hệ thống](../01-bat-dau/TONG_QUAN_HE_THONG.md); RootConfig ghép DatabaseConfig/IntegrationConfig/TrafficConfig/MonitoringConfig. Chỉ gom tên key/route vào ApplicationConstants, không gom logic giám sát hoặc enum nghiệp vụ tương lai vào lớp này.
+## Hằng số và cấu hình
 
-## Khi thêm hoặc đổi cấu hình
-
-1. Thêm key trong `ApplicationConstants.Env`, dùng tại Settings qua ConfigValues.
-2. Thêm placeholder/hướng dẫn vào `.env.example`; cấu hình key tương ứng trong Render/IDE nếu sử dụng. Không commit giá trị thật.
-3. Thêm route/regex đúng nhóm; controller/filter dùng constant. Chỉ sửa WebRoutePolicy khi chủ động thay chính sách truy cập.
-4. Kiểm API/Swagger, locale, quyền thiếu/đủ và luồng liên quan; chạy format trước PR.
-
-Java constants không tự đổi tên Environment trên Render, script shell hoặc URL trong client JavaScript. Đây là các hợp đồng bên ngoài Java: đổi tên cần đồng bộ và triển khai có kế hoạch. Kiểm thử đối chiếu registry với `.env.example` và key dùng trong Render/IntelliJ giúp phát hiện thiếu/sai key; không đọc `.env` thật. Không đổi hàng loạt tên key hiện hành chỉ vì đổi tên class.
-
-Không tạo lớp Constants/web cũ làm bản sao chuyển tiếp; code nội bộ phải cập nhật import sang cấu trúc mới. Giữ lịch sử SQL migration nguyên trạng.
-
-Sau khi lấy source đổi package lần đầu, dừng server, chọn Maven → Lifecycle → **clean**, Reload Maven rồi **Build → Rebuild Project** trước khi Run. Bước này loại class cũ trong thư mục build để Spring không nhìn thấy cả package cũ lẫn mới. Không cần gõ lệnh terminal trong IntelliJ.
+Env/Routes/Regex/Http ở ApplicationConstants; dùng ConfigValues và HttpHeaders chuẩn. Key seed email/password được JSON tham chiếu gián tiếp vẫn phải có trong Env và `.env.example`. Không tự loại key chỉ vì không thấy caller Java trực tiếp. WebRoutePolicy sở hữu public/self-service/JWT; thêm constant không cấp quyền. RequestGuardFilter giữ giới hạn JSON 64 KiB, tối đa hai thao tác BCrypt đồng thời; CSRF, JWT và khóa tài khoản sai mật khẩu vẫn giữ.
 
 
-## Cấu hình theo trách nhiệm và lõi media
+Khi thêm chức năng mới, chỉ thêm class khi có trách nhiệm thật; DTO search tên *Search trong dto/search. Không thêm compatibility wrapper/record/accessor cũ hoặc phục hồi module đã bỏ. Chạy formatter, rules, docs và kiểm thử phù hợp trước bàn giao.
 
-`common.config` chỉ giữ `RootConfig` và `WebApplicationInitializer` làm điểm lắp ghép. Không tạo bản sao compatibility ở vị trí cũ.
+GPS01: RootConfig/WebApplicationInitializer ở common/config, DatabaseInitializer ở common/initializer; không còn TrackingSettings hoặc bean GPS. Query/transaction và WebRoutePolicy giữ trách nhiệm hiện hành.
 
-| Package con | Trách nhiệm |
-|---|---|
-| `application` | AppSettings, ConfigValues, ConfigurationEnvironment (env OS/IDE và file chỉ khi launcher bật) |
-| `database` | DatabaseConfig/Settings/Initializer, migration/seed startup |
-| `integration` | IntegrationConfig, JobSettings/MailSettings/MediaSettings |
-| `traffic` | TrafficConfig/TrafficSettings, quota/filter |
-| `monitoring` | MonitoringConfig, MonitoringSettings/ApiJournalSettings/ActivitySettings, pool quan sát |
-| `web` | WebConfig cho MVC/Thymeleaf/interceptor và method security servlet context |
+## JDBC và khởi tạo database
 
-Auth giữ SecurityConfig, registry/chính sách/controller/service/repository riêng; không chuyển logic phân quyền vào config. `common.media` chứa service/repository/entity/DTO cùng `storage` và `validation`. Public controller/page ở `common.media.controller` chỉ là adapter mỏng gọi lõi chung, không có upload implementation thứ hai. Phân biệt `common.monitoring` cho dữ liệu quan sát với `common.web` cho HTTP plumbing.
+common.jdbc giữ sáu file JdbcConnectionFactory, JdbcTransactions, JdbcSchema, JdbcSchemaValidator, JdbcTable, JdbcIndex; dialect/ có JdbcDialect, PostgreSqlDialect và OracleJdbcDialect, tổng chín file. Factory mượn connection/chọn schema, Transactions quản lý commit/rollback hoặc tham gia JPA; không gộp hai trách nhiệm này. Annotation metadata giữ độc lập để entity dễ khai báo.
+
+DatabaseSettings chọn database/{postgresql,oracle}.properties bằng VIETROUTE_DB_VENDOR hoặc suy từ URL cũ; chỉ nhận hai tên cố định. Driver, Hibernate dialect, schema và thuộc tính timeout theo cùng vendor. OracleJdbcDialect mới chuẩn bị driver/options/validation; JdbcSchema chặn runtime Oracle trước SQL vì chưa có migration/repo/schema transaction Oracle. Không tạo migration Oracle rỗng hoặc dùng ALTER SESSION để giả lập LOCAL search_path. Cách cấu hình và giới hạn tại [chạy local](../01-bat-dau/CHAY_LOCAL.md#chọn-postgresql-hoặc-chuẩn-bị-oracle-26ai).
+
+BaseRepository ở common.base cùng JpaRepositorySupport; các repo/import dùng trực tiếp package mới. MigrationCatalog ở common.initializer cùng DatabaseInitializer. Phần chuẩn bị schema/history trước đây tách lớp nay là private prepareSchema/hasTargetTables trong DatabaseInitializer, dưới cùng advisory lock/transaction. Giữ kiểm nhiều history/sai schema/thiếu history, checksum và seed; không class alias hoặc nested wrapper, không đổi SQL/dữ liệu.

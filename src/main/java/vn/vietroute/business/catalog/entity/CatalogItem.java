@@ -1,5 +1,11 @@
 package vn.vietroute.business.catalog.entity;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -9,11 +15,18 @@ import vn.vietroute.common.constant.ApplicationConstants.CatalogType;
 import vn.vietroute.common.jdbc.JdbcIndex;
 import vn.vietroute.common.jdbc.JdbcTable;
 
-/** Danh mục mẫu có tên vi/en và audit, không chứa logic giao diện hoặc JSON. */
-@Getter
-@Setter
-@SuperBuilder
-@NoArgsConstructor
+/** Entity đầy đủ cột catalog_items; migration giữ DDL/index, repo giữ query và transaction do service quản lý. */
+@Entity
+@Table(
+    name = "catalog_items",
+    indexes = {
+        @Index(name = "catalog_items_pkey", columnList = "id", unique = true),
+        @Index(name = "catalog_items_type_code_key", columnList = "type, code", unique = true),
+        @Index(name = "idx_catalog_type_active_order", columnList = "type, active, sort_order, id"),
+        @Index(name = "idx_catalog_created_by", columnList = "created_by"),
+        @Index(name = "idx_catalog_updated_by", columnList = "updated_by"),
+    }
+)
 @JdbcTable(
     name = "catalog_items",
     primaryKey = { "id" },
@@ -25,17 +38,28 @@ import vn.vietroute.common.jdbc.JdbcTable;
         @JdbcIndex(name = "idx_catalog_updated_by", columns = { "updated_by" }),
     }
 )
+@Getter
+@Setter
+@NoArgsConstructor
+@SuperBuilder
 public class CatalogItem extends BaseEntity {
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false, length = 32)
     private CatalogType type;
 
+    @Column(name = "code", nullable = false, length = 40)
     private String code;
 
+    @Column(name = "name_vi", nullable = false, length = 120)
     private String nameVi;
 
+    @Column(name = "name_en", nullable = false, length = 120)
     private String nameEn;
 
+    @Column(name = "sort_order", nullable = false)
     private int sortOrder;
 
+    @Column(name = "active", nullable = false)
     private boolean active;
 }

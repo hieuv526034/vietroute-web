@@ -82,12 +82,7 @@
                         th:attr="data-password-changed=#{success.passwordChanged}"
                         hidden
                     ></div>
-                    <p
-                        class="initial-password"
-                        id="initial-email"
-                        hidden
-                        th:text="#{ui.initialEmail}"
-                    ></p>
+
                     <div class="toolbar-actions account-actions">
                         <button
                             id="profile-open"
@@ -95,13 +90,7 @@
                             type="button"
                             th:text="#{ui.profile.edit}"
                         ></button>
-                        <button
-                            id="email-open"
-                            th:hidden="${adminRecoveryVisible == true}"
-                            class="button button-outline"
-                            type="button"
-                            th:text="#{ui.accountFlow.bind}"
-                        ></button>
+
                         <button
                             id="password-open"
                             class="button"
@@ -110,117 +99,8 @@
                         ></button>
                     </div>
                 </section>
-                <section
-                    class="panel account-recovery"
-                    th:if="${adminRecoveryVisible == true}"
-                    aria-labelledby="account-recovery-title"
-                >
-                    <div class="account-panel-header">
-                        <span
-                            class="account-panel-icon"
-                            aria-hidden="true"
-                        >
-                            <svg th:replace="~{fragments/layout :: icon('shield')}"></svg>
-                        </span>
-                        <div class="account-panel-copy">
-                            <p
-                                class="eyebrow"
-                                th:text="#{ui.admin}"
-                            ></p>
-                            <h2
-                                id="account-recovery-title"
-                                th:text="#{ui.adminRecovery.title}"
-                            ></h2>
-                        </div>
-                    </div>
-                    <p
-                        class="muted"
-                        th:text="#{ui.adminRecovery.description}"
-                    ></p>
-                    <div class="toolbar-actions">
-                        <button
-                            id="admin-recovery-open"
-                            class="button button-outline"
-                            type="button"
-                            th:text="#{ui.adminRecovery.open}"
-                        ></button>
-                    </div>
-                </section>
             </div>
-            <dialog
-                id="admin-recovery-dialog"
-                class="workspace-dialog"
-                aria-labelledby="admin-recovery-title"
-                th:if="${adminRecoveryVisible == true}"
-            >
-                <fieldset
-                    id="admin-recovery-controls"
-                    class="dialog-controls"
-                >
-                    <div class="dialog-heading">
-                        <h2
-                            id="admin-recovery-title"
-                            th:text="#{ui.adminRecovery.title}"
-                        ></h2>
-                        <button
-                            class="dialog-close"
-                            type="button"
-                            data-dialog-close
-                            th:attr="aria-label=#{ui.ops.close}"
-                        >
-                            ×
-                        </button>
-                    </div>
-                    <p th:text="#{ui.adminRecovery.confirm}"></p>
-                    <p
-                        id="admin-recovery-feedback"
-                        class="feedback"
-                        role="alert"
-                        hidden
-                    ></p>
-                    <form
-                        id="admin-recovery-form"
-                        novalidate
-                        data-endpoint="/api/v1/auth/admin-recovery"
-                        th:attr="data-success=#{ui.adminRecovery.success}"
-                    >
-                        <label
-                            for="admin-recovery-password"
-                            class="form-label"
-                            th:text="#{ui.currentPassword}"
-                        ></label>
-                        <input
-                            id="admin-recovery-password"
-                            name="currentPassword"
-                            type="password"
-                            class="form-control"
-                            required
-                            maxlength="72"
-                            autocomplete="current-password"
-                        />
-                        <div class="dialog-actions">
-                            <button
-                                class="button button-outline"
-                                type="button"
-                                data-dialog-close
-                                th:text="#{ui.ops.close}"
-                            ></button>
-                            <button
-                                type="submit"
-                                class="button"
-                                th:text="#{ui.adminRecovery.submit}"
-                            ></button>
-                        </div>
-                    </form>
-                    <a
-                        id="admin-recovery-login"
-                        class="button"
-                        hidden
-                        th:href="@{/login(lang=${currentLocale})}"
-                        th:text="#{ui.login}"
-                    ></a>
-                </fieldset>
-            </dialog>
+
             <dialog
                 id="profile-dialog"
                 class="workspace-dialog"
@@ -263,35 +143,8 @@
                             maxlength="120"
                             autocomplete="name"
                         />
-                        <label
-                            for="profile-file"
-                            class="mt-3"
-                            th:text="#{ui.profile.avatar}"
-                        ></label>
-                        <input
-                            id="profile-file"
-                            name="file"
-                            type="file"
-                            class="form-control"
-                            accept="image/jpeg,image/png"
-                        />
-                        <p
-                            class="muted"
-                            th:text="#{ui.profile.avatarNote}"
-                        ></p>
-                        <img
-                            id="profile-preview"
-                            class="avatar avatar-preview"
-                            alt=""
-                            hidden
-                        />
+
                         <div class="dialog-actions">
-                            <button
-                                id="profile-remove-avatar"
-                                class="button button-outline"
-                                type="button"
-                                th:text="#{ui.profile.removeAvatar}"
-                            ></button>
                             <button
                                 class="button button-outline"
                                 type="button"
@@ -390,89 +243,10 @@
                     </form>
                 </fieldset>
             </dialog>
-            <dialog
-                id="email-dialog"
-                class="workspace-dialog"
-                aria-labelledby="email-dialog-title"
-            >
-                <fieldset
-                    class="dialog-controls"
-                    id="email-controls"
-                >
-                    <div class="dialog-heading">
-                        <h2
-                            id="email-dialog-title"
-                            class="h4"
-                            th:text="#{ui.accountFlow.bind}"
-                        ></h2>
-                        <button
-                            type="button"
-                            class="dialog-close"
-                            data-dialog-close
-                            th:attr="aria-label=#{ui.ops.close}"
-                        >
-                            ×
-                        </button>
-                    </div>
-                    <p th:text="#{ui.accountFlow.bindNote}"></p>
-                    <p
-                        id="email-feedback"
-                        class="feedback"
-                        role="alert"
-                        hidden
-                    ></p>
-                    <form
-                        id="email-form"
-                        novalidate
-                    >
-                        <label
-                            for="bind-email"
-                            class="form-label"
-                            th:text="#{ui.accountFlow.email}"
-                        ></label>
-                        <input
-                            id="bind-email"
-                            name="email"
-                            type="email"
-                            class="form-control mb-3"
-                            required
-                            maxlength="254"
-                            autocomplete="email"
-                        />
-                        <label
-                            for="bind-password"
-                            class="form-label"
-                            th:text="#{ui.currentPassword}"
-                        ></label>
-                        <input
-                            id="bind-password"
-                            name="currentPassword"
-                            type="password"
-                            class="form-control mb-3"
-                            required
-                            maxlength="72"
-                            autocomplete="current-password"
-                        />
-                        <div class="dialog-actions">
-                            <a
-                                class="button button-outline"
-                                th:href="@{/account-access(lang=${currentLocale})}"
-                                th:text="#{ui.accountFlow.activate}"
-                            ></a>
-                            <button
-                                type="submit"
-                                class="button"
-                                th:text="#{ui.accountFlow.submit}"
-                            ></button>
-                        </div>
-                    </form>
-                </fieldset>
-            </dialog>
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
-        <script th:src="@{/assets/js/account-email.js}"></script>
+
         <script th:src="@{/assets/js/profile.js}"></script>
-        <script th:src="@{/assets/js/admin-recovery.js}"></script>
     </body>
 </html>

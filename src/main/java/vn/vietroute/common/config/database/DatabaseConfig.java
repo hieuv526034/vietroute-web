@@ -1,13 +1,12 @@
 package vn.vietroute.common.config.database;
 
 import com.zaxxer.hikari.HikariDataSource;
-import com.zaxxer.hikari.metrics.micrometer.MicrometerMetricsTrackerFactory;
-import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import java.util.logging.Logger;
 import javax.sql.DataSource;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import vn.vietroute.auth.config.AccessSettings;
+import org.springframework.context.annotation.Primary;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.application.ConfigurationEnvironment;
 import vn.vietroute.common.constant.ApplicationConstants.Env;
@@ -17,12 +16,6 @@ import vn.vietroute.common.jdbc.JdbcSchema;
 /** Tạo bean hạ tầng theo trách nhiệm; Settings vẫn là nơi kiểm cấu hình và secrets. */
 @Configuration
 public class DatabaseConfig {
-
-    /** Ngưỡng lịch sử quyền được kiểm ngay startup, không chứa secret hoặc trạng thái người dùng. */
-    @Bean
-    public AccessSettings accessSettings(ConfigurationEnvironment environment) {
-        return new AccessSettings(environment);
-    }
 
     private static final Logger LOG = Logger.getLogger(DatabaseConfig.class.getName());
 
@@ -40,7 +33,7 @@ public class DatabaseConfig {
         );
         if (environment.sourceOf(Env.DB_URL).equals("DEFAULT")) {
             LOG.warning(
-                "Chưa nhận VIETROUTE_DB_URL: đang dùng mẫu local trong database.properties. Chọn VietRoute Local, kiểm working directory/file .env và biến OS/IDE."
+                "Chưa nhận VIETROUTE_DB_URL: đang dùng mẫu local theo profile database. Kiểm file .env và biến OS/IDE."
             );
         }
         return new DatabaseSettings(environment, settings.isProduction());
@@ -51,10 +44,10 @@ public class DatabaseConfig {
      * Spring đóng pool khi undeploy/shutdown; khởi tạo bean không tự kết nối DB khi initializer tắt.
      */
     @Bean(destroyMethod = "close")
-    public HikariDataSource dataSource(DatabaseSettings settings, PrometheusMeterRegistry registry) {
+    @Primary
+    public HikariDataSource dataSource(DatabaseSettings settings) {
         HikariDataSource pool = new HikariDataSource();
         pool.setPoolName("vietroute-jdbc");
-        pool.setMetricsTrackerFactory(new MicrometerMetricsTrackerFactory(registry));
         pool.setDriverClassName(settings.getDialect().driverClassName());
         pool.setJdbcUrl(settings.getUrl());
         pool.setUsername(settings.getUsername());
@@ -80,7 +73,7 @@ public class DatabaseConfig {
         return pool;
     }
 
-    /** Đóng gói tên schema đã validate; không dùng schema từ dữ liệu HTTP. */
+    /** Chặn hệ DB chưa có runtime trước initializer/repo, kể cả khi tất cả cờ init đã tắt. */
     @Bean
     public JdbcSchema jdbcSchema(DatabaseSettings settings) {
         return new JdbcSchema(settings.getSchema(), settings.getDialect());
@@ -88,7 +81,39 @@ public class DatabaseConfig {
 
     /** Mỗi connection mượn từ pool được đặt lại search_path để tránh dùng nhầm schema. */
     @Bean
-    public JdbcConnectionFactory jdbcConnectionFactory(DataSource source, JdbcSchema schema) {
+    @Primary
+    public JdbcConnectionFactory jdbcConnectionFactory(
+        @Qualifier("applicationDataSource") DataSource source,
+        JdbcSchema schema
+    ) {
+        return new JdbcConnectionFactory(source, schema);
+    }
+
+    /** Nhật ký dùng pool riêng tối đa một connection, không giữ slot của login/nghiệp vụ. */
+    @Bean(name = "journalDataSource", destroyMethod = "close")
+    public HikariDataSource journalDataSource(DatabaseSettings settings) {
+        HikariDataSource pool = new HikariDataSource();
+        pool.setPoolName("vietroute-api-journal");
+        pool.setDriverClassName(settings.getDialect().driverClassName());
+        pool.setJdbcUrl(settings.getUrl());
+        pool.setUsername(settings.getUsername());
+        pool.setPassword(settings.getPassword());
+        pool.setMaximumPoolSize(1);
+        pool.setMinimumIdle(0);
+        pool.setConnectionTimeout(250);
+        pool.setValidationTimeout(1000);
+        pool.setIdleTimeout(60000);
+        pool.setMaxLifetime(600000);
+        pool.setInitializationFailTimeout(-1);
+        pool.setDataSourceProperties(settings.getDialect().connectionProperties(2, 2, "vietroute-api-journal", false));
+        return pool;
+    }
+
+    @Bean("journalConnections")
+    public JdbcConnectionFactory journalConnections(
+        @Qualifier("journalDataSource") DataSource source,
+        JdbcSchema schema
+    ) {
         return new JdbcConnectionFactory(source, schema);
     }
 }

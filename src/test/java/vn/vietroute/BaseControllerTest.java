@@ -29,7 +29,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import vn.vietroute.auth.dto.request.session.LoginRequest;
+import vn.vietroute.auth.dto.request.UserRequest;
+import vn.vietroute.common.api_journal.service.ApiJournalService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.constant.ErrorCode;
@@ -37,7 +38,6 @@ import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.exception.ApiExceptionMapper;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.exception.GlobalExceptionHandler;
-import vn.vietroute.common.monitoring.service.ApiJournalProjection;
 import vn.vietroute.common.web.filter.RequestTraceFilter;
 import vn.vietroute.common.web.locale.SupportedLocaleResolver;
 import vn.vietroute.common.web.response.ApiResponses;
@@ -55,14 +55,25 @@ class BaseControllerTest {
         RootConfig configuration = new RootConfig();
         json = configuration.objectMapper();
         ApiResponses responses = new ApiResponses(
+            json,
             configuration.messageSource(),
             new SupportedLocaleResolver(),
             Clock.fixed(Instant.parse("2026-10-21T10:00:00Z"), ZoneOffset.UTC),
-            new ApiJournalProjection(json)
+            new ApiJournalService(configuration.appSettings(configuration.configurationEnvironment()), null, json)
         );
         ApiExceptionMapper exceptions = new ApiExceptionMapper(responses);
         mvc = MockMvcBuilders.standaloneSetup(new ExampleController(responses, exceptions))
-            .setControllerAdvice(new GlobalExceptionHandler(exceptions))
+            .setControllerAdvice(
+                new GlobalExceptionHandler(
+                    new ApiJournalService(
+                        configuration.appSettings(configuration.configurationEnvironment()),
+                        null,
+                        json
+                    ),
+                    null,
+                    exceptions
+                )
+            )
             .setMessageConverters(new MappingJackson2HttpMessageConverter(json))
             .addFilters(new RequestTraceFilter())
             .build();
@@ -206,7 +217,7 @@ class BaseControllerTest {
 
         @PostMapping
         @ResponseStatus(HttpStatus.CREATED)
-        public ApiResult<String> create(@RequestBody LoginRequest body, HttpServletRequest request) {
+        public ApiResult<String> create(@RequestBody UserRequest body, HttpServletRequest request) {
             return execute(HttpStatus.CREATED, SuccessCode.CREATED, request, () -> data(body.getUsername()));
         }
 

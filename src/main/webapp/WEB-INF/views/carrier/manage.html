@@ -361,24 +361,7 @@
                                 th:text="#{ui.fleet.accountNote}"
                             ></p>
                         </div>
-                        <div th:if="${fleetKind != 'drivers'}">
-                            <label
-                                for="fleet-image"
-                                th:text="#{ui.fleet.image}"
-                            ></label>
-                            <input
-                                id="fleet-image"
-                                name="mediaId"
-                                type="number"
-                                class="form-control"
-                                min="1"
-                                step="1"
-                            />
-                            <p
-                                class="form-help"
-                                th:text="#{ui.fleet.imageNote}"
-                            ></p>
-                        </div>
+
                         <div>
                             <label class="checkbox-label">
                                 <input

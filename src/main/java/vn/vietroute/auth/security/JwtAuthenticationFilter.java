@@ -9,24 +9,24 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Stream;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.web.filter.OncePerRequestFilter;
-import vn.vietroute.auth.entity.UserAccount;
-import vn.vietroute.auth.repository.UserRepository;
+import vn.vietroute.auth.entity.User;
+import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.auth.service.JwtService;
+import vn.vietroute.common.api_journal.filter.ApiJournalFilter.ApiJournalState;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
-import vn.vietroute.common.monitoring.service.ApiJournalState;
-import vn.vietroute.common.web.response.ApiErrorWriter;
+import vn.vietroute.common.web.response.ApiResponses;
 import vn.vietroute.common.web.routing.WebRoutePolicy;
 
 /** Xác minh JWT rồi đọc lại tài khoản/quyền để khóa user hoặc logout có hiệu lực ngay. */
@@ -34,13 +34,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwt;
 
-    private final UserRepository users;
+    private final UserRepo users;
 
-    private final ApiErrorWriter errors;
+    private final ApiResponses errors;
 
     private final AuthCookies cookies;
 
-    public JwtAuthenticationFilter(JwtService jwt, UserRepository users, ApiErrorWriter errors, AuthCookies cookies) {
+    public JwtAuthenticationFilter(JwtService jwt, UserRepo users, ApiResponses errors, AuthCookies cookies) {
         this.jwt = jwt;
         this.users = users;
         this.errors = errors;
@@ -55,10 +55,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Routes.ACCOUNT,
                 Routes.HOME,
                 Routes.LOGIN,
-                Routes.AUTH_LIFECYCLE_PAGE,
                 Routes.AUTH + Routes.ME_ACTION,
                 Routes.AUTH + Routes.PASSWORD_ACTION,
-                Routes.AUTH + Routes.AUTH_EMAIL,
                 Routes.AUTH + Routes.AUTH_CAPABILITIES
             ).contains(path)
         );
@@ -95,7 +93,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Jwt decoded = jwt.decode(token);
                 Object versionClaim = decoded.getClaim("tokenVersion");
                 Number version = versionClaim instanceof Number value ? value : null;
-                UserAccount user = users.findById(Long.valueOf(decoded.getSubject()));
+                User user = users.load(Long.valueOf(decoded.getSubject()));
                 // Không tin role trong JWT: trạng thái/quyền/tokenVersion hiện tại luôn lấy lại từ DB.
                 if (
                     user == null ||
@@ -106,26 +104,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 ) {
                     throw new IllegalArgumentException("Token revoked");
                 }
-                UserPrincipal principal = new UserPrincipal(
-                    user.getId(),
-                    user.getUsername(),
-                    user.getRoles(),
-                    user.getTokenVersion(),
-                    user.getDisplayName(),
-                    user.getAvatarUrl()
-                );
+                UserPrincipal principal = new UserPrincipal(user, null);
                 // Quyền chức năng lấy từ mapping DB mỗi request; thay quyền role có hiệu lực ngay, không chờ JWT hết hạn.
-                var authorities = Stream.concat(
-                    user
-                        .getRoles()
-                        .stream()
-                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role.name())),
-                    user
-                        .getPermissions()
-                        .stream()
-                        .map(permission -> new SimpleGrantedAuthority(permission.name()))
-                ).toList();
-                var context = SecurityContextHolder.createEmptyContext();
+                List<SimpleGrantedAuthority> authorities = user
+                    .getTargets()
+                    .stream()
+                    .map(SimpleGrantedAuthority::new)
+                    .toList();
+                SecurityContext context = SecurityContextHolder.createEmptyContext();
                 context.setAuthentication(
                     UsernamePasswordAuthenticationToken.authenticated(
                         principal,

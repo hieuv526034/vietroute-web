@@ -1,0 +1,181 @@
+{
+  "catalogs": [
+    {
+      "type": "VEHICLE_TYPE",
+      "code": "SEAT",
+      "nameVi": "Ghế ngồi",
+      "nameEn": "Seated coach",
+      "sortOrder": 0
+    },
+    {
+      "type": "VEHICLE_TYPE",
+      "code": "SLEEPER",
+      "nameVi": "Giường nằm",
+      "nameEn": "Sleeper coach",
+      "sortOrder": 10
+    },
+    {
+      "type": "VEHICLE_TYPE",
+      "code": "LIMOUSINE",
+      "nameVi": "Limousine",
+      "nameEn": "Limousine",
+      "sortOrder": 20
+    },
+    {
+      "type": "BOOKING_SOURCE",
+      "code": "WEB",
+      "nameVi": "Website",
+      "nameEn": "Website",
+      "sortOrder": 30
+    },
+    {
+      "type": "BOOKING_SOURCE",
+      "code": "PHONE",
+      "nameVi": "Điện thoại",
+      "nameEn": "Phone",
+      "sortOrder": 40
+    }
+  ],
+  "provinces": [
+    {
+      "code": "HCM",
+      "nameVi": "TP Hồ Chí Minh",
+      "nameEn": "Ho Chi Minh City",
+      "sortOrder": 100,
+      "active": true
+    },
+    {
+      "code": "DANANG",
+      "nameVi": "Đà Nẵng",
+      "nameEn": "Da Nang",
+      "sortOrder": 110,
+      "active": true
+    },
+    {
+      "code": "HANOI",
+      "nameVi": "Hà Nội",
+      "nameEn": "Hanoi",
+      "sortOrder": 120,
+      "active": true
+    }
+  ],
+  "locations": [
+    {
+      "code": "VRTHUDUC",
+      "provinceCode": "HCM",
+      "nameVi": "Văn phòng VietRoute Thủ Đức",
+      "nameEn": "VietRoute Thu Duc Office",
+      "address": "12 Đường số 8, khu vực Thủ Đức, Thành phố Hồ Chí Minh",
+      "latitude": 10.844,
+      "longitude": 106.795,
+      "sortOrder": 100,
+      "active": true
+    },
+    {
+      "code": "VRDANANG",
+      "provinceCode": "DANANG",
+      "nameVi": "Văn phòng VietRoute Đà Nẵng",
+      "nameEn": "VietRoute Da Nang Office",
+      "address": "24 Đường số 3, khu vực Liên Chiểu, Thành phố Đà Nẵng",
+      "latitude": 16.071,
+      "longitude": 108.15,
+      "sortOrder": 110,
+      "active": true
+    },
+    {
+      "code": "VRHANOI",
+      "provinceCode": "HANOI",
+      "nameVi": "Văn phòng VietRoute Hà Nội",
+      "nameEn": "VietRoute Hanoi Office",
+      "address": "36 Đường số 5, khu vực Nam Từ Liêm, Thành phố Hà Nội",
+      "latitude": 21.029,
+      "longitude": 105.776,
+      "sortOrder": 120,
+      "active": true
+    }
+  ],
+  "carriers": [
+    {
+      "code": "VRMIENNAM",
+      "name": "VietRoute Miền Nam",
+      "phone": "028 0000 1101",
+      "description": "Đơn vị vận tải VietRoute Miền Nam. Văn phòng điều hành: 12 Đường số 8, khu vực Thủ Đức, Thành phố Hồ Chí Minh. Tiếp nhận yêu cầu đặt chỗ trên website và qua điện thoại; quản lý xe ghế ngồi 29 chỗ và xe giường nằm 40 chỗ.",
+      "active": true
+    },
+    {
+      "code": "VRBACNAM",
+      "name": "VietRoute Bắc Nam",
+      "phone": "024 0000 2201",
+      "description": "Đơn vị vận tải VietRoute Bắc Nam. Văn phòng điều hành: 36 Đường số 5, khu vực Nam Từ Liêm, Hà Nội. Tiếp nhận yêu cầu đặt chỗ trên website và qua điện thoại; quản lý xe limousine 16 chỗ và xe giường nằm 34 chỗ.",
+      "active": true
+    }
+  ],
+  "vehicles": [
+    {
+      "code": "VRSOUTH01",
+      "carrierCode": "VRMIENNAM",
+      "typeCode": "SEAT",
+      "plateNumber": "50F-100.01",
+      "capacity": 29,
+      "active": true
+    },
+    {
+      "code": "VRSOUTH02",
+      "carrierCode": "VRMIENNAM",
+      "typeCode": "SLEEPER",
+      "plateNumber": "50F-100.02",
+      "capacity": 40,
+      "active": true
+    },
+    {
+      "code": "VRNORTH01",
+      "carrierCode": "VRBACNAM",
+      "typeCode": "LIMOUSINE",
+      "plateNumber": "29B-200.01",
+      "capacity": 16,
+      "active": true
+    },
+    {
+      "code": "VRNORTH02",
+      "carrierCode": "VRBACNAM",
+      "typeCode": "SLEEPER",
+      "plateNumber": "29B-200.02",
+      "capacity": 34,
+      "active": true
+    }
+  ],
+  "drivers": [
+    {
+      "code": "DRVSOUTH01",
+      "carrierCode": "VRMIENNAM",
+      "name": "Nguyễn Minh Tuấn",
+      "phone": "028 0000 1111",
+      "active": true
+    },
+    {
+      "code": "DRVSOUTH02",
+      "carrierCode": "VRMIENNAM",
+      "name": "Trần Quốc Huy",
+      "phone": "028 0000 1112",
+      "active": true
+    },
+    {
+      "code": "DRVNORTH01",
+      "carrierCode": "VRBACNAM",
+      "name": "Lê Hoàng Nam",
+      "phone": "024 0000 2213",
+      "active": true
+    },
+    {
+      "code": "DRVNORTH02",
+      "carrierCode": "VRBACNAM",
+      "name": "Phạm Đức Anh",
+      "phone": "024 0000 2214",
+      "active": true
+    }
+  ],
+  "provenance": {
+    "kind": "PROJECT_GENERATED",
+    "description": "Bộ dữ liệu do dự án tạo theo yêu cầu chủ dự án để nghiệm thu. Tên đơn vị, nhân sự, địa chỉ, số liên hệ, biển số và tọa độ không xác nhận hoạt động ngoài thực tế. Số có đầu thuê bao 0000 chỉ phục vụ dữ liệu khởi tạo. Thay bằng dữ liệu đã xác minh trước khi nhận khách thật."
+  }
+}

@@ -19,7 +19,7 @@
                 ></p>
                 <h1 th:text="#{ui.journey.title}"></h1>
                 <div
-                    th:replace="~{fragments/help :: guide('journey-guide', #{ui.journey.title}, ${ {'ui.help.journey.use', 'ui.journey.description', 'ui.journey.progressHelp', 'ui.tracking.publicHelp'} })}"
+                    th:replace="~{fragments/help :: guide('journey-guide', #{ui.journey.title}, ${ {'ui.help.journey.use', 'ui.journey.description', 'ui.journey.progressHelp'} })}"
                 ></div>
             </div>
             <p
@@ -81,22 +81,33 @@
                                         data-place-search
                                         th:text="#{ui.search}"
                                     ></button>
-                                    <button
-                                        type="button"
-                                        class="button button-outline"
-                                        data-place-prev
-                                        th:text="#{ui.mediaPrevious}"
-                                    ></button>
-                                    <span
-                                        data-place-count
-                                        aria-live="polite"
-                                    ></span>
-                                    <button
-                                        type="button"
-                                        class="button button-outline"
-                                        data-place-next
-                                        th:text="#{ui.mediaNext}"
-                                    ></button>
+                                    <div class="trip-picker-paging lookup-pager">
+                                        <button
+                                            type="button"
+                                            class="button button-outline lookup-page-button"
+                                            data-place-prev
+                                            hidden
+                                            disabled
+                                            th:attr="aria-label=#{ui.mediaPrevious},title=#{ui.mediaPrevious}"
+                                        >
+                                            <span aria-hidden="true">‹</span>
+                                        </button>
+                                        <span
+                                            data-place-count
+                                            aria-live="polite"
+                                            th:attr="data-summary=#{ui.picker.summary},data-empty=#{ui.empty}"
+                                        ></span>
+                                        <button
+                                            type="button"
+                                            class="button button-outline lookup-page-button"
+                                            data-place-next
+                                            hidden
+                                            disabled
+                                            th:attr="aria-label=#{ui.mediaNext},title=#{ui.mediaNext}"
+                                        >
+                                            <span aria-hidden="true">›</span>
+                                        </button>
+                                    </div>
                                 </div>
                                 <label>
                                     <span
@@ -156,22 +167,33 @@
                                             data-filter-search
                                             th:text="#{ui.search}"
                                         ></button>
-                                        <button
-                                            type="button"
-                                            class="button button-outline"
-                                            data-filter-prev
-                                            th:text="#{ui.mediaPrevious}"
-                                        ></button>
-                                        <span
-                                            data-filter-count
-                                            aria-live="polite"
-                                        ></span>
-                                        <button
-                                            type="button"
-                                            class="button button-outline"
-                                            data-filter-next
-                                            th:text="#{ui.mediaNext}"
-                                        ></button>
+                                        <div class="trip-picker-paging lookup-pager">
+                                            <button
+                                                type="button"
+                                                class="button button-outline lookup-page-button"
+                                                data-filter-prev
+                                                hidden
+                                                disabled
+                                                th:attr="aria-label=#{ui.mediaPrevious},title=#{ui.mediaPrevious}"
+                                            >
+                                                <span aria-hidden="true">‹</span>
+                                            </button>
+                                            <span
+                                                data-filter-count
+                                                aria-live="polite"
+                                                th:attr="data-summary=#{ui.picker.summary},data-empty=#{ui.empty}"
+                                            ></span>
+                                            <button
+                                                type="button"
+                                                class="button button-outline lookup-page-button"
+                                                data-filter-next
+                                                hidden
+                                                disabled
+                                                th:attr="aria-label=#{ui.mediaNext},title=#{ui.mediaNext}"
+                                            >
+                                                <span aria-hidden="true">›</span>
+                                            </button>
+                                        </div>
                                     </div>
                                     <label>
                                         <span

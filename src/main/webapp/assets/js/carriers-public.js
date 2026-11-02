@@ -56,22 +56,6 @@
             phone(selected.phone),
             text('p', selected.description),
         );
-        if (selected.logoUrl) {
-            const logo = document.createElement('img');
-            logo.src = selected.logoUrl;
-            logo.alt = selected.name;
-            logo.className = 'public-carrier-logo';
-            logo.loading = 'lazy';
-            logo.referrerPolicy = 'no-referrer';
-            logo.addEventListener(
-                'error',
-                () => {
-                    logo.hidden = true;
-                },
-                { once: true },
-            );
-            summary.prepend(logo);
-        }
     };
     const open = async (id, trigger) => {
         await detail(id);

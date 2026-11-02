@@ -14,13 +14,11 @@ import org.springframework.context.annotation.FilterType;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.Validator;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.springframework.web.multipart.support.StandardServletMultipartResolver;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.config.annotation.DelegatingWebMvcConfiguration;
@@ -30,13 +28,7 @@ import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.spring6.templateresolver.SpringResourceTemplateResolver;
 import org.thymeleaf.spring6.view.ThymeleafViewResolver;
 import org.thymeleaf.templatemode.TemplateMode;
-import vn.vietroute.auth.security.AccessMethodExpressionHandler;
-import vn.vietroute.auth.security.AccessPolicyInterceptor;
-import vn.vietroute.auth.security.AccessResourceSynchronizer;
-import vn.vietroute.auth.security.DatabaseAccessGuard;
-import vn.vietroute.auth.service.AccessManagementService;
-import vn.vietroute.auth.service.AccessResourceService;
-import vn.vietroute.common.config.application.AppSettings;
+import vn.vietroute.auth.security.EndpointAccess;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
@@ -57,15 +49,7 @@ import vn.vietroute.common.web.locale.SupportedLocaleResolver;
 )
 public class WebConfig extends DelegatingWebMvcConfiguration {
 
-    /** Servlet context có advisor riêng; dùng cùng handler với service để trang nhập URL trực tiếp vẫn kiểm DB. */
-    @Bean
-    public static MethodSecurityExpressionHandler methodSecurityExpressionHandler() {
-        return new AccessMethodExpressionHandler();
-    }
-
-    private final AccessManagementService access;
-
-    private final DatabaseAccessGuard guard;
+    private final EndpointAccess access;
 
     private final MessageSource messages;
 
@@ -77,32 +61,12 @@ public class WebConfig extends DelegatingWebMvcConfiguration {
         MessageSource messages,
         ObjectMapper mapper,
         SupportedLocaleResolver locales,
-        AccessManagementService access,
-        DatabaseAccessGuard guard
+        EndpointAccess access
     ) {
         this.access = access;
-        this.guard = guard;
         this.messages = messages;
         this.mapper = mapper;
         this.locales = locales;
-    }
-
-    /** Listener thuộc servlet context; mapping sẵn sàng sau root migration mới đồng bộ danh bạ DB. */
-    @Bean
-    public AccessResourceSynchronizer accessResourceSynchronizer(
-        ApplicationContext context,
-        AppSettings settings,
-        AccessResourceService resources
-    ) {
-        return new AccessResourceSynchronizer(context, settings, resources);
-    }
-
-    /** Chỉ parse multipart/form-data; giới hạn byte do Servlet registration áp dụng trước controller. */
-    @Bean
-    public StandardServletMultipartResolver multipartResolver() {
-        StandardServletMultipartResolver resolver = new StandardServletMultipartResolver();
-        resolver.setStrictServletCompliance(true);
-        return resolver;
     }
 
     /** Ghi đè bean locale mặc định của MVC; vẫn dùng cùng resolver với security/filter ở root. */
@@ -180,7 +144,7 @@ public class WebConfig extends DelegatingWebMvcConfiguration {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         super.addInterceptors(registry);
-        registry.addInterceptor(new AccessPolicyInterceptor(access, guard));
+        registry.addInterceptor(access);
         registry.addInterceptor(
             new HandlerInterceptor() {
                 @Override

@@ -65,7 +65,7 @@
                                     th:text="#{ui.fleet.allStates}"
                                 ></option>
                                 <option
-                                    th:each="state : ${T(vn.vietroute.business.trip.entity.TripStatus).values()}"
+                                    th:each="state : ${T(vn.vietroute.business.trip.constant.TripStatus).values()}"
                                     th:value="${state}"
                                     th:text="#{'ui.trip.'+${state}}"
                                 ></option>
@@ -194,12 +194,6 @@
                                     data-tab-target="trip-events"
                                     th:text="#{ui.trip.history}"
                                 ></button>
-                                <button
-                                    id="trip-location-tab"
-                                    type="button"
-                                    data-tab-target="trip-location"
-                                    th:text="#{ui.tracking.title}"
-                                ></button>
                             </div>
                             <section
                                 id="trip-info"
@@ -256,23 +250,32 @@
                                                 th:text="#{ui.search}"
                                             ></button>
                                         </div>
-                                        <div class="trip-picker-paging">
+                                        <div class="trip-picker-paging lookup-pager">
                                             <button
                                                 type="button"
-                                                class="button button-outline"
+                                                class="button button-outline lookup-page-button"
                                                 data-picker-prev
-                                                th:text="#{ui.mediaPrevious}"
-                                            ></button>
+                                                hidden
+                                                disabled
+                                                th:attr="aria-label=#{ui.mediaPrevious},title=#{ui.mediaPrevious}"
+                                            >
+                                                <span aria-hidden="true">‹</span>
+                                            </button>
                                             <span
                                                 data-picker-count
                                                 aria-live="polite"
+                                                th:attr="data-summary=#{ui.picker.summary},data-empty=#{ui.empty}"
                                             ></span>
                                             <button
                                                 type="button"
-                                                class="button button-outline"
+                                                class="button button-outline lookup-page-button"
                                                 data-picker-next
-                                                th:text="#{ui.mediaNext}"
-                                            ></button>
+                                                hidden
+                                                disabled
+                                                th:attr="aria-label=#{ui.mediaNext},title=#{ui.mediaNext}"
+                                            >
+                                                <span aria-hidden="true">›</span>
+                                            </button>
                                         </div>
                                     </div>
                                     <div
@@ -301,23 +304,32 @@
                                                 th:text="#{ui.search}"
                                             ></button>
                                         </div>
-                                        <div class="trip-picker-paging">
+                                        <div class="trip-picker-paging lookup-pager">
                                             <button
                                                 type="button"
-                                                class="button button-outline"
+                                                class="button button-outline lookup-page-button"
                                                 data-picker-prev
-                                                th:text="#{ui.mediaPrevious}"
-                                            ></button>
+                                                hidden
+                                                disabled
+                                                th:attr="aria-label=#{ui.mediaPrevious},title=#{ui.mediaPrevious}"
+                                            >
+                                                <span aria-hidden="true">‹</span>
+                                            </button>
                                             <span
                                                 data-picker-count
                                                 aria-live="polite"
+                                                th:attr="data-summary=#{ui.picker.summary},data-empty=#{ui.empty}"
                                             ></span>
                                             <button
                                                 type="button"
-                                                class="button button-outline"
+                                                class="button button-outline lookup-page-button"
                                                 data-picker-next
-                                                th:text="#{ui.mediaNext}"
-                                            ></button>
+                                                hidden
+                                                disabled
+                                                th:attr="aria-label=#{ui.mediaNext},title=#{ui.mediaNext}"
+                                            >
+                                                <span aria-hidden="true">›</span>
+                                            </button>
                                         </div>
                                     </div>
 
@@ -347,23 +359,32 @@
                                                 th:text="#{ui.search}"
                                             ></button>
                                         </div>
-                                        <div class="trip-picker-paging">
+                                        <div class="trip-picker-paging lookup-pager">
                                             <button
                                                 type="button"
-                                                class="button button-outline"
+                                                class="button button-outline lookup-page-button"
                                                 data-picker-prev
-                                                th:text="#{ui.mediaPrevious}"
-                                            ></button>
+                                                hidden
+                                                disabled
+                                                th:attr="aria-label=#{ui.mediaPrevious},title=#{ui.mediaPrevious}"
+                                            >
+                                                <span aria-hidden="true">‹</span>
+                                            </button>
                                             <span
                                                 data-picker-count
                                                 aria-live="polite"
+                                                th:attr="data-summary=#{ui.picker.summary},data-empty=#{ui.empty}"
                                             ></span>
                                             <button
                                                 type="button"
-                                                class="button button-outline"
+                                                class="button button-outline lookup-page-button"
                                                 data-picker-next
-                                                th:text="#{ui.mediaNext}"
-                                            ></button>
+                                                hidden
+                                                disabled
+                                                th:attr="aria-label=#{ui.mediaNext},title=#{ui.mediaNext}"
+                                            >
+                                                <span aria-hidden="true">›</span>
+                                            </button>
                                         </div>
                                     </div>
                                     <div
@@ -392,23 +413,32 @@
                                                 th:text="#{ui.search}"
                                             ></button>
                                         </div>
-                                        <div class="trip-picker-paging">
+                                        <div class="trip-picker-paging lookup-pager">
                                             <button
                                                 type="button"
-                                                class="button button-outline"
+                                                class="button button-outline lookup-page-button"
                                                 data-picker-prev
-                                                th:text="#{ui.mediaPrevious}"
-                                            ></button>
+                                                hidden
+                                                disabled
+                                                th:attr="aria-label=#{ui.mediaPrevious},title=#{ui.mediaPrevious}"
+                                            >
+                                                <span aria-hidden="true">‹</span>
+                                            </button>
                                             <span
                                                 data-picker-count
                                                 aria-live="polite"
+                                                th:attr="data-summary=#{ui.picker.summary},data-empty=#{ui.empty}"
                                             ></span>
                                             <button
                                                 type="button"
-                                                class="button button-outline"
+                                                class="button button-outline lookup-page-button"
                                                 data-picker-next
-                                                th:text="#{ui.mediaNext}"
-                                            ></button>
+                                                hidden
+                                                disabled
+                                                th:attr="aria-label=#{ui.mediaNext},title=#{ui.mediaNext}"
+                                            >
+                                                <span aria-hidden="true">›</span>
+                                            </button>
                                         </div>
                                     </div>
                                     <label>
@@ -454,13 +484,6 @@
                                     class="route-stop-list"
                                 ></div>
                             </section>
-                            <section
-                                id="trip-location"
-                                data-tab-panel="trip-location-tab"
-                                hidden
-                            >
-                                <section th:replace="~{fragments/tracking :: panel('trip', false)}"></section>
-                            </section>
                         </div>
                         <div class="dialog-actions">
                             <button
@@ -503,7 +526,7 @@
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
-        <script th:src="@{/assets/js/tracking.js}"></script>
+
         <script th:src="@{/assets/js/trips.js}"></script>
     </body>
 </html>

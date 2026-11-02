@@ -3,227 +3,103 @@ package vn.vietroute;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.context.support.StaticApplicationContext;
-import org.springframework.core.io.FileSystemResourceLoader;
-import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockServletContext;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
-import vn.vietroute.auth.dto.record.resource.AccessResourceResponse;
-import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.repository.AccessRegistryRepository;
-import vn.vietroute.auth.security.AccessPermissionDefinitions;
-import vn.vietroute.auth.security.AccessResourceSynchronizer;
-import vn.vietroute.auth.security.AccessTargets;
-import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.auth.service.AccessResourceService;
+import org.springframework.context.support.GenericApplicationContext;
+import vn.vietroute.auth.initializer.AuthInitializer;
+import vn.vietroute.auth.security.EndpointAccess;
+import vn.vietroute.common.base.BaseRepository.SqlWork;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.web.WebConfig;
-import vn.vietroute.common.constant.ApplicationConstants.Env;
-import vn.vietroute.common.constant.ApplicationConstants.Routes;
-import vn.vietroute.support.AccessTestConfig;
-import vn.vietroute.support.JournalTestConfig;
+import vn.vietroute.common.jdbc.JdbcTransactions;
+import vn.vietroute.common.web.locale.SupportedLocaleResolver;
+import vn.vietroute.support.NativeEndpointWebFixture;
+import vn.vietroute.support.NativeSecurityFixture;
 
-/** Dựng root/servlet như WAR; không bật migration và không mở connection DB thật. */
+/** Thu thập endpoint thật và tôn trọng cờ sync/context sở hữu, thay đồng bộ action registry cũ. */
 class AccessResourceDiscoveryTest {
 
     @Test
-    void discoversRealMappingsAndKeepsPublicAndRecoveryRoutesReadOnly() throws Exception {
-        try (
-            var root = new AnnotationConfigWebApplicationContext();
-            var child = new AnnotationConfigWebApplicationContext()
-        ) {
-            var web = new MockServletContext("src/main/webapp", new FileSystemResourceLoader());
-            root.setServletContext(web);
-            root.register(
-                RootConfig.class,
-                AccessTestConfig.class,
-                JournalTestConfig.class,
-                DatabaseAccessGuardTest.FutureModule.class
-            );
-            root.refresh();
-            child.setParent(root);
-            child.setServletContext(web);
-            child.register(WebConfig.class);
-            child.refresh();
-            var mapping = child.getBean(RequestMappingHandlerMapping.class);
-            var resources = AccessTargets.discover(mapping);
-            var catalog = resources
-                .stream()
-                .filter(item -> item.target().equals("PUT /api/v1/admin/catalogs/{id}"))
-                .findFirst()
-                .orElseThrow();
-            assertEquals("CATALOG", catalog.group());
-            assertTrue(catalog.declaredPermissions().contains("CATALOG_UPDATE"));
-            assertTrue(catalog.declaredPermissions().contains("CATALOG_WRITE"));
-            var media = resources
-                .stream()
-                .filter(item -> item.target().equals("GET " + Routes.MEDIA_PAGE))
-                .toList();
-            assertEquals(1, media.size(), "Không sinh endpoint giả trùng trang giao diện");
-            assertEquals("MENU", media.get(0).kind());
-            assertTrue(media.get(0).configurable());
-            assertTrue(media.get(0).handler().startsWith("MediaPageController#"));
-            for (String path : List.of(Routes.LOGIN, Routes.HOME, Routes.HEALTH, Routes.OPENAPI, Routes.AUTH_LOGIN)) {
-                var found = resources
-                    .stream()
-                    .filter(item -> item.target().endsWith(" " + path))
-                    .findFirst()
-                    .orElseThrow();
-                assertTrue(found.publicRoute(), path);
-                assertFalse(found.configurable(), path);
-            }
-            assertTrue(
-                resources
-                    .stream()
-                    .filter(item -> item.target().contains(Routes.ACCESS))
-                    .noneMatch(AccessResourceResponse::configurable)
-            );
+    void discoversRealMappingsAndKeepsPublicAndSelfServiceRoutesUnassignable() {
+        try (var web = new NativeEndpointWebFixture()) {
+            assertEquals("ENDPOINT", web.catalog.find("GET /api/v1/native-probe/{id}").getKind());
+            assertEquals("MENU", web.catalog.find("GET /operations/native-probe").getKind());
+            assertTrue(web.catalog.find("GET /api/v1/auth/csrf").isPublicEndpoint());
+            assertTrue(web.catalog.find("GET /api/v1/auth/me").isSelfService());
             assertFalse(
-                AccessTargets.inventory(mapping)
+                web.catalog
+                    .assignable()
                     .stream()
-                    .anyMatch(item -> item.target().endsWith(" " + Routes.AUTH_LOGIN))
+                    .anyMatch(value -> value.isPublicEndpoint() || value.isSelfService())
             );
-            var mvc = MockMvcBuilders.webAppContextSetup(child).apply(springSecurity()).build();
-            // Service-only module không có Permission constant vẫn được bảo vệ trên node tắt ghi sync.
-            assertFalse(root.getBean(AppSettings.class).isAccessSyncEnabled());
-            var registry = root.getBean(AccessRegistryRepository.class);
-            assertTrue(registry.builtIn("permissions", "FUTUREMODULE_UPDATE"));
-            assertFalse(registry.builtIn("permissions", "CUSTOMMODULE_READ"));
-            var admin = UsernamePasswordAuthenticationToken.authenticated(
-                new UserPrincipal(1L, "fixture", Set.of(Role.ADMIN), 0),
-                null,
-                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"), new SimpleGrantedAuthority("ACCESS_UPDATE"))
-            );
-            assertEquals(
-                403,
-                mvc
-                    .perform(
-                        put("/api/v1/admin/access/registry/permissions/FUTUREMODULE_UPDATE")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(
-                                "{\"nameVi\":\"Module mới\",\"nameEn\":\"New module\",\"active\":false,\"version\":0}"
-                            )
-                            .with(authentication(admin))
-                            .with(csrf())
-                    )
-                    .andReturn()
-                    .getResponse()
-                    .getStatus()
-            );
-            var spec = root
-                .getBean(ObjectMapper.class)
-                .readTree(mvc.perform(get(Routes.OPENAPI)).andReturn().getResponse().getContentAsString());
-            var schema = spec.at(
-                "/paths/~1api~1v1~1admin~1access~1resources/get/responses/200/content/application~1json/schema"
-            );
-            String ref = schema.path("$ref").asText();
-            assertTrue(ref.contains("ApiResponse"), schema.toString());
-            var envelope = spec.at(ref.substring(1));
-            assertTrue(envelope.path("properties").has("data"));
-            assertTrue(envelope.path("properties").has("traceId"));
-            // ACCESS_READ được ủy quyền qua DB; chỉ có role ADMIN chưa đủ, kể cả gọi trực tiếp URL API.
-            for (var scenario : List.of(
-                List.of("ROLE_ADMIN"),
-                List.of("ACCESS_READ"),
-                List.of("ROLE_ADMIN", "ACCESS_READ")
-            )) {
-                var principal = new UserPrincipal(1L, "fixture", Set.of(Role.ADMIN), 0);
-                var actor = UsernamePasswordAuthenticationToken.authenticated(
-                    principal,
-                    null,
-                    scenario.stream().map(SimpleGrantedAuthority::new).toList()
-                );
-                assertEquals(
-                    scenario.contains("ACCESS_READ") ? 200 : 403,
-                    mvc
-                        .perform(get(Routes.ACCESS + Routes.ACCESS_RESOURCES).with(authentication(actor)))
-                        .andReturn()
-                        .getResponse()
-                        .getStatus()
-                );
-                if (scenario.contains("ACCESS_READ")) {
-                    for (var invalid : Map.of("kind", "INVALID", "query", "a".repeat(161)).entrySet()) {
-                        assertEquals(
-                            400,
-                            mvc
-                                .perform(
-                                    get(Routes.ACCESS + Routes.ACCESS_RESOURCES)
-                                        .param(invalid.getKey(), invalid.getValue())
-                                        .with(authentication(actor))
-                                )
-                                .andReturn()
-                                .getResponse()
-                                .getStatus()
-                        );
-                    }
-                }
-            }
+            assertEquals(3, web.catalog.assignable().size());
         }
     }
 
     @Test
-    void synchronizesOnlyOwningServletContextOnceAndHonorsDisabledFlag() {
-        try (var context = new StaticApplicationContext(); var unrelated = new StaticApplicationContext()) {
-            context.getBeanFactory().registerSingleton("mapping", new RequestMappingHandlerMapping());
-            context.getBeanFactory().registerSingleton("futureModule", new DatabaseAccessGuardTest.FutureModule());
-            var recorder = new RecordingResources();
-            var enabled = new AppSettings(Map.of(Env.ACCESS_SYNC_ENABLED.key(), "true")::get);
-            var listener = new AccessResourceSynchronizer(context, enabled, recorder);
-            listener.onApplicationEvent(new ContextRefreshedEvent(unrelated));
-            assertEquals(0, recorder.calls);
-            listener.onApplicationEvent(new ContextRefreshedEvent(context));
-            listener.onApplicationEvent(new ContextRefreshedEvent(context));
-            assertEquals(1, recorder.calls);
-            assertTrue(recorder.serviceCodes.containsAll(Set.of("FUTUREMODULE_CREATE", "FUTUREMODULE_UPDATE")));
-            new AccessResourceSynchronizer(context, new AppSettings(key -> null), recorder).onApplicationEvent(
-                new ContextRefreshedEvent(context)
+    void synchronizationRunsOnlyForOwningServletAndHonorsExplicitDisabledFlag() {
+        try (var web = new NativeEndpointWebFixture(); var other = new GenericApplicationContext()) {
+            other.refresh();
+            var count = new AtomicInteger();
+            var transactions = new JdbcTransactions(null) {
+                @Override
+                public <T> T execute(SqlWork<T> work) {
+                    count.incrementAndGet();
+                    return null;
+                }
+            };
+            var disabled = new AuthInitializer(
+                null,
+                null,
+                settings(Map.of("VIETROUTE_ACCESS_SYNC_ENABLED", "false")),
+                null,
+                null,
+                transactions,
+                new RootConfig().objectMapper()
             );
-            assertEquals(1, recorder.calls);
+            var listener = new EndpointAccess(null, null, disabled);
+            listener.onApplicationEvent(new ContextRefreshedEvent(other));
+            listener.onApplicationEvent(new ContextRefreshedEvent(web.context));
+            assertEquals(0, count.get());
+            var enabled = new EndpointAccess(
+                null,
+                null,
+                new AuthInitializer(
+                    null,
+                    null,
+                    settings(Map.of("VIETROUTE_ACCESS_SYNC_ENABLED", "true")),
+                    null,
+                    null,
+                    transactions,
+                    new RootConfig().objectMapper()
+                )
+            );
+            enabled.onApplicationEvent(new ContextRefreshedEvent(other));
+            assertEquals(0, count.get());
+            enabled.onApplicationEvent(new ContextRefreshedEvent(web.context));
+            assertEquals(1, count.get());
         }
     }
 
     @Test
     void synchronizationFollowsInitializerUnlessExplicitlyConfigured() {
-        var values = Map.of(Env.DB_INIT_ENABLED.key(), "true", Env.BOOTSTRAP_ADMIN_PASSWORD.key(), "UnitOnly@12345");
-        assertTrue(new AppSettings(values::get).isAccessSyncEnabled());
+        assertTrue(settings(Map.of("VIETROUTE_DB_INIT_ENABLED", "true")).isAccessSyncEnabled());
         assertFalse(
-            new AppSettings(key ->
-                key.equals(Env.ACCESS_SYNC_ENABLED.key()) ? "false" : values.get(key)
+            settings(
+                Map.of("VIETROUTE_DB_INIT_ENABLED", "true", "VIETROUTE_ACCESS_SYNC_ENABLED", "false")
             ).isAccessSyncEnabled()
         );
     }
 
-    private static class RecordingResources extends AccessResourceService {
-
-        private int calls;
-
-        private Set<String> serviceCodes = Set.of();
-
-        RecordingResources() {
-            super(null, null, null, null, null, new AccessPermissionDefinitions());
-        }
-
-        @Override
-        public void synchronize(List<AccessResourceResponse> inventory, Set<String> serviceCodes) {
-            calls++;
-            this.serviceCodes = serviceCodes;
-        }
+    private static AppSettings settings(Map<String, String> overrides) {
+        var values = new HashMap<>(overrides);
+        values.put("VIETROUTE_BOOTSTRAP_ADMIN_PASSWORD", "TestOnly!2026Aa");
+        values.put("VIETROUTE_BOOTSTRAP_ADMIN_EMAIL", "admin@example.invalid");
+        return new AppSettings(values::get);
     }
 }

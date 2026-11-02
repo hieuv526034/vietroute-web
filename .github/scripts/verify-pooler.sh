@@ -46,7 +46,7 @@ call 200 POST /api/v1/auth/login "$work/login.json" cookie
 token=$(field data.accessToken)
 for attempt in {1..4}; do
   call 200 GET /api/v1/auth/me '' bearer
-  call 200 GET /api/v1/admin/access/tree '' bearer
+  call 200 GET /api/v1/admin/access/resources '' bearer
 done
 pooler_trace=$(field traceId)
 call 200 GET "/api/v1/admin/system/api-journal?traceId=$pooler_trace" '' bearer

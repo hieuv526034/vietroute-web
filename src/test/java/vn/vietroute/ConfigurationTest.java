@@ -8,14 +8,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.zaxxer.hikari.HikariDataSource;
+import java.io.InputStream;
+import java.sql.Driver;
+import java.sql.SQLFeatureNotSupportedException;
 import java.util.Map;
+import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.database.DatabaseConfig;
 import vn.vietroute.common.config.database.DatabaseSettings;
-import vn.vietroute.common.config.monitoring.MonitoringConfig;
+import vn.vietroute.common.constant.ApplicationConstants.DatabaseProperties;
 import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.jdbc.dialect.JdbcDialect;
 
@@ -34,9 +38,173 @@ class ConfigurationTest {
             assertFalse(error.getMessage().contains("private-"));
             assertTrue(error.getMessage().contains("VIETROUTE_DB_URL"));
             if (url.startsWith("jdbc:oracle:")) {
-                assertTrue(error.getMessage().contains("Oracle"));
-                assertTrue(error.getMessage().contains("migration"));
+                assertFalse(error.getMessage().contains("private-password"));
             }
+        }
+    }
+
+    @Test
+    void databaseProfilesDeclareBlankPasswordAndEnvironmentOverridesIt() throws Exception {
+        for (String vendor : new String[] { "postgresql", "oracle" }) {
+            Properties profile = new Properties();
+            try (
+                InputStream input = ConfigurationTest.class.getResourceAsStream("/database/" + vendor + ".properties")
+            ) {
+                profile.load(input);
+            }
+            assertTrue(profile.containsKey(DatabaseProperties.PASSWORD));
+            assertEquals("", profile.getProperty(DatabaseProperties.PASSWORD));
+            assertEquals("", new DatabaseSettings(Map.of("VIETROUTE_DB_VENDOR", vendor)::get, false).getPassword());
+            assertEquals(
+                "unit-test-only",
+                new DatabaseSettings(
+                    Map.of("VIETROUTE_DB_VENDOR", vendor, "VIETROUTE_DB_PASSWORD", "unit-test-only")::get,
+                    false
+                ).getPassword()
+            );
+            assertEquals(
+                "",
+                new DatabaseSettings(
+                    Map.of("VIETROUTE_DB_VENDOR", vendor, "VIETROUTE_DB_PASSWORD", "")::get,
+                    false
+                ).getPassword()
+            );
+        }
+    }
+
+    @Test
+    void vendorProfilesHaveSeparateDefaultsAndPreserveUrlOnlyConfiguration() {
+        DatabaseSettings postgresql = new DatabaseSettings(Map.<String, String>of()::get, false);
+        assertEquals("postgresql", postgresql.getDialect().vendor());
+        assertEquals("jdbc:postgresql://localhost:5432/vietroute", postgresql.getUrl());
+        assertEquals("vietroute_app", postgresql.getUsername());
+        assertEquals("vietroute", postgresql.getSchema());
+        assertEquals("org.hibernate.dialect.PostgreSQLDialect", postgresql.getDialect().hibernateDialectClassName());
+
+        DatabaseSettings oracle = new DatabaseSettings(Map.of("VIETROUTE_DB_VENDOR", "oracle")::get, false);
+        assertEquals("jdbc:oracle:thin:@//localhost:1521/FREEPDB1", oracle.getUrl());
+        assertEquals("VIETROUTE_APP", oracle.getUsername());
+        assertEquals("VIETROUTE_APP", oracle.getSchema());
+        assertEquals("org.hibernate.dialect.OracleDialect", oracle.getDialect().hibernateDialectClassName());
+
+        DatabaseSettings urlOnly = new DatabaseSettings(
+            Map.of("VIETROUTE_DB_URL", "jdbc:oracle:thin:@//127.0.0.1:1/isolated_pdb")::get,
+            false
+        );
+        assertEquals("oracle", urlOnly.getDialect().vendor());
+        assertEquals("VIETROUTE_APP", urlOnly.getSchema());
+    }
+
+    @Test
+    void explicitVendorAndUrlMustAgreeWithoutEchoingInvalidValues() {
+        for (String vendor : new String[] { "", "postgres", "ORACLE", "../private-profile" }) {
+            IllegalStateException error = assertThrows(IllegalStateException.class, () ->
+                new DatabaseSettings(Map.of("VIETROUTE_DB_VENDOR", vendor)::get, false)
+            );
+            assertTrue(error.getMessage().contains("VIETROUTE_DB_VENDOR"));
+            assertFalse(error.getMessage().contains("private-profile"));
+        }
+        for (String vendor : new String[] { "oracle", "postgresql" }) {
+            String url = vendor.equals("oracle")
+                ? "jdbc:postgresql://private-host/private-database"
+                : "jdbc:oracle:thin:@//private-host:1521/private-service";
+            IllegalStateException error = assertThrows(IllegalStateException.class, () ->
+                new DatabaseSettings(Map.of("VIETROUTE_DB_VENDOR", vendor, "VIETROUTE_DB_URL", url)::get, false)
+            );
+            assertTrue(error.getMessage().contains("VIETROUTE_DB_VENDOR"));
+            assertFalse(error.getMessage().contains("private-"));
+        }
+    }
+
+    @Test
+    void oracleSchemaAndProductionCredentialsAreValidatedSeparatelyFromPostgresql() {
+        for (String schema : new String[] {
+            "",
+            "vietroute",
+            "SYS",
+            "SYSTEM",
+            "A;DROP USER X",
+            "A\"B",
+            "A".repeat(129),
+        }) {
+            assertThrows(IllegalStateException.class, () ->
+                new DatabaseSettings(Map.of("VIETROUTE_DB_VENDOR", "oracle", "VIETROUTE_DB_SCHEMA", schema)::get, false)
+            );
+        }
+        assertThrows(IllegalStateException.class, () ->
+            new DatabaseSettings(Map.of("VIETROUTE_DB_VENDOR", "oracle")::get, true)
+        );
+        DatabaseSettings settings = new DatabaseSettings(
+            Map.of(
+                "VIETROUTE_DB_VENDOR",
+                "oracle",
+                "VIETROUTE_DB_URL",
+                "jdbc:oracle:thin:@//127.0.0.1:1/isolated_pdb",
+                "VIETROUTE_DB_USER",
+                "TEST_APP",
+                "VIETROUTE_DB_PASSWORD",
+                "unit-test-only",
+                "VIETROUTE_DB_SCHEMA",
+                "TEST_APP"
+            )::get,
+            true
+        );
+        assertEquals("TEST_APP", settings.getSchema());
+    }
+
+    @Test
+    void oracleDriverAndLazyPoolUseMillisecondsWithoutOpeningDatabase() throws Exception {
+        DatabaseSettings settings = new DatabaseSettings(Map.of("VIETROUTE_DB_VENDOR", "oracle")::get, false);
+        JdbcDialect dialect = settings.getDialect();
+        Driver driver = (Driver) Class.forName(dialect.driverClassName()).getDeclaredConstructor().newInstance();
+        assertTrue(driver.acceptsURL(settings.getUrl()));
+        assertFalse(driver.acceptsURL("jdbc:postgresql://127.0.0.1:1/test"));
+        Properties business = dialect.connectionProperties(15, 30, "vietroute-web", true);
+        Properties journal = dialect.connectionProperties(2, 2, "vietroute-api-journal", false);
+        assertEquals("15000", business.getProperty("oracle.net.CONNECT_TIMEOUT"));
+        assertEquals("15000", business.getProperty("oracle.net.OUTBOUND_CONNECT_TIMEOUT"));
+        assertEquals("30000", business.getProperty("oracle.jdbc.ReadTimeout"));
+        assertEquals("true", business.getProperty("oracle.net.keepAlive"));
+        assertEquals("2000", journal.getProperty("oracle.jdbc.ReadTimeout"));
+        assertEquals("false", journal.getProperty("oracle.net.keepAlive"));
+        assertEquals("vietroute-api-journal", journal.getProperty("v$session.program"));
+        assertFalse(business.containsKey("socketTimeout"));
+        assertFalse(business.containsKey("ApplicationName"));
+        business.setProperty("oracle.jdbc.ReadTimeout", "99");
+        assertEquals("2000", journal.getProperty("oracle.jdbc.ReadTimeout"));
+        try (HikariDataSource pool = new DatabaseConfig().dataSource(settings)) {
+            assertNull(pool.getHikariPoolMXBean());
+            assertEquals("oracle.jdbc.OracleDriver", pool.getDriverClassName());
+            assertEquals("30000", pool.getDataSourceProperties().getProperty("oracle.jdbc.ReadTimeout"));
+        }
+    }
+
+    @Test
+    void oracleApplicationStopsBeforeSchemaOrSqlEvenWhenInitializationIsDisabled() {
+        for (String enabled : new String[] { "true", "false" }) {
+            DatabaseSettings settings = new DatabaseSettings(
+                Map.of(
+                    "VIETROUTE_DB_VENDOR",
+                    "oracle",
+                    "VIETROUTE_DB_INIT_ENABLED",
+                    enabled,
+                    "VIETROUTE_ACCESS_SYNC_ENABLED",
+                    enabled,
+                    "VIETROUTE_DEFAULT_ACCOUNTS_ENABLED",
+                    enabled,
+                    "VIETROUTE_BUSINESS_INIT_ENABLED",
+                    enabled
+                )::get,
+                false
+            );
+            IllegalStateException error = assertThrows(IllegalStateException.class, () ->
+                new DatabaseConfig().jdbcSchema(settings)
+            );
+            assertTrue(error.getMessage().contains("Oracle 26ai"));
+            assertTrue(error.getMessage().contains("migration"));
+            assertThrows(SQLFeatureNotSupportedException.class, () ->
+                settings.getDialect().selectSchema(null, "TEST_APP")
+            );
         }
     }
 
@@ -144,8 +312,7 @@ class ConfigurationTest {
             )::get,
             false
         );
-        var registry = new MonitoringConfig().meterRegistry();
-        HikariDataSource pool = new DatabaseConfig().dataSource(settings, registry);
+        HikariDataSource pool = new DatabaseConfig().dataSource(settings);
         try (pool) {
             assertNull(pool.getHikariPoolMXBean(), "Chưa tạo pool runtime hoặc mở kết nối ở bước cấu hình");
             assertEquals(2, pool.getMaximumPoolSize());
@@ -154,8 +321,6 @@ class ConfigurationTest {
             assertEquals(0, pool.getKeepaliveTime());
             assertEquals(15, pool.getDataSourceProperties().get("connectTimeout"));
             assertEquals(30, pool.getDataSourceProperties().get("socketTimeout"));
-        } finally {
-            registry.close();
         }
         assertTrue(pool.isClosed());
     }

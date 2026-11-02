@@ -16,7 +16,7 @@
                 <div>
                     <h1 th:text="#{ui.grants.roles}"></h1>
                     <div
-                        th:replace="~{fragments/help :: guide('roles-guide', #{ui.grants.roles}, ${ {'ui.help.roles.use', 'ui.grants.note', 'ui.help.roles.selection', 'ui.help.roles.scope', 'ui.help.roles.history'} })}"
+                        th:replace="~{fragments/help :: guide('roles-guide', #{ui.grants.roles}, ${ {'ui.help.roles.use', 'ui.grants.note', 'ui.help.roles.selection', 'ui.help.roles.scope'} })}"
                     ></div>
                 </div>
             </div>
@@ -39,18 +39,16 @@
                         th:text="#{ui.grants.roles}"
                     ></button>
                     <button
+                        id="functions-tab"
+                        type="button"
+                        data-tab-target="functions-panel"
+                        th:text="#{ui.functions.title}"
+                    ></button>
+                    <button
                         id="scopes-tab"
                         type="button"
                         data-tab-target="access-scopes-section"
-                        th:if="${adminUser}"
                         th:text="#{ui.scope.title}"
-                    ></button>
-                    <button
-                        id="history-tab"
-                        type="button"
-                        data-tab-target="access-history-section"
-                        th:if="${adminUser}"
-                        th:text="#{ui.accessHistory.title}"
                     ></button>
                 </div>
                 <section
@@ -122,8 +120,83 @@
                         <nav th:replace="~{fragments/pagination :: pager('roles', 20)}"></nav>
                     </fieldset>
                 </section>
+                <section
+                    id="functions-panel"
+                    class="card p-4"
+                    hidden
+                >
+                    <h2
+                        class="h4"
+                        th:text="#{ui.functions.title}"
+                    ></h2>
+                    <p th:text="#{ui.functions.note}"></p>
+                    <p
+                        id="functions-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></p>
+                    <fieldset
+                        id="functions-controls"
+                        class="border-0 p-0 m-0"
+                    >
+                        <form
+                            id="functions-filter"
+                            class="table-filter mb-3"
+                        >
+                            <div>
+                                <label
+                                    for="functions-query"
+                                    th:text="#{ui.functions.search}"
+                                ></label>
+                                <input
+                                    id="functions-query"
+                                    type="search"
+                                    class="form-control"
+                                    maxlength="160"
+                                />
+                            </div>
+                            <button
+                                class="button button-outline"
+                                type="submit"
+                                th:text="#{ui.ops.filter}"
+                            ></button>
+                            <button
+                                id="functions-refresh"
+                                class="button button-outline"
+                                type="button"
+                                th:text="#{ui.ops.refresh}"
+                            ></button>
+                            <button
+                                id="function-create"
+                                class="button"
+                                type="button"
+                                hidden
+                                th:text="#{ui.functions.create}"
+                            ></button>
+                        </form>
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th th:text="#{ui.foundation.code}"></th>
+                                        <th th:text="#{ui.foundation.nameVi}"></th>
+                                        <th th:text="#{ui.foundation.nameEn}"></th>
+                                        <th th:text="#{ui.foundation.active}"></th>
+                                        <th th:text="#{ui.grants.resources}"></th>
+                                        <th
+                                            class="table-actions"
+                                            th:text="#{ui.ops.actions}"
+                                        ></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="functions-body"></tbody>
+                            </table>
+                        </div>
+                        <nav th:replace="~{fragments/pagination :: pager('functions', 20)}"></nav>
+                    </fieldset>
+                </section>
                 <section th:replace="~{fragments/access-advanced :: scopes}"></section>
-                <section th:replace="~{fragments/access-advanced :: history}"></section>
             </div>
             <dialog
                 id="role-dialog"
@@ -281,20 +354,137 @@
                                 role="alert"
                                 hidden
                             ></p>
-                            <div class="dialog-actions">
-                                <button
-                                    type="button"
-                                    class="button button-outline"
-                                    data-dialog-close
-                                    th:text="#{ui.catalog.cancel}"
-                                ></button>
-                                <button
-                                    id="grants-save"
-                                    type="submit"
-                                    class="button"
-                                    th:text="#{ui.catalog.save}"
-                                ></button>
-                            </div>
+                            <nav th:replace="~{fragments/pagination :: pager('function-grants', 20)}"></nav>
+                        </div>
+                        <div class="dialog-actions">
+                            <button
+                                type="button"
+                                class="button button-outline"
+                                data-dialog-close
+                                th:text="#{ui.catalog.cancel}"
+                            ></button>
+                            <button
+                                id="grants-save"
+                                type="submit"
+                                class="button"
+                                th:text="#{ui.catalog.save}"
+                            ></button>
+                        </div>
+                    </fieldset>
+                </form>
+            </dialog>
+            <dialog
+                id="function-dialog"
+                class="workspace-dialog workspace-dialog-wide"
+                aria-labelledby="function-dialog-title"
+            >
+                <div class="dialog-heading">
+                    <h2
+                        id="function-dialog-title"
+                        class="h4"
+                        th:text="#{ui.functions.edit}"
+                    ></h2>
+                    <button
+                        type="button"
+                        class="dialog-close"
+                        data-dialog-close
+                        th:attr="aria-label=#{ui.ops.close}"
+                    >
+                        ×
+                    </button>
+                </div>
+                <form
+                    id="function-form"
+                    data-validate
+                >
+                    <fieldset
+                        id="function-form-controls"
+                        class="border-0 p-0 m-0"
+                    >
+                        <label
+                            for="function-code"
+                            class="form-label"
+                            th:text="#{ui.foundation.code}"
+                        ></label>
+                        <input
+                            id="function-code"
+                            name="code"
+                            class="form-control"
+                            required
+                            maxlength="80"
+                            pattern="[A-Z][A-Za-z0-9_]{2,79}"
+                        />
+                        <label
+                            for="function-name-vi"
+                            class="form-label"
+                            th:text="#{ui.foundation.nameVi}"
+                        ></label>
+                        <input
+                            id="function-name-vi"
+                            name="nameVi"
+                            class="form-control"
+                            required
+                            maxlength="500"
+                        />
+                        <label
+                            for="function-name-en"
+                            class="form-label"
+                            th:text="#{ui.foundation.nameEn}"
+                        ></label>
+                        <input
+                            id="function-name-en"
+                            name="nameEn"
+                            class="form-control"
+                            required
+                            maxlength="500"
+                        />
+                        <label class="d-flex gap-2 mt-3">
+                            <input
+                                id="function-active"
+                                name="active"
+                                type="checkbox"
+                                class="form-check-input"
+                            />
+                            <span th:text="#{ui.foundation.active}"></span>
+                        </label>
+                        <label
+                            for="function-target-query"
+                            class="form-label mt-3"
+                            th:text="#{ui.grants.search}"
+                        ></label>
+                        <input
+                            id="function-target-query"
+                            type="search"
+                            class="form-control"
+                            maxlength="160"
+                        />
+                        <p
+                            id="function-target-count"
+                            role="status"
+                            aria-live="polite"
+                        ></p>
+                        <div
+                            id="function-target-options"
+                            class="resource-grant-tree"
+                        ></div>
+                        <p
+                            id="function-form-feedback"
+                            class="feedback"
+                            role="alert"
+                            hidden
+                        ></p>
+                        <div class="dialog-actions">
+                            <button
+                                type="button"
+                                class="button button-outline"
+                                data-dialog-close
+                                th:text="#{ui.catalog.cancel}"
+                            ></button>
+                            <button
+                                type="submit"
+                                class="button"
+                                th:text="#{ui.catalog.save}"
+                            ></button>
                         </div>
                     </fieldset>
                 </form>
@@ -302,27 +492,20 @@
             <dialog th:replace="~{fragments/access-advanced :: scopeDialog}"></dialog>
             <dialog th:replace="~{fragments/access-advanced :: membersDialog}"></dialog>
             <dialog th:replace="~{fragments/access-advanced :: memberDialog}"></dialog>
-            <dialog th:replace="~{fragments/access-advanced :: historyDialog}"></dialog>
             <div th:replace="~{fragments/access-advanced :: scopeLabels}"></div>
-            <div th:replace="~{fragments/access-advanced :: historyLabels}"></div>
             <div
                 id="grants-labels"
                 hidden
-                th:attr="data-open-menu=#{ui.grants.openMenu},data-edit=#{ui.foundation.edit},data-assign=#{ui.grants.assign},data-delete=#{ui.foundation.deleteRole},data-confirm=#{ui.foundation.confirmRole},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off},data-empty=#{ui.foundation.empty},data-public=#{ui.grants.public},data-self=#{ui.grants.self},data-admin=#{ui.grants.admin},data-menu=#{ui.accessResources.menu},data-api=#{ui.accessResources.api},data-selected=#{ui.grants.selected},data-added=#{ui.accessTree.added},data-removed=#{ui.accessTree.removed},data-loading=#{ui.ops.loading},data-success=#{ui.accounts.success},data-conflict=#{ui.accounts.conflict},data-stale=#{ui.grants.stale},data-readonly=#{ui.grants.readonly}"
+                th:attr="data-functions=#{ui.functions.title},data-delete-function=#{ui.functions.delete},data-confirm-function=#{ui.functions.confirm},data-open-menu=#{ui.grants.openMenu},data-edit=#{ui.foundation.edit},data-assign=#{ui.grants.assign},data-delete=#{ui.foundation.deleteRole},data-confirm=#{ui.foundation.confirmRole},data-on=#{ui.monitoring.on},data-off=#{ui.monitoring.off},data-empty=#{ui.foundation.empty},data-public=#{ui.grants.public},data-self=#{ui.grants.self},data-admin=#{ui.grants.admin},data-menu=#{ui.accessResources.menu},data-api=#{ui.accessResources.api},data-selected=#{ui.grants.selected},data-added=#{ui.accessTree.added},data-removed=#{ui.accessTree.removed},data-loading=#{ui.ops.loading},data-success=#{ui.accounts.success},data-conflict=#{ui.accounts.conflict},data-stale=#{ui.grants.stale},data-readonly=#{ui.grants.readonly}"
             ></div>
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
-        <script th:src="@{/assets/js/resource-grants.js}"></script>
+        <script th:src="@{/assets/js/function-selection.js}"></script>
+        <script th:src="@{/assets/js/functions.js}"></script>
         <script th:src="@{/assets/js/roles.js}"></script>
         <script th:src="@{/assets/js/role-picker.js}"></script>
-        <script
-            th:if="${adminUser}"
-            th:src="@{/assets/js/access-history.js}"
-        ></script>
-        <script
-            th:if="${adminUser}"
-            th:src="@{/assets/js/data-scopes.js}"
-        ></script>
+
+        <script th:src="@{/assets/js/data-scopes.js}"></script>
     </body>
 </html>

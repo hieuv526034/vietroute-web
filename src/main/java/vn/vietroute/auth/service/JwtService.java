@@ -20,10 +20,8 @@ import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.dto.record.session.AuthResponse;
-import vn.vietroute.auth.dto.response.account.UserResponse;
-import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.entity.UserAccount;
+import vn.vietroute.auth.dto.UserDTO;
+import vn.vietroute.auth.entity.User;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.constant.ErrorCode;
@@ -60,7 +58,7 @@ public class JwtService {
     }
 
     /** Vai trò trong JWT phục vụ mô tả; filter vẫn đọc DB để áp dụng khóa/thu hồi quyền ngay. */
-    public AuthResponse issue(UserAccount user) {
+    public UserDTO issue(User user) {
         // Chặn cả lời gọi nội bộ: system không bao giờ được cấp JWT dù có lỗi ở caller.
         if (user.getId() == SystemActor.ID) {
             throw new BusinessException(ErrorCode.TOKEN_INVALID);
@@ -76,13 +74,18 @@ public class JwtService {
             .expiresAt(expires)
             .id(UUID.randomUUID().toString())
             .claim("username", user.getUsername())
-            .claim("roles", user.getRoles().stream().map(Role::name).sorted().toList())
+            .claim("roles", user.getRoles().stream().sorted().toList())
             .claim("tokenVersion", user.getTokenVersion())
             .build();
         String token = encoder
             .encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims))
             .getTokenValue();
-        return new AuthResponse(token, "Bearer", expires, UserResponse.from(user));
+        UserDTO result = new UserDTO();
+        result.setAccessToken(token);
+        result.setTokenType("Bearer");
+        result.setExpiresAt(expires);
+        result.setUser(UserDTO.from(user));
+        return result;
     }
 
     /** Chặn token quá dài, xác minh bằng Nimbus rồi bắt buộc đủ exp/iat/jti trước khi filter đọc tài khoản. */

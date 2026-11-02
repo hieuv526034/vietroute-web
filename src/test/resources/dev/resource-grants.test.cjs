@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { model } = require('../../../main/webapp/assets/js/resource-grants.js');
+const { model } = require('../../../main/webapp/assets/js/function-selection.js');
 
 test('menu and same-action APIs remain independent; future APIs are never selected implicitly', () => {
     const menu = 'GET /operations/vehicles', list = 'GET /api/v1/admin/vehicles', detail = list + '/{id}';

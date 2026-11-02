@@ -1,4 +1,4 @@
-/* Role CRUD và modal gán menu/API; mọi mutation dùng version, lỗi giữ bản nháp và không tự gửi lại. */
+/* RoleCode CRUD và modal gán chức năng; mọi mutation dùng version, lỗi giữ bản nháp và không tự gửi lại. */
 (() => {
     'use strict';
     const root = document.querySelector('[data-role-workspace]');
@@ -18,8 +18,8 @@
         currentRole,
         grantRole,
         state,
+        grantReady = false,
         version,
-        features = [],
         inventory = [],
         allowed = new Set(),
         query = '';
@@ -29,6 +29,7 @@
         busy: () => busy,
         onClose: () => {
             state = undefined;
+            grantReady = false;
         },
     });
     const perform = async (work) => {
@@ -64,7 +65,7 @@
             controls.forEach((item) => {
                 item.disabled = false;
             });
-            node('grants-save').disabled = !state;
+            node('grants-save').disabled = !state || !grantReady;
             node('roles-status').textContent = '';
             roleModal.focus();
             grantModal.focus();
@@ -72,12 +73,12 @@
     };
     const pager = table.pager('roles', { busy: () => busy, onChange: (params) => perform(() => load(params)) });
     const load = async (params = pager.query) => {
-        if (!can('GET', '/registry/{kind}/page')) {
+        if (!can('GET', '/registry/roles/page')) {
             node('roles-status').textContent = labels.readonly;
             return;
         }
         const page = await table.readPage(
-            async (values) => (await get('/registry/roles/page?' + new URLSearchParams({ ...values, query }))).page,
+            async (values) => await get('/registry/roles/page?' + new URLSearchParams({ ...values, query })),
             params,
         );
         const body = node('roles-body');
@@ -90,9 +91,9 @@
                 buttons = text('div');
             actions.className = 'table-actions';
             buttons.className = 'row-actions';
-            if (!role.builtIn && can('PUT', '/registry/{kind}/{code}'))
+            if (!role.protectedRole && can('PUT', '/registry/roles/{code}'))
                 buttons.append(table.actionButton(labels.edit, 'edit', () => edit(role)));
-            if (can('GET', '/roles/{role}/resources') && can('GET', '/resource-catalog') && can('GET', '/tree')) {
+            if (can('GET', '/roles/{role}/functions') && can('GET', '/functions')) {
                 const assign = table.actionButton(
                     labels.assign,
                     'assign',
@@ -100,7 +101,7 @@
                 );
                 buttons.append(assign);
             }
-            if (!role.builtIn && can('DELETE', '/registry/roles/{code}'))
+            if (!role.protectedRole && can('DELETE', '/registry/roles/{code}'))
                 buttons.append(
                     table.actionButton(
                         labels.delete,
@@ -147,49 +148,81 @@
         roleModal.open();
     };
     const update = () => {
-        const delta = state.changes();
-        node('grants-count').textContent = `${labels.selected}: ${state.values().length}`;
+        node('grants-count').textContent = labels.selected + ': ' + state.size;
         node('grants-changes').textContent =
-            `${labels.added}: ${delta.added.length} · ${labels.removed}: ${delta.removed.length}`;
+            labels.added +
+            ': ' +
+            [...state].filter((code) => !original.has(code)).length +
+            ' · ' +
+            labels.removed +
+            ': ' +
+            [...original].filter((code) => !state.has(code)).length;
     };
-    const render = () =>
-        window.VietRouteResourceGrants.render(
-            node('grants-tree'),
-            state,
-            features,
-            inventory,
-            grantRole.builtIn || !can('PUT', '/roles/{role}/resources') ? [] : [...allowed],
-            labels,
-            node('grants-search').value,
-            update,
+    const grantPager = table.pager('function-grants', {
+        busy: () => busy,
+        onChange: (params) => perform(() => loadFunctions(params)),
+    });
+    const render = () => {
+        const root = node('grants-tree');
+        root.replaceChildren();
+        for (const item of inventory) {
+            const label = text('label');
+            label.className = 'd-flex gap-2 p-2 border-bottom';
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.value = item.code;
+            input.checked = state.has(item.code);
+            input.disabled =
+                grantRole.protectedRole || !can('PUT', '/roles/{role}/functions') || (!item.active && !input.checked);
+            input.addEventListener('change', () => {
+                if (input.checked) state.add(item.code);
+                else state.delete(item.code);
+                update();
+            });
+            const name = document.documentElement.lang === 'en' ? item.nameEn : item.nameVi;
+            label.append(input, text('span', name + ' · ' + item.code + (item.active ? '' : ' · ' + labels.off)));
+            root.append(label);
+        }
+        if (!inventory.length) root.append(text('p', labels.empty));
+        update();
+    };
+    const loadFunctions = async (params = grantPager.query) => {
+        const page = await table.readPage(
+            (values) =>
+                get('/functions?' + new URLSearchParams({ ...values, query: node('grants-search').value.trim() })),
+            params,
         );
+        inventory = page.content;
+        grantPager.update(page);
+        render();
+        grantReady = true;
+    };
     const openGrants = async (role, opener) => {
         grantRole = role;
         state = undefined;
+        grantReady = false;
         node('grants-tree').replaceChildren(text('p', labels.loading));
         node('grants-count').textContent = '';
         node('grants-changes').textContent = '';
-        node('grants-target').textContent = `${role.nameVi} · ${role.code}`;
         node('grants-search').value = '';
-        node('grants-save').hidden = role.builtIn || !can('PUT', '/roles/{role}/resources');
+        node('grants-save').hidden = role.protectedRole || !can('PUT', '/roles/{role}/functions');
         node('grants-save').disabled = true;
         app.feedback('', false, 'grants-feedback');
         grantModal.open(opener);
-        // Metadata chỉ dùng trong modal; mỗi lần mở lấy lại snapshot, lỗi giữ modal và chặn lưu tập chưa tải.
-        let result;
-        [features, inventory, result] = await window.VietRouteRequests.allReads([
-            get('/tree'),
-            get('/resource-catalog'),
-            get(`/roles/${encodeURIComponent(role.code)}/resources`),
-        ]);
+        const result = await get('/roles/' + encodeURIComponent(role.code) + '/functions');
         version = result.version;
-        state = window.VietRouteResourceGrants.model(result.targets, [...allowed]);
-        node('grants-target').textContent =
-            `${role.nameVi} · ${role.code} · v${version}${role.builtIn ? ' · ' + labels.readonly : ''}`;
-        render();
+        state = new Set(result.functionCodes);
+        original = new Set(result.functionCodes);
+        node('grants-target').textContent = role.nameVi + ' · ' + role.code + ' · v' + version;
+        await loadFunctions({ ...grantPager.query, page: 0 });
     };
+    let original = new Set(),
+        searchTimer;
     node('grants-search').addEventListener('input', () => {
-        if (state) render();
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            if (state && !busy) void perform(() => loadFunctions({ ...grantPager.query, page: 0 }));
+        }, 250);
     });
     node('role-create').addEventListener('click', () => edit());
     node('roles-refresh').addEventListener('click', () => void perform(() => load()));
@@ -222,10 +255,10 @@
     });
     node('grants-form').addEventListener('submit', (event) => {
         event.preventDefault();
-        if (busy || !state || grantRole.builtIn || !can('PUT', '/roles/{role}/resources')) return;
-        const body = { targets: state.values(), version };
+        if (busy || !state || !grantReady || grantRole.protectedRole || !can('PUT', '/roles/{role}/functions')) return;
+        const body = { functionCodes: [...state], version };
         void perform(async () => {
-            await app.mutate(`${base}/roles/${encodeURIComponent(grantRole.code)}/resources`, body, 'put');
+            await app.mutate(`${base}/roles/${encodeURIComponent(grantRole.code)}/functions`, body, 'put');
             node('grants-dialog').close();
             app.feedback(labels.success, true);
             await load();
@@ -234,7 +267,7 @@
     void perform(async () => {
         const capabilities = (await app.api.get('/api/v1/auth/capabilities')).data.data;
         allowed = new Set(capabilities.flatMap((item) => item.targets));
-        node('role-create').hidden = !can('POST', '/registry/{kind}/{code}');
+        node('role-create').hidden = !can('POST', '/registry/roles/{code}');
         await load();
     });
 })();

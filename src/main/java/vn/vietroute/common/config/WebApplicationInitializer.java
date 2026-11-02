@@ -1,25 +1,14 @@
 package vn.vietroute.common.config;
 
 import jakarta.servlet.Filter;
-import jakarta.servlet.MultipartConfigElement;
-import jakarta.servlet.ServletRegistration;
 import org.springframework.web.filter.CharacterEncodingFilter;
 import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
-import vn.vietroute.common.config.integration.MediaSettings;
 import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.web.filter.RequestTraceFilter;
 
 /** Điểm khởi tạo WAR trong Tomcat: root hạ tầng, servlet MVC và filter encoding/trace. */
 public class WebApplicationInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
-
-    /** Tomcat chốt kích thước kể cả request chunked; file tạm bị MVC xóa khi request kết thúc. */
-    @Override
-    protected void customizeRegistration(ServletRegistration.Dynamic registration) {
-        registration.setMultipartConfig(
-            new MultipartConfigElement("", MediaSettings.MAX_FILE_BYTES, MediaSettings.MAX_REQUEST_BYTES, 0)
-        );
-    }
 
     @Override
     protected Class<?>[] getRootConfigClasses() {

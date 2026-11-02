@@ -27,7 +27,6 @@
     const createModal = window.VietRouteUI.modal('booking-create-dialog', { busy: () => busy }),
         detailModal = window.VietRouteUI.modal('booking-detail-dialog', { busy: () => busy }),
         tabs = window.VietRouteUI.tabs(node('booking-tabs'));
-    const tracking = customer ? window.VietRouteTracking.attach(node('booking-tracking')) : null;
     const pager = tables.pager('booking', { busy: () => busy, onChange: (query) => perform(() => load(query)) });
     const can = (method, suffix = '') => capability.targets.includes(`${method} ${path}${suffix}`);
     const text = (tag, value) => {
@@ -71,6 +70,8 @@
             node('booking-create').disabled = busy || !can('POST');
             node('booking-trip-prev').disabled = busy || tripPage === 0;
             node('booking-trip-next').disabled = busy || !tripHasNext;
+            node('booking-trip-prev').hidden = tripPage === 0 && !tripHasNext;
+            node('booking-trip-next').hidden = tripPage === 0 && !tripHasNext;
         }
         node('booking-submit').disabled = busy || !can('POST') || !quoteReady;
         node('booking-confirm').hidden = customer || !writable() || selected.status !== 'PENDING';
@@ -175,8 +176,8 @@
         if (current?.value) form.elements.tripId.value = current.value;
         tripPage = result.page;
         tripHasNext = result.hasNext;
-        node('booking-trip-count').textContent =
-            `${result.totalElements ? result.page + 1 : 0} / ${result.totalPages} · ${result.totalElements}`;
+        const count = node('booking-trip-count');
+        count.textContent = tables.lookupSummary(result, count.dataset.summary, count.dataset.empty);
     };
     const quote = async () => {
         quoteReady = false;
@@ -286,9 +287,7 @@
         if (moneyForm) moneyForm.elements.kind.value = row.status === 'CANCELLED' ? 'REFUND' : 'PAYMENT';
         feedback('', false, 'booking-detail-feedback');
         detailModal.open(trigger);
-        tracking?.open(
-            can('GET', '/{id}/tracking') ? { path: `${path}/${selected.id}/tracking`, status: selected.status } : null,
-        );
+
         requestAnimationFrame(() => {
             tabs.select('booking-info');
             node('booking-detail-title').focus();

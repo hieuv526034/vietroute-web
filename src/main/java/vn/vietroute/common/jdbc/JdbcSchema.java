@@ -17,6 +17,7 @@ public final class JdbcSchema {
     }
 
     public JdbcSchema(String name, JdbcDialect dialect) {
+        dialect.requireApplicationSupport();
         dialect.validateSchema(name);
         this.name = name;
         this.dialect = dialect;

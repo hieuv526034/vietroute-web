@@ -1,23 +1,71 @@
 package vn.vietroute.auth.entity;
 
-import vn.vietroute.common.jdbc.JdbcIndex;
+import com.fasterxml.jackson.databind.JsonNode;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import java.time.Instant;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import vn.vietroute.common.jdbc.JdbcTable;
 
-/** Metadata bảng lịch sử; chỉ INSERT/đọc/cleanup, không có API sửa sự kiện đã ghi. */
-@JdbcTable(
-    name = "auth_access_changes",
-    primaryKey = { "id" },
-    indexes = {
-        @JdbcIndex(name = "auth_access_changes_pkey", columns = { "id" }, unique = true),
-        @JdbcIndex(name = "idx_access_changes_time", columns = { "created_at", "id" }),
-        @JdbcIndex(name = "idx_access_changes_target", columns = { "target_kind", "target_key", "created_at" }),
-        @JdbcIndex(name = "idx_access_changes_actor", columns = { "actor_id", "created_at" }),
-        @JdbcIndex(name = "idx_access_changes_trace", columns = { "trace_id" }),
-        @JdbcIndex(name = "idx_access_changes_created_by", columns = { "created_by" }),
-        @JdbcIndex(name = "idx_access_changes_updated_by", columns = { "updated_by" }),
-    }
-)
-public final class AccessChange {
+/** Model đầy đủ cột bảng auth_access_changes; chỉ DTO mới được nhận/trả ở API. */
+@Entity
+@Table(name = "auth_access_changes")
+@JdbcTable(name = "auth_access_changes", primaryKey = { "id" })
+@Getter
+@Setter
+@NoArgsConstructor
+public class AccessChange {
 
-    private AccessChange() {}
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private Long id;
+
+    @Column(name = "event_type", length = 64)
+    private String eventType;
+
+    @Column(name = "target_kind", length = 20)
+    private String targetKind;
+
+    @Column(name = "target_key", length = 240)
+    private String targetKey;
+
+    @Column(name = "actor_id")
+    private long actorId;
+
+    @Column(name = "trace_id", length = 64)
+    private String traceId;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "before_state", columnDefinition = "jsonb")
+    private JsonNode beforeState;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "after_state", columnDefinition = "jsonb")
+    private JsonNode afterState;
+
+    @Version
+    @Column(name = "version")
+    private long version;
+
+    @Column(name = "created_at")
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    @Column(name = "created_by")
+    private long createdBy;
+
+    @Column(name = "updated_by")
+    private long updatedBy;
 }

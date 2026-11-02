@@ -1,80 +1,53 @@
 # VietRoute
 
-Website quản lý nhà xe, tuyến/chuyến, đặt chỗ và theo dõi hành trình liên tỉnh. Một source Java server + giao diện Thymeleaf; Spring MVC 6, Spring Security/JWT, JDBC thuần, PostgreSQL/Neon, Maven WAR và Tomcat 10.1. Java 17+; build/runtime dùng JDK/JRE 21. Không dùng Spring Boot, JPA/Hibernate ORM, JdbcTemplate hoặc Spring Data.
+Website quản lý nhà xe, tuyến/chuyến, đặt chỗ và theo dõi hành trình liên tỉnh. Java 17+, Spring MVC 6/Security, Thymeleaf, PostgreSQL/Neon, Spring Data JPA/Hibernate và JDBC; đóng WAR cho Tomcat 10.1, không Spring Boot.
 
-## Phần đã có
+## Source hiện hành
 
-- Common: locale vi/en, message key/mã lỗi, BusinessException và API envelope thống nhất, validation, tạo mã, audit base, phân trang và transaction JDBC.
-- Auth: JWT HS256, BCrypt, cookie HttpOnly/CSRF hoặc Bearer, login/me/đổi mật khẩu/logout, thu hồi token, khóa đăng nhập sai và kiểm tra role/active từ DB.
-- Migration có history/checksum/transaction lock, seed admin và danh mục lặp không trùng; không reset mật khẩu đã đổi.
-- Danh mục mẫu: tra cứu vi/en có phân trang; quyền READ/CREATE/UPDATE/DELETE riêng cho quản trị, version/audit và xóa mềm; các module nghiệp vụ dùng mẫu này để triển khai tiếp.
-- Ảnh công khai: thư viện Cloudinary, upload/xem/xóa có quyền và owner, chuẩn hóa JPEG/PNG, metadata/audit và worker dọn upload dang dở; bật sau khi cấu hình credentials.
-- Giao diện responsive: trang chủ, đăng nhập, tài khoản/đổi mật khẩu, quản trị danh mục và Swagger UI; Bootstrap/Axios/WebJars đóng gói trong WAR.
-- Docker có cache Maven/layer, GitHub CI kiểm tra container và auth trên PostgreSQL tạm, Render Blueprint chỉ tự deploy main sau CI thành công.
+- Auth: 40 file Java, tám bảng; User → Role → Function → menu/endpoint trong DB, JWT/BCrypt/CSRF, scope/owner/version và lịch sử mutation nguyên tử.
+- Business: danh mục, địa điểm, nhà xe/xe/tài xế, tuyến/chuyến, đặt chỗ/tồn chỗ theo chặng, báo cáo và tiến độ chuyến theo mốc tài xế.
+- Common: 61 file Java, giữ nền MVC/JPA/JDBC, envelope/lỗi/locale/Swagger và nhật ký API; gồm cấu hình JDBC Oracle 26ai đang chuẩn bị, chưa bật runtime Oracle. Đã bỏ job/mail/media/monitoring/traffic cùng provider và giao diện phụ.
+- Nhật ký /operations/api-journal: user/request/thời gian, snapshot payload/response đã lọc, copy cURL/Postman. Cần grant page/API tương ứng; không ghi token/mật khẩu/PII hoặc tự replay mutation.
+- Database: tám SQL theo auth/catalog/carrier/trip/booking/common/foundation, tạo 23 bảng ứng dụng + history. Database có history khác cần bảo trì rebaseline có đối chiếu cấu trúc trước.
+- Bộ khởi tạo đầy đủ: 43 tài khoản, 6 nhà xe, 24 xe/tài xế, 24 tuyến, 494 chuyến và 2.952 đơn giả lập. [Tài khoản, key mật khẩu và luồng dùng thử](docs/01-bat-dau/CHAY_LOCAL.md#tài-khoản-và-dữ-liệu-khởi-tạo); init opt-in, giữ dữ liệu/password đã có.
 
-Đây là **nền tảng đồ án**, chưa hoàn thành nghiệp vụ nhà xe/xe, tuyến/chuyến, đặt chỗ/tồn chỗ, Geolocation/Maps hoặc báo cáo. Phạm vi, thứ tự và người phụ trách nằm trong tài liệu bên dưới.
+Trạng thái merge/deploy và bằng chứng nghiệm thu nằm trong [tiến độ](docs/05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md); source cục bộ chưa đồng nghĩa main/Render đã được cập nhật. Dữ liệu nền do dự án tạo theo yêu cầu, không xác nhận là hoạt động thật của một đơn vị vận tải.
 
-## Tài liệu phải đọc
+## Tài liệu
 
-**Người mới mở [Bắt đầu tại đây — mục lục và thứ tự đọc](docs/README.md).** Có 5 bước: tổng quan → chạy/format → luồng request/API → quy ước → nhận việc. Tài liệu đã chia thành thư mục 01–06 và 99 lưu trữ; chuyên đề vận hành/provider đọc theo phần việc.
+Bắt đầu tại [mục lục 5 bước](docs/README.md), [tổng quan](docs/01-bat-dau/TONG_QUAN_HE_THONG.md), [chạy IntelliJ](docs/01-bat-dau/CHAY_LOCAL.md), [cấu trúc common](docs/02-phat-trien/CONSTANTS_VA_CAU_TRUC_WEB.md) và [schema/quyền](docs/02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md). Dùng AI đọc [AGENTS.md](AGENTS.md) và [bàn giao](docs/06-ai-va-ban-giao/AI_VA_BAN_GIAO.md); nhánh thành viên → dev, chỉ phát hành main khi chủ dự án có lệnh mới.
 
-Ba nguồn dùng thường xuyên: [Tổng quan hệ thống](docs/01-bat-dau/TONG_QUAN_HE_THONG.md), [Tiến độ nhóm và PR bằng chứng](docs/05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md), [Nghiệm thu trước nghiệp vụ](docs/05-ke-hoach/NGHIEM_THU_NEN_TANG.md). Phân công tương lai không được coi là đóng góp đã hoàn thành.
+## Chạy và kiểm tra
 
-Kho Markdown tập trung trong `docs/`; [công nghệ và thư viện BE → UI](docs/01-bat-dau/CONG_NGHE_VA_THU_VIEN.md) tổng hợp phiên bản từ source, vai trò, điểm đọc code và câu trả lời khi trình bày đồ án.
+IntelliJ: Maven profile local → Reload Maven → VietRoute Local → Run/Debug, mặc định http://localhost:8080/login?lang=vi. .env gốc được theo dõi Git theo ngoại lệ chủ dự án, không sao chép secret vào docs/log/image. OS/IDE có ưu tiên cao hơn file; WAR/Render nhận biến môi trường, test/build không tự đọc .env.
 
-Khi dùng AI, chuyển máy hoặc tiếp tục việc dở, đọc một hướng dẫn [AI và bàn giao](docs/06-ai-va-ban-giao/AI_VA_BAN_GIAO.md). Quy tắc/ngữ cảnh theo Git; env/secret cấp riêng. Chạy `npm run check:rules` / `npm run check:docs` cùng formatter để kiểm quy ước và cấu trúc tài liệu mà không cần khởi động app.
-
-Menu **Hệ thống** có [quản lý job, ma trận quyền/gán role và xem cấu hình an toàn](docs/04-van-hanh/QUAN_TRI_HE_THONG.md). Các màn dùng quyền backend và CSRF chung; cấu hình chỉ đọc, secret vẫn ở Environment.
-
-ADMIN có SYSTEM_READ có thể mở **Hệ thống → Nhật ký API** để tra traceId/controller/lỗi và xem request/response đã lọc; có copy cURL/xuất Postman. Lịch sử lưu PostgreSQL dùng chung giữa các node, mặc định 7 ngày và mục tiêu 10.000 bản ghi; bản ghi đã commit còn sau restart. Xem [hướng dẫn nhật ký và debug](docs/04-van-hanh/NHAT_KY_API_VA_DEBUG.md).
-
-[Format IntelliJ dùng chung](docs/01-bat-dau/FORMAT_INTELLIJ.md): Project scheme + EditorConfig, nút **VietRoute Format / VietRoute Format Check** và cách bật format khi lưu. Chốt `npm run format:check` trước commit; các file IDE cá nhân vẫn bị ignore.
-
-## Chạy dự án
-
-**IntelliJ:** bật Maven profile `local`, Reload Maven, chọn **VietRoute Local** rồi Run/Debug. Có lớp `VietRouteApplication.main()` dùng Tomcat nhúng cho phát triển; production vẫn WAR. Hướng dẫn môi trường và phương án Tomcat Server nằm trong [Cloudinary và IntelliJ](docs/01-bat-dau/CHAY_LOCAL_VA_CLOUDINARY.md).
-
-Cài JDK 17/21, đặt JAVA_HOME đúng thư mục JDK. Import pom.xml vào IDE. WAR không tự đọc `.env`; launcher local chủ động đọc file riêng theo hướng dẫn chạy IntelliJ: đặt biến môi trường trong Tomcat/IDE hoặc dùng Docker `--env-file`.
-
-Khi phát triển, cài Node.js để chạy `npm ci`, `npm run format` và `npm run format:check`. Bộ format Java/HTML/CSS/JS/XML chỉ dùng ở máy phát triển; production Docker không cài Node. Tên lớp dùng `DTO` viết hoa, thời điểm Java dùng `Instant`. Mỗi người làm nhánh theo bảng [phân công](docs/05-ke-hoach/PHAN_CONG.md), mở PR rồi mới merge vào `main`.
-
-```powershell
-# Kiểm tra phát triển, bao gồm test local không dùng Neon
+~~~powershell
+npm ci
+npm run format
+npm run format:check
+npm run check:rules
+npm run check:docs
 .\mvnw.cmd verify
+node --test src/test/resources/dev/*.test.cjs
+~~~
 
-# Kiểm tra CSRF của Swagger bằng Node, chỉ dành cho phát triển
-node --test src/test/resources/dev/swagger.test.cjs
+PostgreSQL regression dùng database riêng theo [API base](docs/02-phat-trien/API_BASE.md); mặc định unit/H2/MVC không cần Neon. Production đóng gói bằng Maven profile production, không compile/chạy test hoặc đưa launcher nhúng vào WAR. Không chạy init/test/cleanup production để kiểm build.
 
-# Build production: bỏ qua cả compile và chạy test
-.\mvnw.cmd -Pproduction clean package
-
-# Chạy Docker với cấu hình local đã chuẩn bị
-# Nếu DB_INIT_ENABLED=true, ứng dụng sẽ chạy migration/seed trên DB đã cấu hình.
-docker build -t vietroute-web .
-docker run --rm --env-file .env -p 10000:10000 vietroute-web
-```
-
-Docker: mở http://localhost:10000; `/login`, `/account`, `/admin`, `/docs`, `/v3/api-docs`. WAR thủ công: deploy `target/vietroute.war` lên Tomcat 10.1 và thêm context `/vietroute` vào các đường dẫn. Linux/macOS dùng `sh ./mvnw` hoặc `./mvnw`.
-
-Cần DB đã migrate để đăng nhập/tra danh mục. Trang chủ, trang đăng nhập, Swagger và `/health` có thể render khi initializer tắt; `/health` chỉ xác nhận web availability, không xác nhận DB sẵn sàng. Bootstrap username mặc định `admin`, mật khẩu lấy từ `VIETROUTE_BOOTSTRAP_ADMIN_PASSWORD` trong `.env` local/Environment; không có mật khẩu production trong source.
-
-Schema ứng dụng cấu hình bằng `VIETROUTE_DB_SCHEMA` (mặc định `vietroute`) trong database `neondb`. Query và metadata tự dùng schema cấu hình; DB mới tạo bảng/index/seed tại đó, legacy public được nâng cấp giữ dữ liệu/hash. Đổi tên schema đang có dữ liệu cần bảo trì/rename DB trước khi đổi key; startup chặn history ở nơi khác để tránh seed nhầm. Xem hướng dẫn schema ở trên.
+Chỉ chủ động bật DB_INIT/ACCESS_SYNC/default seed khi cần khởi tạo/nâng cấp môi trường đã sao lưu. Startup giữ hash tài khoản hiện có; .env không đặt lại mật khẩu đã đổi trong DB. /health chỉ kiểm web availability; xem [nhật ký và vận hành](docs/04-van-hanh/NHAT_KY_API_VA_DEBUG.md) để chẩn đoán DB/request.
 
 ## Cấu trúc
 
-```text
+~~~text
 src/main/java/vn/vietroute/
-  common/     base, constant, exception, validation, util, jdbc, config, web, monitoring, job, mail, media, traffic
-  auth/       config, security, controller, dto/request, dto/response, entity, repository, service
-  business/
-    catalog/  controller, dto/request, dto/response, entity, repository, service
+  auth/                  config, security, controller/api, dto/request, dto/search,
+                         entity, repo, service, initializer
+  business/<module>/     controller/api, dto/request, dto/response, dto/search,
+                         entity, repo, service, initializer
+  common/                base, config, initializer, jdbc, api_journal, web,
+                         constant, exception, validation
 src/main/resources/
-  i18n/              messages_vi.properties, messages_en.properties
-  db/migration/      Migration SQL có phiên bản và checksum
-src/main/webapp/
-  WEB-INF/views/     fragments, auth, docs và các trang Thymeleaf
-  assets/            CSS/JavaScript dùng chung
-src/test/            Test local, bị loại khỏi build context/image production
-```
-
-Controller chỉ nhận request, service giữ nghiệp vụ/transaction/quyền, repository dùng PreparedStatement. Entity không trả thẳng ra client. Comment các luồng bằng tiếng Việt; thêm message key phải có đủ vi/en. Các module tiếp theo đặt dưới business, không đặt lẫn vào auth/common.
+  db/migration/postgresql/          auth, catalog, carrier, trip, booking, common, foundation
+  i18n/                            Thông báo vi/en
+src/main/webapp/                    Thymeleaf, CSS/JavaScript
+src/test/                          Regression/fixture, không đưa vào image production
+~~~
