@@ -56,11 +56,11 @@ Linux/macOS dùng `./mvnw` hoặc `sh ./mvnw`. Cấu hình Git identity của ch
 
 | Theo clone | Cần chuẩn bị riêng |
 |---|---|
-| Source/docs/AGENTS, migrations, lockfile, `.run`, codeStyles và `.env` ở gốc đã push theo yêu cầu 01/11/2026 | Git credentials, env/thiết lập IDE cá nhân; `.env.*` khác vẫn ignore, key mẫu tại [.env.example](../../.env.example) |
+| Source/docs/AGENTS, migrations, lockfile, `.run`, codeStyles và `.env.example` không secret | Git credentials, root `.env`, env/thiết lập IDE cá nhân; `.env.*` chứa credential bị ignore, key mẫu tại [.env.example](../../.env.example) |
 | Test chia sẻ ở `src/test`, CI và bằng chứng PR | Dựng lại `target/`, `node_modules/`, cache; `.tools/` và process localhost máy cũ không phải công cụ/dịch vụ bàn giao |
 | Cấu hình DB/triển khai | Quyền/dữ liệu PostgreSQL và Render thuộc dịch vụ ngoài Git; có mẫu không đồng nghĩa đã hoạt động |
 
-Chủ dự án cho phép commit chính `.env` ở gốc ngày 01/11/2026 để đổi máy; chỉ có sau khi commit đã được push/clone đúng nhánh. Thành viên có quyền đọc repo cũng đọc được lịch sử file này; không sao chép giá trị vào docs/chat/log.
+Yêu cầu mới02/11/2026 thay thế ngoại lệ cũ: không push password/secret, root `.env` ngừng theo dõi và chỉ giữ trên máy. Clone máy mới copy `.env.example` thành `.env` rồi cấu hình qua kênh riêng. Lịch sử Git cũ không được viết lại trong lượt này; không sao chép giá trị cũ/mới vào docs/chat/log.
 
 WAR không tự đọc `.env`; launcher local chủ động đọc file riêng theo hướng dẫn chạy IntelliJ. Các node cùng môi trường cần cấu hình JWT tương thích; không tạo lại khóa production chỉ vì đổi máy, development dùng secret riêng. Bootstrap không đặt lại mật khẩu admin đã đổi. Port thử 18095 trong ảnh cũ không phải service luôn chạy; launcher local mặc định 8080. Không ghi secret/token/payload riêng tư vào docs, PR hoặc ảnh chụp.
 

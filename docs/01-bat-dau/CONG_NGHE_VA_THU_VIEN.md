@@ -46,7 +46,7 @@ Source giữ Spring MVC/WAR, auth và CRUD business đơn giản dùng Spring Da
 | PostgreSQL JDBC driver | 42.7.14 | Mở connection, PreparedStatement/ResultSet; chuyển Timestamp/Instant tại biên JDBC |
 | Oracle JDBC Thin | ojdbc17 23.26.4.0.0, Oracle 26ai | Cấu hình driver/timeout/schema và Hibernate dialect đã chuẩn bị; runtime chưa bật SQL/migration Oracle. [Cách chọn DB](CHAY_LOCAL.md#chọn-postgresql-hoặc-chuẩn-bị-oracle-26ai), [driver Oracle](https://www.oracle.com/database/technologies/appdev/jdbc-downloads.html) |
 | HikariCP | 7.1.0 | Pool nghiệp vụ mặc định 4 connection/node; journal có pool riêng tối đa 1/node |
-| Neon | Dịch vụ PostgreSQL production do chủ dự án cấu hình | DB `neondb`; schema cấu hình một nơi qua `VIETROUTE_DB_SCHEMA`, mặc định vietroute; credential trong root .env được theo dõi theo yêu cầu và Render Environment, không đưa vào image/log |
+| PostgreSQL máy chủ chủ dự án | DB hiện hành `hieuboy`, thay Neon theo DB02 | Schema qua `VIETROUTE_DB_SCHEMA`, mặc định vietroute; credential chỉ trong .env local/Render Environment, .env ngừng theo dõi Git; không đưa vào image/log |
 | Migration/seed tự quản lý | 8 bước theo cụm, checksum/history và transaction lock | Chạy lúc startup khi bật initializer; giữ mật khẩu cũ, không chạy khi Maven package |
 | Nhật ký API | PostgreSQL, retention 7 ngày, mục tiêu 10.000 dòng | Snapshot được whitelist, query/paging trên DB; không queue/cache lịch sử trong RAM; có counter ghi lỡ khi DB/slot lỗi |
 

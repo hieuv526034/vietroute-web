@@ -4,6 +4,18 @@
 
 Ngày 02/11/2026, hieuv526034 trên nhánh hieuv526034/businessdb01-chuan-hoa-nghiep-vu, HEAD đối chiếu ban đầu10e5698. Tài liệu ghi các mốc kiểm source/common/migration/bỏ GPS/UI và chuẩn bị phát hành theo lệnh chủ dự án. Những dòng chưa commit/merge/deploy trong từng mục mô tả đúng thời điểm kiểm đó; bằng chứng phát hành sau chốt source nằm trong [PR của đợt này](https://github.com/hieuv526034/vietroute-web/pulls?q=is%3Apr+head%3Ahieuv526034%2Fbusinessdb01-chuan-hoa-nghiep-vu), [PR dev → main](https://github.com/hieuv526034/vietroute-web/pulls?q=is%3Apr+base%3Amain+head%3Adev) và deployment thực tế, không suy từ kế hoạch hoặc checkout local. Không ghi phân công thành tác giả source; lịch sử thay thế tra Git.
 
+## DB02 — Chuyển môi trường PostgreSQL theo chủ dự án
+
+Ngày02/11/2026, hieuv526034 trên nhánh hieuv526034/db02-chuyen-postgresql-env từ dev8143627. Chủ dự án yêu cầu thay Neon cho cả local/Render bằng DB hieuboy, khởi tạo schema/dữ liệu mới từ đầu và không push password. Môi trường cũ không bị xóa; không chuyển dữ liệu Neon hoặc tự fallback. Cấu hình source của DB02 ở nhánh riêng, không bao gồm UI02/PR154 và chưa merge dev/main.
+
+Máy chủ PostgreSQL16.14 chưa hỗ trợ TLS. Đã kiểm SSL negotiation trước khi gửi credential và nhận xác nhận riêng cho phép kết nối không mã hóa cho đúng máy chủ này; URL dùng sslmode=disable, không đổi mặc định chung cho DB khác. Credential chỉ trong .env local/Render Environment; .env ngừng theo dõi Git nhưng giữ nguyên trên máy, .env.example chứa đích DB và placeholder. Cập nhật quy tắc AGENTS/docs theo yêu cầu mới; lịch sử Git trước đây không được viết lại.
+
+Trước init: xác nhận chưa có schema vietroute/0 bảng người dùng, có quyền CREATE và pg_trgm. Sao lưu mã hóa Windows DPAPI CurrentUser, phục hồi vào DB loopback riêng và đối chiếu trạng thái trống đạt. Startup tạo24 bảng/8 migration,43 account sử dụng,6 nhà xe,24 xe/24 tài xế,24 tuyến,494 chuyến/2.952 đơn. Không thay tám SQL baseline. Local8080 chạy với DB mới, HTTP43/43 login/đọc dữ liệu scope-owner/logout đạt, bốn dashboard200 và khách bị chặn account API403.
+
+Lượt local đầu bị DB từ chối alias timezone Asia/Saigon từ JVM Windows trước khi tạo schema. Chuẩn hóa VM option -Duser.timezone=Asia/Ho_Chi_Minh trong Run config như Docker, chạy lại thành công; không sửa timezone máy chủ. Kiểm27 test cấu hình/registry/rules/security/render cô lập đạt, không fail/error/skip; npm ci/format/format:check/rules/docs đạt. Không chạy lại full nghiệp vụ/Docker vì chỉ đổi config, VM option và comment, không đổi query/service/entity.
+
+Render giữ image main bbeec57, áp Environment theo ủy quyền. Lượt lưu đầu chỉ thêm schema/vendor; ba trường ẩn URL/user/password tải bất đồng bộ giá trị cũ ghi đè phần nhập, nên lượt HTTP trước đó không được dùng làm bằng chứng DB mới. Đã sửa sau khi chờ trường tải xong và mở lại bản đã lưu, so sánh đủ ba giá trị bằng boolean. [Deployment dep-dbk5gdqjnfac739l8flg](https://dashboard.render.com/web/srv-dbcve0q9lscs73f81reg/deploys/dep-dbk5gdqjnfac739l8flg) Live sau3m04s. Sau hai account kiểm đích DB, lượt cuối đạt **43/43 Render**,0 lỗi: login bằng username, dữ liệu theo scope/owner, logout; bốn dashboard200, khách vào account API403, public6 nhà xe. Đọc token_version trước/sau ngay trong hieuboy cho thấy **43/43 account tăng phiên** ở lượt HTTP này, xác nhận service thực sự dùng DB mới, không chỉ thay nhãn config. Local43/43 và Render43/43 là hai lượt riêng; giữ local8080 chạy sau bàn giao, dừng PostgreSQL loopback kiểm backup. Không load test, đổi plan, JWT secret, xóa Neon hoặc merge main trong DB02.
+
 ## Đã xử lý
 
 - Auth đúng 40 file/8 bảng: JPA đầy cột, DTO class trong đúng package, User → Role → Function → Menu/API, lifecycle/tokenVersion/scope/owner/history và bootstrap một lần.
