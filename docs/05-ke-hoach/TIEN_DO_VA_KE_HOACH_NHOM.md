@@ -48,7 +48,7 @@ Bổ sung chú thích toàn bộ 302 field ở 23 entity và BaseEntity, gồm k
 
 Kiểm riêng 12 tài liệu/45 câu hỏi/bốn phần thành viên, 163 link/anchor nội bộ và checksum Word. ENVEX01 kiểm mọi giá trị ngoài DB password bằng so sánh trong bộ nhớ, .env không đổi; quét file Git bảo đảm không có mật khẩu DB và các secret khác chỉ nằm trong .env.example được cho phép. npm ci/format/check/rules/docs/diff đạt, không chạy lại Java/Node vì lượt bổ sung chỉ sửa env mẫu và hướng dẫn. Maven Wrapper trên Windows PowerShell dừng trước build do Target[0] null; không sửa wrapper để né. Đã dùng đúng Maven3.9.11 cache và chỉ rõ kho dependency local để chạy 29 test ở lượt trước, không đọc .env hoặc dùng DB thật.
 
-## UI03 — menu và các bộ chọn nghiệp vụ
+## UI03 — mốc kiểm local trước phát hành
 
 Tiếp tục trên hieuv526034/docs03-tai-lieu-demo để giữ các thay đổi đang nghiệm thu. Nhận source/test của UI02 commit0f4ceca bằng patch, không phục hồi tài liệu/ảnh cũ và không merge dev/main. Swagger private giữ grant DB, regression hai context đã chạy; PR154 vẫn chưa merge.
 
@@ -72,10 +72,22 @@ Trước thay đổi dữ liệu thật: đã backup nhất quán hieuboy.vietro
 
 Đã commit cec5f41 và mở [PR156 vào dev](https://github.com/hieuv526034/vietroute-web/pull/156). PR154/155 đã qua check và merge dev lần lượt tại5fc418f/e7941e5; tích hợp lại vào nhánh riêng giữ nguyên source đã kiểm, không phục hồi tài liệu/ảnh cũ. Kiểm format/rules/docs/diff sau tích hợp đạt. Render đã lưu và đối chiếu các cờ init/sync cùng ba key seed theo role; chưa chạy bản mới tại mốc ghi nhận này. Không đổi DB password/JWT hoặc mật khẩu account cũ.
 
-Tiếp theo: PR156 qua check vào dev, PR dev → main qua Production CI, rồi kiểm Render/HTTP/DB. Bằng chứng phát hành và kết quả Live cập nhật tại PR156 cùng PR phát hành được liên kết từ đó; không coi mốc chuẩn bị này là đã deploy. Các PR Dependabot/nhánh cũ không thuộc phạm vi, chưa có review nghiệm thu của thành viên khác.
+Mốc chuẩn bị trên đã được thay bằng kết quả phát hành dưới đây. Các PR Dependabot/nhánh cũ không thuộc phạm vi, chưa có review nghiệm thu của thành viên khác.
+
+### DUYLONG02 — bằng chứng main và Render
+
+[PR156](https://github.com/hieuv526034/vietroute-web/pull/156) đã merge dev tại5ecbbb3 sau Java/format/docs đạt. [PR157 dev → main](https://github.com/hieuv526034/vietroute-web/pull/157) đã merge tại c706d0a sau đủ bốn checks, gồm [Production CI của PR](https://github.com/hieuv526034/vietroute-web/actions/runs/41444594467). [CI main](https://github.com/hieuv526034/vietroute-web/actions/runs/41445789297) cũng đạt:203 Java/70 PostgreSQL, Docker/Tomcat/home/assets, WAR không credential/test, bootstrap/restart, transaction pooler và recovery8 baseline. Không bypass gate hoặc Manual Deploy.
+
+[Render deployment](https://dashboard.render.com/web/srv-dbcve0q9lscs73f81reg/deploys/dep-dbk89fuq1p3s73bhm6j0) báo Deploy succeeded | Live, đúng c706d0a, auto-deploy mất4m33s. Startup bổ sung nhà xe Duy Long và152 chuyến. DB hiện hành có46 account sử dụng,7 nhà xe,25 xe/25 tài xế,28 mẫu tuyến,646 chuyến và3878 đơn. Đây là nâng cấp giữ dữ liệu, không ép về3866 đơn của DB mới: các đơn WEB cũ giữ nguyên, chỉ bổ sung dữ liệu còn thiếu.
+
+Đối chiếu chỉ đọc với bản sao đã phục hồi: đủ14 bảng nghiệp vụ giữ nguyên mọi dòng cũ, hash mật khẩu các account cũ khớp. Browser Live chọn Hải Phòng → Hà Nội/điểm Duy Long/ngày04/11 thấy hai lượt05:00–09:00 và12:00–15:00, giá180.000đ/chỗ và13 chỗ còn sau đơn giả lập. Bộ chọn lấy danh mục thật, chỉ một nút tìm; không có nút chuyển trang trong từng select. Cột sức chứa của chuyến vẫn16, chỗ còn là tồn sau đặt chỗ.
+
+HTTP Live đạt46/46 account: username login → dữ liệu theo scope/owner → logout. Admin đọc /docs và /v3/api-docs200;45 account thường đều403 ở cả hai đích. Tài xế/điều hành Duy Long thấy đúng152 chuyến cùng nhà xe; khách Duy Long có2 đơn của mình. tokenVersion của cả46 account tăng trong hieuboy ở lượt này, xác nhận request Render thực sự dùng DB hiện hành. Hai chiều tìm công khai đều2 kết quả/ngày; kiểm đúng bốn khung giờ,16 chỗ và tên Phạm Thành Lương. Năm asset CSS/JS khớp checksum source đã phát hành.
+
+Không tạo đơn hoặc thu tiền thật để kiểm production. Lượt OpenAPI đầu tiên timeout40s; lượt sau với timeout90s đạt, các lượt kiểm hoàn chỉnh không lỗi. Đã dùng page size1/tối đa hai phiên để kiểm count/quyền mà không tải thừa dữ liệu; không coi đây là kiểm tải/SLA. Dữ liệu/hash cũ đối chiếu trước các phiên login/logout; thay tokenVersion là tác động vòng đời đăng nhập có chủ đích. PostgreSQL test chứa bản phục hồi đã dừng sau nghiệm thu. Kết quả và link triển khai được bàn giao thêm trong PR157 và PR DUYLONG02.
 
 ## Còn lại và bước tiếp
 
-Nghiệm thu toàn bộ qua PR156 và PR phát hành theo lệnh DUYLONG01. Chưa có Oracle runtime/regression, kiểm tải/SLA hoặc backup di động/PITR/RPO/RTO; DPAPI local phụ thuộc tài khoản Windows. AccountChallengeRepo còn SQL phụ cũ chưa được luồng hiện hành gọi, cần dọn riêng khi sửa auth, không trình bày như chức năng đang hoạt động. Kiểm thêm cách chạy Maven Wrapper trên máy trước khi dùng hướng dẫn local.
+Source DUYLONG01 đã có trên dev/main và Live theo bằng chứng trên; DUYLONG02 chốt tài liệu nghiệm thu. Chưa có Oracle runtime/regression, kiểm tải/SLA hoặc backup di động/PITR/RPO/RTO; DPAPI local phụ thuộc tài khoản Windows. AccountChallengeRepo còn SQL phụ cũ chưa được luồng hiện hành gọi, cần dọn riêng khi sửa auth, không trình bày như chức năng đang hoạt động. Kiểm thêm cách chạy Maven Wrapper trên máy trước khi dùng hướng dẫn local.
 
 Theo [quy trình Git](../../CONTRIBUTING.md): nhánh thành viên → PR/check/review → dev; main/deploy chỉ khi có lệnh mới. Routine test dùng DB cô lập, không root .env hoặc DB thật. Dữ liệu seed neo ngày lần đầu, muốn demo ngày mới thì tạo chuyến hợp lệ trên DB demo đã được phép, không reset DB thật.
