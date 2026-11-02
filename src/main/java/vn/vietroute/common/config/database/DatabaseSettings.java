@@ -29,7 +29,7 @@ public final class DatabaseSettings {
     /** Schema được validate theo vendor, không tự đổi chữ hoa/thường. */
     private final String schema;
 
-    /** Trần connection nghiệp vụ trên mỗi node, mặc định 4 để phù hợp Neon Free. */
+    /** Trần connection nghiệp vụ trên mỗi node, mặc định 4 connection nghiệp vụ mỗi node. */
     private final int maximumPoolSize;
 
     /** Mili giây chờ mượn connection từ pool, mặc định 20000; hết hạn trả lỗi dữ liệu. */

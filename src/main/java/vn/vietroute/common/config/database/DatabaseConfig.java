@@ -40,7 +40,7 @@ public class DatabaseConfig {
     }
 
     /**
-     * Pool nhỏ cho Render Free/Neon: tạo lười, không giữ connection nhàn rỗi lâu hoặc ping giữ DB thức.
+     * Pool nhỏ cho Render Free và PostgreSQL: tạo lười, không giữ connection nhàn rỗi lâu hoặc ping giữ DB thức.
      * Spring đóng pool khi undeploy/shutdown; khởi tạo bean không tự kết nối DB khi initializer tắt.
      */
     @Bean(destroyMethod = "close")

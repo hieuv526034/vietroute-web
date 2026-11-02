@@ -24,7 +24,7 @@ Pool journal vẫn tối đa 1 connection/node, acquire tối đa 250ms. Validat
 
 Khi chuyển trang chậm, đo riêng DNS/connect, thời gian nhận byte đầu và tổng tải bằng vài GET public tuần tự (`/health`, `/login`, asset CSS), rồi kiểm layout/client bằng fixture loopback. Không dùng build/test routine để ghi production hoặc bật probe giữ DB thức. `/health` không query DB, CSS không cần dựng giao diện: nếu các request này chưa nhận byte đầu thì không thể quy toàn bộ thời gian chờ cho JavaScript hay SQL nghiệp vụ. TTFB chưa có khi timeout không phải TTFB bằng 0; phân biệt lỗi client timeout với HTTP 5xx.
 
-[Render Free](https://render.com/docs/free#spinning-down-on-idle) có cơ chế ngủ sau 15 phút không nhận traffic và cần thời gian bật lại; [Neon scale-to-zero](https://neon.com/docs/introduction/scale-to-zero) cũng có thời gian khởi động compute sau lúc không hoạt động. Đây là cơ chế có thể góp phần, không là bằng chứng nguyên nhân của một lượt chậm cụ thể. Cần log runtime và đo DB trên cùng request để tách mạng/Render/app/pool/Neon; không tự bật polling giữ dịch vụ thức, nâng gói hoặc sửa guard/cache authority để làm giao diện có vẻ nhanh. Bằng chứng lượt đo và giới hạn hiện tại ghi ở tiến độ/PR.
+[Render Free](https://render.com/docs/free#spinning-down-on-idle) có cơ chế ngủ sau 15 phút không nhận traffic và cần thời gian bật lại. DB hiện hành là PostgreSQL hieuboy trên máy chủ chủ dự án, không áp dụng mô tả scale-to-zero của Neon cũ để giải thích độ trễ hiện tại. Cần log runtime và đo DB trên cùng request để tách mạng/Render/app/pool/PostgreSQL; không tự bật polling giữ dịch vụ thức, nâng gói hoặc sửa guard/cache authority để làm giao diện có vẻ nhanh. Bằng chứng lượt đo và giới hạn hiện tại ghi ở tiến độ/PR.
 
 ## Đo đăng nhập và diễn tập khôi phục
 
@@ -32,10 +32,10 @@ Luồng web là GET CSRF → POST login → GET document dashboard/account. Đo 
 
 [verify-recovery.sh](../../.github/scripts/verify-recovery.sh) chỉ chạy trong GitHub Actions với PostgreSQL/container test riêng. Script dừng node test để snapshot ổn định, dump custom và restore sang database mới; đối chiếu digest dữ liệu, sequence và constraint qua catalog tham chiếu phục hồi. Sau đó kiểm tám history baseline, khởi động app phục hồi và thử CSRF/login/me/page/API. Không dùng so sánh chuỗi deparse khác parser hoặc bỏ biểu thức bằng regex để ép khớp. Dump/manifest chỉ ở môi trường CI tạm, không upload artifact hoặc in giá trị riêng tư.
 
-Drill không tạo lịch backup, PITR, kho mã hóa, global PostgreSQL roles hoặc bảo đảm RPO/RTO cho Neon. Backup/rebaseline thực tế chỉ được ghi hoàn thành khi có bằng chứng trong [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
+Drill không tạo lịch backup, PITR, kho mã hóa, global PostgreSQL roles hoặc bảo đảm RPO/RTO cho DB production. Backup/rebaseline thực tế chỉ được ghi hoàn thành khi có bằng chứng trong [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
 
 ## Dữ liệu và kiểm tải cô lập
 
 BusinessIntegrationTest giữ fixture dữ liệu đại diện, kiểm plan/index, giới hạn số query, scope/owner, race giữ/trả chỗ và rollback. Có ca hủy 5.001 đơn theo tập và đối chiếu event/version/chỗ; fixture này không phải dữ liệu khởi tạo người dùng hoặc workload production. [verify-business-load.sh](../../.github/scripts/verify-business-load.sh) hiện kiểm report JUnit/PostgreSQL qua gate business-load; không khởi động bộ sampler metrics hoặc quota đã bỏ.
 
-Kết quả local/CI không chứng minh capacity, p95 hay SLA production. Muốn nghiệm thu tải HTTP nhiều node cần môi trường staging, workload và phép đo mới theo source hiện hành; không dùng số tải/metrics của phiên bản trước làm kết quả hiện tại. Không load test hoặc seed Neon để đo, không giảm BCrypt/CSRF/guard/journal để có số đẹp.
+Kết quả local/CI không chứng minh capacity, p95 hay SLA production. Muốn nghiệm thu tải HTTP nhiều node cần môi trường staging, workload và phép đo mới theo source hiện hành; không dùng số tải/metrics của phiên bản trước làm kết quả hiện tại. Không load test hoặc seed DB production để đo, không giảm BCrypt/CSRF/guard/journal để có số đẹp.

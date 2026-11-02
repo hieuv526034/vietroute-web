@@ -20,10 +20,9 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# Cấu hình local: chủ dự án cho phép theo dõi duy nhất .env ở gốc (01/11/2026).
+# Cấu hình local có credential: không theo dõi Git theo yêu cầu 02/11/2026.
 .env
 .env.*
-!/.env
 !.env.example
 src/main/resources/database-local.properties
 *.p12

@@ -13,11 +13,11 @@ Launcher chỉ bind loopback, VIETROUTE_HTTP_PORT mặc định 8080. Java cần
 
 ## Cấu hình và database
 
-Launcher chủ động đọc root .env theo working directory; VIETROUTE_LOCAL_ENV_FILE chọn file khác. OS/IDE ưu tiên file, sau cùng properties mặc định. Root .env được theo dõi Git theo yêu cầu chủ dự án; .env.* khác ignore và [.env.example](../../.env.example) chỉ placeholder. Không in giá trị hoặc đưa secret vào .run/docs/image. WAR/Tomcat/Render chỉ nhận biến môi trường, không tự đọc file. Launcher dùng chế độ development/HTTP nếu không có OS/IDE override rõ ràng.
+Launcher chủ động đọc root .env theo working directory; VIETROUTE_LOCAL_ENV_FILE chọn file khác. OS/IDE ưu tiên file, sau cùng properties mặc định. Root .env và .env.* chứa credential chỉ giữ local, không theo dõi Git theo yêu cầu mới02/11/2026. Khi clone máy mới, copy [.env.example](../../.env.example) thành .env rồi điền password/JWT/bootstrap riêng; mẫu có địa chỉ DB nhưng không mật khẩu thật. Không in giá trị hoặc đưa secret vào .run/docs/image. WAR/Tomcat/Render chỉ nhận biến môi trường, không tự đọc file. Launcher dùng chế độ development/HTTP nếu không có OS/IDE override rõ ràng.
 
 VIETROUTE_LOCAL_ENV_FILE phải đặt ở OS/IDE hoặc system property trước khi launcher chọn file; không cần dòng rỗng trong root .env. File gốc chỉ giữ key còn dùng, nhóm DB/môi trường/JWT-bootstrap/init/account/quyền/journal. Các key email/password của DEFAULT_CUSTOMER/DRIVER/OPERATOR vẫn cần vì JSON seed tham chiếu; chỉ dùng khi tạo account còn thiếu. Key retention/capacity lịch sử quyền, policy và đăng ký/self-service đã bỏ không có tác dụng, không thêm lại từ cấu hình cũ.
 
-Maven/test không đọc root .env. Surefire dùng env/DB cô lập; chạy JUnit trực tiếp cũng không gán env production vào cấu hình test. Local UI kết nối Neon theo cấu hình thật thì CRUD sẽ tác động dữ liệu thật; không dùng nó để kiểm build hoặc tạo fixture.
+Maven/test không đọc root .env. Surefire dùng env/DB cô lập; chạy JUnit trực tiếp cũng không gán env production vào cấu hình test. Local UI kết nối DB hieuboy theo cấu hình thật thì CRUD sẽ tác động dữ liệu thật; không dùng nó để kiểm build hoặc tạo fixture.
 
 ## Khởi tạo môi trường
 
@@ -32,7 +32,7 @@ src/main/resources/
   database/oracle.properties      # URL/user/schema mẫu Oracle 26ai
 ```
 
-VIETROUTE_DB_VENDOR nhận đúng postgresql hoặc oracle. Nếu bỏ key này, DatabaseSettings suy từ VIETROUTE_DB_URL hiện có; thiếu cả hai mới chọn db.vendor. OS/IDE và file local vẫn ưu tiên theo quy tắc trên, sau đó mới tới giá trị mẫu của profile. URL phải khớp vendor; tên không hợp lệ bị từ chối, không dùng tên profile tùy ý làm đường dẫn. Hai profile khai báo db.password= trống; VIETROUTE_DB_PASSWORD từ OS/IDE/.env ưu tiên, chỉ development mới được dùng fallback properties. Production yêu cầu password môi trường tường minh, không fallback credential classpath. Không điền secret thật vào properties được đóng WAR/image. Root .env giữ kết nối PostgreSQL; không tự chuyển Neon sang Oracle. Mật khẩu DB độc lập mật khẩu tài khoản admin/khách/tài xế/điều hành.
+VIETROUTE_DB_VENDOR nhận đúng postgresql hoặc oracle. Nếu bỏ key này, DatabaseSettings suy từ VIETROUTE_DB_URL hiện có; thiếu cả hai mới chọn db.vendor. OS/IDE và file local vẫn ưu tiên theo quy tắc trên, sau đó mới tới giá trị mẫu của profile. URL phải khớp vendor; tên không hợp lệ bị từ chối, không dùng tên profile tùy ý làm đường dẫn. Hai profile khai báo db.password= trống; VIETROUTE_DB_PASSWORD từ OS/IDE/.env ưu tiên, chỉ development mới được dùng fallback properties. Production yêu cầu password môi trường tường minh, không fallback credential classpath. Không điền secret thật vào properties được đóng WAR/image. Root .env giữ kết nối PostgreSQL; không tự chuyển PostgreSQL sang Oracle. Mật khẩu DB độc lập mật khẩu tài khoản admin/khách/tài xế/điều hành.
 
 | Thiết lập | PostgreSQL hiện hành | Oracle 26ai, cấu hình chuẩn bị |
 |---|---|---|
@@ -52,7 +52,7 @@ Oracle dùng JDBC Thin không yêu cầu cài Oracle Client; ojdbc17 phù hợp 
 
 ### Khởi tạo PostgreSQL
 
-Database trắng: điền DB/schema/JWT và VIETROUTE_BOOTSTRAP_ADMIN_* trong env của môi trường; bật DB_INIT có chủ đích để chạy [baseline tám bước](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#baseline-theo-cụm-bảng). Database đã có history khác phải backup/kiểm phục hồi, dừng node và đổi baseline bằng công cụ bảo trì trước; runtime không tự reset. Không bật initializer Neon chỉ để thử launcher.
+Database trắng: điền DB/schema/JWT và VIETROUTE_BOOTSTRAP_ADMIN_* trong env của môi trường; bật DB_INIT có chủ đích để chạy [baseline tám bước](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#baseline-theo-cụm-bảng). Database đã có history khác phải backup/kiểm phục hồi, dừng node và đổi baseline bằng công cụ bảo trì trước; runtime không tự reset. Không bật initializer DB thật chỉ để thử launcher.
 
 ACCESS_SYNC thu thập endpoint sau MVC refresh và đồng bộ bootstrap khi bật; không thay migration. DEFAULT_ACCOUNTS_ENABLED tạo 42 account theo JSON, dùng email/password DEFAULT_CUSTOMER/DRIVER/OPERATOR cho ba nhóm; BUSINESS_INIT_ENABLED tạo bộ vận hành đầy đủ và gán phạm vi/hồ sơ một lần. Bảng đăng nhập và luồng dùng thử nằm ở phần dưới. Các cờ opt-in không đặt lại password hoặc phục hồi ordinary grant/membership đã thu hồi. Chi tiết tại [bootstrap](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#khởi-tạo-và-bảo-vệ-bootstrap).
 
@@ -181,3 +181,7 @@ Không chuyển output --show-passwords vào ảnh/log/PR. Tài liệu giữ key
 auth/default-access.json giữ account/role/function/grant và mapping ban đầu; bootstrap/foundation.json giữ bộ nền tối thiểu; bootstrap/operations.json bổ sung nhà xe/địa điểm/tuyến và profile vận hành. BusinessDataRepo giữ toàn bộ SQL theo tập, UserRepo giữ batch tài khoản/scope/link. Không thêm bảng hoặc sửa tám migration cho dữ liệu này.
 
 Nút /operations/demo và POST /api/v1/admin/demo chỉ bổ sung bộ nền 21 bản ghi như contract API, không tạo account/membership hoặc các chuyến/đơn số lượng lớn từ HTTP. Bộ đầy đủ chạy tại startup với bốn cờ trên, vì quyền/credential là cấu hình người vận hành. Không tự bật bộ này trên môi trường khác chỉ để xem giao diện. Trạng thái đã áp dụng ở môi trường nào xem [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
+
+DB hieuboy hiện chưa bật TLS; chủ dự án đã chấp thuận riêng kết nối không mã hóa cho local/Render tới máy chủ này. URL mẫu dùng sslmode=disable, không áp dụng thành mặc định chung cho DB khác. Khi DBA bật TLS phải cấu hình CA/hostname và đổi URL tương ứng; không dùng cờ bỏ xác minh certificate để giả là TLS đã chuẩn. Password chỉ điền trong .env local/Render Environment, không properties/Git/docs.
+
+Run config VietRoute Local dùng VM option -Duser.timezone=Asia/Ho_Chi_Minh giống Docker. Máy chủ DB mới không nhận alias Asia/Saigon của một số JVM Windows; chạy main ngoài Run config cũng phải đặt timezone chuẩn này trước khi pgJDBC mở connection. Không sửa timezone/schema trên máy chủ để che lỗi cấu hình client.

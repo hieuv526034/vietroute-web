@@ -94,7 +94,7 @@ AuthInitializer đọc auth/default-access.json. Username/email/password bootstr
 
 Bootstrap function nhận các endpoint private hiện có khi sync bật. Vì vậy endpoint mới mặc định deny ở runtime, và được gán bootstrap qua lần sync chủ động; không phải bypass runtime. Ordinary role/function có marker init một lần, không tự khôi phục grant đã thu hồi sau restart. Bật cờ phải có chủ đích, không dùng Neon để thử build.
 
-Account cũ ngoài bootstrap chưa xác minh vẫn bị chặn private. Luồng email/reset đã cắt nên phải có phương án người vận hành xử lý dữ liệu hoặc thiết kế bổ sung trước chuyển đổi; app không tự gửi thư hay tự đặt lại password. `.env` gốc được commit/push tới repo đã được chủ dự án cho phép; giá trị không đưa vào tài liệu/log/image. OS/IDE ưu tiên file local; WAR/Render không tự đọc `.env`.
+Account cũ ngoài bootstrap chưa xác minh vẫn bị chặn private. Luồng email/reset đã cắt nên phải có phương án người vận hành xử lý dữ liệu hoặc thiết kế bổ sung trước chuyển đổi; app không tự gửi thư hay tự đặt lại password. Theo yêu cầu mới02/11/2026, `.env` gốc chỉ giữ local và bị ignore Git, mẫu `.env.example` không có credential thật; giá trị không đưa vào tài liệu/log/image. OS/IDE ưu tiên file local; WAR/Render không tự đọc `.env`.
 
 Danh sách đầy đủ account, key mật khẩu, scope và luồng nghiệm thu ở [hướng dẫn dữ liệu khởi tạo](../01-bat-dau/CHAY_LOCAL.md#tài-khoản-và-dữ-liệu-khởi-tạo). Email bổ sung nằm trong JSON thuộc miền giả lập; credential vẫn từ env. Scope/link chỉ nhận khi bootstrap_scope_pending và nguồn nhà xe/hồ sơ sẵn sàng, không khôi phục sau thu hồi.
 

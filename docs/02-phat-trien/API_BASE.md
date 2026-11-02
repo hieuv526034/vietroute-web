@@ -141,7 +141,7 @@ Không có quyền offline: private request đọc account/grants DB hiện hàn
 
 Swagger mô tả path/query/header/body, inherited pagination và generic envelope. @Operation có trên API, @Schema có trên field; principal/servlet là server-injected. HTTP 201 do execute chọn; lỗi vẫn status thực. Auth source inventory dùng /targets hoặc /resources, không lấy từ OpenAPI như nguồn cấp quyền.
 
-Maven/test không tự đọc `.env`, không migration Neon. Init/sync theo cờ chỉ ở runtime; [chạy local](../01-bat-dau/CHAY_LOCAL.md) mô tả OS/IDE → file launcher → default properties. `.env` gốc được theo dõi Git theo yêu cầu, không đưa giá trị vào docs/log/WAR/image. H2 kiểm phần portable, PostgreSQL riêng kiểm dialect/migration/FK/batch và hai context. Bằng chứng kết quả/giới hạn nằm tại tiến độ; code local không đồng nghĩa đã lên dev/main/Render.
+Maven/test không tự đọc `.env`, không migration Neon. Init/sync theo cờ chỉ ở runtime; [chạy local](../01-bat-dau/CHAY_LOCAL.md) mô tả OS/IDE → file launcher → default properties. `.env` gốc chỉ giữ local/ignore Git theo yêu cầu mới02/11/2026, không đưa giá trị vào docs/log/WAR/image. H2 kiểm phần portable, PostgreSQL riêng kiểm dialect/migration/FK/batch và hai context. Bằng chứng kết quả/giới hạn nằm tại tiến độ; code local không đồng nghĩa đã lên dev/main/Render.
 
 ## Hợp đồng business và ranh giới JPA/JDBC
 

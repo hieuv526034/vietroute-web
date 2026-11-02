@@ -8,15 +8,15 @@ Dev CI kiểm Java/Node/format/rules/docs. Release CI kiểm Docker/PostgreSQL/a
 
 ## Cấu hình service
 
-Blueprint từ render.yaml: Docker, Tomcat 10.1, ROOT.war, PORT do Render cấp, health /health. Environment phải có DB URL JDBC/user/password/schema, JWT secret cố định, bootstrap credential và các cờ init cần thiết. .env gốc được phép theo dõi Git nhưng bị loại Docker context/WAR; Render không tự đọc file này. sync:false không tự đổi secret service đang tồn tại; quản trị viên cập nhật Environment khi cần.
+Blueprint từ render.yaml: Docker, Tomcat 10.1, ROOT.war, PORT do Render cấp, health /health. Environment phải có DB URL JDBC/user/password/schema, JWT secret cố định, bootstrap credential và các cờ init cần thiết. .env gốc chỉ giữ local, bị ignore Git và loại Docker context/WAR; Render không tự đọc file này. sync:false không tự đổi secret service đang tồn tại; quản trị viên cập nhật Environment khi cần.
 
 Cookie production Secure; không đổi JWT secret mỗi deploy. Placeholder không hợp lệ trong production. Env có thể ưu tiên cấu hình cũ nên đối chiếu tên key với .env.example, không đưa giá trị vào log/docs. Không cần env cho GPS/mail/upload/worker/Redis/metrics.
 
 ## Database trước phát hành
 
-Schema mặc định vietroute trong neondb, cấu hình bằng VIETROUTE_DB_SCHEMA. User DB phải có quyền cần thiết cho initializer. [Baseline hiện hành](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#baseline-theo-cụm-bảng) gồm tám SQL theo cụm, 24 bảng cuối cùng. Database mới chạy khi DB_INIT bật; database có history khác dừng trước seed và cần quy trình rebaseline ngoài runtime.
+Môi trường hiện hành dùng database hieuboy, schema vietroute, cấu hình bằng VIETROUTE_DB_SCHEMA. User DB phải có quyền cần thiết cho initializer. [Baseline hiện hành](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#baseline-theo-cụm-bảng) gồm tám SQL theo cụm, 24 bảng cuối cùng. Database mới chạy khi DB_INIT bật; database có history khác dừng trước seed và cần quy trình rebaseline ngoài runtime.
 
-Trước rebaseline: dừng mọi node, backup và kiểm phục hồi riêng, chạy --check rồi mới --apply --confirm-stopped trên đúng đích đã cho phép. Công cụ đối chiếu cấu trúc trước khi đổi riêng history; không xóa dữ liệu hoặc mật khẩu. Không đổi history/seed Neon trong build/test CI. Sau bảo trì phải dùng source tương ứng; không khởi động lại WAR khác baseline.
+Trước rebaseline: dừng mọi node, backup và kiểm phục hồi riêng, chạy --check rồi mới --apply --confirm-stopped trên đúng đích đã cho phép. Công cụ đối chiếu cấu trúc trước khi đổi riêng history; không xóa dữ liệu hoặc mật khẩu. Không đổi history/seed DB thật trong build/test CI. Sau bảo trì phải dùng source tương ứng; không khởi động lại WAR khác baseline.
 
 ## Build và kiểm tra
 
@@ -26,10 +26,12 @@ Trước rebaseline: dừng mọi node, backup và kiểm phục hồi riêng, c
 docker build -t vietroute-web .
 ```
 
-Production Docker chỉ copy src/main và dùng -Pproduction, bỏ cả compile/test fixture và dev launcher. Node/formatter là công cụ phát triển. Chạy container cần truyền env của đúng môi trường có chủ đích; không dùng Neon cho smoke test thông thường.
+Production Docker chỉ copy src/main và dùng -Pproduction, bỏ cả compile/test fixture và dev launcher. Node/formatter là công cụ phát triển. Chạy container cần truyền env của đúng môi trường có chủ đích; không dùng DB thật cho smoke test thông thường.
 
 Sau deploy kiểm Events/Logs/health, login/me, một luồng có DB, thiếu quyền trực tiếp 403, scope/owner, nhật ký và đổi ngôn ngữ. /health không query DB nên UP không chứng minh dữ liệu/quyền/seed đã đúng. Ghi commit/CI/môi trường/kết quả vào tiến độ; chưa deploy thì không ghi Đã có trên main/Render.
 
 ## Kết nối và chẩn đoán
 
 Pool mặc định tối đa bốn connection nghiệp vụ + một journal/node, không ping giữ DB thức. Journal ghi trực tiếp PostgreSQL, không queue RAM, có timeout/backoff và failed-write counter; có thể thiếu record khi DB/slot lỗi. Xem [vận hành](GIAM_SAT_VA_VAN_HANH.md) và [nhật ký](NHAT_KY_API_VA_DEBUG.md). Không sửa guard/cache authority để che lỗi DB; không tăng gói hoặc bật polling khi chưa được yêu cầu.
+
+DB hieuboy hiện chưa bật TLS; chủ dự án đã chấp thuận riêng kết nối không mã hóa cho local/Render tới máy chủ này. URL mẫu dùng sslmode=disable, không áp dụng thành mặc định chung cho DB khác. Khi DBA bật TLS phải cấu hình CA/hostname và đổi URL tương ứng; không dùng cờ bỏ xác minh certificate để giả là TLS đã chuẩn. Password chỉ điền trong .env local/Render Environment, không properties/Git/docs.
