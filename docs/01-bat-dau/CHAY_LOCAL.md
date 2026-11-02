@@ -75,39 +75,45 @@ Chỉ trên terminal riêng, thêm --show-passwords mới đọc/in giá trị t
 | custom10 | Đặng Văn Phúc | CUSTOMER | Đơn đặt chỗ của chính mình |
 | custom11 | Phan Thảo Vy | CUSTOMER | Đơn đặt chỗ của chính mình |
 | custom12 | Mai Hồng Nhung | CUSTOMER | Đơn đặt chỗ của chính mình |
-| driver01 | Nguyễn Minh Tuấn | DRIVER | VietRoute Miền Nam / DRVSOUTH01 |
-| driver02 | Lê Hoàng Nam | DRIVER | VietRoute Bắc Nam / DRVNORTH01 |
-| driver03 | Trần Quốc Huy | DRIVER | VietRoute Miền Nam / DRVSOUTH02 |
-| driver04 | Lê Hoàng Nam | DRIVER | VietRoute Miền Nam / VRDRV03 |
-| driver05 | Phạm Đức Anh | DRIVER | VietRoute Miền Nam / VRDRV04 |
-| driver06 | Phạm Đức Anh | DRIVER | VietRoute Bắc Nam / DRVNORTH02 |
-| driver07 | Bùi Trung Kiên | DRIVER | VietRoute Bắc Nam / VRDRV07 |
-| driver08 | Võ Minh Khoa | DRIVER | VietRoute Bắc Nam / VRDRV08 |
-| driver09 | Lê Quốc Bảo | DRIVER | VietRoute Miền Trung / VRDRV09 |
-| driver10 | Nguyễn Hữu Phúc | DRIVER | VietRoute Miền Trung / VRDRV10 |
-| driver11 | Trần Minh Hải | DRIVER | VietRoute Miền Trung / VRDRV11 |
-| driver12 | Phạm Công Thành | DRIVER | VietRoute Miền Trung / VRDRV12 |
-| driver13 | Hoàng Văn Long | DRIVER | VietRoute Tây Nguyên / VRDRV13 |
-| driver14 | Đỗ Anh Dũng | DRIVER | VietRoute Tây Nguyên / VRDRV14 |
-| driver15 | Ngô Đức Thắng | DRIVER | VietRoute Tây Nguyên / VRDRV15 |
-| driver16 | Vũ Tuấn Anh | DRIVER | VietRoute Tây Nguyên / VRDRV16 |
-| driver17 | Dương Thành Đạt | DRIVER | VietRoute Miền Tây / VRDRV17 |
-| driver18 | Trịnh Minh Quân | DRIVER | VietRoute Miền Tây / VRDRV18 |
-| driver19 | Đinh Văn Lâm | DRIVER | VietRoute Miền Tây / VRDRV19 |
-| driver20 | Phan Quốc Hưng | DRIVER | VietRoute Miền Tây / VRDRV20 |
-| driver21 | Lý Văn Bình | DRIVER | VietRoute Đông Bắc / VRDRV21 |
-| driver22 | Cao Minh Triết | DRIVER | VietRoute Đông Bắc / VRDRV22 |
-| driver23 | Hồ Thanh Tùng | DRIVER | VietRoute Đông Bắc / VRDRV23 |
-| driver24 | Mai Đức Hòa | DRIVER | VietRoute Đông Bắc / VRDRV24 |
-| operator01 | Nguyễn Phương Linh | OPERATOR | VietRoute Miền Nam |
-| operator02 | Trần Quốc Việt | OPERATOR | VietRoute Bắc Nam |
-| operator03 | Lê Ngọc Hân | OPERATOR | VietRoute Miền Trung |
-| operator04 | Phạm Minh Thư | OPERATOR | VietRoute Tây Nguyên |
-| operator05 | Võ Thanh Bình | OPERATOR | VietRoute Miền Tây |
-| operator06 | Đỗ Bảo Ngân | OPERATOR | VietRoute Đông Bắc |
+| driver01 | Quách Tĩnh | DRIVER | Nhà xe Thiên Hành / DRVSOUTH01 |
+| driver02 | Dương Quá | DRIVER | Nhà xe An Phúc / DRVNORTH01 |
+| driver03 | Lệnh Hồ Xung | DRIVER | Nhà xe Thiên Hành / DRVSOUTH02 |
+| driver04 | Trương Vô Kỵ | DRIVER | Nhà xe Thiên Hành / VRDRV03 |
+| driver05 | Tiêu Phong | DRIVER | Nhà xe Thiên Hành / VRDRV04 |
+| driver06 | Đoàn Dự | DRIVER | Nhà xe An Phúc / DRVNORTH02 |
+| driver07 | Hư Trúc | DRIVER | Nhà xe An Phúc / VRDRV07 |
+| driver08 | Thạch Phá Thiên | DRIVER | Nhà xe An Phúc / VRDRV08 |
+| driver09 | Hồ Phỉ | DRIVER | Nhà xe Thanh Vân / VRDRV09 |
+| driver10 | Vi Tiểu Bảo | DRIVER | Nhà xe Thanh Vân / VRDRV10 |
+| driver11 | Trần Gia Lạc | DRIVER | Nhà xe Thanh Vân / VRDRV11 |
+| driver12 | Viên Thừa Chí | DRIVER | Nhà xe Thanh Vân / VRDRV12 |
+| driver13 | Trương Tam Phong | DRIVER | Nhà xe Đại Ngàn / VRDRV13 |
+| driver14 | Hoàng Dược Sư | DRIVER | Nhà xe Đại Ngàn / VRDRV14 |
+| driver15 | Hồng Thất Công | DRIVER | Nhà xe Đại Ngàn / VRDRV15 |
+| driver16 | Chu Bá Thông | DRIVER | Nhà xe Đại Ngàn / VRDRV16 |
+| driver17 | Vương Trùng Dương | DRIVER | Nhà xe Ngọc Hà / VRDRV17 |
+| driver18 | Đoàn Trí Hưng | DRIVER | Nhà xe Ngọc Hà / VRDRV18 |
+| driver19 | Khưu Xử Cơ | DRIVER | Nhà xe Ngọc Hà / VRDRV19 |
+| driver20 | Mã Ngọc | DRIVER | Nhà xe Ngọc Hà / VRDRV20 |
+| driver21 | Tống Viễn Kiều | DRIVER | Nhà xe Trường Phong / VRDRV21 |
+| driver22 | Du Liên Châu | DRIVER | Nhà xe Trường Phong / VRDRV22 |
+| driver23 | Du Đại Nham | DRIVER | Nhà xe Trường Phong / VRDRV23 |
+| driver24 | Mạc Thanh Cốc | DRIVER | Nhà xe Trường Phong / VRDRV24 |
+| operator01 | Nguyễn Phương Linh | OPERATOR | Nhà xe Thiên Hành |
+| operator02 | Trần Quốc Việt | OPERATOR | Nhà xe An Phúc |
+| operator03 | Lê Ngọc Hân | OPERATOR | Nhà xe Thanh Vân |
+| operator04 | Phạm Minh Thư | OPERATOR | Nhà xe Đại Ngàn |
+| operator05 | Võ Thanh Bình | OPERATOR | Nhà xe Ngọc Hà |
+| operator06 | Đỗ Bảo Ngân | OPERATOR | Nhà xe Trường Phong |
 | driverduylong | Phạm Thành Lương | DRIVER | Nhà xe Duy Long / DLGLUONG |
 | operatorduylong | Điều hành Duy Long | OPERATOR | Nhà xe Duy Long |
 | customduylong | Khách hàng Duy Long | CUSTOMER | Đơn của chính mình |
+
+## Phạm vi bộ dữ liệu demo
+
+Bảy nhà xe: Thiên Hành, An Phúc, Thanh Vân, Đại Ngàn, Ngọc Hà, Trường Phong và Duy Long. Sáu tên đầu là tên giả định riêng; 24 tài xế dùng tên nhân vật kiếm hiệp Kim Dung, không là hồ sơ người thật. Duy Long/Phạm Thành Lương giữ theo đầu vào chủ dự án. Mã kỹ thuật VRMIENNAM/VRBACNAM… giữ để không đổi liên kết, username hoặc scope; tên hiển thị lấy từ dữ liệu. Bảng account phía trên là tên lúc khởi tạo mới; đổi JSON không tự ghi đè tên trên DB đã có.
+
+Bộ demo phục vụ toàn hệ thống với nhiều nhà xe, địa phương, tuyến, loại xe, tài xế, lịch chạy, khách hàng và trạng thái đơn/thu–hoàn. Duy Long là một nhà xe trong bộ dữ liệu này. Khi bổ sung tiếp, mở rộng đa dạng các đơn vị và tình huống nghiệp vụ, giữ mã ổn định, scope/owner đúng và seed idempotent; không lấy Duy Long làm mặc định chung hoặc giới hạn nghiệp vụ quanh một nhà xe. Số lượng mới bổ sung theo từng đợt được nghiệm thu, không suy rằng các dữ liệu dự kiến đã có trong DB.
 
 ## Nhà xe Duy Long
 

@@ -74,9 +74,9 @@ Menu giúp điều hướng; backend kiểm lại endpoint và SQL kiểm dữ l
 
 | Người học | Mở phần của mình |
 |---|---|
-| hieuv526034 | [Auth, common, DB và deploy](../05-ke-hoach/PHAN_CONG.md#hieuv526034) |
-| anhhoang104 | [Danh mục, địa điểm và nhà xe](../05-ke-hoach/PHAN_CONG.md#anhhoang104) |
-| BangPhamIT | [Tuyến, chuyến và đặt chỗ](../05-ke-hoach/PHAN_CONG.md#bangphamit) |
-| hiencoi250404-design | [Báo cáo và dashboard](../05-ke-hoach/PHAN_CONG.md#hiencoi250404-design) |
+| hieuv526034 | [Dev nền, DB/deploy và báo cáo/dashboard](../05-ke-hoach/PHAN_CONG.md#hieuv526034) |
+| BangPhamIT | [Dev catalog/carrier/trip/booking và UI](../05-ke-hoach/PHAN_CONG.md#bangphamit) |
+| anhhoang104 | [Báo cáo Word, sơ đồ và tổng hợp bản nộp](../05-ke-hoach/PHAN_CONG.md#anhhoang104) |
+| hiencoi250404-design | [Test thủ công, ảnh chức năng và báo cáo Word](../05-ke-hoach/PHAN_CONG.md#hiencoi250404-design) |
 
-Mỗi người chịu trọn page/API/DTO/service/repo/entity/UI/test trong khối mình bảo trì. Học cả luồng trước/sau phần mình để bàn giao được bằng ID và trạng thái. Đóng góp đã làm phải đối chiếu commit/PR, không suy từ bảng phân công.
+Hai dev chịu source và test của thay đổi mình viết; Anh chủ trì báo cáo Word/sơ đồ, Hien test thủ công/chụp ảnh chức năng; cả hai cùng hoàn thiện bản nộp. Test tự động do hai dev phụ trách. Học luồng trước/sau phần mình để bàn giao được bằng ID, trạng thái, testcase và bằng chứng. Phân công mới từ02/11/2026 không thay tác giả code đã có; đóng góp thực đối chiếu commit/PR.

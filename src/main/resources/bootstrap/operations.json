@@ -191,30 +191,30 @@
   "carriers": [
     {
       "code": "VRMIENTRUNG",
-      "name": "VietRoute Miền Trung",
+      "name": "Nhà xe Thanh Vân",
       "phone": "0236 0000 3301",
-      "description": "VietRoute Miền Trung: tiếp nhận đặt chỗ qua website và tổng đài, phục vụ tuyến liên tỉnh theo lịch công bố. Đội xe ghế ngồi, giường nằm và limousine.",
+      "description": "Nhà xe Thanh Vân: tiếp nhận đặt chỗ qua website và tổng đài, phục vụ tuyến liên tỉnh theo lịch công bố. Đội xe ghế ngồi, giường nằm và limousine.",
       "active": true
     },
     {
       "code": "VRTAYNGUYEN",
-      "name": "VietRoute Tây Nguyên",
+      "name": "Nhà xe Đại Ngàn",
       "phone": "0262 0000 4401",
-      "description": "VietRoute Tây Nguyên: tiếp nhận đặt chỗ qua website và tổng đài, phục vụ tuyến liên tỉnh theo lịch công bố. Đội xe ghế ngồi, giường nằm và limousine.",
+      "description": "Nhà xe Đại Ngàn: tiếp nhận đặt chỗ qua website và tổng đài, phục vụ tuyến liên tỉnh theo lịch công bố. Đội xe ghế ngồi, giường nằm và limousine.",
       "active": true
     },
     {
       "code": "VRMIENTAY",
-      "name": "VietRoute Miền Tây",
+      "name": "Nhà xe Ngọc Hà",
       "phone": "0292 0000 5501",
-      "description": "VietRoute Miền Tây: tiếp nhận đặt chỗ qua website và tổng đài, phục vụ tuyến liên tỉnh theo lịch công bố. Đội xe ghế ngồi, giường nằm và limousine.",
+      "description": "Nhà xe Ngọc Hà: tiếp nhận đặt chỗ qua website và tổng đài, phục vụ tuyến liên tỉnh theo lịch công bố. Đội xe ghế ngồi, giường nằm và limousine.",
       "active": true
     },
     {
       "code": "VRDONGBAC",
-      "name": "VietRoute Đông Bắc",
+      "name": "Nhà xe Trường Phong",
       "phone": "0203 0000 6601",
-      "description": "VietRoute Đông Bắc: tiếp nhận đặt chỗ qua website và tổng đài, phục vụ tuyến liên tỉnh theo lịch công bố. Đội xe ghế ngồi, giường nằm và limousine.",
+      "description": "Nhà xe Trường Phong: tiếp nhận đặt chỗ qua website và tổng đài, phục vụ tuyến liên tỉnh theo lịch công bố. Đội xe ghế ngồi, giường nằm và limousine.",
       "active": true
     },
     {
@@ -399,140 +399,140 @@
     {
       "code": "VRDRV03",
       "carrierCode": "VRMIENNAM",
-      "name": "Lê Hoàng Nam",
+      "name": "Trương Vô Kỵ",
       "phone": "028 0000 3003",
       "active": true
     },
     {
       "code": "VRDRV04",
       "carrierCode": "VRMIENNAM",
-      "name": "Phạm Đức Anh",
+      "name": "Tiêu Phong",
       "phone": "028 0000 3004",
       "active": true
     },
     {
       "code": "VRDRV07",
       "carrierCode": "VRBACNAM",
-      "name": "Bùi Trung Kiên",
+      "name": "Hư Trúc",
       "phone": "028 0000 3007",
       "active": true
     },
     {
       "code": "VRDRV08",
       "carrierCode": "VRBACNAM",
-      "name": "Võ Minh Khoa",
+      "name": "Thạch Phá Thiên",
       "phone": "028 0000 3008",
       "active": true
     },
     {
       "code": "VRDRV09",
       "carrierCode": "VRMIENTRUNG",
-      "name": "Lê Quốc Bảo",
+      "name": "Hồ Phỉ",
       "phone": "028 0000 3009",
       "active": true
     },
     {
       "code": "VRDRV10",
       "carrierCode": "VRMIENTRUNG",
-      "name": "Nguyễn Hữu Phúc",
+      "name": "Vi Tiểu Bảo",
       "phone": "028 0000 3010",
       "active": true
     },
     {
       "code": "VRDRV11",
       "carrierCode": "VRMIENTRUNG",
-      "name": "Trần Minh Hải",
+      "name": "Trần Gia Lạc",
       "phone": "028 0000 3011",
       "active": true
     },
     {
       "code": "VRDRV12",
       "carrierCode": "VRMIENTRUNG",
-      "name": "Phạm Công Thành",
+      "name": "Viên Thừa Chí",
       "phone": "028 0000 3012",
       "active": true
     },
     {
       "code": "VRDRV13",
       "carrierCode": "VRTAYNGUYEN",
-      "name": "Hoàng Văn Long",
+      "name": "Trương Tam Phong",
       "phone": "028 0000 3013",
       "active": true
     },
     {
       "code": "VRDRV14",
       "carrierCode": "VRTAYNGUYEN",
-      "name": "Đỗ Anh Dũng",
+      "name": "Hoàng Dược Sư",
       "phone": "028 0000 3014",
       "active": true
     },
     {
       "code": "VRDRV15",
       "carrierCode": "VRTAYNGUYEN",
-      "name": "Ngô Đức Thắng",
+      "name": "Hồng Thất Công",
       "phone": "028 0000 3015",
       "active": true
     },
     {
       "code": "VRDRV16",
       "carrierCode": "VRTAYNGUYEN",
-      "name": "Vũ Tuấn Anh",
+      "name": "Chu Bá Thông",
       "phone": "028 0000 3016",
       "active": true
     },
     {
       "code": "VRDRV17",
       "carrierCode": "VRMIENTAY",
-      "name": "Dương Thành Đạt",
+      "name": "Vương Trùng Dương",
       "phone": "028 0000 3017",
       "active": true
     },
     {
       "code": "VRDRV18",
       "carrierCode": "VRMIENTAY",
-      "name": "Trịnh Minh Quân",
+      "name": "Đoàn Trí Hưng",
       "phone": "028 0000 3018",
       "active": true
     },
     {
       "code": "VRDRV19",
       "carrierCode": "VRMIENTAY",
-      "name": "Đinh Văn Lâm",
+      "name": "Khưu Xử Cơ",
       "phone": "028 0000 3019",
       "active": true
     },
     {
       "code": "VRDRV20",
       "carrierCode": "VRMIENTAY",
-      "name": "Phan Quốc Hưng",
+      "name": "Mã Ngọc",
       "phone": "028 0000 3020",
       "active": true
     },
     {
       "code": "VRDRV21",
       "carrierCode": "VRDONGBAC",
-      "name": "Lý Văn Bình",
+      "name": "Tống Viễn Kiều",
       "phone": "028 0000 3021",
       "active": true
     },
     {
       "code": "VRDRV22",
       "carrierCode": "VRDONGBAC",
-      "name": "Cao Minh Triết",
+      "name": "Du Liên Châu",
       "phone": "028 0000 3022",
       "active": true
     },
     {
       "code": "VRDRV23",
       "carrierCode": "VRDONGBAC",
-      "name": "Hồ Thanh Tùng",
+      "name": "Du Đại Nham",
       "phone": "028 0000 3023",
       "active": true
     },
     {
       "code": "VRDRV24",
       "carrierCode": "VRDONGBAC",
-      "name": "Mai Đức Hòa",
+      "name": "Mạc Thanh Cốc",
       "phone": "028 0000 3024",
       "active": true
     },
@@ -1609,7 +1609,7 @@
   },
   "provenance": {
     "kind": "PROJECT_GENERATED",
-    "description": "Giả lập vận hành: tên, nhân sự, địa chỉ, liên hệ và lịch chạy do dự án tạo; không xác nhận đơn vị/giá/lịch ngoài thực tế. Không dùng để nhận khách thật.",
+    "description": "Giả lập vận hành: tên, nhân sự, địa chỉ, liên hệ và lịch chạy do dự án tạo; không xác nhận đơn vị/giá/lịch ngoài thực tế. Không dùng để nhận khách thật. Sáu tên nhà xe là tên giả định riêng; 24 tên tài xế mượn nhân vật kiếm hiệp Kim Dung. Nhà xe Duy Long và Phạm Thành Lương giữ theo đầu vào chủ dự án.",
     "duyLong": {
       "providedByOwner": [
         "Tên Nhà xe Duy Long, Hải Phòng",

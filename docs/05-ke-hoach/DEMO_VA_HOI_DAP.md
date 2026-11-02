@@ -2,6 +2,8 @@
 
 Học theo [phần từng thành viên](PHAN_CONG.md), [tổng quan](../01-bat-dau/TONG_QUAN_HE_THONG.md) và source được chỉ ở cuối mỗi nhóm câu hỏi. Câu trả lời dưới đây là mẫu nói ngắn; người trình bày phải chỉ ra được một màn hình, một method/query/test và giới hạn thật. Không học thuộc để nhận chức năng hoặc đóng góp chưa có.
 
+Đọc nhanh: [Lời thoại hai dev](#lời-thoại-trình-bày-của-hai-dev) → [chuẩn bị luồng](#chuẩn-bị-một-luồng-xuyên-suốt) → [hỏi sâu Q46–Q55](#phản-biện-theo-phần-của-hai-dev--q46-đến-q55). Q01–Q45 là bộ nền; phần cuối vẫn giữ yêu cầu báo cáo Word.
+
 ## Kiểm tra trước buổi demo
 
 1. Chốt đúng nhánh/commit/môi trường với [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md). Đối chiếu commit đang chạy trước khi khẳng định menu/select và Swagger private đã có trên Render.
@@ -31,15 +33,167 @@ Maven mặc định có thể bỏ qua ca PostgreSQL có điều kiện; đọc 
 
 | Phút | Người trình bày | Thao tác và câu nói cần đạt |
 |---|---|---|
-| 0–2 | Hieu | “Đây là web đặt chỗ theo chặng; quyền endpoint từ DB và SQL giới hạn dữ liệu.” Nêu stack, tác nhân, scope và phần chưa có |
-| 2–4 | Anh | Mở danh mục/địa điểm, xe/tài xế trong nhà xe. Chỉ quan hệ cha/ID/capacity và liên kết account, bàn giao cho Bang |
-| 4–8 | Bang | Mở chuyến hợp lệ, khách tìm/đặt WEB PENDING; điều hành xác nhận, chỉ chỗ giảm trên chặng, ghi thu thủ công |
-| 8–10 | Bang | Tài xế đúng assignment START → ARRIVE → DEPART điểm giữa → ARRIVE cuối → COMPLETE. Mốc server, không GPS |
-| 10–12 | Hien | Cùng ngày/nhà xe đọc báo cáo, đối chiếu đơn; tách giá trị đặt/thu/hoàn và lượt chỗ |
-| 12–14 | Hieu + mỗi chủ khối | Một ca403 hoặc404 ngoài scope và một409 version cũ trên DB demo. Journal đã che dữ liệu nếu có grant |
-| 14–15 | Cả nhóm | Nêu test/bằng chứng đúng commit, giới hạn và hướng phát triển; trả lời ngắn bằng source |
+| 0–2 | anhhoang104 | Trình bày tổng quan/phạm vi/tác nhân, bộ demo đa nhà xe và tài liệu hướng dẫn đã đối chiếu; nêu đúng vai trò tài liệu |
+| 2–4 | hieuv526034 | Nền auth/common/DB: username, grant endpoint, scope/owner, Swagger quản trị và môi trường/commit đang chạy |
+| 4–8 | BangPhamIT | Từ danh mục/địa điểm/xe–tài xế đến tuyến/chuyến hợp lệ; khách đặt WEB PENDING, điều hành xác nhận/giữ chỗ và ghi thu trên DB demo |
+| 8–10 | BangPhamIT | Tài xế đúng assignment START → ARRIVE → DEPART điểm giữa → ARRIVE cuối → COMPLETE. Mốc server, không GPS |
+| 10–12 | hieuv526034 + hiencoi250404-design | Hieu trình bày report/dashboard; Hien đối soát ca kiểm với đơn cùng ngày/scope, tách giá trị đặt/thu/hoàn và lượt chỗ |
+| 12–14 | hiencoi250404-design + hieuv526034 | Hien trình bày bảng test thủ công/ảnh chức năng và kết quả kiểm lại; Hieu giải thích guard/trace ở source. Không nhận ca chưa chạy là đạt |
+| 14–15 | anhhoang104 + cả nhóm | Chốt tài liệu/test đúng commit, giới hạn và hướng phát triển; hai dev xác nhận phần kỹ thuật, cả bốn trả lời câu hỏi |
 
 Đối chiếu sau mỗi bước: PENDING chưa giữ chỗ → CONFIRMED giữ mọi đoạn → thu không quá total → hủy đủ điều kiện trả chỗ → hoàn riêng không vượt đã thu. Mốc ARRIVE đến điểm trả hoàn tất các đơn CONFIRMED phù hợp; START/DEPART có thể từ chối đơn PENDING đã lỡ điểm đón. Không chạy tất cả nhánh trên cùng một đơn rồi kỳ vọng quay lại trạng thái trước.
+
+## Lời thoại trình bày của hai dev
+
+Phần này là kịch bản có thể tập nói trực tiếp, không phải biên bản đã demo thành công. Dùng khoảng15–18 phút cho hai dev; nếu cả nhóm chỉ có15 phút thì rút từng bước theo chỉ dẫn “Bản ngắn”. Anh mở đầu/tổng hợp Word, Hien trình bày ảnh và kết quả test thủ công theo phân công; hai dev thực hiện luồng dưới đây. Phần hỏi–đáp dùng sau demo, không đọc hết trên sân khấu.
+
+### Chuẩn bị một luồng xuyên suốt
+
+| Việc cần chuẩn bị trước | Điều kiện chốt |
+|---|---|
+| Môi trường | Local/demo được phép ghi, UI tiếng Việt, phiên bản/source đã kiểm; Render là phương án đọc khi phản hồi tốt, không phụ thuộc mạng để hoàn thành thao tác ghi |
+| Phiên đăng nhập | Profile trình duyệt riêng cho admin, operator01, custom01 và driver01; không dùng các tab chung cookie để giả nhiều người |
+| Dữ liệu chính | Thiên Hành: operator01, driver01/Quách Tĩnh, custom01; An Phúc: operator02 để đối chiếu scope. Khách custom01 có thể tìm/đặt nhà xe khác, không bị giới hạn theo tên nhóm account |
+| Chuyến chính | Một chuyến Thiên Hành OPEN, phân công đúng driver01, ba điểm A→B→C, giờ đi khoảng10 phút tới, còn ít nhất2 chỗ trên cả AB/BC; xe/tài xế không trùng lịch. Đánh dấu ID/code, ngày và điểm đón/trả thực tế đã chọn |
+| Khách | custom01 không còn WEB PENDING/CONFIRMED từ lần tập trước; xử lý hợp lệ trên DB demo hoặc chuẩn bị account khác, không sửa SQL/reset để lách điều kiện |
+| Giá minh họa | Nếu chuẩn bị chặng A→C giá180.000đ/chỗ thì2 chỗ thành360.000đ. Nếu dùng tuyến khác, đọc giá server và thay các con số trong lời nói theo dữ liệu thực trên màn |
+| Hai nhánh | Đơn A: xác nhận/thu rồi đi theo tiến độ đến hoàn tất. Đơn B riêng: xác nhận/thu/hủy/hoàn trước khi rời điểm đón; không dùng lại đơn A cho cả hai nhánh |
+| Báo cáo | Ghi số liệu nền, cùng nhà xe/ngày khởi hành Việt Nam với chuyến chính. Đối chiếu phần tăng/giảm sau thao tác, không kỳ vọng toàn báo cáo chỉ có một đơn |
+| Tư liệu dự phòng | Ảnh chức năng và sơ đồ đúng phiên bản do Anh/Hien chuẩn bị; ghi rõ ảnh minh họa khi dùng, không gọi là thao tác Live vừa thành công |
+
+Không đọc mật khẩu thành tiếng hoặc chiếu .env. Lấy mật khẩu từ cấu hình trên máy cá nhân theo hướng dẫn local. Nếu chưa chuẩn bị được chuyến ba điểm, dùng lịch sử một chuyến nhiều chặng để giải thích AB/BC, rồi demo tiến độ trên chuyến hai điểm hợp lệ; khi đó bỏ bước DEPART điểm giữa. Các thao tác bên dưới có thể đổi nhãn theo locale nhưng dùng đúng chức năng hiện hành.
+
+### Hieu — mở bài, kiến trúc và quyền (khoảng4 phút)
+
+**H1 — Mở Home và sơ đồ hệ thống.**
+
+> Em chào thầy/cô. Nhóm em xây dựng VietRoute để quản lý nhà xe, tuyến, chuyến và đặt chỗ theo chặng. Sản phẩm có bốn tác nhân: quản trị viên, điều hành nhà xe, tài xế và khách hàng. Trong phần này em trình bày nền xác thực, phân quyền và cách tổ chức hệ thống; bạn Bang sẽ đi một luồng vận hành từ dữ liệu nguồn đến chuyến và đơn, sau đó em đối chiếu bằng báo cáo/dashboard.
+>
+> Ứng dụng dùng Java, Spring MVC, Spring Security và Thymeleaf, đóng gói WAR chạy trên Tomcat. Dự án không dùng Spring Boot. Dữ liệu hiện chạy bằng PostgreSQL; CRUD đơn giản dùng JPA, còn truy vấn tổng hợp, batch và khóa giữ chỗ dùng JDBC trong cùng cơ chế transaction. Controller nhận và kiểm dữ liệu, service xử lý nghiệp vụ, repo làm việc với DB; API trả DTO riêng.
+
+Chỉ sơ đồ Browser → Controller → Service → Repo → PostgreSQL, rồi chỉ RootConfig/WebConfig và một BookingAPI/BookingService/BookingRepo nếu được hỏi. Không mở hàng loạt file hoặc đọc tên công nghệ quá lâu. **Bản ngắn:** giới thiệu bài toán/bốn tác nhân, nói ba lớp và chuyển H2.
+
+**H2 — Đăng nhập admin, mở menu tài khoản và phân quyền.**
+
+> Người dùng đăng nhập bằng username và password. Mật khẩu được lưu dưới dạng BCrypt hash; JWT có thời hạn và được kiểm cùng trạng thái tài khoản hiện hành. Quyền đi theo User → Role → Function → Menu/API. Menu giúp điều hướng; quyền endpoint mới quyết định một request có được thực hiện hay không. Danh sách endpoint được thu thập từ Spring MVC, nhưng endpoint mới chưa được gán thì mặc định bị chặn.
+>
+> Ở đây em mở tài khoản, role và chức năng đã gán. Chúng em không viết enum cố định cho từng quyền nghiệp vụ. Sau quyền chức năng còn có phạm vi dữ liệu nhà xe. Vì vậy hai điều hành có thể có cùng chức năng nhưng nhìn thấy dữ liệu khác nhau.
+
+Mở các tab sẵn có tại /operations/accounts và /operations/access; chọn một role/function có sẵn để chỉ liên kết, không gán/xóa quyền ngẫu hứng. Có thể mở inventory /operations/access/resources để chỉ method + route template. **Bản ngắn:** chỉ một role, một function, một target endpoint.
+
+**H3 — Chứng minh quyền bằng hai phiên.**
+
+> Em dùng admin mở Tài liệu API. Đích này thuộc bộ grant quản trị. Sau đó em chuyển sang phiên operator01 và nhập trực tiếp cùng đường dẫn /docs; ứng dụng phải chặn quyền, không chỉ ẩn menu. Tiếp theo em mở danh sách nghiệp vụ: operator01 thuộc Thiên Hành, operator02 thuộc An Phúc. Bộ lọc giao diện không tự cấp quyền; server vẫn kiểm scope khi đọc hoặc cập nhật ID.
+>
+> Với khách hàng, giới hạn là đơn của chính mình. Với tài xế, giới hạn là chuyến được phân công cho account. Đây là ba quan hệ khác nhau: scope nhà xe, owner đơn và assignment tài xế.
+
+Kết quả mong đợi: admin /docs đọc được, operator /docs bị403; hai danh sách điều hành đúng scope. Chỉ dùng ID hai nhà xe đã chuẩn bị trên DB demo nếu cần chứng minh ngoài scope; không dò ID. Nếu quyền thực tế không khớp thì dừng và ghi lỗi, không gọi mọi403 là “đúng bảo mật”. **Bản ngắn:** chỉ admin/operator với /docs.
+
+**H4 — Chuyển lời.**
+
+> Nền quyền bảo đảm đúng người được thao tác đúng chức năng và dữ liệu. Tiếp theo bạn Bang sẽ dùng chính các vai trò này để trình bày luồng tạo chuyến, tìm chuyến, đặt và xác nhận chỗ.
+
+### Bang — dữ liệu nguồn, chuyến và đặt chỗ (khoảng7–9 phút)
+
+**B1 — Mở danh mục/địa điểm và nhà xe/xe/tài xế.**
+
+> Luồng nghiệp vụ bắt đầu từ dữ liệu nguồn: tỉnh, địa điểm, loại xe, nhà xe, xe và tài xế. Dữ liệu có danh mục được chọn từ API thay vì yêu cầu người dùng nhớ ID. Chọn tỉnh thì danh sách địa điểm phụ thuộc thay đổi; chọn nhà xe thì xe, tài xế và tuyến phải thuộc nhà xe đó. Backend kiểm lại các quan hệ này khi lưu.
+>
+> Bộ dữ liệu có nhiều nhà xe. Thiên Hành là đơn vị em dùng cho luồng chính; Duy Long là một trường hợp khác có xe16 chỗ và bốn lượt Hải Phòng–Hà Nội mỗi ngày. Tên nhà xe và phần lớn dữ liệu là giả lập để học/nghiệm thu, không phải lịch khai thác thương mại đã xác minh. Tên tài xế Quách Tĩnh cũng là tên nhân vật giả lập.
+
+Mở modal xe/tài xế có sẵn để chỉ field và quan hệ; không cần tạo đủ mọi danh mục tại sân khấu. Duy Long giữ Phạm Thành Lương; không chuyển driver01 sang Duy Long để tiện demo. **Bản ngắn:** chỉ quan hệ nhà xe → xe/tài xế, bỏ ví dụ Duy Long.
+
+**B2 — Mở /operations/routes và /operations/trips.**
+
+> Tuyến là mẫu một chiều gồm các điểm có thứ tự, thời gian tương đối và giá cộng dồn. Chuyến là một lần chạy cụ thể có ngày giờ, xe, tài xế và sức chứa. Khi tạo chuyến, hệ thống lưu snapshot các điểm, giá và lịch để việc sửa tuyến mẫu sau này không thay đổi lịch sử chuyến đã tạo.
+>
+> Em mở chuyến đã chuẩn bị và chỉ tuyến, giờ khởi hành, xe và tài xế được phân công. Khi mở chuyến, service kiểm nguồn còn hợp lệ và lịch xe/tài xế không bị chồng. Phân công cùng tên nhà xe chưa đủ; chuyến phải gắn đúng account tài xế.
+
+Chỉ chuyến chính OPEN và các điểm đón/trả. Nếu muốn demo tạo mới, chuẩn bị trước mẫu tuyến và xe/tài xế rảnh, tạo DRAFT rồi mở hợp lệ trên DB demo; không chỉnh sửa một chuyến đã có đơn chỉ để minh họa CRUD. **Bản ngắn:** xem chuyến đã chuẩn bị, không tạo mới.
+
+**B3 — Chuyển phiên khách custom01, mở /journeys.**
+
+> Khách chọn nơi đi, nơi đến, ngày đón và số chỗ. Các danh mục được tải từ API; các ô phụ thuộc cập nhật theo lựa chọn trước. Chỉ một nút tìm áp tiêu chí vào bảng kết quả. Phân trang thuộc bảng kết quả, không nằm bên cạnh từng ô chọn.
+>
+> Em tìm chặng A đến C của chuyến vừa giới thiệu. Giá và chỗ còn do server tính. Nếu chặng này180.000đ/chỗ thì hai chỗ thành360.000đ. Tồn chỗ theo chặng là chỗ ít nhất còn lại trên các đoạn mà khách đi qua, vì vậy chặng khác nhau trên cùng chuyến có thể còn số chỗ khác nhau.
+
+Chọn đúng tỉnh/địa điểm thực tế ứng với A/C trong phiếu chuẩn bị; đọc lại ngày và chiều trước bấm tìm. Mở kết quả đúng nhà xe/chuyến, không chọn chuyến đầu tiên bất kỳ. **Bản ngắn:** điền sẵn danh mục, chỉ bấm Tìm và giải thích một kết quả.
+
+**B4 — Tạo yêu cầu WEB, xem /my-bookings.**
+
+> Em chọn chuyến và tạo yêu cầu đặt hai chỗ. Kết quả ban đầu là PENDING, nghĩa là đã tiếp nhận yêu cầu nhưng chưa giữ chỗ. Khách chỉ xem được đơn của chính mình, và bản hiện hành giới hạn mỗi khách một đơn WEB đang PENDING hoặc CONFIRMED.
+>
+> Trạng thái này giúp phân biệt yêu cầu và chỗ đã được điều hành xác nhận. Kết quả tìm kiếm cũng không cam kết chỗ còn nguyên đến lúc xác nhận. Giá, owner và audit được xác định lại ở server, không tin tổng tiền hoặc userId do trình duyệt tự gửi.
+
+Ghi mã đơn A, kiểm số chỗ/tổng/trạng thái. Nếu trước đó khách còn đơn active, dùng nhánh đã chuẩn bị; không bấm gửi nhiều lần. **Bản ngắn:** mở đơn PENDING đã chuẩn bị và nói rõ đang xem dữ liệu có sẵn.
+
+**B5 — Chuyển operator01, mở /operations/bookings và xác nhận.**
+
+> Điều hành mở đúng đơn và xác nhận. Trong một transaction, ứng dụng khóa/kiểm lại chuyến, đơn và các segment liên quan. Chỉ khi mọi đoạn còn đủ chỗ thì đơn mới chuyển CONFIRMED và giữ đủ hai chỗ trên từng đoạn. Nếu hai request cùng tranh chỗ cuối, chúng không được cùng xác nhận thành công.
+>
+> Ví dụ trước khi xác nhận AB còn5, BC còn3 thì A đến C nhận tối đa3. Xác nhận hai chỗ làm AB còn3 và BC còn1. Nếu một đoạn không đủ, cả thao tác phải rollback; không có tình trạng đơn xác nhận nhưng thiếu chỗ trên một đoạn.
+
+So sánh tồn trước/sau bằng số thực tế đã ghi. Ví dụ5/3 chỉ để minh họa nếu dữ liệu không đúng các số đó; không nói thành kết quả vừa quan sát. **Bản ngắn:** xác nhận một đơn, chỉ trạng thái và số chỗ thay đổi.
+
+**B6 — Ghi thu và giải thích nhánh hủy/hoàn.**
+
+> Đây là ghi nhận thu tiền thủ công, chưa phải thanh toán ngân hàng. Với đơn360.000đ đã xác nhận, em ghi thu200.000đ rồi chỉ số đã thu và phần còn lại. Mỗi thao tác thu/hoàn có requestKey để lần gửi lặp cùng nội dung không cộng tiền thêm lần nữa; thao tác mới còn kiểm version hiện hành.
+>
+> Hủy đơn và hoàn tiền là hai việc riêng. Trên đơn B đã chuẩn bị, hủy đủ điều kiện sẽ trả chỗ; số tiền đã thu vẫn còn và cần ghi hoàn riêng. Ví dụ thu200.000đ, hoàn50.000đ thì thực thu ròng còn150.000đ và khoản phải hoàn của đơn đã hủy là150.000đ. Hệ thống không tự chuyển tiền cho khách khi bấm Hủy.
+
+Đơn A giữ để chạy tiến độ; nhánh B dùng đơn khác trước khi điểm đón đã rời. Bản ngắn chỉ mở lịch sử B, bỏ thao tác hủy/hoàn; tuyệt đối không thu lại nếu chưa biết request trước có thành công hay không. Lấy snapshot báo cáo sau nhánh tiền và trước bước tài xế để việc chuyển CONFIRMED→COMPLETED không làm khó đối chiếu.
+
+**B7 — Chuyển driver01, mở /driver/trips.**
+
+> Tài xế chỉ thấy chuyến được phân công cho mình. Ở đây driver01 là Quách Tĩnh và được giao đúng chuyến chính. Em mở danh sách đón/trả, rồi thực hiện START, ARRIVE điểm giữa, DEPART điểm giữa, ARRIVE điểm cuối và COMPLETE.
+>
+> Thứ tự được kiểm trên server, kèm version và thời điểm server. START không được sớm hơn30 phút trước lịch; không thể bấm hoàn tất một điểm cuối chưa đến. Đây là xác nhận tiến độ thủ công, không phải bản đồ GPS hoặc bằng chứng tọa độ thực. Khi đến điểm trả, các đơn đã xác nhận phù hợp được hoàn tất theo luồng.
+
+Chỉ bấm bước được phép; nhánh hai điểm dùng START → ARRIVE cuối → COMPLETE. Nếu chưa vào cửa sổ START thì xem lịch sử chuyến hoàn tất hoặc chuyển sang chuyến dự phòng hợp lệ, không sửa clock. **Bản ngắn:** chỉ một thao tác START hợp lệ và lịch sử tiến độ đã có, nói rõ phần nào là dữ liệu lịch sử.
+
+**B8 — Chuyển lời bằng ID và số liệu.**
+
+> Em vừa đi từ dữ liệu nguồn đến chuyến, yêu cầu đặt, xác nhận chỗ, thu tiền và tiến độ tài xế. Các thay đổi đều thuộc cùng nhà xe và được giữ lịch sử. Em bàn giao mã chuyến, mã đơn và ngày khởi hành này để bạn Hieu đối chiếu trên dashboard và báo cáo.
+
+### Hieu — dashboard, báo cáo và kết bài (khoảng3–4 phút)
+
+**H5 — Mở /dashboard rồi /operations/reports bằng actor có quyền.**
+
+> Dashboard là điểm xem tổng quan theo capability của người đang đăng nhập. Báo cáo dùng dữ liệu nghiệp vụ vừa thao tác, không có bộ bảng báo cáo riêng để nhập tay. Em chọn cùng nhà xe và khoảng ngày có chuyến vừa demo, rồi bấm xem báo cáo. Khi đổi sang điều hành nhà xe khác, dữ liệu vẫn phải tuân theo scope hiện hành.
+>
+> Bộ lọc ngày của bản hiện tại dựa vào ngày khởi hành chuyến theo múi giờ Việt Nam. Vì vậy đây không phải sổ tiền theo ngày chuyển khoản. Ví dụ hôm nay thu cho một chuyến khởi hành ngày mai thì khoản đó thuộc tập chuyến ngày mai khi xem báo cáo này.
+
+Chỉ tab/số liệu hiện có trên phiên đã kiểm; không hứa biểu đồ dự báo, xuất Excel hoặc cập nhật thời gian thực nếu không có chức năng đó. Đối chiếu asOf và tải lại khi dữ liệu đổi. **Bản ngắn:** mở thẳng báo cáo và chỉ nhà xe/ngày.
+
+**H6 — Đối chiếu số và giải thích query.**
+
+> Ba khái niệm dễ nhầm là giá trị đơn, tiền đã thu và tiền ròng. Với đơn A360.000đ đang CONFIRMED hoặc đã COMPLETED, giá trị được tính là360.000đ; nếu mới thu200.000đ thì tiền đã thu chỉ200.000đ. Riêng đơn B đã hủy, thu200.000đ và hoàn50.000đ, số ròng còn150.000đ và còn phải hoàn150.000đ. Đơn hủy không được cộng vào giá trị các đơn xác nhận/hoàn tất.
+>
+> Nếu chỉ xét hai đơn này thì giá trị xác nhận/hoàn tất là360.000đ, tổng thu400.000đ, tổng hoàn50.000đ, tiền ròng350.000đ và phải hoàn150.000đ. Trên DB có dữ liệu nền, em đối chiếu phần chênh lệch với số trước thao tác thay vì nói toàn bộ báo cáo bằng hai đơn này.
+>
+> Ở repo, tập chuyến được lọc theo scope và ngày, sau đó tổng chuyến và tổng đơn được gom riêng trong cùng một statement. Cách này tránh một chuyến có nhiều đơn bị đếm thành nhiều chuyến. Lượt chỗ đã xác nhận là tổng số chỗ theo đơn, không phải số ghế vật lý duy nhất của cả đội xe.
+
+Mở ReportRepo.summary khi được hỏi cách tính, không đọc cả SQL. Đối chiếu từng field với đơn A/B; nếu nhánh tiền bị rút gọn thì dùng ví dụ tính trên giấy/ảnh đã ghi rõ minh họa. **Bản ngắn:** nói giá trị khác tiền thu, chỉ một tổng đối chiếu được.
+
+**H7 — Nhật ký, chất lượng và kết bài.**
+
+> Khi cần kiểm tra request, tài khoản có grant nhật ký có thể xem endpoint, trạng thái, thời gian và traceId cùng dữ liệu đã lọc. Journal không lưu nguyên password/JWT hoặc mọi payload, và có thể bỏ lỡ bản ghi khi pool/DB log lỗi. Lịch sử trạng thái và tiền của nghiệp vụ thì được ghi cùng transaction, lỗi lịch sử phải rollback thao tác liên quan.
+>
+> Nhóm kiểm lớp portable bằng H2, còn SQL và khóa/transaction bằng PostgreSQL test riêng; phần giao diện có ca kiểm tương ứng. Khi báo cáo kết quả, chúng em nêu đúng commit và số ca thực chạy, không coi CI xanh là bằng chứng chịu tải production. Hai bạn tài liệu tổng hợp Word, sơ đồ, ảnh chức năng và kết quả test thủ công.
+>
+> Sản phẩm hiện bao quát quản lý dữ liệu nguồn, tuyến/chuyến, đặt chỗ theo chặng, xác nhận chỗ, ghi thu–hoàn và báo cáo theo quyền. Giới hạn hiện tại là chưa có payment gateway, GPS/mobile hoặc runtime Oracle đã kiểm. Dùng thực tế còn cần đánh giá tải, bảo vệ kết nối DB và quy trình backup/phục hồi. Em xin kết thúc phần demo và sẵn sàng nhận câu hỏi.
+
+Nếu hết giờ, bỏ mở journal và nói kết bài trong20 giây. Không trình chiếu .env, hash, token, dump DB hoặc credential trong Swagger/DevTools. Phần dư thời gian dùng một request trace đã chuẩn bị, không tạo lỗi hoặc gọi lại mutation để “có log”.
+
+### Bản rút gọn và câu trả lời khi bị ngắt
+
+| Thời lượng hai dev được giao | Chọn bước |
+|---|---|
+| 8–10 phút | H1 ngắn/H2/H3; B2 xem có sẵn/B3/B4 có sẵn/B5; H5/H6/H7 kết bài. B6/B7 chỉ giải thích bằng lịch sử/ảnh, nói rõ không thao tác mới |
+| 12–15 phút | H1–H4; B1/B2 ngắn, B3–B5 thật, B6 một lần thu, B7 một mốc; H5–H7. Nhánh hủy/hoàn xem đơn B sẵn có |
+| 15–18 phút | Toàn luồng; vẫn chuẩn bị trước dữ liệu nguồn/chuyến và giới hạn thao tác để còn thời gian hỏi–đáp |
+
+Khi bị hỏi giữa thao tác, nói: “Em xin trả lời ngắn phần nguyên tắc, sau đó quay lại đúng mã đơn đang demo.” Ghi lại mã đơn/trạng thái; không chuyển nhiều role rồi quên phiên. Khi câu hỏi cần source: “Em mở method liên quan để chỉ điều kiện kiểm; phần em chưa kiểm thực tế em sẽ nêu rõ.” Nếu mất mạng: “Phiên Render đang chưa phản hồi, em chuyển sang môi trường local đã chuẩn bị; em ghi rõ đây là môi trường khác.”
 
 ## Khi demo gặp lỗi
 
@@ -109,7 +263,7 @@ Không. Menu và API có target riêng trong DB; người có page mà thiếu A
 
 ### Q12. Scope, owner và tài xế được phân công khác nhau thế nào?
 
-Scope giới hạn nhà xe, owner giới hạn đơn của khách, driver assignment giới hạn chuyến gắn đúng account tài xế. operator01 không được đọc ID Bắc Nam; custom01 không đọc đơn custom02; driver01 không được lấy chuyến driver02 chỉ vì biết ID. Thường404 khi ngoài dữ liệu được thấy,403 khi thiếu quyền endpoint.
+Scope giới hạn nhà xe, owner giới hạn đơn của khách, driver assignment giới hạn chuyến gắn đúng account tài xế. operator01 không được đọc ID nhà xe An Phúc; custom01 không đọc đơn custom02; driver01 không được lấy chuyến driver02 chỉ vì biết ID. Thường404 khi ngoài dữ liệu được thấy,403 khi thiếu quyền endpoint.
 
 ### Q13. all_scopes của một role có nới quyền từ role khác không?
 
@@ -237,7 +391,7 @@ H2 kiểm phần portable, model và một số repo; PostgreSQL riêng kiểm d
 
 ### Q41. Swagger và tìm chuyến mới đã có trên Render chưa?
 
-Tra tiến độ/PR trước trả lời. Tại mốc quy hoạch này PR154 đã CI xanh nhưng chưa merge: khóa Swagger vào grant quản trị, menu cách 6px và select tỉnh→địa điểm/một nút tìm nằm ở nhánh đó. Render đang image main bbeec57. Không bấm bản preview rồi khẳng định production đã khóa Swagger.
+Đã có bằng chứng nghiệm thu tại [PR157](https://github.com/hieuv526034/vietroute-web/pull/157) và [PR161 chuyển Singapore](https://github.com/hieuv526034/vietroute-web/pull/161). Lượt Singapore main7ef6025 kiểm admin docs/OpenAPI200, tài khoản thường403 và bộ chọn tỉnh→địa điểm/nhà xe với một nút tìm. Trước mỗi lần demo vẫn đối chiếu SHA Live/tiến độ/PR và môi trường thực, không lấy preview hoặc kết quả của một phiên cũ làm bằng chứng cho phiên mới.
 
 ### Q42. Local khác Render và bí mật cấu hình được giữ ở đâu?
 
@@ -253,15 +407,92 @@ Chưa. Có JDBC Thin/ojdbc17, profile và dialect chuẩn bị nhưng runtime ch
 
 ### Q45. Từng thành viên làm gì, AI có tham gia thì trình bày thế nào?
 
-Nêu khối được giao và bằng chứng commit/PR/review/test thật. Hieu phụ trách nền auth/common/DB/deploy; Anh catalog/carrier; Bang trip/booking; Hien report/dashboard. Trách nhiệm bảo trì không biến code nền đã có thành tác giả mới; không đổi author hoặc đếm commit thay chất lượng. Có hỗ trợ AI thì nói rõ công cụ hỗ trợ, người phải hiểu/kiểm source và chịu trách nhiệm phần trình bày.
+Theo phân công mới02/11/2026, nhóm có hai dev: hieuv526034 phụ trách auth/common/DB/cơ chế init/CI/deploy và chức năng báo cáo/dashboard; BangPhamIT phụ trách catalog/carrier/trip/booking và UI tương ứng. anhhoang104 chủ trì báo cáo Word/nội dung/sơ đồ; hiencoi250404-design test thủ công, chụp ảnh chức năng, viết bảng kết quả và cùng hoàn thiện Word để nộp. Hai dev phụ trách code và test tự động. Nêu đầu ra và bằng chứng commit/PR/review/test thực tế của từng người, kể cả tài liệu/test. Phân công mới không biến source nền hoặc code đã có thành tác giả mới; không đổi author hoặc đếm commit thay chất lượng. Có hỗ trợ AI thì nói rõ phần hỗ trợ và trách nhiệm hiểu/kiểm/trình bày của thành viên.
 
 Nguồn: [vận hành](../04-van-hanh/VAN_HANH.md), [schema](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md), [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md), [phân công](PHAN_CONG.md) và các regression trong [src/test](../../src/test).
+
+## Phản biện theo phần của hai dev — Q46 đến Q55
+
+Hai dev học chung Q01–Q06 và Q39–Q45. Hieu trả lời chính auth/common/DB/report/dashboard; Bang trả lời chính catalog/carrier/trip/booking/driver. Khi câu hỏi đi qua cả hai phần, người nhận câu hỏi nêu nguyên tắc rồi chuyển đúng người bằng ID/ví dụ đang demo, không trả lời thay bằng suy đoán.
+
+### Q46. Hieu: Nếu em chỉ đổi role trong JWT hoặc sửa HTML để hiện nút admin thì sao?
+
+**Có thể nói:** “Điều đó không cấp quyền. JWT bị sửa payload sẽ không qua kiểm chữ ký. Kể cả token còn hợp lệ, backend vẫn đọc account/tokenVersion và grant endpoint hiện hành từ DB; UI chỉ hỗ trợ sử dụng. Em có thể chứng minh bằng operator nhập trực tiếp /docs và bị chặn, thay vì chỉ nhìn menu bị ẩn.”
+
+**Nếu hỏi tiếp về quyền dữ liệu:** “Qua được endpoint vẫn còn scope/owner/assignment. Endpoint đọc booking không cho khách đọc đơn người khác. all_scopes chỉ có hiệu lực khi chính role đó cũng cấp endpoint, không ghép quyền rộng từ role khác.” Chỉ EndpointAccess/UserRoleRepo và Q11–Q15; không thử sửa token/DB thật tại sân khấu.
+
+### Q47. Bang: Sao PENDING không giữ chỗ, vậy khách đặt có bị hết chỗ không?
+
+**Có thể nói:** “Có thể hết trước khi được xác nhận, và ứng dụng phải thông báo đúng. PENDING là yêu cầu chờ điều hành; CONFIRMED mới là chỗ đã giữ. Lúc xác nhận, hệ thống kiểm lại mọi đoạn dưới khóa trong transaction. Nếu muốn thiết kế giữ chỗ tạm thì cần thêm thời hạn, giải phóng quá hạn và ca cạnh tranh; bản này chưa triển khai cơ chế đó.”
+
+**Nếu hỏi sao không xác nhận luôn:** “Đó là lựa chọn luồng xử lý hiện tại, không phải tính chất bắt buộc của mọi app vé xe. Demo phân biệt rõ tiếp nhận và xác nhận, không gọi PENDING là vé chắc chắn.” Chỉ BookingService.state/TripSegmentRepo và Q24–Q25.
+
+### Q48. Bang: Khách mua chỗ số mấy, có sơ đồ ghế và vé QR không?
+
+**Có thể nói:** “Bản này đặt số lượng chỗ theo chặng, chưa gán ghế cụ thể hoặc triển khai soát vé QR. Vì vậy tồn được quản lý bằng sức chứa và số chỗ đã xác nhận trên từng segment. Em không gọi hai chỗ là ghế số1,2. Nếu phát triển sơ đồ ghế thì phải thêm mô hình ghế, kiểm chồng theo đoạn và quy trình đổi/giữ ghế.”
+
+**Ví dụ nối tiếp:** “Xe16 chỗ có thể chỉ còn13 trên chặng đang chọn vì đã có đơn giữ3. Khi một nhóm xuống ở điểm giữa, đoạn phía sau có thể có lượng chỗ khả dụng khác.” Chỉ BookingRequest/TripSegmentRepo và Q23; không tuyên bố đã có bàn giao ghế hoặc phát hành vé điện tử.
+
+### Q49. Bang: Bấm xác nhận hay thu tiền xong mạng đứt thì bấm lại có bị nhân đôi không?
+
+**Có thể nói:** “Em không khẳng định mọi API đều idempotent. Tạo đơn và ghi thu/hoàn dùng requestKey theo contract; cùng key, actor và nội dung đã được ghi thì không tạo hoặc cộng thêm lần nữa. Key cũ với nội dung khác bị từ chối. Cập nhật trạng thái còn kiểm version/state. Khi mất response, em tải lại đúng đơn và kiểm lịch sử trước khi quyết định gửi lại, không đổi key rồi bấm thu tiếp.”
+
+**Nếu hỏi request chưa đến server:** “Cần phân biệt chưa gửi, chưa nhận response và đã commit nhưng response mất. UI giữ draft/key và không tự replay mutation; kết quả hiện hành ở server là căn cứ.” Chỉ BookingService.create/payment và Q14/Q27/Q29.
+
+### Q50. Hieu: Báo cáo có thể dùng làm sổ kế toán hoặc đối soát ngân hàng luôn không?
+
+**Có thể nói:** “Chưa. Báo cáo này tổng hợp tập chuyến theo ngày khởi hành và scope, cùng tiền ghi nhận thủ công của các đơn đó. Nó không đọc sao kê ngân hàng, không nhận callback cổng thanh toán và không là sổ tiền theo ngày event thu/hoàn. Giá trị đơn, đã thu, đã hoàn, tiền ròng và phải hoàn được tách để tránh nhầm.”
+
+**Nếu yêu cầu báo cáo theo ngày nhận tiền:** “Cần thống nhất contract mới lọc PAYMENT/REFUND event theo thời gian giao dịch, có query/test và đối soát tương ứng. Không chỉ đổi nhãn bộ lọc ngày trên giao diện.” Chỉ ReportRepo.summary và Q30–Q32.
+
+### Q51. Hieu: Vừa xác nhận xong, sao dashboard/báo cáo chưa đổi ngay?
+
+**Có thể nói:** “Phải kiểm cùng actor, scope, nhà xe, ngày khởi hành và thời điểm snapshot. Bản này không hứa cập nhật push thời gian thực. Em chủ động tải lại và kiểm asOf. Đơn mới PENDING cũng chưa thuộc giá trị CONFIRMED/COMPLETED, nên không phải tổng nào cũng tăng sau mọi thao tác.”
+
+**Nếu vẫn lệch:** “Em đối chiếu mã chuyến/đơn và công thức từng field với số nền. Nếu không giải thích được thì ghi lỗi, không sửa số phía trình duyệt để khớp.” Chỉ ReportSummaryResponse/ReportRepo và đơn A/B đã chuẩn bị; không suy mỗi ô dashboard đều dùng cùng định nghĩa nếu chưa đọc contract.
+
+### Q52. Hieu: Em nói nhanh hơn sau chuyển Singapore, bằng chứng và giới hạn ở đâu?
+
+**Có thể nói:** “Nhóm có đợt so sánh cùng code/DB và cùng tập GET tuần tự giữa Virginia và Singapore. Mẫu đo ghi nhận các API có DB ở Singapore nhanh hơn; đó là bằng chứng theo mẫu, không phải SLA hoặc kết quả kiểm tải. Khoảng cách mạng và số lượt trao đổi DB có ảnh hưởng, còn Free có cold start và vẫn có request timeout.”
+
+**Nếu yêu cầu số chính xác:** Mở bằng chứng PERF05/PR161 đúng thời điểm đo; nếu không có số đối chiếu trước mặt thì không nhớ ước lượng thành kết quả chính thức. Nêu rõ lượt DATA02 GET carriers đã timeout dù kiểm DB đổi tên đạt. Không dùng /health200 suy mọi query nhanh, không gọi timeout là DB hỏng khi chưa tách network/CPU/pool/SQL.
+
+### Q53. Bang: Sửa tên tài xế hoặc tuyến mẫu thì dữ liệu chuyến cũ có tự đổi hết không?
+
+**Có thể nói:** “Không nên coi dữ liệu nguồn là lịch sử duy nhất. Chuyến có snapshot, nên sửa tuyến/tài xế hiện hành không mặc định viết lại mọi chuyến cũ. Đợt đổi24 tên tài xế giả lập vừa rồi là bảo trì riêng được chủ dự án cho phép: backup kiểm phục hồi trước, chỉ cập nhật494 nhãn trên chuyến seed xác định sẵn, giữ dữ liệu ngoài phạm vi.”
+
+**Nếu hỏi sao không đổi code luôn:** “Code/ID đang liên kết account, scope, tuyến/chuyến. Yêu cầu là đổi tên hiển thị dễ phân biệt, nên giữ mã ổn định và liên kết; source seed mới cũng dùng cùng bộ tên.” Chỉ TripRepo/BusinessDataRepo và DATA02 trong tiến độ. Không mô tả việc bảo trì riêng là tính năng tự cập nhật snapshot khi restart.
+
+### Q54. Hieu/Bang: Ai làm gì và hai bạn còn lại đóng góp thế nào?
+
+**Hieu nói:** “Theo phân công hiện tại em phụ trách auth/common, DB/init/CI/deploy và báo cáo/dashboard. Bạn Bang phụ trách catalog/carrier/trip/booking và giao diện tương ứng. Hai dev chịu code và kiểm thử tự động.”
+
+**Bang nối:** “Bạn Anh chủ trì Word, nội dung và sơ đồ; bạn Hien test thủ công, chụp ảnh chức năng và ghi bảng kết quả. Hai bạn cùng hoàn thiện báo cáo để nộp; dev cung cấp và xác nhận phần kỹ thuật. Phân công không thay tác giả source cũ; đóng góp thực tế đối chiếu bằng bản nộp, commit/PR và kết quả kiểm.”
+
+Nếu hỏi dùng AI, nói đúng công cụ đã dùng và phạm vi hỗ trợ; chỉ ra phần thành viên đã đọc, sửa, kiểm và có thể giải thích. Không nhận phần chưa làm hoặc nói “AI làm hết nên em không rõ”. Câu chưa rõ thì ghi nhận cần kiểm source, không bịa quy tắc nghiệp vụ.
+
+### Q55. Hai dev: Nếu thầy/cô yêu cầu một chức năng chưa có ngay trong demo?
+
+**Có thể nói:** “Em xin phân biệt chức năng hiện có và đề xuất mở rộng. Phần hiện có em có thể mở màn/contract và chỉ ca kiểm. Với phần chưa có, em nêu dữ liệu, luồng và điều kiện cần bổ sung; em không dùng ảnh thiết kế để khẳng định đã chạy.”
+
+Ba ví dụ trả lời: thanh toán online cần provider/callback/xác thực/idempotence và đối soát; GPS cần nguồn vị trí/quyền truy cập/quy trình vận hành riêng; Oracle cần migration/SQL/transaction/regression thật, hiện mới chuẩn bị cấu hình và đang chặn runtime. Kết bằng việc có thể làm tiếp sau khi chốt yêu cầu; không hứa thời gian chưa ước lượng hoặc tự mở lại các module đã loại khỏi phạm vi.
+
+### Chỗ mở source khi được hỏi sâu
+
+| Người và nhóm câu | Điểm mở ngắn |
+|---|---|
+| Hieu — login/quyền | [UserService](../../src/main/java/vn/vietroute/auth/service/UserService.java), [EndpointAccess](../../src/main/java/vn/vietroute/auth/security/EndpointAccess.java), [UserRoleRepo](../../src/main/java/vn/vietroute/auth/repo/UserRoleRepo.java) |
+| Hieu — transaction/migration | [JdbcTransactions](../../src/main/java/vn/vietroute/common/jdbc/JdbcTransactions.java), [DatabaseInitializer](../../src/main/java/vn/vietroute/common/initializer/DatabaseInitializer.java), [manifest](../../src/main/resources/db/migration/postgresql/migrations.list) |
+| Hieu — báo cáo | [ReportRepo](../../src/main/java/vn/vietroute/business/report/repo/ReportRepo.java), [ReportSummaryResponse](../../src/main/java/vn/vietroute/business/report/dto/response/ReportSummaryResponse.java) |
+| Bang — tạo/xác nhận/thu–hoàn | [BookingService](../../src/main/java/vn/vietroute/business/booking/service/BookingService.java), [BookingRepo](../../src/main/java/vn/vietroute/business/booking/repo/BookingRepo.java), [TripSegmentRepo](../../src/main/java/vn/vietroute/business/trip/repo/TripSegmentRepo.java) |
+| Bang — snapshot/tìm/tiến độ | [TripRepo](../../src/main/java/vn/vietroute/business/trip/repo/TripRepo.java), [JourneyRepo](../../src/main/java/vn/vietroute/business/trip/repo/JourneyRepo.java), [DriverTripService](../../src/main/java/vn/vietroute/business/trip/service/DriverTripService.java) |
+| Hai dev — bằng chứng | [BusinessIntegrationTest](../../src/test/java/vn/vietroute/BusinessIntegrationTest.java), [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md) và PR đúng commit, không đọc số ca của bản khác thành số hiện tại |
 
 ## Báo cáo sản phẩm theo mẫu Công nghệ Java
 
 Ngày 31/10/2026, chủ dự án chỉ định [mẫu Word Công nghệ Java](mau/Mau_BTL_Cong_nghe_Java.docx) làm format cho tài liệu sản phẩm VietRoute và yêu cầu lưu file mẫu gốc trong Git để dùng chung khi đổi máy. Giữ nguyên byte của bản mẫu; SHA-256 là `bd8fc0707ebadb9373d988f28bc7d4b036542f6bb8a662191228f410ca5089c6`. Mẫu theo repository tại `docs/05-ke-hoach/mau/`, không dùng đường dẫn máy cá nhân làm nguồn thay thế khi bàn giao. Đây là báo cáo bài tập lớn học phần Công nghệ Java, khác với hướng dẫn vận hành/API hiện có.
 
-Chủ dự án đã xác nhận: **chỉ đọc mẫu và chốt cấu trúc trước, hoàn thiện ứng dụng rồi mới soạn tài liệu**. Báo cáo thuộc **Nhóm 10**, gồm bốn thành viên đã xác định tại [phân công](PHAN_CONG.md#thông-tin-thành-viên): `anhhoang104`, `BangPhamIT`, `hiencoi250404-design`, `hieuv526034`. **Lớp, khóa và giảng viên để trống**, bổ sung sau theo thông tin chủ dự án cung cấp. Họ tên/MSSV dùng dữ liệu đã được xác nhận khi soạn; không suy từ username hoặc tự tạo danh tính. Không bắt đầu viết báo cáo Word hoàn chỉnh chỉ từ việc ghi nhận thông tin này.
+Mẫu gốc đã được chọn làm chuẩn bố cục; hai dev bàn giao nội dung kỹ thuật và phiên bản để nhóm tài liệu hoàn thiện bản nộp. Báo cáo thuộc **Nhóm 10**, gồm bốn thành viên đã xác định tại [phân công](PHAN_CONG.md#thông-tin-thành-viên): `anhhoang104`, `BangPhamIT`, `hiencoi250404-design`, `hieuv526034`. **Lớp, khóa và giảng viên để trống**, bổ sung sau theo thông tin chủ dự án cung cấp. Họ tên/MSSV dùng dữ liệu đã được xác nhận khi soạn; không suy từ username hoặc tự tạo danh tính. Theo phân công mới02/11/2026, Anh và Hien phụ trách hoàn thiện Word để nộp, thu thập sơ đồ/ảnh và test thủ công; trạng thái bản Word thực tế phải ghi trong tiến độ, không coi phân công là đã có bản nộp.
 
 ### Cấu trúc giữ từ mẫu
 
@@ -292,4 +523,6 @@ Dùng [tổng quan](../01-bat-dau/TONG_QUAN_HE_THONG.md) cho bài toán; [API](.
 
 Phân biệt bản trên dev và main/Render, ca thử cô lập và hạ tầng thật. Oracle 26ai hiện mới ORACLECFG01 cấu hình JDBC Thin/profile/Hibernate dialect, chưa có runtime/migration/SQL nghiệp vụ và chưa kiểm kết nối Oracle thật; các dịch vụ ngoài phạm vi hiện hành không đưa vào báo cáo như chức năng đã làm. Backup/restore phải có bằng chứng riêng. Chỉ đưa ảnh được xác minh thuộc phiên bản báo cáo; che token/mật khẩu/PII, ghi rõ ảnh dùng dữ liệu kiểm thử khi cần. Kết quả test có mốc commit/môi trường, không diễn giải CI thành SLA production.
 
-Trước bàn giao Word: đối chiếu nội dung từng chương với source, cập nhật mục lục/danh mục/số trang, kiểm bản mẫu còn nguyên checksum, kết xuất và xem mọi trang để phát hiện vỡ bảng, thiếu dấu, khoảng trống, ảnh/heading bị tách. Lượt đọc mẫu mới kiểm nội dung OOXML/styles/section/textbox/field; công cụ kết xuất đóng gói chưa chạy được vì thiếu LibreOffice trên môi trường Windows. Chưa có bản Word sản phẩm được tạo hoặc nghiệm thu bố cục.
+Đã dựng [báo cáo Word Nhóm10](bao-cao/Bao_cao_VietRoute_Nhom_10.docx) theo lệnh soạn đầy đủ của chủ dự án, kèm [sơ đồ SVG và ảnh gốc](bao-cao/Tu_lieu_VietRoute_Nhom_10.zip). Giữ ba chương, hai bìa, mục lục/danh mục, kết luận, tham khảo và phụ lục schema/demo; chỉ các thông tin chưa xác nhận trên bìa để ô [[...]]. Mẫu gốc giữ nguyên checksum. Bản này dùng dữ liệu local giả lập, không ảnh production hoặc minh chứng giao dịch thương mại.
+
+Field TOC/SEQ/PAGE được cập nhật bằng Microsoft Word cài sẵn rồi xuất PDF để rà trang; renderer đóng gói đã được chẩn đoán thiếu LibreOffice, không dùng lỗi đó để bỏ kiểm bố cục. Bằng chứng source/test/ảnh, phiên bản và giới hạn ở WORD01 trong tiến độ. Khi chỉnh nội dung hoặc thay ảnh, cập nhật mục lục/danh mục/số trang và kiểm lại bản in, không giữ số trang cũ.
