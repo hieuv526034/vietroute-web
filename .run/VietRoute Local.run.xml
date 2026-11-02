@@ -24,23 +24,11 @@
         />
         <envs>
             <env
-                name="VIETROUTE_ACTIVITY_ENABLED"
-                value="true"
-            />
-            <env
                 name="VIETROUTE_ENV"
                 value="development"
             />
             <env
                 name="VIETROUTE_COOKIE_SECURE"
-                value="false"
-            />
-            <env
-                name="VIETROUTE_WORKER_ENABLED"
-                value="false"
-            />
-            <env
-                name="VIETROUTE_MAIL_ENABLED"
                 value="false"
             />
         </envs>

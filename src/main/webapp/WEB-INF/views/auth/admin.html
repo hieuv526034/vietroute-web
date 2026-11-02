@@ -132,35 +132,11 @@
                     >
                         <a
                             class="system-shortcut"
-                            th:if="${monitoringAllowed}"
-                            th:href="@{/monitoring(lang=${currentLocale})}"
-                        >
-                            <strong th:text="#{ui.monitoring}"></strong>
-                            <span th:text="#{ui.system.monitoringDescription}"></span>
-                        </a>
-                        <a
-                            class="system-shortcut"
-                            th:if="${jobsAllowed}"
-                            th:href="@{/operations/jobs(lang=${currentLocale})}"
-                        >
-                            <strong th:text="#{ui.ops.jobs}"></strong>
-                            <span th:text="#{ui.system.jobsDescription}"></span>
-                        </a>
-                        <a
-                            class="system-shortcut"
                             th:if="${accessAllowed}"
                             th:href="@{/operations/access(lang=${currentLocale})}"
                         >
                             <strong th:text="#{ui.ops.access}"></strong>
                             <span th:text="#{ui.system.accessDescription}"></span>
-                        </a>
-                        <a
-                            class="system-shortcut"
-                            th:if="${monitoringAllowed}"
-                            th:href="@{/operations/configuration(lang=${currentLocale})}"
-                        >
-                            <strong th:text="#{ui.ops.configuration}"></strong>
-                            <span th:text="#{ui.system.configurationDescription}"></span>
                         </a>
                     </nav>
                 </section>

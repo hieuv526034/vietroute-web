@@ -17,7 +17,6 @@
         capability = { targets: [] };
     const modal = window.VietRouteUI.modal('trip-dialog', { busy: () => busy }),
         tabs = window.VietRouteUI.tabs(node('trip-tabs'));
-    const tracking = window.VietRouteTracking.attach(node('trip-tracking'));
     const pager = tables.pager('trip', { busy: () => busy, onChange: (query) => perform(() => load(query)) });
     const can = (method, suffix = '') => capability.targets.includes(`${method} ${path}${suffix}`);
     const text = (tag, value) => {
@@ -72,6 +71,8 @@
         });
         for (const picker of pickers) {
             const fixed = Boolean(selected && ['CARRIER', 'ROUTE'].includes(picker.kind));
+            picker.element.querySelector('[data-picker-prev]').hidden = picker.page === 0 && !picker.hasNext;
+            picker.element.querySelector('[data-picker-next]').hidden = picker.page === 0 && !picker.hasNext;
             picker.element.querySelector('.trip-picker-search').hidden = fixed || !editable();
             picker.element.querySelector('.trip-picker-paging').hidden = fixed || !editable();
             picker.element.querySelector('[data-picker-prev]').disabled = busy || picker.page === 0;
@@ -188,8 +189,8 @@
         if (current?.value) picker.select.value = current.value;
         picker.page = result.page;
         picker.hasNext = result.hasNext;
-        picker.element.querySelector('[data-picker-count]').textContent =
-            `${result.totalElements ? result.page + 1 : 0} / ${result.totalPages} · ${result.totalElements}`;
+        const count = picker.element.querySelector('[data-picker-count]');
+        count.textContent = tables.lookupSummary(result, count.dataset.summary, count.dataset.empty);
     };
     const detail = () => {
         node('trip-stop-list').replaceChildren();
@@ -255,11 +256,7 @@
         detail();
         feedback('', false, 'trip-form-feedback');
         modal.open(trigger);
-        tracking.open(
-            selected && can('GET', '/{id}/tracking')
-                ? { path: `${path}/${selected.id}/tracking`, status: selected.status }
-                : null,
-        );
+
         requestAnimationFrame(() => {
             tabs.select('trip-info');
             sync();

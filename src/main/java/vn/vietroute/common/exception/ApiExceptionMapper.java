@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,11 +29,11 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import vn.vietroute.common.api_journal.filter.ApiJournalFilter.ApiJournalState;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.constant.ValidationCode;
-import vn.vietroute.common.monitoring.service.ApiJournalState;
 import vn.vietroute.common.web.filter.RequestTraceFilter;
 import vn.vietroute.common.web.response.ApiResponses;
 import vn.vietroute.common.web.response.ApiResult;
@@ -102,6 +105,9 @@ public class ApiExceptionMapper {
 
     /** HTTP status phản ánh đúng loại lỗi; không dùng HTTP 200 cho phản hồi thất bại. */
     private ErrorCode classify(Exception error) {
+        if (error instanceof OptimisticLockingFailureException) return ErrorCode.STALE_VERSION;
+        if (error instanceof DataIntegrityViolationException) return ErrorCode.CONFLICT;
+        if (error instanceof DataAccessException) return ErrorCode.DATABASE_UNAVAILABLE;
         if (error instanceof MaxUploadSizeExceededException) {
             return ErrorCode.PAYLOAD_TOO_LARGE;
         }

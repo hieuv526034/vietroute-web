@@ -1,0 +1,1494 @@
+{
+  "catalogs": [],
+  "provinces": [
+    {
+      "code": "HUE",
+      "nameVi": "Thành phố Huế",
+      "nameEn": "Hue",
+      "sortOrder": 130,
+      "active": true
+    },
+    {
+      "code": "CANTHO",
+      "nameVi": "Cần Thơ",
+      "nameEn": "Can Tho",
+      "sortOrder": 140,
+      "active": true
+    },
+    {
+      "code": "LAMDONG",
+      "nameVi": "Lâm Đồng",
+      "nameEn": "Lam Dong",
+      "sortOrder": 150,
+      "active": true
+    },
+    {
+      "code": "KHANHHOA",
+      "nameVi": "Khánh Hòa",
+      "nameEn": "Khanh Hoa",
+      "sortOrder": 160,
+      "active": true
+    },
+    {
+      "code": "GIALAI",
+      "nameVi": "Gia Lai",
+      "nameEn": "Gia Lai",
+      "sortOrder": 170,
+      "active": true
+    },
+    {
+      "code": "DAKLAK",
+      "nameVi": "Đắk Lắk",
+      "nameEn": "Dak Lak",
+      "sortOrder": 180,
+      "active": true
+    },
+    {
+      "code": "NGHEAN",
+      "nameVi": "Nghệ An",
+      "nameEn": "Nghe An",
+      "sortOrder": 190,
+      "active": true
+    },
+    {
+      "code": "HAIPHONG",
+      "nameVi": "Hải Phòng",
+      "nameEn": "Hai Phong",
+      "sortOrder": 200,
+      "active": true
+    },
+    {
+      "code": "QUANGNINH",
+      "nameVi": "Quảng Ninh",
+      "nameEn": "Quang Ninh",
+      "sortOrder": 210,
+      "active": true
+    }
+  ],
+  "locations": [
+    {
+      "code": "VRHUE",
+      "provinceCode": "HUE",
+      "nameVi": "Điểm đón VietRoute Huế",
+      "nameEn": "VietRoute Hue pickup point",
+      "address": "40 Đường nội bộ VietRoute, khu vực Huế, Thành phố Huế",
+      "latitude": 16.455,
+      "longitude": 107.58,
+      "sortOrder": 130,
+      "active": true
+    },
+    {
+      "code": "VRCANTHO",
+      "provinceCode": "CANTHO",
+      "nameVi": "Điểm đón VietRoute Cần Thơ",
+      "nameEn": "VietRoute Can Tho pickup point",
+      "address": "44 Đường nội bộ VietRoute, khu vực Cần Thơ, Cần Thơ",
+      "latitude": 10.045,
+      "longitude": 105.746,
+      "sortOrder": 140,
+      "active": true
+    },
+    {
+      "code": "VRDALAT",
+      "provinceCode": "LAMDONG",
+      "nameVi": "Điểm đón VietRoute Đà Lạt",
+      "nameEn": "VietRoute Lam Dong pickup point",
+      "address": "48 Đường nội bộ VietRoute, khu vực Đà Lạt, Lâm Đồng",
+      "latitude": 11.94,
+      "longitude": 108.44,
+      "sortOrder": 150,
+      "active": true
+    },
+    {
+      "code": "VRNHATRANG",
+      "provinceCode": "KHANHHOA",
+      "nameVi": "Điểm đón VietRoute Nha Trang",
+      "nameEn": "VietRoute Khanh Hoa pickup point",
+      "address": "52 Đường nội bộ VietRoute, khu vực Nha Trang, Khánh Hòa",
+      "latitude": 12.245,
+      "longitude": 109.19,
+      "sortOrder": 160,
+      "active": true
+    },
+    {
+      "code": "VRQUYNHON",
+      "provinceCode": "GIALAI",
+      "nameVi": "Điểm đón VietRoute Quy Nhơn",
+      "nameEn": "VietRoute Gia Lai pickup point",
+      "address": "56 Đường nội bộ VietRoute, khu vực Quy Nhơn, Gia Lai",
+      "latitude": 13.77,
+      "longitude": 109.22,
+      "sortOrder": 170,
+      "active": true
+    },
+    {
+      "code": "VRBUONMATHUOT",
+      "provinceCode": "DAKLAK",
+      "nameVi": "Điểm đón VietRoute Buôn Ma Thuột",
+      "nameEn": "VietRoute Dak Lak pickup point",
+      "address": "60 Đường nội bộ VietRoute, khu vực Buôn Ma Thuột, Đắk Lắk",
+      "latitude": 12.67,
+      "longitude": 108.04,
+      "sortOrder": 180,
+      "active": true
+    },
+    {
+      "code": "VRVINH",
+      "provinceCode": "NGHEAN",
+      "nameVi": "Điểm đón VietRoute Vinh",
+      "nameEn": "VietRoute Nghe An pickup point",
+      "address": "64 Đường nội bộ VietRoute, khu vực Vinh, Nghệ An",
+      "latitude": 18.68,
+      "longitude": 105.68,
+      "sortOrder": 190,
+      "active": true
+    },
+    {
+      "code": "VRHAIPHONG",
+      "provinceCode": "HAIPHONG",
+      "nameVi": "Điểm đón VietRoute Hải Phòng",
+      "nameEn": "VietRoute Hai Phong pickup point",
+      "address": "68 Đường nội bộ VietRoute, khu vực Hải Phòng, Hải Phòng",
+      "latitude": 20.84,
+      "longitude": 106.68,
+      "sortOrder": 200,
+      "active": true
+    },
+    {
+      "code": "VRHALONG",
+      "provinceCode": "QUANGNINH",
+      "nameVi": "Điểm đón VietRoute Hạ Long",
+      "nameEn": "VietRoute Quang Ninh pickup point",
+      "address": "72 Đường nội bộ VietRoute, khu vực Hạ Long, Quảng Ninh",
+      "latitude": 20.95,
+      "longitude": 107.08,
+      "sortOrder": 210,
+      "active": true
+    }
+  ],
+  "carriers": [
+    {
+      "code": "VRMIENTRUNG",
+      "name": "VietRoute Miền Trung",
+      "phone": "0236 0000 3301",
+      "description": "VietRoute Miền Trung: tiếp nhận đặt chỗ qua website và tổng đài, phục vụ tuyến liên tỉnh theo lịch công bố. Đội xe ghế ngồi, giường nằm và limousine.",
+      "active": true
+    },
+    {
+      "code": "VRTAYNGUYEN",
+      "name": "VietRoute Tây Nguyên",
+      "phone": "0262 0000 4401",
+      "description": "VietRoute Tây Nguyên: tiếp nhận đặt chỗ qua website và tổng đài, phục vụ tuyến liên tỉnh theo lịch công bố. Đội xe ghế ngồi, giường nằm và limousine.",
+      "active": true
+    },
+    {
+      "code": "VRMIENTAY",
+      "name": "VietRoute Miền Tây",
+      "phone": "0292 0000 5501",
+      "description": "VietRoute Miền Tây: tiếp nhận đặt chỗ qua website và tổng đài, phục vụ tuyến liên tỉnh theo lịch công bố. Đội xe ghế ngồi, giường nằm và limousine.",
+      "active": true
+    },
+    {
+      "code": "VRDONGBAC",
+      "name": "VietRoute Đông Bắc",
+      "phone": "0203 0000 6601",
+      "description": "VietRoute Đông Bắc: tiếp nhận đặt chỗ qua website và tổng đài, phục vụ tuyến liên tỉnh theo lịch công bố. Đội xe ghế ngồi, giường nằm và limousine.",
+      "active": true
+    }
+  ],
+  "vehicles": [
+    {
+      "code": "VRVEH03",
+      "carrierCode": "VRMIENNAM",
+      "typeCode": "LIMOUSINE",
+      "plateNumber": "50F-300.03",
+      "capacity": 16,
+      "active": true
+    },
+    {
+      "code": "VRVEH04",
+      "carrierCode": "VRMIENNAM",
+      "typeCode": "SLEEPER",
+      "plateNumber": "50F-300.04",
+      "capacity": 34,
+      "active": true
+    },
+    {
+      "code": "VRVEH07",
+      "carrierCode": "VRBACNAM",
+      "typeCode": "LIMOUSINE",
+      "plateNumber": "29F-301.03",
+      "capacity": 16,
+      "active": true
+    },
+    {
+      "code": "VRVEH08",
+      "carrierCode": "VRBACNAM",
+      "typeCode": "SLEEPER",
+      "plateNumber": "29F-301.04",
+      "capacity": 34,
+      "active": true
+    },
+    {
+      "code": "VRVEH09",
+      "carrierCode": "VRMIENTRUNG",
+      "typeCode": "SEAT",
+      "plateNumber": "43F-302.01",
+      "capacity": 29,
+      "active": true
+    },
+    {
+      "code": "VRVEH10",
+      "carrierCode": "VRMIENTRUNG",
+      "typeCode": "SLEEPER",
+      "plateNumber": "43F-302.02",
+      "capacity": 40,
+      "active": true
+    },
+    {
+      "code": "VRVEH11",
+      "carrierCode": "VRMIENTRUNG",
+      "typeCode": "LIMOUSINE",
+      "plateNumber": "43F-302.03",
+      "capacity": 16,
+      "active": true
+    },
+    {
+      "code": "VRVEH12",
+      "carrierCode": "VRMIENTRUNG",
+      "typeCode": "SLEEPER",
+      "plateNumber": "43F-302.04",
+      "capacity": 34,
+      "active": true
+    },
+    {
+      "code": "VRVEH13",
+      "carrierCode": "VRTAYNGUYEN",
+      "typeCode": "SEAT",
+      "plateNumber": "47F-303.01",
+      "capacity": 29,
+      "active": true
+    },
+    {
+      "code": "VRVEH14",
+      "carrierCode": "VRTAYNGUYEN",
+      "typeCode": "SLEEPER",
+      "plateNumber": "47F-303.02",
+      "capacity": 40,
+      "active": true
+    },
+    {
+      "code": "VRVEH15",
+      "carrierCode": "VRTAYNGUYEN",
+      "typeCode": "LIMOUSINE",
+      "plateNumber": "47F-303.03",
+      "capacity": 16,
+      "active": true
+    },
+    {
+      "code": "VRVEH16",
+      "carrierCode": "VRTAYNGUYEN",
+      "typeCode": "SLEEPER",
+      "plateNumber": "47F-303.04",
+      "capacity": 34,
+      "active": true
+    },
+    {
+      "code": "VRVEH17",
+      "carrierCode": "VRMIENTAY",
+      "typeCode": "SEAT",
+      "plateNumber": "65F-304.01",
+      "capacity": 29,
+      "active": true
+    },
+    {
+      "code": "VRVEH18",
+      "carrierCode": "VRMIENTAY",
+      "typeCode": "SLEEPER",
+      "plateNumber": "65F-304.02",
+      "capacity": 40,
+      "active": true
+    },
+    {
+      "code": "VRVEH19",
+      "carrierCode": "VRMIENTAY",
+      "typeCode": "LIMOUSINE",
+      "plateNumber": "65F-304.03",
+      "capacity": 16,
+      "active": true
+    },
+    {
+      "code": "VRVEH20",
+      "carrierCode": "VRMIENTAY",
+      "typeCode": "SLEEPER",
+      "plateNumber": "65F-304.04",
+      "capacity": 34,
+      "active": true
+    },
+    {
+      "code": "VRVEH21",
+      "carrierCode": "VRDONGBAC",
+      "typeCode": "SEAT",
+      "plateNumber": "14F-305.01",
+      "capacity": 29,
+      "active": true
+    },
+    {
+      "code": "VRVEH22",
+      "carrierCode": "VRDONGBAC",
+      "typeCode": "SLEEPER",
+      "plateNumber": "14F-305.02",
+      "capacity": 40,
+      "active": true
+    },
+    {
+      "code": "VRVEH23",
+      "carrierCode": "VRDONGBAC",
+      "typeCode": "LIMOUSINE",
+      "plateNumber": "14F-305.03",
+      "capacity": 16,
+      "active": true
+    },
+    {
+      "code": "VRVEH24",
+      "carrierCode": "VRDONGBAC",
+      "typeCode": "SLEEPER",
+      "plateNumber": "14F-305.04",
+      "capacity": 34,
+      "active": true
+    }
+  ],
+  "drivers": [
+    {
+      "code": "VRDRV03",
+      "carrierCode": "VRMIENNAM",
+      "name": "Lê Hoàng Nam",
+      "phone": "028 0000 3003",
+      "active": true
+    },
+    {
+      "code": "VRDRV04",
+      "carrierCode": "VRMIENNAM",
+      "name": "Phạm Đức Anh",
+      "phone": "028 0000 3004",
+      "active": true
+    },
+    {
+      "code": "VRDRV07",
+      "carrierCode": "VRBACNAM",
+      "name": "Bùi Trung Kiên",
+      "phone": "028 0000 3007",
+      "active": true
+    },
+    {
+      "code": "VRDRV08",
+      "carrierCode": "VRBACNAM",
+      "name": "Võ Minh Khoa",
+      "phone": "028 0000 3008",
+      "active": true
+    },
+    {
+      "code": "VRDRV09",
+      "carrierCode": "VRMIENTRUNG",
+      "name": "Lê Quốc Bảo",
+      "phone": "028 0000 3009",
+      "active": true
+    },
+    {
+      "code": "VRDRV10",
+      "carrierCode": "VRMIENTRUNG",
+      "name": "Nguyễn Hữu Phúc",
+      "phone": "028 0000 3010",
+      "active": true
+    },
+    {
+      "code": "VRDRV11",
+      "carrierCode": "VRMIENTRUNG",
+      "name": "Trần Minh Hải",
+      "phone": "028 0000 3011",
+      "active": true
+    },
+    {
+      "code": "VRDRV12",
+      "carrierCode": "VRMIENTRUNG",
+      "name": "Phạm Công Thành",
+      "phone": "028 0000 3012",
+      "active": true
+    },
+    {
+      "code": "VRDRV13",
+      "carrierCode": "VRTAYNGUYEN",
+      "name": "Hoàng Văn Long",
+      "phone": "028 0000 3013",
+      "active": true
+    },
+    {
+      "code": "VRDRV14",
+      "carrierCode": "VRTAYNGUYEN",
+      "name": "Đỗ Anh Dũng",
+      "phone": "028 0000 3014",
+      "active": true
+    },
+    {
+      "code": "VRDRV15",
+      "carrierCode": "VRTAYNGUYEN",
+      "name": "Ngô Đức Thắng",
+      "phone": "028 0000 3015",
+      "active": true
+    },
+    {
+      "code": "VRDRV16",
+      "carrierCode": "VRTAYNGUYEN",
+      "name": "Vũ Tuấn Anh",
+      "phone": "028 0000 3016",
+      "active": true
+    },
+    {
+      "code": "VRDRV17",
+      "carrierCode": "VRMIENTAY",
+      "name": "Dương Thành Đạt",
+      "phone": "028 0000 3017",
+      "active": true
+    },
+    {
+      "code": "VRDRV18",
+      "carrierCode": "VRMIENTAY",
+      "name": "Trịnh Minh Quân",
+      "phone": "028 0000 3018",
+      "active": true
+    },
+    {
+      "code": "VRDRV19",
+      "carrierCode": "VRMIENTAY",
+      "name": "Đinh Văn Lâm",
+      "phone": "028 0000 3019",
+      "active": true
+    },
+    {
+      "code": "VRDRV20",
+      "carrierCode": "VRMIENTAY",
+      "name": "Phan Quốc Hưng",
+      "phone": "028 0000 3020",
+      "active": true
+    },
+    {
+      "code": "VRDRV21",
+      "carrierCode": "VRDONGBAC",
+      "name": "Lý Văn Bình",
+      "phone": "028 0000 3021",
+      "active": true
+    },
+    {
+      "code": "VRDRV22",
+      "carrierCode": "VRDONGBAC",
+      "name": "Cao Minh Triết",
+      "phone": "028 0000 3022",
+      "active": true
+    },
+    {
+      "code": "VRDRV23",
+      "carrierCode": "VRDONGBAC",
+      "name": "Hồ Thanh Tùng",
+      "phone": "028 0000 3023",
+      "active": true
+    },
+    {
+      "code": "VRDRV24",
+      "carrierCode": "VRDONGBAC",
+      "name": "Mai Đức Hòa",
+      "phone": "028 0000 3024",
+      "active": true
+    }
+  ],
+  "routes": [
+    {
+      "carrierCode": "VRMIENNAM",
+      "code": "HCMHANOI",
+      "nameVi": "Thủ Đức — Đà Nẵng — Hà Nội",
+      "nameEn": "Thu Duc — Da Nang — Hanoi",
+      "vehicleCode": "VRSOUTH01",
+      "driverCode": "DRVSOUTH01",
+      "driverUsername": "driver01",
+      "intervalDays": 4,
+      "slot": 1,
+      "stops": [
+        {
+          "locationCode": "VRTHUDUC",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRDANANG",
+          "stopOrder": 2,
+          "arrival": 1080,
+          "departure": 1110,
+          "fare": 450000,
+          "pickup": true,
+          "dropoff": true
+        },
+        {
+          "locationCode": "VRHANOI",
+          "stopOrder": 3,
+          "arrival": 2040,
+          "departure": 2040,
+          "fare": 900000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRMIENNAM",
+      "code": "HCMDALAT",
+      "nameVi": "Thủ Đức — Buôn Ma Thuột — Đà Lạt",
+      "nameEn": "Thu Duc — Dak Lak — Lam Dong",
+      "vehicleCode": "VRSOUTH02",
+      "driverCode": "DRVSOUTH02",
+      "driverUsername": "driver03",
+      "intervalDays": 1,
+      "slot": 2,
+      "stops": [
+        {
+          "locationCode": "VRTHUDUC",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRBUONMATHUOT",
+          "stopOrder": 2,
+          "arrival": 360,
+          "departure": 370,
+          "fare": 210000,
+          "pickup": true,
+          "dropoff": true
+        },
+        {
+          "locationCode": "VRDALAT",
+          "stopOrder": 3,
+          "arrival": 540,
+          "departure": 540,
+          "fare": 420000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRMIENNAM",
+      "code": "HCMNHATRANG",
+      "nameVi": "Thủ Đức — Đà Lạt — Nha Trang",
+      "nameEn": "Thu Duc — Lam Dong — Khanh Hoa",
+      "vehicleCode": "VRVEH03",
+      "driverCode": "VRDRV03",
+      "driverUsername": "driver04",
+      "intervalDays": 1,
+      "slot": 3,
+      "stops": [
+        {
+          "locationCode": "VRTHUDUC",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRDALAT",
+          "stopOrder": 2,
+          "arrival": 360,
+          "departure": 370,
+          "fare": 195000,
+          "pickup": true,
+          "dropoff": true
+        },
+        {
+          "locationCode": "VRNHATRANG",
+          "stopOrder": 3,
+          "arrival": 540,
+          "departure": 540,
+          "fare": 390000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRMIENNAM",
+      "code": "CANTHOHCM",
+      "nameVi": "Cần Thơ — TP Hồ Chí Minh",
+      "nameEn": "Can Tho — Thu Duc",
+      "vehicleCode": "VRVEH04",
+      "driverCode": "VRDRV04",
+      "driverUsername": "driver05",
+      "intervalDays": 1,
+      "slot": 4,
+      "stops": [
+        {
+          "locationCode": "VRCANTHO",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRTHUDUC",
+          "stopOrder": 2,
+          "arrival": 180,
+          "departure": 180,
+          "fare": 180000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRBACNAM",
+      "code": "HANOIHCM",
+      "nameVi": "Hà Nội — Đà Nẵng — Thủ Đức",
+      "nameEn": "Hanoi — Da Nang — Thu Duc",
+      "vehicleCode": "VRNORTH01",
+      "driverCode": "DRVNORTH01",
+      "driverUsername": "driver02",
+      "intervalDays": 4,
+      "slot": 5,
+      "stops": [
+        {
+          "locationCode": "VRHANOI",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRDANANG",
+          "stopOrder": 2,
+          "arrival": 960,
+          "departure": 990,
+          "fare": 450000,
+          "pickup": true,
+          "dropoff": true
+        },
+        {
+          "locationCode": "VRTHUDUC",
+          "stopOrder": 3,
+          "arrival": 2040,
+          "departure": 2040,
+          "fare": 900000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRBACNAM",
+      "code": "HANOIVINH",
+      "nameVi": "Hà Nội — Hải Phòng — Vinh",
+      "nameEn": "Hanoi — Hai Phong — Nghe An",
+      "vehicleCode": "VRNORTH02",
+      "driverCode": "DRVNORTH02",
+      "driverUsername": "driver06",
+      "intervalDays": 1,
+      "slot": 6,
+      "stops": [
+        {
+          "locationCode": "VRHANOI",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRHAIPHONG",
+          "stopOrder": 2,
+          "arrival": 120,
+          "departure": 130,
+          "fare": 175000,
+          "pickup": true,
+          "dropoff": true
+        },
+        {
+          "locationCode": "VRVINH",
+          "stopOrder": 3,
+          "arrival": 480,
+          "departure": 480,
+          "fare": 350000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRBACNAM",
+      "code": "VINHHANOI",
+      "nameVi": "Vinh — Hải Phòng — Hà Nội",
+      "nameEn": "Nghe An — Hai Phong — Hanoi",
+      "vehicleCode": "VRVEH07",
+      "driverCode": "VRDRV07",
+      "driverUsername": "driver07",
+      "intervalDays": 1,
+      "slot": 7,
+      "stops": [
+        {
+          "locationCode": "VRVINH",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRHAIPHONG",
+          "stopOrder": 2,
+          "arrival": 360,
+          "departure": 370,
+          "fare": 175000,
+          "pickup": true,
+          "dropoff": true
+        },
+        {
+          "locationCode": "VRHANOI",
+          "stopOrder": 3,
+          "arrival": 480,
+          "departure": 480,
+          "fare": 350000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRBACNAM",
+      "code": "HANOIHALONG",
+      "nameVi": "Hà Nội — Hải Phòng — Hạ Long",
+      "nameEn": "Hanoi — Hai Phong — Quang Ninh",
+      "vehicleCode": "VRVEH08",
+      "driverCode": "VRDRV08",
+      "driverUsername": "driver08",
+      "intervalDays": 1,
+      "slot": 8,
+      "stops": [
+        {
+          "locationCode": "VRHANOI",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRHAIPHONG",
+          "stopOrder": 2,
+          "arrival": 120,
+          "departure": 130,
+          "fare": 125000,
+          "pickup": true,
+          "dropoff": true
+        },
+        {
+          "locationCode": "VRHALONG",
+          "stopOrder": 3,
+          "arrival": 210,
+          "departure": 210,
+          "fare": 250000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRMIENTRUNG",
+      "code": "DANANGHUE",
+      "nameVi": "Đà Nẵng — Huế — Vinh",
+      "nameEn": "Da Nang — Hue — Nghe An",
+      "vehicleCode": "VRVEH09",
+      "driverCode": "VRDRV09",
+      "driverUsername": "driver09",
+      "intervalDays": 1,
+      "slot": 9,
+      "stops": [
+        {
+          "locationCode": "VRDANANG",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRHUE",
+          "stopOrder": 2,
+          "arrival": 150,
+          "departure": 160,
+          "fare": 190000,
+          "pickup": true,
+          "dropoff": true
+        },
+        {
+          "locationCode": "VRVINH",
+          "stopOrder": 3,
+          "arrival": 540,
+          "departure": 540,
+          "fare": 380000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRMIENTRUNG",
+      "code": "HUEDANANG",
+      "nameVi": "Vinh — Huế — Đà Nẵng",
+      "nameEn": "Nghe An — Hue — Da Nang",
+      "vehicleCode": "VRVEH10",
+      "driverCode": "VRDRV10",
+      "driverUsername": "driver10",
+      "intervalDays": 1,
+      "slot": 10,
+      "stops": [
+        {
+          "locationCode": "VRVINH",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRHUE",
+          "stopOrder": 2,
+          "arrival": 390,
+          "departure": 400,
+          "fare": 190000,
+          "pickup": true,
+          "dropoff": true
+        },
+        {
+          "locationCode": "VRDANANG",
+          "stopOrder": 3,
+          "arrival": 540,
+          "departure": 540,
+          "fare": 380000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRMIENTRUNG",
+      "code": "DANANGQUYNHON",
+      "nameVi": "Đà Nẵng — Quy Nhơn — Nha Trang",
+      "nameEn": "Da Nang — Gia Lai — Khanh Hoa",
+      "vehicleCode": "VRVEH11",
+      "driverCode": "VRDRV11",
+      "driverUsername": "driver11",
+      "intervalDays": 1,
+      "slot": 11,
+      "stops": [
+        {
+          "locationCode": "VRDANANG",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRQUYNHON",
+          "stopOrder": 2,
+          "arrival": 360,
+          "departure": 370,
+          "fare": 215000,
+          "pickup": true,
+          "dropoff": true
+        },
+        {
+          "locationCode": "VRNHATRANG",
+          "stopOrder": 3,
+          "arrival": 600,
+          "departure": 600,
+          "fare": 430000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRMIENTRUNG",
+      "code": "NHATRANGDANANG",
+      "nameVi": "Nha Trang — Quy Nhơn — Đà Nẵng",
+      "nameEn": "Khanh Hoa — Gia Lai — Da Nang",
+      "vehicleCode": "VRVEH12",
+      "driverCode": "VRDRV12",
+      "driverUsername": "driver12",
+      "intervalDays": 1,
+      "slot": 12,
+      "stops": [
+        {
+          "locationCode": "VRNHATRANG",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRQUYNHON",
+          "stopOrder": 2,
+          "arrival": 240,
+          "departure": 250,
+          "fare": 215000,
+          "pickup": true,
+          "dropoff": true
+        },
+        {
+          "locationCode": "VRDANANG",
+          "stopOrder": 3,
+          "arrival": 600,
+          "departure": 600,
+          "fare": 430000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRTAYNGUYEN",
+      "code": "BUONMATHUOTHCM",
+      "nameVi": "Buôn Ma Thuột — Đà Lạt — Thủ Đức",
+      "nameEn": "Dak Lak — Lam Dong — Thu Duc",
+      "vehicleCode": "VRVEH13",
+      "driverCode": "VRDRV13",
+      "driverUsername": "driver13",
+      "intervalDays": 1,
+      "slot": 13,
+      "stops": [
+        {
+          "locationCode": "VRBUONMATHUOT",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRDALAT",
+          "stopOrder": 2,
+          "arrival": 240,
+          "departure": 250,
+          "fare": 205000,
+          "pickup": true,
+          "dropoff": true
+        },
+        {
+          "locationCode": "VRTHUDUC",
+          "stopOrder": 3,
+          "arrival": 600,
+          "departure": 600,
+          "fare": 410000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRTAYNGUYEN",
+      "code": "HCMBUONMATHUOT",
+      "nameVi": "Thủ Đức — Đà Lạt — Buôn Ma Thuột",
+      "nameEn": "Thu Duc — Lam Dong — Dak Lak",
+      "vehicleCode": "VRVEH14",
+      "driverCode": "VRDRV14",
+      "driverUsername": "driver14",
+      "intervalDays": 1,
+      "slot": 14,
+      "stops": [
+        {
+          "locationCode": "VRTHUDUC",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRDALAT",
+          "stopOrder": 2,
+          "arrival": 360,
+          "departure": 370,
+          "fare": 205000,
+          "pickup": true,
+          "dropoff": true
+        },
+        {
+          "locationCode": "VRBUONMATHUOT",
+          "stopOrder": 3,
+          "arrival": 600,
+          "departure": 600,
+          "fare": 410000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRTAYNGUYEN",
+      "code": "DALATNHATRANG",
+      "nameVi": "Đà Lạt — Nha Trang",
+      "nameEn": "Lam Dong — Khanh Hoa",
+      "vehicleCode": "VRVEH15",
+      "driverCode": "VRDRV15",
+      "driverUsername": "driver15",
+      "intervalDays": 1,
+      "slot": 15,
+      "stops": [
+        {
+          "locationCode": "VRDALAT",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRNHATRANG",
+          "stopOrder": 2,
+          "arrival": 210,
+          "departure": 210,
+          "fare": 220000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRTAYNGUYEN",
+      "code": "NHATRANGDALAT",
+      "nameVi": "Nha Trang — Đà Lạt",
+      "nameEn": "Khanh Hoa — Lam Dong",
+      "vehicleCode": "VRVEH16",
+      "driverCode": "VRDRV16",
+      "driverUsername": "driver16",
+      "intervalDays": 1,
+      "slot": 16,
+      "stops": [
+        {
+          "locationCode": "VRNHATRANG",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRDALAT",
+          "stopOrder": 2,
+          "arrival": 210,
+          "departure": 210,
+          "fare": 220000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRMIENTAY",
+      "code": "CANTHODALAT",
+      "nameVi": "Cần Thơ — Thủ Đức — Đà Lạt",
+      "nameEn": "Can Tho — Thu Duc — Lam Dong",
+      "vehicleCode": "VRVEH17",
+      "driverCode": "VRDRV17",
+      "driverUsername": "driver17",
+      "intervalDays": 1,
+      "slot": 17,
+      "stops": [
+        {
+          "locationCode": "VRCANTHO",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRTHUDUC",
+          "stopOrder": 2,
+          "arrival": 180,
+          "departure": 190,
+          "fare": 225000,
+          "pickup": true,
+          "dropoff": true
+        },
+        {
+          "locationCode": "VRDALAT",
+          "stopOrder": 3,
+          "arrival": 600,
+          "departure": 600,
+          "fare": 450000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRMIENTAY",
+      "code": "DALATCANTHO",
+      "nameVi": "Đà Lạt — Thủ Đức — Cần Thơ",
+      "nameEn": "Lam Dong — Thu Duc — Can Tho",
+      "vehicleCode": "VRVEH18",
+      "driverCode": "VRDRV18",
+      "driverUsername": "driver18",
+      "intervalDays": 1,
+      "slot": 18,
+      "stops": [
+        {
+          "locationCode": "VRDALAT",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRTHUDUC",
+          "stopOrder": 2,
+          "arrival": 420,
+          "departure": 430,
+          "fare": 225000,
+          "pickup": true,
+          "dropoff": true
+        },
+        {
+          "locationCode": "VRCANTHO",
+          "stopOrder": 3,
+          "arrival": 600,
+          "departure": 600,
+          "fare": 450000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRMIENTAY",
+      "code": "CANTHONHATRANG",
+      "nameVi": "Cần Thơ — Thủ Đức — Nha Trang",
+      "nameEn": "Can Tho — Thu Duc — Khanh Hoa",
+      "vehicleCode": "VRVEH19",
+      "driverCode": "VRDRV19",
+      "driverUsername": "driver19",
+      "intervalDays": 1,
+      "slot": 19,
+      "stops": [
+        {
+          "locationCode": "VRCANTHO",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRTHUDUC",
+          "stopOrder": 2,
+          "arrival": 180,
+          "departure": 190,
+          "fare": 240000,
+          "pickup": true,
+          "dropoff": true
+        },
+        {
+          "locationCode": "VRNHATRANG",
+          "stopOrder": 3,
+          "arrival": 660,
+          "departure": 660,
+          "fare": 480000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRMIENTAY",
+      "code": "NHATRANGCANTHO",
+      "nameVi": "Nha Trang — Thủ Đức — Cần Thơ",
+      "nameEn": "Khanh Hoa — Thu Duc — Can Tho",
+      "vehicleCode": "VRVEH20",
+      "driverCode": "VRDRV20",
+      "driverUsername": "driver20",
+      "intervalDays": 1,
+      "slot": 20,
+      "stops": [
+        {
+          "locationCode": "VRNHATRANG",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRTHUDUC",
+          "stopOrder": 2,
+          "arrival": 480,
+          "departure": 490,
+          "fare": 240000,
+          "pickup": true,
+          "dropoff": true
+        },
+        {
+          "locationCode": "VRCANTHO",
+          "stopOrder": 3,
+          "arrival": 660,
+          "departure": 660,
+          "fare": 480000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRDONGBAC",
+      "code": "HALONGHANOI",
+      "nameVi": "Hạ Long — Hải Phòng — Hà Nội",
+      "nameEn": "Quang Ninh — Hai Phong — Hanoi",
+      "vehicleCode": "VRVEH21",
+      "driverCode": "VRDRV21",
+      "driverUsername": "driver21",
+      "intervalDays": 1,
+      "slot": 21,
+      "stops": [
+        {
+          "locationCode": "VRHALONG",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRHAIPHONG",
+          "stopOrder": 2,
+          "arrival": 90,
+          "departure": 100,
+          "fare": 125000,
+          "pickup": true,
+          "dropoff": true
+        },
+        {
+          "locationCode": "VRHANOI",
+          "stopOrder": 3,
+          "arrival": 210,
+          "departure": 210,
+          "fare": 250000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRDONGBAC",
+      "code": "HANOIHAIPHONG",
+      "nameVi": "Hà Nội — Hải Phòng",
+      "nameEn": "Hanoi — Hai Phong",
+      "vehicleCode": "VRVEH22",
+      "driverCode": "VRDRV22",
+      "driverUsername": "driver22",
+      "intervalDays": 1,
+      "slot": 22,
+      "stops": [
+        {
+          "locationCode": "VRHANOI",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRHAIPHONG",
+          "stopOrder": 2,
+          "arrival": 150,
+          "departure": 150,
+          "fare": 190000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRDONGBAC",
+      "code": "HAIPHONGHANOI",
+      "nameVi": "Hải Phòng — Hà Nội",
+      "nameEn": "Hai Phong — Hanoi",
+      "vehicleCode": "VRVEH23",
+      "driverCode": "VRDRV23",
+      "driverUsername": "driver23",
+      "intervalDays": 1,
+      "slot": 23,
+      "stops": [
+        {
+          "locationCode": "VRHAIPHONG",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRHANOI",
+          "stopOrder": 2,
+          "arrival": 150,
+          "departure": 150,
+          "fare": 190000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "VRDONGBAC",
+      "code": "HALONGVINH",
+      "nameVi": "Hạ Long — Hà Nội — Vinh",
+      "nameEn": "Quang Ninh — Hanoi — Nghe An",
+      "vehicleCode": "VRVEH24",
+      "driverCode": "VRDRV24",
+      "driverUsername": "driver24",
+      "intervalDays": 1,
+      "slot": 24,
+      "stops": [
+        {
+          "locationCode": "VRHALONG",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "VRHANOI",
+          "stopOrder": 2,
+          "arrival": 210,
+          "departure": 220,
+          "fare": 210000,
+          "pickup": true,
+          "dropoff": true
+        },
+        {
+          "locationCode": "VRVINH",
+          "stopOrder": 3,
+          "arrival": 570,
+          "departure": 570,
+          "fare": 420000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    }
+  ],
+  "profile": {
+    "version": "VRINIT1",
+    "pastDays": 7,
+    "futureDays": 14,
+    "phoneBookingsPerTrip": 6
+  },
+  "provenance": {
+    "kind": "PROJECT_GENERATED",
+    "description": "Giả lập vận hành: tên, nhân sự, địa chỉ, liên hệ và lịch chạy do dự án tạo; không xác nhận đơn vị/giá/lịch ngoài thực tế. Không dùng để nhận khách thật."
+  },
+  "contacts": [
+    {
+      "name": "Nguyễn Thu Hà",
+      "phone": "028 0000 7000"
+    },
+    {
+      "name": "Trần Minh Ngọc",
+      "phone": "028 0000 7001"
+    },
+    {
+      "name": "Phạm Hoàng Anh",
+      "phone": "028 0000 7002"
+    },
+    {
+      "name": "Lê Thanh Trúc",
+      "phone": "028 0000 7003"
+    },
+    {
+      "name": "Võ Bảo Châu",
+      "phone": "028 0000 7004"
+    },
+    {
+      "name": "Đỗ Ngọc Mai",
+      "phone": "028 0000 7005"
+    },
+    {
+      "name": "Bùi Đức Huy",
+      "phone": "028 0000 7006"
+    },
+    {
+      "name": "Ngô Minh Tâm",
+      "phone": "028 0000 7007"
+    },
+    {
+      "name": "Hoàng Quỳnh Anh",
+      "phone": "028 0000 7008"
+    },
+    {
+      "name": "Đặng Văn Phúc",
+      "phone": "028 0000 7009"
+    },
+    {
+      "name": "Phan Thảo Vy",
+      "phone": "028 0000 7010"
+    },
+    {
+      "name": "Mai Hồng Nhung",
+      "phone": "028 0000 7011"
+    }
+  ],
+  "customerUsernames": [
+    "custom01",
+    "custom02",
+    "custom03",
+    "custom04",
+    "custom05",
+    "custom06",
+    "custom07",
+    "custom08",
+    "custom09",
+    "custom10",
+    "custom11",
+    "custom12"
+  ]
+}

@@ -1,7 +1,8 @@
 ## Chức năng
 
 Issue: <!-- ví dụ Closes #12 -->
-Module: <!-- common / auth / catalog / carrier / network / booking / tracking / integration -->
+Module: <!-- common / auth / catalog / carrier / trip / booking / report / bootstrap -->
+Đích: <!-- dev cho phát triển; dev → main chỉ khi chủ dự án đã yêu cầu phát hành, ghi mốc yêu cầu. -->
 
 <!-- Nêu vấn đề và hành vi sau thay đổi. -->
 

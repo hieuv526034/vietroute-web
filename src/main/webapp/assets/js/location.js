@@ -244,7 +244,6 @@
                     ),
                 );
                 capability = {
-                    actions: [...new Set(features.flatMap((feature) => feature.actions))],
                     targets: [...new Set(features.flatMap((feature) => feature.targets))],
                 };
                 await load(button.dataset.refresh);
@@ -265,7 +264,6 @@
             ),
         );
         capability = {
-            actions: [...new Set(features.flatMap((feature) => feature.actions))],
             targets: [...new Set(features.flatMap((feature) => feature.targets))],
         };
         await Promise.all(visibleKinds.map((resource) => load(resource)));

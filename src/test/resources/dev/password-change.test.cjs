@@ -188,7 +188,7 @@ test('password success rebuilds server navigation with context and locale after 
         assert.equal(ui.form.fields.currentPassword, '');
         assert.equal(ui.dialog.open, false);
         assert.equal(ui.controls.disabled, false);
-        assert.deepEqual(ui.state.navigation, [`${base}/account?lang=${locale}&passwordChanged=true`]);
+        assert.deepEqual(ui.state.navigation, [`${base}/login?lang=${locale}`]);
     }
 });
 

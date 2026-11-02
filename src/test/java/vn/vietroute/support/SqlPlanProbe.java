@@ -14,7 +14,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import vn.vietroute.common.jdbc.BaseRepository.SqlWork;
+import vn.vietroute.common.base.BaseRepository.SqlWork;
 
 /** Chỉ test loopback: lấy SQL/bind từ DAO thật, replay EXPLAIN SELECT; không sửa SQL nghiệp vụ hoặc in payload. */
 public final class SqlPlanProbe {

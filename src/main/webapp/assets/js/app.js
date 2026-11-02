@@ -204,9 +204,8 @@
             form.reset();
             feedback(response.data.message, true);
             document.getElementById('password-dialog').close();
-            // Cookie mới đã được server trả về: tải lại document để dựng menu theo quyền DB của phiên mới.
-            // Chỉ đọc lại /me sẽ để header mắc ở menu rỗng của phiên mật khẩu tạm dù đổi đã thành công.
-            window.location.assign(`${route('/account')}&passwordChanged=true`);
+            // Server đã thu hồi mọi token và xóa cookie; người dùng phải đăng nhập lại sau đổi mật khẩu.
+            window.location.assign(route('/login'));
         },
         'password-feedback',
     );
@@ -236,14 +235,7 @@
         });
         document.querySelectorAll('[data-avatar-shell]').forEach((node) => {
             node.replaceChildren();
-            if (user.avatarUrl) {
-                const img = document.createElement('img');
-                img.src = user.avatarUrl;
-                img.alt = '';
-                node.append(img);
-            } else {
-                node.textContent = user.username.slice(0, 1).toUpperCase();
-            }
+            node.textContent = user.username.slice(0, 1).toUpperCase();
         });
         void loadAccount();
     });
@@ -253,10 +245,9 @@
 
 /* Quyền UI lấy cùng guard/policy backend. Lần gọi mới đọc lại DB, không dùng quyền lưu trong localStorage. */
 window.VietRouteAccess = {
-    async load(feature) {
+    async load() {
         const response = await window.VietRoute.api.get('/api/v1/auth/capabilities', { timeout: 10000 });
-        return (
-            response.data.data.find((item) => item.function === feature) || { view: false, actions: [], targets: [] }
-        );
+        const targets = [...new Set(response.data.data.flatMap((item) => item.targets))];
+        return { view: targets.includes('GET ' + window.location.pathname), targets };
     },
 };

@@ -11,7 +11,7 @@
 | 3 | Chuyên đề theo [mục lục](../README.md), code/PR của phần đang sửa | Hợp đồng, quyết định/lý do và giới hạn thật tại đúng commit |
 | 4 | [Git/PR](../../CONTRIBUTING.md), [format](../01-bat-dau/FORMAT_INTELLIJ.md) | Nhánh đúng người, kiểm tra và commit/PR tiếng Việt |
 
-AI nêu ngắn gọn phần đã đọc, mục tiêu/mã việc, phần tái sử dụng/còn thiếu, nhánh/người thực hiện và cách kiểm trước khi sửa. Đây là xác nhận hiểu ngữ cảnh, không thêm vòng xin phép cho việc người dùng đã yêu cầu. Khi docs khác code, đối chiếu mốc/PR rồi cập nhật đúng nguồn; không tự ghi đè thay đổi có sẵn của người khác.
+AI nêu ngắn gọn phần đã đọc, mục tiêu/mã việc, phần tái sử dụng/còn thiếu, nhánh/người thực hiện và cách kiểm trước khi sửa. Đây là xác nhận hiểu ngữ cảnh, không thêm vòng xin phép cho việc người dùng đã yêu cầu. Khi docs khác code, đối chiếu mốc/PR rồi cập nhật đúng nguồn; không tự ghi đè thay đổi có sẵn của người khác. Từ 31/10/2026 tích hợp vào `dev`; chỉ phát hành `dev` → `main` khi có yêu cầu mới của chủ dự án theo [quy trình Git](../../CONTRIBUTING.md#tích-hợp-dev-và-phát-hành-main-từ-31102026). Không tiếp tục cơ chế tự merge main/deploy từ các lượt trước.
 
 ## 2. Điểm đọc cho từng AI
 
@@ -52,13 +52,15 @@ npm run check:docs
 node --test src/test/resources/dev/*.test.cjs
 ```
 
-Linux/macOS dùng `./mvnw` hoặc `sh ./mvnw`. Cấu hình Git identity của chính thành viên theo CONTRIBUTING. Cách Run/Debug IntelliJ, profile `local` và env nằm trong [chạy local](../01-bat-dau/CHAY_LOCAL_VA_CLOUDINARY.md#nút-rundebug-trong-intellij); không bật DB_INIT/worker/provider chỉ để thử giao diện trên Neon production. `/health` lên chưa chứng minh DB/login hoạt động.
+Linux/macOS dùng `./mvnw` hoặc `sh ./mvnw`. Cấu hình Git identity của chính thành viên theo CONTRIBUTING. Cách Run/Debug IntelliJ, profile `local` và env nằm trong [chạy local](../01-bat-dau/CHAY_LOCAL.md#nút-rundebug-trong-intellij); không bật DB_INIT/seed chỉ để thử giao diện trên Neon production. `/health` lên chưa chứng minh DB/login hoạt động.
 
 | Theo clone | Cần chuẩn bị riêng |
 |---|---|
-| Source/docs/AGENTS, migrations, lockfile, `.run`, codeStyles đã push | `.env`, Git credentials, env/thiết lập IDE cá nhân; lấy tên key từ [.env.example](../../.env.example), secret cấp qua kênh riêng |
+| Source/docs/AGENTS, migrations, lockfile, `.run`, codeStyles và `.env` ở gốc đã push theo yêu cầu 01/11/2026 | Git credentials, env/thiết lập IDE cá nhân; `.env.*` khác vẫn ignore, key mẫu tại [.env.example](../../.env.example) |
 | Test chia sẻ ở `src/test`, CI và bằng chứng PR | Dựng lại `target/`, `node_modules/`, cache; `.tools/` và process localhost máy cũ không phải công cụ/dịch vụ bàn giao |
-| Cấu hình mẫu và adapter | Quyền/dữ liệu PostgreSQL, Cloudinary, Gmail, Render thuộc dịch vụ ngoài Git; có mẫu không đồng nghĩa đã hoạt động |
+| Cấu hình DB/triển khai | Quyền/dữ liệu PostgreSQL và Render thuộc dịch vụ ngoài Git; có mẫu không đồng nghĩa đã hoạt động |
+
+Chủ dự án cho phép commit chính `.env` ở gốc ngày 01/11/2026 để đổi máy; chỉ có sau khi commit đã được push/clone đúng nhánh. Thành viên có quyền đọc repo cũng đọc được lịch sử file này; không sao chép giá trị vào docs/chat/log.
 
 WAR không tự đọc `.env`; launcher local chủ động đọc file riêng theo hướng dẫn chạy IntelliJ. Các node cùng môi trường cần cấu hình JWT tương thích; không tạo lại khóa production chỉ vì đổi máy, development dùng secret riêng. Bootstrap không đặt lại mật khẩu admin đã đổi. Port thử 18095 trong ảnh cũ không phải service luôn chạy; launcher local mặc định 8080. Không ghi secret/token/payload riêng tư vào docs, PR hoặc ảnh chụp.
 
@@ -80,6 +82,6 @@ Kiểm tra đã chạy / chưa chạy / giới hạn:
 Bước tiếp theo cụ thể:
 ```
 
-Commit/push đúng nhánh trước khi rời máy; chưa đủ kiểm tra thì giữ draft. Chỉ ghi Đã có trên main khi có merge thật. Không sao chép toàn bộ quy tắc/backlog/log chat thành file memory mới, không đổi tác giả commit theo kế hoạch.
+Commit/push đúng nhánh trước khi rời máy; chưa đủ kiểm tra thì giữ draft. Ghi đúng Đã có trên dev hoặc Đã có trên main theo merge thật; tích hợp dev chưa phải deploy. Không sao chép toàn bộ quy tắc/backlog/log chat thành file memory mới, không đổi tác giả commit theo kế hoạch.
 
 Nguồn cơ chế AI đã đối chiếu ngày 23/10/2026: [Codex](https://learn.chatgpt.com/docs/agent-configuration/agents-md), [Copilot](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions), [Cursor](https://cursor.com/docs/rules), [Claude](https://code.claude.com/docs/en/memory), [Gemini](https://geminicli.com/docs/cli/gemini-md/). Repo không tự cài/bật các công cụ trên máy thành viên.

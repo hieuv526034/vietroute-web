@@ -197,8 +197,6 @@
             if (form.elements[name]) form.elements[name].value = current?.[name] ?? '';
         form.elements.code.disabled = Boolean(current);
         form.elements.active.checked = current?.active ?? true;
-        if (form.elements.mediaId)
-            form.elements.mediaId.value = current?.[kind === 'carriers' ? 'logoMediaId' : 'photoMediaId'] ?? '';
         if (kind !== 'carriers') {
             form.elements.carrierId.disabled = Boolean(current);
             node('fleet-carrier-picker').hidden = Boolean(current);
@@ -233,14 +231,12 @@
             if (kind === 'carriers')
                 Object.assign(body, {
                     description: data.description.value.trim(),
-                    logoMediaId: data.mediaId.value ? Number(data.mediaId.value) : null,
                 });
             if (kind === 'vehicles')
                 Object.assign(body, {
                     plateNumber: data.plateNumber.value.trim().toUpperCase(),
                     vehicleTypeId: Number(data.vehicleTypeId.value),
                     capacity: Number(data.capacity.value),
-                    photoMediaId: data.mediaId.value ? Number(data.mediaId.value) : null,
                 });
             if (kind === 'drivers') body.userId = data.userId.value ? Number(data.userId.value) : null;
             if (selected) body.version = selected.version;

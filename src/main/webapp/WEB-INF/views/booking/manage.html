@@ -68,7 +68,7 @@
                                 th:text="#{ui.fleet.allStates}"
                             ></option>
                             <option
-                                th:each="state:${T(vn.vietroute.business.booking.entity.BookingStatus).values()}"
+                                th:each="state:${T(vn.vietroute.business.booking.constant.BookingStatus).values()}"
                                 th:value="${state}"
                                 th:text="#{'ui.booking.'+${state}}"
                             ></option>
@@ -182,23 +182,32 @@
                                     th:text="#{ui.search}"
                                 ></button>
                             </div>
-                            <div class="trip-picker-paging">
+                            <div class="trip-picker-paging lookup-pager">
                                 <button
                                     id="booking-trip-prev"
                                     type="button"
-                                    class="button button-outline"
-                                    th:text="#{ui.mediaPrevious}"
-                                ></button>
+                                    class="button button-outline lookup-page-button"
+                                    hidden
+                                    disabled
+                                    th:attr="aria-label=#{ui.mediaPrevious},title=#{ui.mediaPrevious}"
+                                >
+                                    <span aria-hidden="true">‹</span>
+                                </button>
                                 <span
                                     id="booking-trip-count"
                                     aria-live="polite"
+                                    th:attr="data-summary=#{ui.picker.summary},data-empty=#{ui.empty}"
                                 ></span>
                                 <button
                                     id="booking-trip-next"
                                     type="button"
-                                    class="button button-outline"
-                                    th:text="#{ui.mediaNext}"
-                                ></button>
+                                    class="button button-outline lookup-page-button"
+                                    hidden
+                                    disabled
+                                    th:attr="aria-label=#{ui.mediaNext},title=#{ui.mediaNext}"
+                                >
+                                    <span aria-hidden="true">›</span>
+                                </button>
                             </div>
                         </div>
                         <div class="dialog-form-grid">
@@ -348,13 +357,7 @@
                                 data-tab-target="booking-history"
                                 th:text="#{ui.booking.history}"
                             ></button>
-                            <button
-                                th:if="${customerBookings}"
-                                id="booking-location-tab"
-                                type="button"
-                                data-tab-target="booking-location"
-                                th:text="#{ui.tracking.title}"
-                            ></button>
+
                             <button
                                 th:unless="${customerBookings}"
                                 id="booking-money-tab"
@@ -424,14 +427,7 @@
                                 class="route-stop-list"
                             ></div>
                         </section>
-                        <section
-                            th:if="${customerBookings}"
-                            id="booking-location"
-                            data-tab-panel="booking-location-tab"
-                            hidden
-                        >
-                            <section th:replace="~{fragments/tracking :: panel('booking', false)}"></section>
-                        </section>
+
                         <section
                             th:unless="${customerBookings}"
                             id="booking-money"
@@ -508,7 +504,7 @@
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
-        <script th:src="@{/assets/js/tracking.js}"></script>
+
         <script th:src="@{/assets/js/bookings.js}"></script>
     </body>
 </html>

@@ -7,53 +7,105 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.util.HashSet;
+import java.util.HexFormat;
+import java.util.List;
+import java.util.Properties;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
-import vn.vietroute.common.jdbc.JdbcSchema;
-import vn.vietroute.common.jdbc.LegacyMigrationSql;
+import vn.vietroute.common.initializer.MigrationCatalog;
 
-/** Kiểm compatibility adapter chỉ ánh xạ schema của V002/V003, không đổi byte/checksum nguồn hoặc migration mới. */
+/** Baseline theo khối: đủ resource, phụ thuộc, checksum và không tạo bảng đã bỏ. */
 class SchemaMigrationTest {
 
-    /** History lưu nguyên tên file trong VARCHAR(40); phát hiện tên quá dài trước khi startup chạm DB. */
     @Test
-    void migrationNamesFitTheExistingHistoryColumn() throws Exception {
-        Path directory = Path.of(getClass().getResource("/db/migration").toURI());
-        try (var files = Files.list(directory)) {
-            for (Path file : files.toList()) {
-                String name = file.getFileName().toString();
-                if (name.endsWith(".sql")) {
-                    assertTrue(name.length() <= 40, "Tên migration vượt giới hạn history: " + name);
-                }
-            }
-        }
+    void migrationNamesFitTheExistingHistoryColumn() {
+        for (String version : MigrationCatalog.versions()) assertTrue(version.length() <= 40, version);
     }
 
+    /** PK/UNIQUE có trước actor system và FK liên cụm; không dựa thứ tự thư mục. */
     @Test
-    void legacyDdlTargetsConfiguredSchemaIncludingSqlKeywordNames() throws Exception {
-        for (String version : new String[] {
-            "V002__vietroute_schema_and_indexes.sql",
-            "V003__permissions_and_jobs.sql",
-        }) {
-            try (var input = getClass().getResourceAsStream("/db/migration/" + version)) {
-                String original = new String(input.readAllBytes(), StandardCharsets.UTF_8);
-                String rendered = LegacyMigrationSql.render(version, original, new JdbcSchema("select"));
-                assertFalse(rendered.contains("vietroute."));
-                assertTrue(rendered.contains("\"select\"."));
-                assertTrue(original.contains("vietroute."));
-                if (version.startsWith("V002")) {
-                    assertTrue(rendered.contains("ALTER TABLE public.%I SET SCHEMA \"select\""));
-                }
-            }
-        }
-    }
-
-    @Test
-    void newMigrationIsNotGloballyRewrittenAndHistoryTableNameIsPreserved() {
-        String sql = "SELECT 'vietroute', 'vietroute_schema_history'";
-        assertEquals(sql, LegacyMigrationSql.render("V004__new_feature.sql", sql, new JdbcSchema("custom")));
+    void manifestKeepsCrossModuleDependenciesExplicit() {
         assertEquals(
-            "SELECT '\"custom\"', 'vietroute_schema_history'",
-            LegacyMigrationSql.render("V003__permissions_and_jobs.sql", sql, new JdbcSchema("custom"))
+            List.of(
+                "auth/001_schema.sql",
+                "catalog/001_schema.sql",
+                "carrier/001_schema.sql",
+                "trip/001_schema.sql",
+                "booking/001_schema.sql",
+                "common/001_schema.sql",
+                "foundation/001_system_account.sql",
+                "foundation/002_references.sql"
+            ),
+            MigrationCatalog.versions()
         );
+    }
+
+    /** Snapshot khóa baseline mới; thay schema tiếp theo phải thêm bước. */
+    @Test
+    void baselineChecksumsArePinned() throws Exception {
+        Properties expected = new Properties();
+        try (var input = getClass().getResourceAsStream("/db/migration-checksums.properties")) {
+            expected.load(input);
+        }
+        assertEquals(Set.copyOf(MigrationCatalog.versions()), expected.stringPropertyNames());
+        for (String version : expected.stringPropertyNames()) {
+            String checksum = HexFormat.of().formatHex(
+                MessageDigest.getInstance("SHA-256").digest(MigrationCatalog.read(version))
+            );
+            assertEquals(expected.getProperty(version), checksum, version);
+        }
+    }
+
+    @Test
+    void manifestMatchesEveryPackagedMigrationExactlyOnce() throws Exception {
+        Path root = Path.of(getClass().getResource("/db/migration").toURI());
+        Set<String> packaged = new HashSet<>();
+        try (var paths = Files.walk(root)) {
+            for (Path path : paths.filter(Files::isRegularFile).toList()) {
+                if (path.toString().endsWith(".sql")) packaged.add(
+                    "/db/migration/" + root.relativize(path).toString().replace('\\', '/')
+                );
+            }
+        }
+        Set<String> listed = new HashSet<>();
+        for (String version : MigrationCatalog.versions()) assertTrue(listed.add(MigrationCatalog.resource(version)));
+        assertEquals(8, listed.size());
+        assertEquals(packaged, listed);
+    }
+
+    /** Không cần rewrite schema hoặc dựng lại bảng GPS/provider/quyền action đã nghỉ. */
+    @Test
+    void baselineUsesConfiguredSchemaAndOnlyCurrentTables() {
+        for (String version : MigrationCatalog.versions()) {
+            String sql = new String(MigrationCatalog.read(version), StandardCharsets.UTF_8);
+            for (String retired : List.of(
+                "trip_tracking",
+                "trip_locations",
+                "media_assets",
+                "system_jobs",
+                "system_visitor_presence",
+                "auth_permissions",
+                "auth_access_policies"
+            ))
+                assertFalse(sql.contains(retired), version + ": " + retired);
+            assertFalse(sql.contains("vietroute."), version);
+            assertFalse(sql.contains("public."), version);
+            assertFalse(sql.matches("(?s).*DROP\\s+(?:TABLE|SCHEMA)[^;]*CASCADE\\s*;.*"), version);
+        }
+    }
+
+    @Test
+    void tripProgressRemainsWithoutDeviceTracking() throws Exception {
+        assertFalse(Files.exists(Path.of("src/main/java/vn/vietroute/business/tracking")));
+        for (String file : new String[] { "trips.js", "driver-trips.js", "bookings.js" }) {
+            String source = Files.readString(Path.of("src/main/webapp/assets/js").resolve(file));
+            assertFalse(source.contains("VietRouteTracking"), file);
+            assertFalse(source.contains("/tracking"), file);
+        }
+        String sql = new String(MigrationCatalog.read("trip/001_schema.sql"), StandardCharsets.UTF_8);
+        assertTrue(sql.contains("CREATE TABLE IF NOT EXISTS trip_stops"));
+        assertTrue(sql.contains("CREATE TABLE IF NOT EXISTS trip_events"));
     }
 }

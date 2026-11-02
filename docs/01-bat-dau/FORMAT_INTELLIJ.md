@@ -41,7 +41,7 @@ Native IntelliJ và Prettier Java có khác biệt ở wrap chain/annotation/rec
 
 Trong **Settings → Tools → Actions on Save**, bật **Reformat code**, chọn **Changed lines** và phạm vi Java/HTML/CSS/JS/XML đang sửa. Có thể bật Optimize imports cho Java. Đây là lựa chọn cá nhân của IDE, repo không ghi đè `workspace.xml` của từng người. Không bật Rearrange/code cleanup toàn bộ một cách tự động. Với bản IDE có Prettier plugin, tránh để hai formatter cùng chạy trên một loại file lúc save; chọn một cơ chế rồi chốt lại bằng npm script trước commit.
 
-Loại trừ `src/main/resources/db/migration/*.sql`, `target`, `.tools`, `.m2`, `node_modules` và file credential khỏi format-on-save/whole-project. SQL migration đã áp dụng có checksum: không sửa dù chỉ whitespace. EditorConfig không trim/chèn newline cho migration; `.prettierignore` và glob npm không format SQL. Nếu chọn **Reformat directory**, luôn giới hạn scope, không chọn toàn project kèm thư mục DB.
+Loại trừ `src/main/resources/db/migration/**/*.sql`, `target`, `.tools`, `.m2`, `node_modules` và file credential khỏi format-on-save/whole-project. SQL migration đã áp dụng có checksum: không sửa dù chỉ whitespace. EditorConfig không trim/chèn newline cho migration trong mọi thư mục con; `.prettierignore` và glob npm không format SQL. Nếu chọn **Reformat directory**, luôn giới hạn scope, không chọn toàn project kèm thư mục DB.
 
 Mỗi lần hoàn tất thay đổi source:
 

@@ -25,7 +25,9 @@
         if (css) item.className = css;
         return item;
     };
-    const can = (action) => me?.permissions?.includes(`ACCESS_${action}`);
+    let granted = [];
+    const can = (action) =>
+        granted.includes(`PUT ${base}${action === 'ASSIGN' ? '/scopes/{id}/members/{userId}' : '/scopes/{id}'}`);
     const roleName = (code) => {
         const value = metadata.find((item) => item.code === code);
         return `${value ? (document.documentElement.lang === 'en' ? value.nameEn : value.nameVi) : code} · ${code}`;
@@ -130,7 +132,7 @@
         }
         if (!page.content.length) empty(body, 4);
         pager.update(page);
-        node('scope-create').hidden = !can('CREATE');
+        node('scope-create').hidden = true;
         node('scope-member-create').hidden = !can('ASSIGN');
     };
     const empty = (body, columns) => {
@@ -172,7 +174,7 @@
         const host = node('scope-role-options');
         host.querySelectorAll('label').forEach((label) => label.remove());
         for (const code of user?.roles || []) {
-            if (code === 'ADMIN') continue;
+            if (metadata.find((item) => item.code === code)?.protectedRole) continue;
             const label = text('label', '', 'account-role-option');
             label.dataset.roleChoice = code;
             const input = document.createElement('input');
@@ -190,9 +192,7 @@
     };
     const searchUsers = async (username = node('scope-user-query').value.trim()) => {
         const page = await get('/users', { username, size: 20 });
-        candidates = page.content.filter(
-            (user) => user.id !== me.id && (user.active || user.id === member?.userId) && !user.roles.includes('ADMIN'),
-        );
+        candidates = page.content.filter((user) => user.id !== me.id && (user.active || user.id === member?.userId));
         const select = node('scope-user');
         select.replaceChildren();
         for (const user of candidates) {
@@ -246,7 +246,6 @@
         event.preventDefault();
         if (!forms.validate(event.target)) return;
         const body = {
-            code: node('scope-code').value.trim(),
             nameVi: node('scope-name-vi').value.trim(),
             nameEn: node('scope-name-en').value.trim(),
             active: node('scope-active').checked,
@@ -281,9 +280,10 @@
     new MutationObserver(() => {
         if (section.hidden || loaded || busy) return;
         void perform(async () => {
-            [me, metadata] = await Promise.all([
+            [me, metadata, granted] = await Promise.all([
                 (async () => (await app.api.get('/api/v1/auth/me')).data.data)(),
                 get('/registry/roles'),
+                window.VietRouteAccess.load().then((value) => value.targets),
             ]);
             await loadScopes();
             loaded = true;

@@ -1,81 +1,75 @@
 package vn.vietroute.business.carrier.service;
 
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.entity.PermissionAction;
-import vn.vietroute.auth.security.AccessActors;
-import vn.vietroute.auth.security.DataScopeGuard;
+import vn.vietroute.auth.repo.AccessChangeRepo;
+import vn.vietroute.auth.repo.UserRoleRepo;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.auth.security.annotation.AccessOperation;
-import vn.vietroute.auth.security.annotation.AccessResource;
-import vn.vietroute.business.carrier.dto.request.CarrierCreateRequest;
-import vn.vietroute.business.carrier.dto.request.CarrierSearchRequest;
-import vn.vietroute.business.carrier.dto.request.CarrierUpdateRequest;
+import vn.vietroute.business.carrier.dto.request.CarrierRequest;
 import vn.vietroute.business.carrier.dto.response.CarrierResponse;
-import vn.vietroute.business.carrier.repository.CarrierRepository;
+import vn.vietroute.business.carrier.dto.search.CarrierSearch;
+import vn.vietroute.business.carrier.entity.Carrier;
+import vn.vietroute.business.carrier.repo.CarrierRepo;
 import vn.vietroute.common.base.PageResponse;
-import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.jdbc.JdbcTransactions;
-import vn.vietroute.common.media.service.MediaService;
 
 /** Nhà xe sở hữu scope duy nhất; scope active khác trạng thái nhận chuyến/đặt của doanh nghiệp. */
 @Service
 @RequiredArgsConstructor
-@AccessResource(Groups.CARRIER)
 public class CarrierService {
 
-    private final CarrierRepository carriers;
+    private final CarrierRepo carriers;
     private final JdbcTransactions transactions;
-    private final MediaService media;
+
+    private final AccessChangeRepo changes;
 
     /** Count/trang đều lọc quyền scoped trong SQL, không union quyền từ nhà xe khác. */
-    @AccessOperation(action = PermissionAction.READ)
-    public PageResponse<CarrierResponse> page(CarrierSearchRequest page) {
-        var result = carriers.carriers(page);
+    public PageResponse<CarrierResponse> page(CarrierSearch page) {
+        PageResponse<Carrier> result = carriers.carriers(page);
         return new PageResponse<>(
-            result.content().stream().map(CarrierResponse::from).toList(),
-            result.page(),
-            result.size(),
-            result.totalElements(),
-            result.totalPages(),
-            result.hasNext(),
-            result.hasPrevious()
+            result.getContent().stream().map(CarrierResponse::from).toList(),
+            result.getPage(),
+            result.getSize(),
+            result.getTotalElements(),
+            result.getTotalPages(),
+            result.isHasNext(),
+            result.isHasPrevious()
         );
     }
 
-    @AccessOperation(action = PermissionAction.READ)
     public CarrierResponse find(long id) {
-        return transactions.execute(connection ->
-            CarrierResponse.from(carriers.carrier(connection, id, Groups.CARRIER, PermissionAction.READ, false))
-        );
+        return transactions.execute(connection -> CarrierResponse.from(carriers.carrier(connection, id, false)));
     }
 
-    /** ADMIN tạo scope + nhà xe cùng transaction, không tự cấp mapping role cho người dùng thường. */
-    @AccessOperation(action = PermissionAction.CREATE, adminOnly = true)
-    public CarrierResponse create(CarrierCreateRequest body, UserPrincipal actor) {
-        AccessActors.requireCurrent(actor);
+    /** Actor có global target tạo scope + nhà xe cùng transaction, không tự cấp mapping role cho người dùng thường. */
+    public CarrierResponse create(CarrierRequest body, UserPrincipal actor) {
+        UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
-            DataScopeGuard.requireAdmin(connection, actor);
-            if (body.getLogoMediaId() != null) media.requireReference(connection, body.getLogoMediaId(), actor);
+            UserRoleRepo.requireGlobal(connection, actor);
             long id = carriers.insertCarrier(connection, body, actor.id());
-            return CarrierResponse.from(
-                carriers.carrier(connection, id, Groups.CARRIER, PermissionAction.CREATE, false)
+            Carrier value = carriers.carrier(connection, id, false);
+            changes.append(
+                connection,
+                "SCOPE_CREATED",
+                "SCOPE",
+                Long.toString(value.getScopeId()),
+                actor.id(),
+                Map.of(),
+                Map.of("active", true, "nameVi", body.getName(), "nameEn", body.getName(), "version", 0)
             );
+            return CarrierResponse.from(value);
         });
     }
 
-    /** Khóa ảnh trước entity, version/audit đồng thời; chỉ ADMIN được đổi trạng thái nhận nghiệp vụ. */
-    @AccessOperation(action = PermissionAction.UPDATE)
-    public CarrierResponse update(long id, CarrierUpdateRequest body, UserPrincipal actor) {
-        AccessActors.requireCurrent(actor);
+    /** Khóa ảnh trước entity, version/audit đồng thời; đổi trạng thái nhận nghiệp vụ cần global target tương ứng. */
+    public CarrierResponse update(long id, CarrierRequest body, UserPrincipal actor) {
+        UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
-            if (body.getLogoMediaId() != null) media.requireReference(connection, body.getLogoMediaId(), actor);
-            var current = carriers.carrier(connection, id, Groups.CARRIER, PermissionAction.UPDATE, true);
-            if (current.isActive() != body.isActive()) DataScopeGuard.requireAdmin(connection, actor);
+            Carrier current = carriers.carrier(connection, id, true);
+            if (current.isActive() != body.isActive()) UserRoleRepo.requireGlobal(connection, actor);
             carriers.updateCarrier(connection, current, body, actor.id());
-            return CarrierResponse.from(
-                carriers.carrier(connection, id, Groups.CARRIER, PermissionAction.UPDATE, false)
-            );
+            return CarrierResponse.from(carriers.carrier(connection, id, false));
         });
     }
 }

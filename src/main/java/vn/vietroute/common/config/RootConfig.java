@@ -21,9 +21,7 @@ import vn.vietroute.auth.config.SecurityConfig;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.application.ConfigurationEnvironment;
 import vn.vietroute.common.config.database.DatabaseConfig;
-import vn.vietroute.common.config.integration.IntegrationConfig;
-import vn.vietroute.common.config.monitoring.MonitoringConfig;
-import vn.vietroute.common.config.traffic.TrafficConfig;
+import vn.vietroute.common.config.database.JpaConfig;
 import vn.vietroute.common.web.locale.SupportedLocaleResolver;
 
 /** Root context quản lý service/repository và hạ tầng; không quét controller để tránh tạo bean hai lần. */
@@ -35,13 +33,7 @@ import vn.vietroute.common.web.locale.SupportedLocaleResolver;
         classes = { Controller.class, ControllerAdvice.class, Configuration.class }
     )
 )
-@Import({
-    SecurityConfig.class,
-    DatabaseConfig.class,
-    IntegrationConfig.class,
-    TrafficConfig.class,
-    MonitoringConfig.class,
-})
+@Import({ SecurityConfig.class, DatabaseConfig.class, JpaConfig.class })
 public class RootConfig {
 
     /** Cùng một Clock UTC cho audit, JWT và nghiệp vụ để dễ kiểm thử thời gian. */

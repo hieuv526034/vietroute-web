@@ -7,9 +7,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.FileSystemResourceLoader;
@@ -17,8 +21,6 @@ import org.springframework.mock.web.MockServletContext;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
-import vn.vietroute.auth.entity.Permission;
-import vn.vietroute.auth.entity.PermissionAction;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
@@ -27,16 +29,6 @@ import vn.vietroute.support.JournalTestConfig;
 
 /** Kiểm hợp đồng mà Swagger/Postman thực sự nhận, không mở connection hoặc đọc .env production. */
 class OpenApiContractTest {
-
-    @Test
-    void supportsSeparateListAndDetailCodesForFutureBusinessWithoutGrantingRead() {
-        var list = Permission.valueOf("BOOKING_LIST");
-        var detail = Permission.valueOf("BOOKING_DETAIL");
-        assertEquals(Set.of(PermissionAction.LIST), list.actions());
-        assertEquals(Set.of(PermissionAction.DETAIL), detail.actions());
-        assertFalse(list.equals(detail));
-        assertFalse(list.actions().contains(PermissionAction.READ));
-    }
 
     @Test
     void documentsEveryApiWithInheritedQueryFieldsAndPayloads() throws Exception {
@@ -57,6 +49,11 @@ class OpenApiContractTest {
             var response = mvc.perform(get(Routes.OPENAPI)).andReturn().getResponse();
             assertEquals(200, response.getStatus());
             var spec = json.readTree(response.getContentAsString());
+            spec.path("paths")
+                .properties()
+                .forEach(path ->
+                    assertFalse(path.getKey().contains("/tracking"), "GPS endpoint đã bỏ: " + path.getKey())
+                );
             Set<String> ids = new HashSet<>();
             var mapping = child.getBean(RequestMappingHandlerMapping.class);
             mapping.getHandlerMethods().forEach((route, handler) -> {
@@ -84,6 +81,18 @@ class OpenApiContractTest {
                 }
             });
             var schemas = spec.path("components").path("schemas");
+            // URL inventory trong JS phải tồn tại trong MVC thật; fixture không được che lệch tên route.
+            Matcher inventoryCall = Pattern.compile("inventory = \\(await get\\('([^']+)'\\)\\)").matcher(
+                Files.readString(Path.of("src/main/webapp/assets/js/functions.js"))
+            );
+            assertTrue(inventoryCall.find(), "Không tìm thấy URL tải danh bạ của modal Function");
+            assertFalse(
+                spec
+                    .path("paths")
+                    .path(Routes.ACCESS + inventoryCall.group(1))
+                    .path("get")
+                    .isMissingNode()
+            );
             schemas.properties().forEach(entry ->
                 entry
                     .getValue()
@@ -116,7 +125,19 @@ class OpenApiContractTest {
                 assertFalse(parameter(journal, name).isMissingNode(), name);
             // Client được dùng mã registry mới, Swagger không khóa role/permission thành enum bootstrap.
             assertFalse(schemas.path("Permission").has("enum"));
-            assertEquals("REPORT_READ", json.readValue("\"REPORT_READ\"", Permission.class).name());
+            // DTO dùng chung không làm version bắt buộc khi tạo, hoặc code/type bắt buộc khi sửa/xóa.
+            assertRequired(spec, Routes.ADMIN_CATALOGS, "post", Set.of("type", "nameVi", "nameEn"));
+            assertRequired(spec, Routes.ADMIN_CATALOG_BY_ID, "put", Set.of("nameVi", "nameEn", "version"));
+            assertRequired(spec, Routes.ADMIN_CATALOG_BY_ID, "delete", Set.of("version"));
+            assertRequired(spec, Routes.ADMIN_TRIPS + Routes.TRIP_STATE, "put", Set.of("status", "version", "note"));
+            assertRequired(spec, Routes.ADMIN_TRIPS + Routes.TRIP_NOTICE, "put", Set.of("version", "note"));
+            assertRequired(
+                spec,
+                Routes.ADMIN_BOOKINGS + Routes.BOOKING_PAYMENT,
+                "put",
+                Set.of("kind", "amount", "requestKey", "version", "note")
+            );
+            assertEquals("CUSTOM_ROLE", json.readValue("\"CUSTOM_ROLE\"", String.class));
         }
     }
 
@@ -125,6 +146,23 @@ class OpenApiContractTest {
             .filter(item -> item.path("name").asText().equals(name))
             .findFirst()
             .orElse(operation.path("missing"));
+    }
+
+    private static void assertRequired(JsonNode spec, String path, String method, Set<String> expected) {
+        JsonNode schema = resolve(
+            spec,
+            spec
+                .path("paths")
+                .path(path)
+                .path(method)
+                .path("requestBody")
+                .path("content")
+                .path("application/json")
+                .path("schema")
+        );
+        Set<String> actual = new HashSet<>();
+        schema.path("required").forEach(field -> actual.add(field.asText()));
+        assertEquals(expected, actual, method + " " + path);
     }
 
     private static JsonNode resolve(JsonNode spec, JsonNode schema) {

@@ -23,7 +23,6 @@
         onChange: (query) => perform(() => load(query), 'catalog-feedback'),
     });
     let selected = null;
-    let permissions = [];
     let targets = [];
     let busy = false;
     const editor = window.VietRouteUI.modal('catalog-dialog', {
@@ -35,14 +34,11 @@
         },
     });
     const can = (action) =>
-        root.dataset.api
-            ? targets.includes(
-                  `${{ CREATE: 'POST', READ: 'GET', UPDATE: 'PUT', DELETE: 'DELETE' }[action]} ${privateApi}${['UPDATE', 'DELETE'].includes(action) ? '/{id}' : ''}`,
-              )
-            : permissions.includes(action);
+        targets.includes(
+            `${{ CREATE: 'POST', READ: 'GET', UPDATE: 'PUT', DELETE: 'DELETE' }[action]} ${privateApi}${['UPDATE', 'DELETE'].includes(action) ? '/{id}' : ''}`,
+        );
     const refreshCapabilities = async () => {
         const data = await window.VietRouteAccess.load(feature);
-        permissions = data.actions;
         targets = data.targets;
     };
 

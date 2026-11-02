@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietroute.business.carrier.entity.Driver;
-import vn.vietroute.common.base.BaseResponse;
+import vn.vietroute.common.base.BaseDTO;
 
 /** Projection staff tường minh sau kiểm quyền/scope; không chứa mật khẩu/email/JWT. */
 @Getter
@@ -14,7 +14,7 @@ import vn.vietroute.common.base.BaseResponse;
 @NoArgsConstructor
 @SuperBuilder
 @Schema(description = "Dữ liệu Driver trong phạm vi được phép")
-public class DriverResponse extends BaseResponse {
+public class DriverResponse extends BaseDTO {
 
     @Schema(description = "ID nhà xe")
     private long carrierId;

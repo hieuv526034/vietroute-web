@@ -1,69 +1,39 @@
 package vn.vietroute;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.List;
-import java.util.ListResourceBundle;
-import java.util.ResourceBundle;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
-import vn.vietroute.auth.dto.response.AccessResourceResponse;
-import vn.vietroute.auth.entity.Permission;
-import vn.vietroute.auth.security.AccessPermissionDefinitions;
+import vn.vietroute.support.NativeEndpointWebFixture;
 
-/** Metadata source và nhãn module mở rộng độc lập danh sách hằng bootstrap; không mô phỏng authority user. */
+/** Engine mới không cần định nghĩa permission: mapping Spring MVC là nguồn danh bạ duy nhất. */
 class AccessPermissionDefinitionsTest {
 
     @Test
-    void sourceSnapshotIncludesHttpExtrasServiceOnlyViewAndLegacyAliases() {
-        var definitions = new AccessPermissionDefinitions();
-        var endpoint = new AccessResourceResponse(
-            "ENDPOINT",
-            "GET /fixture",
-            "Fixture#read",
-            "",
-            false,
-            true,
-            null,
-            null,
-            "FUTUREMODULE",
-            List.of("FUTUREMODULE_READ", "ANOTHER_DETAIL")
-        );
-        definitions.remember(List.of(endpoint), Set.of("SERVICEONLY_UPDATE"));
-        for (String code : List.of(
-            "FUTUREMODULE_READ",
-            "ANOTHER_DETAIL",
-            "SERVICEONLY_UPDATE",
-            "ACCESS_VIEW",
-            "CATALOG_WRITE"
-        ))
-            assertTrue(definitions.contains(code), code);
-        assertFalse(definitions.contains("CUSTOMMODULE_READ"));
-        definitions.remember(List.of(), Set.of());
-        assertFalse(definitions.contains("SERVICEONLY_UPDATE"), "Snapshot mới không giữ metadata đã bỏ khỏi source");
+    void newModuleAppearsWithoutCustomAnnotationAndKeepsItsSwaggerDescription() {
+        try (var web = new NativeEndpointWebFixture()) {
+            var endpoint = web.catalog.find("GET /api/v1/native-probe/{id}");
+            assertEquals("Chi tiết tự thu thập", endpoint.getDescription());
+            assertTrue(endpoint.getHandler().contains("ProbeAPI#get"));
+            assertEquals(
+                Set.of("GET", "PUT"),
+                web.catalog
+                    .assignable()
+                    .stream()
+                    .filter(item -> item.getPathTemplate().contains("{id}"))
+                    .map(item -> item.getHttpMethod())
+                    .collect(Collectors.toSet())
+            );
+        }
     }
 
     @Test
-    void newModuleUsesItsOwnBilingualKeyAndFallsBackToExactCode() {
-        var permission = Permission.valueOf("FUTUREMODULE_READ");
-        assertEquals("permission.FUTUREMODULE_READ", permission.messageKey());
-        for (String label : List.of("Đọc module mới", "Read future module")) {
-            ResourceBundle messages = new ListResourceBundle() {
-                @Override
-                protected Object[][] getContents() {
-                    return new Object[][] {
-                        { "permission.FUTUREMODULE_READ", label },
-                        { "permission.custom", "generic" },
-                    };
-                }
-            };
-            assertEquals(label, AccessPermissionDefinitions.localizedName(permission, messages));
-            assertEquals(
-                "ANOTHER_READ",
-                AccessPermissionDefinitions.localizedName(Permission.valueOf("ANOTHER_READ"), messages)
-            );
-        }
+    void missingHttpMethodFailsBeforePublishingAnIncompleteInventory() {
+        assertThrows(IllegalStateException.class, () ->
+            new NativeEndpointWebFixture(NativeEndpointWebFixture.InvalidAPI.class)
+        );
     }
 }

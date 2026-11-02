@@ -179,7 +179,7 @@
     });
     window.VietRouteAccess.load('JOURNAL')
         .then((capability) => {
-            readAllowed = capability.actions.includes('READ');
+            readAllowed = capability.targets.includes('GET /api/v1/admin/api-journal');
             perform(load);
         })
         .catch(window.VietRoute.failure);

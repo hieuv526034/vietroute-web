@@ -1,0 +1,41 @@
+name: Development Java
+
+on:
+  pull_request:
+    branches: [dev]
+    paths: &java-paths
+      - 'src/**/*.java'
+      - 'src/main/resources/**'
+      - 'src/test/resources/**'
+      - 'src/main/webapp/**'
+      - 'pom.xml'
+      - 'mvnw'
+      - '.mvn/**'
+      - '.github/workflows/development.yml'
+  push:
+    branches: [dev]
+    paths: *java-paths
+
+permissions:
+  contents: read
+
+concurrency:
+  group: development-java-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: Check Java without production image or external database
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Run Java unit and MVC tests without external database
+        run: sh ./mvnw test

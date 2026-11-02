@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Kiểu trả về ngắn cho controller: {@code ApiResult<UserResponse>} vẫn là HTTP response có envelope ApiResponse.
+ * Kiểu trả về ngắn cho controller: {@code ApiResult<UserSessionDTO>} vẫn là HTTP response có envelope ApiResponse.
  * Spring xử lý như ResponseEntity nên giữ nguyên status, header, generic DTO và cơ chế serialize hiện tại.
  */
 public final class ApiResult<T> extends ResponseEntity<ApiResponse<T>> {

@@ -1,0 +1,9 @@
+# Thứ tự phụ thuộc; 001 bắt đầu riêng trong từng cụm.
+postgresql/auth/001_schema.sql
+postgresql/catalog/001_schema.sql
+postgresql/carrier/001_schema.sql
+postgresql/trip/001_schema.sql
+postgresql/booking/001_schema.sql
+postgresql/common/001_schema.sql
+postgresql/foundation/001_system_account.sql
+postgresql/foundation/002_references.sql

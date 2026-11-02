@@ -8,14 +8,11 @@
     }
 })(() => {
     'use strict';
-    const permitted = (capabilities, feature, target) =>
-        capabilities.some((row) => row.function === feature && row.targets.includes(target));
-    const plan = (capabilities, roles = []) => {
+    const permitted = (capabilities, feature, target) => capabilities.some((row) => row.targets.includes(target));
+    const plan = (capabilities) => {
         const result = [];
-        if (roles.includes('CUSTOMER') && permitted(capabilities, 'MY_BOOKING', 'GET /api/v1/my-bookings'))
-            result.push('customer');
-        if (roles.includes('DRIVER') && permitted(capabilities, 'DRIVER_TRIP', 'GET /api/v1/driver/trips'))
-            result.push('driver');
+        if (permitted(capabilities, 'MY_BOOKING', 'GET /api/v1/my-bookings')) result.push('customer');
+        if (permitted(capabilities, 'DRIVER_TRIP', 'GET /api/v1/driver/trips')) result.push('driver');
         if (permitted(capabilities, 'REPORT', 'GET /api/v1/admin/reports')) result.push('report');
         if (permitted(capabilities, 'BOOKING', 'GET /api/v1/admin/bookings')) result.push('staff');
         return result;
@@ -129,7 +126,7 @@
                 const capabilities = await get('/api/v1/auth/capabilities');
                 // CUSTOMER/DRIVER là điều kiện nghiệp vụ owner/phân công, không được suy từ ADMIN có đủ permission.
                 const sections = plan(capabilities, user.roles);
-                const views = (feature) => capabilities.some((row) => row.function === feature && row.view);
+                const views = (feature) => capabilities.some((row) => row.view);
                 const range = dateRange();
                 document.getElementById('dashboard-range').textContent = sections.includes('report')
                     ? labels.range + ' ' + range.fromDate + ' — ' + range.toDate

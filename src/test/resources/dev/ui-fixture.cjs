@@ -422,8 +422,8 @@ const page = (values, query) => {
             }
             if (route === '/api/v1/admin/access/tree')
                 return respond(url.searchParams.get('lang') === 'en' ? enTree : viTree);
-            // Hợp đồng đọc ACCESS24 cho preview Role; không gửi grant tới DB hoặc provider.
-            if (route === '/api/v1/admin/access/resource-catalog') return respond(resources);
+            // Danh bạ MVC hiện hành cho modal Function; fixture không gửi grant tới DB hoặc provider.
+            if (route === '/api/v1/admin/access/targets') return respond(resources);
             if (/^\/api\/v1\/admin\/access\/roles\/[A-Z0-9_]+\/resources$/.test(route) && req.method === 'GET') {
                 const role = registry.find((item) => item.code === route.split('/')[6]);
                 if (!role) return respond(null, 404);
@@ -558,7 +558,7 @@ const page = (values, query) => {
                 Object.assign(value, input, { version: input.version + 1 });
                 return respond(value);
             }
-            if (route === '/api/v1/admin/access/policies' || route === '/api/v1/admin/access/targets')
+            if (route === '/api/v1/admin/access/policies')
                 return respond([]);
             if (route === '/api/v1/admin/accounts/options')
                 return respond({ roles, canCreate: true, canRead: true, canUpdate: true });

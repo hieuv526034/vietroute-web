@@ -5,28 +5,21 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import vn.vietroute.auth.entity.PermissionAction;
-import vn.vietroute.auth.security.AccessActors;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.auth.security.annotation.AccessOperation;
-import vn.vietroute.auth.security.annotation.AccessResource;
-import vn.vietroute.business.booking.repository.BookingLifecycleRepository;
-import vn.vietroute.business.carrier.repository.CarrierRepository;
-import vn.vietroute.business.tracking.repository.TrackingRepository;
-import vn.vietroute.business.trip.dto.request.TripAssignmentRequest;
-import vn.vietroute.business.trip.dto.request.TripChoiceRequest;
-import vn.vietroute.business.trip.dto.request.TripCreateRequest;
-import vn.vietroute.business.trip.dto.request.TripNoticeRequest;
-import vn.vietroute.business.trip.dto.request.TripSearchRequest;
-import vn.vietroute.business.trip.dto.request.TripStateRequest;
+import vn.vietroute.business.booking.repo.BookingRepo;
+import vn.vietroute.business.carrier.entity.Carrier;
+import vn.vietroute.business.carrier.repo.CarrierRepo;
+import vn.vietroute.business.trip.constant.TripStatus;
+import vn.vietroute.business.trip.dto.request.TripRequest;
 import vn.vietroute.business.trip.dto.response.TripChoiceResponse;
 import vn.vietroute.business.trip.dto.response.TripResponse;
-import vn.vietroute.business.trip.entity.TripStatus;
-import vn.vietroute.business.trip.repository.TripRepository;
-import vn.vietroute.business.trip.repository.TripTemplateRepository;
-import vn.vietroute.business.trip.repository.TripTemplateRepository.Template;
+import vn.vietroute.business.trip.dto.search.TripChoiceSearch;
+import vn.vietroute.business.trip.dto.search.TripSearch;
+import vn.vietroute.business.trip.repo.TripRepo;
+import vn.vietroute.business.trip.repo.TripRepo.Assets;
+import vn.vietroute.business.trip.repo.TripRepo.SourceStop;
+import vn.vietroute.business.trip.repo.TripRepo.Template;
 import vn.vietroute.common.base.PageResponse;
-import vn.vietroute.common.constant.AccessConstants.Groups;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.validation.BusinessRules;
@@ -34,222 +27,209 @@ import vn.vietroute.common.validation.BusinessRules;
 /** Điều hành chuyến theo scope: draft, snapshot, phân công và mở/hủy không cho bỏ qua đồ thị trạng thái. */
 @Service
 @RequiredArgsConstructor
-@AccessResource(Groups.TRIP)
 public class TripService {
 
-    private final TrackingRepository tracking;
-
-    private final TripRepository trips;
-    private final TripTemplateRepository templates;
-    private final CarrierRepository carriers;
+    private final TripRepo trips;
+    private final CarrierRepo carriers;
     private final JdbcTransactions transactions;
-    private final BookingLifecycleRepository bookings;
+    private final BookingRepo bookings;
 
     /** Danh sách staff lọc tại DB trước count/phân trang. */
-    @AccessOperation(action = PermissionAction.READ)
-    public PageResponse<TripResponse> page(TripSearchRequest search) {
+    public PageResponse<TripResponse> page(TripSearch search) {
         return trips.page(search);
     }
 
-    /** READ độc lập VIEW; ID ngoài quyền là 404. */
-    @AccessOperation(action = PermissionAction.READ)
+    /** GET dữ liệu độc lập GET menu; ID ngoài quyền là 404. */
     public TripResponse find(long id) {
-        return transactions.execute(connection -> trips.find(connection, id, PermissionAction.READ, false, true));
+        return transactions.execute(connection -> trips.find(connection, id, false, true));
     }
 
     /** tripId=0 chọn CREATE, ID có sẵn chọn UPDATE và buộc picker về chính nhà xe của trip. */
-    @AccessOperation(createArgument = "tripId")
-    public PageResponse<TripChoiceResponse> choices(long tripId, TripChoiceRequest body) {
+    public PageResponse<TripChoiceResponse> choices(long tripId, TripChoiceSearch body) {
         return transactions.execute(connection -> {
-            var action = tripId == 0 ? PermissionAction.CREATE : PermissionAction.UPDATE;
             if (tripId > 0) {
-                var trip = trips.find(connection, tripId, action, false, false);
-                body.setCarrierId(trip.carrierId());
+                TripResponse trip = trips.find(connection, tripId, false, false);
+                body.setCarrierId(trip.getCarrierId());
             }
-            return templates.choices(connection, body, action);
+            return trips.choices(connection, body);
         });
     }
 
     /** Khóa nhà xe → mẫu → xe → tài xế → account, tạo snapshot/segments/history nguyên tử. */
-    @AccessOperation(action = PermissionAction.CREATE)
-    public TripResponse create(TripCreateRequest body, UserPrincipal actor) {
-        AccessActors.requireCurrent(actor);
-        var start = future(body.getDepartureAt());
+    public TripResponse create(TripRequest body, UserPrincipal actor) {
+        UserPrincipal.requireCurrent(actor);
+        Instant start = future(body.getDepartureAt());
         body.setDepartureAt(start);
         return transactions.execute(connection -> {
-            var initial = templates.template(connection, body.getRouteId(), null, false);
-            var carrier = carriers.carrier(connection, initial.carrierId(), Groups.TRIP, PermissionAction.CREATE, true);
+            Template initial = trips.template(connection, body.getRouteId(), null, false);
+            Carrier carrier = carriers.carrier(connection, initial.getCarrierId(), true);
             BusinessRules.require(carrier.isActive(), ErrorCode.TRIP_STATE_CONFLICT);
-            var template = templates.template(connection, body.getRouteId(), carrier.getId(), true);
+            Template template = trips.template(connection, body.getRouteId(), carrier.getId(), true);
             validateTemplate(template);
-            var assets = templates.assets(
+            Assets assets = trips.assets(
                 connection,
                 carrier.getId(),
                 carrier.getScopeId(),
                 body.getVehicleId(),
                 body.getDriverId()
             );
-            carriers.requireDriverUser(connection, assets.driverUserId(), carrier.getScopeId());
+            carriers.requireDriverUser(connection, assets.getDriverUserId(), carrier.getScopeId());
             BusinessRules.require(
-                body.getCapacity() > 0 && body.getCapacity() <= assets.capacity(),
+                body.getCapacity() > 0 && body.getCapacity() <= assets.getCapacity(),
                 ErrorCode.TRIP_INVALID
             );
-            var end = start.plusSeconds(
+            Instant end = start.plusSeconds(
                 template
-                    .stops()
-                    .get(template.stops().size() - 1)
-                    .arrival() * 60L
+                    .getStops()
+                    .get(template.getStops().size() - 1)
+                    .getArrival() * 60L
             );
             long id = trips.insert(connection, body, template, assets, end, actor.id());
-            return trips.find(connection, id, PermissionAction.CREATE, false, true);
+            return trips.find(connection, id, false, true);
         });
     }
 
     /** Mở khóa trip trước assets; hai publish cạnh tranh không thể vượt qua cùng kiểm tra lịch. */
-    @AccessOperation(action = PermissionAction.UPDATE)
-    public TripResponse state(long id, TripStateRequest body, UserPrincipal actor) {
-        AccessActors.requireCurrent(actor);
+    public TripResponse state(long id, TripRequest body, UserPrincipal actor) {
+        UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
-            var trip = trips.find(connection, id, PermissionAction.UPDATE, true, true);
-            version(trip, body.version());
+            TripResponse trip = trips.find(connection, id, true, true);
+            version(trip, body.getVersion());
             BusinessRules.require(
-                body.status() == TripStatus.OPEN || body.status() == TripStatus.CANCELLED,
+                body.getStatus() == TripStatus.OPEN || body.getStatus() == TripStatus.CANCELLED,
                 ErrorCode.TRIP_STATE_CONFLICT
             );
-            if (body.status() == TripStatus.OPEN) {
-                BusinessRules.require(trip.status() == TripStatus.DRAFT, ErrorCode.TRIP_STATE_CONFLICT);
-                future(trip.departureAt());
-                var carrier = carriers.carrier(
-                    connection,
-                    trip.carrierId(),
-                    Groups.TRIP,
-                    PermissionAction.UPDATE,
-                    true
-                );
+            if (body.getStatus() == TripStatus.OPEN) {
+                BusinessRules.require(trip.getStatus() == TripStatus.DRAFT, ErrorCode.TRIP_STATE_CONFLICT);
+                future(trip.getDepartureAt());
+                Carrier carrier = carriers.carrier(connection, trip.getCarrierId(), true);
                 BusinessRules.require(carrier.isActive(), ErrorCode.TRIP_STATE_CONFLICT);
-                var template = templates.template(connection, trip.routeId(), trip.carrierId(), true);
+                Template template = trips.template(connection, trip.getRouteId(), trip.getCarrierId(), true);
                 validateTemplate(template);
                 trips.requireStopsActive(connection, id);
                 // Chỉ kiểm danh mục còn dùng; giữ nguyên tên/giờ/giá snapshot ngay cả mẫu vừa sửa.
-                var assets = templates.assets(
+                Assets assets = trips.assets(
                     connection,
-                    trip.carrierId(),
-                    trip.scopeId(),
-                    trip.vehicleId(),
-                    trip.driverId()
+                    trip.getCarrierId(),
+                    trip.getScopeId(),
+                    trip.getVehicleId(),
+                    trip.getDriverId()
                 );
-                carriers.requireDriverUser(connection, assets.driverUserId(), trip.scopeId());
+                carriers.requireDriverUser(connection, assets.getDriverUserId(), trip.getScopeId());
                 BusinessRules.require(
-                    assets.driverUserId() == trip.driverUserId() && trip.capacity() <= assets.capacity(),
+                    assets.getDriverUserId() == trip.getDriverUserId() && trip.getCapacity() <= assets.getCapacity(),
                     ErrorCode.TRIP_INVALID
                 );
-                templates.requireAvailable(connection, id, assets, trip.departureAt(), trip.endAt(), false);
+                trips.requireAvailable(connection, id, assets, trip.getDepartureAt(), trip.getEndAt(), false);
             } else {
                 BusinessRules.require(
-                    (trip.status() == TripStatus.DRAFT || trip.status() == TripStatus.OPEN) &&
-                        body.note() != null &&
-                        !body.note().isBlank(),
+                    (trip.getStatus() == TripStatus.DRAFT || trip.getStatus() == TripStatus.OPEN) &&
+                        body.getNote() != null &&
+                        !body.getNote().isBlank(),
                     ErrorCode.TRIP_STATE_CONFLICT
                 );
             }
-            if (body.status() == TripStatus.CANCELLED) bookings.cancelTrip(
+            if (body.getStatus() == TripStatus.CANCELLED) bookings.cancelTrip(
                 connection,
                 id,
-                body.note().strip(),
+                body.getNote().strip(),
                 actor.id()
             );
-            trips.state(connection, trip, body.status(), body.note().strip(), actor.id());
-            if (body.status() == TripStatus.CANCELLED) tracking.stop(connection, id, actor.id());
+            trips.state(connection, trip, body.getStatus(), body.getNote().strip(), actor.id());
             trips.event(
                 connection,
                 id,
-                trip.carrierId(),
-                trip.scopeId(),
-                body.status() == TripStatus.OPEN ? "OPENED" : "CANCELLED",
+                trip.getCarrierId(),
+                trip.getScopeId(),
+                body.getStatus() == TripStatus.OPEN ? "OPENED" : "CANCELLED",
                 null,
-                body.note().strip(),
+                body.getNote().strip(),
                 actor.id()
             );
-            return trips.find(connection, id, PermissionAction.UPDATE, false, true);
+            return trips.find(connection, id, false, true);
         });
     }
 
     /** Đổi xe/tài xế cùng nhà xe; OPEN giữ lịch, DRAFT được dịch lịch nhưng không đổi snapshot giá/điểm. */
-    @AccessOperation(action = PermissionAction.UPDATE)
-    public TripResponse assignment(long id, TripAssignmentRequest body, UserPrincipal actor) {
-        AccessActors.requireCurrent(actor);
+    public TripResponse assignment(long id, TripRequest body, UserPrincipal actor) {
+        UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
-            var trip = trips.find(connection, id, PermissionAction.UPDATE, true, true);
-            version(trip, body.version());
+            TripResponse trip = trips.find(connection, id, true, true);
             BusinessRules.require(
-                trip.status() == TripStatus.DRAFT || trip.status() == TripStatus.OPEN,
+                (body.getCode() == null || trip.getCode().equals(body.getCode())) &&
+                    (body.getRouteId() == 0 || trip.getRouteId() == body.getRouteId()),
+                ErrorCode.INVALID_REQUEST
+            );
+            version(trip, body.getVersion());
+            BusinessRules.require(
+                trip.getStatus() == TripStatus.DRAFT || trip.getStatus() == TripStatus.OPEN,
                 ErrorCode.TRIP_STATE_CONFLICT
             );
-            var carrier = carriers.carrier(connection, trip.carrierId(), Groups.TRIP, PermissionAction.UPDATE, true);
+            Carrier carrier = carriers.carrier(connection, trip.getCarrierId(), true);
             BusinessRules.require(carrier.isActive(), ErrorCode.TRIP_STATE_CONFLICT);
             Instant start =
-                body.departureAt() == null ? trip.departureAt() : body.departureAt().truncatedTo(ChronoUnit.SECONDS);
+                body.getDepartureAt() == null
+                    ? trip.getDepartureAt()
+                    : body.getDepartureAt().truncatedTo(ChronoUnit.SECONDS);
             BusinessRules.require(
-                trip.status() == TripStatus.DRAFT || start.equals(trip.departureAt()),
+                trip.getStatus() == TripStatus.DRAFT || start.equals(trip.getDepartureAt()),
                 ErrorCode.TRIP_STATE_CONFLICT
             );
             future(start);
-            Instant end = start.plus(Duration.between(trip.departureAt(), trip.endAt()));
-            var assets = templates.assets(
+            Instant end = start.plus(Duration.between(trip.getDepartureAt(), trip.getEndAt()));
+            Assets assets = trips.assets(
                 connection,
-                trip.carrierId(),
-                trip.scopeId(),
-                body.vehicleId(),
-                body.driverId()
+                trip.getCarrierId(),
+                trip.getScopeId(),
+                body.getVehicleId(),
+                body.getDriverId()
             );
-            carriers.requireDriverUser(connection, assets.driverUserId(), trip.scopeId());
+            carriers.requireDriverUser(connection, assets.getDriverUserId(), trip.getScopeId());
             BusinessRules.require(
-                body.capacity() > 0 &&
-                    body.capacity() <= assets.capacity() &&
-                    body.capacity() >= trips.peakReserved(connection, id),
+                body.getCapacity() > 0 &&
+                    body.getCapacity() <= assets.getCapacity() &&
+                    body.getCapacity() >= trips.peakReserved(connection, id),
                 ErrorCode.TRIP_INVALID
             );
-            if (trip.status() == TripStatus.OPEN) templates.requireAvailable(connection, id, assets, start, end, false);
-            trips.assignment(connection, trip, assets, body.capacity(), start, end, actor.id());
-            tracking.stop(connection, id, actor.id());
+            if (trip.getStatus() == TripStatus.OPEN) trips.requireAvailable(connection, id, assets, start, end, false);
+            trips.assignment(connection, trip, assets, body.getCapacity(), start, end, actor.id());
             trips.event(
                 connection,
                 id,
-                trip.carrierId(),
-                trip.scopeId(),
+                trip.getCarrierId(),
+                trip.getScopeId(),
                 "ASSIGNED",
                 null,
-                body.note().strip(),
+                body.getNote().strip(),
                 actor.id()
             );
-            return trips.find(connection, id, PermissionAction.UPDATE, false, true);
+            return trips.find(connection, id, false, true);
         });
     }
 
     /** Giữ trạng thái OPEN/IN_PROGRESS, chỉ thay thông báo và ghi NOTICE cùng transaction. */
-    @AccessOperation(action = PermissionAction.UPDATE)
-    public TripResponse notice(long id, TripNoticeRequest body, UserPrincipal actor) {
-        AccessActors.requireCurrent(actor);
-        BusinessRules.require(body.note() != null && !body.note().isBlank(), ErrorCode.INVALID_REQUEST);
+    public TripResponse notice(long id, TripRequest body, UserPrincipal actor) {
+        UserPrincipal.requireCurrent(actor);
+        BusinessRules.require(body.getNote() != null && !body.getNote().isBlank(), ErrorCode.INVALID_REQUEST);
         return transactions.execute(connection -> {
-            var trip = trips.find(connection, id, PermissionAction.UPDATE, true, true);
-            version(trip, body.version());
+            TripResponse trip = trips.find(connection, id, true, true);
+            version(trip, body.getVersion());
             BusinessRules.require(
-                trip.status() == TripStatus.OPEN || trip.status() == TripStatus.IN_PROGRESS,
+                trip.getStatus() == TripStatus.OPEN || trip.getStatus() == TripStatus.IN_PROGRESS,
                 ErrorCode.TRIP_STATE_CONFLICT
             );
-            trips.state(connection, trip, trip.status(), body.note().strip(), actor.id());
+            trips.state(connection, trip, trip.getStatus(), body.getNote().strip(), actor.id());
             trips.event(
                 connection,
                 id,
-                trip.carrierId(),
-                trip.scopeId(),
+                trip.getCarrierId(),
+                trip.getScopeId(),
                 "NOTICE",
                 null,
-                body.note().strip(),
+                body.getNote().strip(),
                 actor.id()
             );
-            return trips.find(connection, id, PermissionAction.UPDATE, false, true);
+            return trips.find(connection, id, false, true);
         });
     }
 
@@ -264,26 +244,26 @@ public class TripService {
     }
 
     private void version(TripResponse trip, Long version) {
-        BusinessRules.require(version != null && trip.version() == version, ErrorCode.STALE_VERSION);
+        BusinessRules.require(version != null && trip.getVersion() == version, ErrorCode.STALE_VERSION);
     }
 
     /** Chống nguồn dữ liệu không hợp lệ từ SQL vận hành; không chỉ dựa form ROUTE01. */
     private void validateTemplate(Template template) {
         BusinessRules.require(
-            template.active() && template.stops().size() >= 2 && template.stops().size() <= 32,
+            template.isActive() && template.getStops().size() >= 2 && template.getStops().size() <= 32,
             ErrorCode.TRIP_INVALID
         );
         int previous = -1;
         int order = 0;
-        for (var stop : template.stops()) {
+        for (SourceStop stop : template.getStops()) {
             BusinessRules.require(
-                stop.active() &&
-                    stop.order() == ++order &&
-                    stop.arrival() > previous &&
-                    stop.departure() >= stop.arrival(),
+                stop.isActive() &&
+                    stop.getOrder() == ++order &&
+                    stop.getArrival() > previous &&
+                    stop.getDeparture() >= stop.getArrival(),
                 ErrorCode.TRIP_INVALID
             );
-            previous = stop.departure();
+            previous = stop.getDeparture();
         }
     }
 }

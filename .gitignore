@@ -4,6 +4,7 @@
 /.m2/
 /node_modules/
 *.log
+__pycache__/
 
 # IDE and operating system
 /.idea/*
@@ -19,9 +20,10 @@
 .DS_Store
 Thumbs.db
 
-# Local credentials and configuration
+# Cấu hình local: chủ dự án cho phép theo dõi duy nhất .env ở gốc (01/11/2026).
 .env
 .env.*
+!/.env
 !.env.example
 src/main/resources/database-local.properties
 *.p12

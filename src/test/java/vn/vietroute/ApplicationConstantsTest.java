@@ -44,17 +44,17 @@ class ApplicationConstantsTest {
     void typedConfigPreservesDefaultsAndNeverEchoesRejectedSecretValues() {
         var values = new ConfigValues(
             Map.of(
-                "VIETROUTE_WORKER_THREADS",
+                "VIETROUTE_DB_POOL_SIZE",
                 "private-value-never-echo",
-                "VIETROUTE_MAIL_ENABLED",
+                "VIETROUTE_API_JOURNAL_ENABLED",
                 "invalid-private-value"
             )::get
         );
-        assertEquals("default", values.text(Env.CLOUDINARY_FOLDER, "default"));
-        var numberError = assertThrows(IllegalStateException.class, () -> values.number(Env.WORKER_THREADS, 2, 1, 8));
-        assertTrue(numberError.getMessage().contains(Env.WORKER_THREADS.key()));
+        assertEquals("default", values.text(Env.HTTP_PORT, "default"));
+        var numberError = assertThrows(IllegalStateException.class, () -> values.number(Env.DB_POOL_SIZE, 2, 1, 8));
+        assertTrue(numberError.getMessage().contains(Env.DB_POOL_SIZE.key()));
         assertFalse(numberError.getMessage().contains("private-value"));
-        var flagError = assertThrows(IllegalStateException.class, () -> values.flag(Env.MAIL_ENABLED, false));
+        var flagError = assertThrows(IllegalStateException.class, () -> values.flag(Env.API_JOURNAL_ENABLED, false));
         assertFalse(flagError.getMessage().contains("invalid-private-value"));
     }
 
@@ -69,6 +69,6 @@ class ApplicationConstantsTest {
         assertFalse(WebRoutePolicy.recoversInvalidCookie("/api/v1/media", "GET"));
         assertTrue(WebRoutePolicy.recoversInvalidCookie("/login", "GET"));
         assertTrue(WebRoutePolicy.publicMatchers().contains(Routes.LOGIN));
-        assertFalse(WebRoutePolicy.publicMatchers().contains(Routes.MEDIA));
+        assertFalse(WebRoutePolicy.publicMatchers().contains("/api/v1/media"));
     }
 }
