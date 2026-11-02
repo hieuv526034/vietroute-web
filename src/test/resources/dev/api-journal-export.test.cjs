@@ -55,3 +55,39 @@ test('Không dùng host trong lịch sử hoặc URL có credential/protocol l�
  for(const replayPath of ['//other.example/api/x','/api/../outside','/api/\\other.example','https://other.example/api/x'])
   assert(exporter.curl({...detail,replayPath},{baseUrl:'https://app.example'}).includes('https://app.example/api/REPLACE_ENDPOINT'));
 });
+
+async function journalAccessFixture(targets) {
+ const nodes = new Map(), calls = [], errors = [];
+ const node = (id) => {
+  if (!nodes.has(id)) nodes.set(id, {
+   dataset: {}, children: [], handlers: {}, attrs: {},
+   addEventListener(kind, action) { this.handlers[kind] = action; },
+   setAttribute(key, value) { this.attrs[key] = value; },
+   append(...values) { this.children.push(...values); },
+   replaceChildren(...values) { this.children = values; },
+   get childElementCount() { return this.children.length; },
+  });
+  return nodes.get(id);
+ };
+ const page = { content: [], totalElements: 0, page: 0, size: 20 };
+ vm.runInNewContext(fs.readFileSync('src/main/webapp/assets/js/api-journal.js', 'utf8'), {
+  document: { getElementById: node, createElement: () => node(Symbol()), querySelector: () => ({ content: 'No read permission' }) },
+  window: {
+   location: { origin: 'http://localhost:18155' },
+   VietRoute: { api: { async get(url) { calls.push(url); return { data: { data: { records: page, retentionMinutes: 10080, enabled: true } } }; } }, feedback() {}, failure(error) { errors.push(error); } },
+   VietRouteAccess: { load: async () => ({ targets }) },
+   VietRouteJournalExport: { applicationBase: (origin) => origin },
+   VietRouteTable: { pager: () => ({ query: {}, update() {} }), readPage: async (read, query) => read(query) },
+   VietRouteUI: { modal: () => ({ isOpen: false }) },
+  },
+ });
+ for (let i = 0; i < 30; i++) await new Promise(setImmediate);
+ assert.equal(errors.length, 0);
+ return calls;
+}
+
+test('Journal dùng grant endpoint thật có /system; có page hoặc target cũ không tự cấp quyền đọc', async () => {
+ assert.deepEqual(await journalAccessFixture(['GET /api/v1/admin/system/api-journal']), ['/api/v1/admin/system/api-journal']);
+ assert.deepEqual(await journalAccessFixture(['GET /operations/api-journal']), []);
+ assert.deepEqual(await journalAccessFixture(['GET /api/v1/admin/api-journal']), []);
+});

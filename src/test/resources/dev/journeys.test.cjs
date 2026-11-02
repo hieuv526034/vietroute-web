@@ -6,7 +6,7 @@ const tables = require('../../../main/webapp/assets/js/table.js');
 const requests = require('../../../main/webapp/assets/js/request-state.js');
 
 // Chạy client thật: đổi danh mục chỉ tải lựa chọn phụ thuộc, chưa gửi truy vấn chuyến.
-function fixture() {
+function fixture(access = null) {
     const nodes = new Map(), state = { calls: [], errors: [] };
     const node = (id) => {
         if (nodes.has(id)) return nodes.get(id);
@@ -16,12 +16,13 @@ function fixture() {
             setAttribute(key, value) { this.attrs[key] = value; },
             replaceChildren(...children) { this.children = children; this.value = ''; },
             append(...children) { this.children.push(...children); },
+            focus() {},
         };
         nodes.set(id, item);
         return item;
     };
     const root = node('journey-workspace');
-    root.dataset = { authenticated: 'false', loading: 'Loading', choose: 'Choose', all: 'All', empty: 'Empty' };
+    root.dataset = { authenticated: access ? 'true' : 'false', loading: 'Loading', choose: 'Choose', all: 'All', empty: 'Empty' };
     const form = node('journey-form');
     form.elements = Object.fromEntries(['date', 'seats', 'carrierId', 'vehicleTypeId', 'minPrice', 'maxPrice'].map((name) => [name, node(name)]));
     form.elements.seats.value = '1';
@@ -41,6 +42,7 @@ function fixture() {
     const api = {
         async get(path, { params }) {
             state.calls.push({ path, params });
+            if (path === '/api/v1/trips/1') return { data: { data: { id: 1, code: 'TRIP01', status: 'OPEN', stops: [] } } };
             if (path === '/api/v1/locations' && state.failLocation) throw new Error('Unavailable');
             const content = path === '/api/v1/provinces'
                 ? [{ id: params.page + 1, name: 'Province ' + (params.page + 1) }]
@@ -51,13 +53,15 @@ function fixture() {
         },
     };
     vm.runInNewContext(fs.readFileSync('src/main/webapp/assets/js/journeys.js', 'utf8'), {
-        URLSearchParams, Intl, Date, location: { search: '' },
+        URLSearchParams, Intl, Date, location: { search: access ? '?tripId=1' : '' },
+        requestAnimationFrame: (callback) => callback(),
         document: { documentElement: { lang: 'vi' }, getElementById: node, querySelector: () => ({ content: '' }), createElement: (tag) => node(Symbol(tag)) },
         window: {
             VietRoute: { api, feedback() {}, failure(error) { state.errors.push(error); } },
             VietRouteTable: { ...tables, pager: () => ({ query: { page: 0, size: 20 }, update() {} }) },
             VietRouteRequests: requests,
-            VietRouteUI: { modal: () => ({ isOpen: false }), tabs: () => ({}) },
+            VietRouteUI: { modal: () => ({ isOpen: false, open() {} }), tabs: () => ({ select() {} }) },
+            VietRouteAccess: { load: async () => access },
             VietRouteForms: { validate: () => true, clear() {} },
         },
     });
@@ -93,6 +97,23 @@ test('Chọn tỉnh tải đúng địa điểm, đổi tỉnh xóa địa đi�
     assert.equal(search.toLocationId, '10');
     assert.equal(search.fromLocationId, undefined);
     assert.equal(ui.state.errors.length, 0);
+});
+
+test('Trang tìm chuyến công khai cho đặt khi có cả quyền trang đơn và API tạo, không cần grant trang công khai', async () => {
+    const ui = fixture({ view: false, targets: ['GET /my-bookings', 'POST /api/v1/my-bookings'] });
+    await ui.idle();
+    assert.equal(ui.state.errors.length, 0);
+    assert.equal(ui.node('journey-book').hidden, false);
+    assert.match(ui.node('journey-book').href, /\/my-bookings\?.*tripId=1/);
+});
+
+test('Thiếu quyền trang đơn hoặc API tạo thì vẫn ẩn đặt chỗ dù đọc được chuyến', async () => {
+    for (const targets of [['GET /my-bookings'], ['POST /api/v1/my-bookings']]) {
+        const ui = fixture({ view: true, targets });
+        await ui.idle();
+        assert.equal(ui.state.errors.length, 0);
+        assert.equal(ui.node('journey-book').hidden, true);
+    }
 });
 
 test('Lỗi tải địa điểm giữ tỉnh, xóa lựa chọn lỗi thời và không tự gửi lại request', async () => {

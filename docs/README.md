@@ -7,17 +7,17 @@ Mỗi nội dung có một nơi chính. Thành viên không cần đọc hết d
 | 1 | [Tổng quan](01-bat-dau/TONG_QUAN_HE_THONG.md) | Hiểu bài toán, tác nhân, công nghệ, khối/bảng và luồng chung |
 | 2 | [Chạy local và account](01-bat-dau/CHAY_LOCAL.md), [formatter](01-bat-dau/FORMAT_INTELLIJ.md) | Chạy đúng DB demo, có tài khoản, biết quy tắc format |
 | 3 | [Phần của từng thành viên](05-ke-hoach/PHAN_CONG.md) | Đi từ màn/API → service → repo/bảng, biết ca lỗi và đầu ra bàn giao |
-| 4 | [Demo và 45 hỏi–đáp](05-ke-hoach/DEMO_VA_HOI_DAP.md) | Tập bài trình bày15 phút, ví dụ số, câu trả lời và source chứng minh |
+| 4 | [Lời thoại demo và 55 hỏi–đáp](05-ke-hoach/DEMO_VA_HOI_DAP.md) | Hai dev có lời thoại theo màn, bản rút gọn, ví dụ số và câu trả lời có source |
 | 5 | [Tiến độ](05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md) | Chốt phần đã main/Render, phần PR chưa tích hợp và giới hạn trước demo |
 
 ## Vào thẳng phần của mình
 
 | Thành viên | Đường học và trình bày |
 |---|---|
-| hieuv526034 | [Auth/common/DB/deploy](05-ke-hoach/PHAN_CONG.md#hieuv526034) |
-| anhhoang104 | [Danh mục/địa điểm/nhà xe](05-ke-hoach/PHAN_CONG.md#anhhoang104) |
-| BangPhamIT | [Tuyến/chuyến/tìm chuyến/đặt chỗ/tiến độ](05-ke-hoach/PHAN_CONG.md#bangphamit) |
-| hiencoi250404-design | [Báo cáo/dashboard](05-ke-hoach/PHAN_CONG.md#hiencoi250404-design) |
+| hieuv526034 | [Dev nền, DB/deploy và báo cáo/dashboard](05-ke-hoach/PHAN_CONG.md#hieuv526034) |
+| BangPhamIT | [Dev catalog/carrier/trip/booking và UI](05-ke-hoach/PHAN_CONG.md#bangphamit) |
+| anhhoang104 | [Báo cáo Word, sơ đồ và tổng hợp bản nộp](05-ke-hoach/PHAN_CONG.md#anhhoang104) |
+| hiencoi250404-design | [Test thủ công, ảnh chức năng và báo cáo Word](05-ke-hoach/PHAN_CONG.md#hiencoi250404-design) |
 
 ## Tra cứu khi phát triển hoặc vận hành
 
@@ -30,4 +30,6 @@ Mỗi nội dung có một nơi chính. Thành viên không cần đọc hết d
 | 05 — Làm nhóm/demo | Phân công, demo–hỏi đáp và tiến độ ở bước3–5; [yêu cầu báo cáo Word](05-ke-hoach/DEMO_VA_HOI_DAP.md#báo-cáo-sản-phẩm-theo-mẫu-công-nghệ-java) |
 | 06 — AI/bàn giao | [Cách tiếp tục khi đổi máy/người](06-ai-va-ban-giao/AI_VA_BAN_GIAO.md), [AGENTS](../AGENTS.md), [Git/PR](../CONTRIBUTING.md) |
 
-Bộ gọn có 12 file Markdown trong sáu cụm, không giữ hướng dẫn cũ hoặc redirect rỗng. Version thư viện tra pom.xml, payload tra controller/Swagger đúng bản, account/key theo CHAY_LOCAL và ngoại lệ .env.example; bằng chứng chỉ ở tiến độ/PR. Mẫu Word gốc nằm trong05-ke-hoach/mau, chưa phải báo cáo sản phẩm đã soạn. Khi chuyển/gộp/xóa phải sửa link/prompt/điểm đọc AI và chạy check:docs sau khi stage file mới.
+Bản nộp: [Báo cáo Word VietRoute Nhóm10](05-ke-hoach/bao-cao/Bao_cao_VietRoute_Nhom_10.docx), kèm [sơ đồ SVG và ảnh gốc](05-ke-hoach/bao-cao/Tu_lieu_VietRoute_Nhom_10.zip). Điền các ô [[GIANG_VIEN]], [[LOP]], [[KHOA_HOC]], [[HO_TEN_1]]… và [[MSSV_1]]… trên hai trang bìa; cập nhật field khi sửa nội dung. Trạng thái kiểm/bản dựng ở WORD01 trong tiến độ.
+
+Bộ gọn giữ 12 file Markdown trong sáu cụm. Version thư viện tra pom.xml, payload tra controller/Swagger đúng bản, account/key theo CHAY_LOCAL và ngoại lệ .env.example; bằng chứng ở tiến độ/PR. Mẫu Word gốc trong05-ke-hoach/mau giữ nguyên byte; báo cáo sản phẩm ở thư mục bao-cao. Khi chuyển/gộp/xóa phải sửa link/prompt/điểm đọc AI và chạy check:docs sau khi stage file mới.

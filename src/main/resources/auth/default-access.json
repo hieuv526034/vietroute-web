@@ -1601,7 +1601,7 @@
     },
     {
       "username": "driver01",
-      "displayName": "Nguyễn Minh Tuấn",
+      "displayName": "Quách Tĩnh",
       "role": "DRIVER",
       "carrierCode": "VRMIENNAM",
       "driverCode": "DRVSOUTH01",
@@ -1610,7 +1610,7 @@
     },
     {
       "username": "driver02",
-      "displayName": "Lê Hoàng Nam",
+      "displayName": "Dương Quá",
       "role": "DRIVER",
       "carrierCode": "VRBACNAM",
       "driverCode": "DRVNORTH01",
@@ -1619,7 +1619,7 @@
     },
     {
       "username": "driver03",
-      "displayName": "Trần Quốc Huy",
+      "displayName": "Lệnh Hồ Xung",
       "role": "DRIVER",
       "carrierCode": "VRMIENNAM",
       "driverCode": "DRVSOUTH02",
@@ -1628,7 +1628,7 @@
     },
     {
       "username": "driver04",
-      "displayName": "Lê Hoàng Nam",
+      "displayName": "Trương Vô Kỵ",
       "role": "DRIVER",
       "carrierCode": "VRMIENNAM",
       "driverCode": "VRDRV03",
@@ -1637,7 +1637,7 @@
     },
     {
       "username": "driver05",
-      "displayName": "Phạm Đức Anh",
+      "displayName": "Tiêu Phong",
       "role": "DRIVER",
       "carrierCode": "VRMIENNAM",
       "driverCode": "VRDRV04",
@@ -1646,7 +1646,7 @@
     },
     {
       "username": "driver06",
-      "displayName": "Phạm Đức Anh",
+      "displayName": "Đoàn Dự",
       "role": "DRIVER",
       "carrierCode": "VRBACNAM",
       "driverCode": "DRVNORTH02",
@@ -1655,7 +1655,7 @@
     },
     {
       "username": "driver07",
-      "displayName": "Bùi Trung Kiên",
+      "displayName": "Hư Trúc",
       "role": "DRIVER",
       "carrierCode": "VRBACNAM",
       "driverCode": "VRDRV07",
@@ -1664,7 +1664,7 @@
     },
     {
       "username": "driver08",
-      "displayName": "Võ Minh Khoa",
+      "displayName": "Thạch Phá Thiên",
       "role": "DRIVER",
       "carrierCode": "VRBACNAM",
       "driverCode": "VRDRV08",
@@ -1673,7 +1673,7 @@
     },
     {
       "username": "driver09",
-      "displayName": "Lê Quốc Bảo",
+      "displayName": "Hồ Phỉ",
       "role": "DRIVER",
       "carrierCode": "VRMIENTRUNG",
       "driverCode": "VRDRV09",
@@ -1682,7 +1682,7 @@
     },
     {
       "username": "driver10",
-      "displayName": "Nguyễn Hữu Phúc",
+      "displayName": "Vi Tiểu Bảo",
       "role": "DRIVER",
       "carrierCode": "VRMIENTRUNG",
       "driverCode": "VRDRV10",
@@ -1691,7 +1691,7 @@
     },
     {
       "username": "driver11",
-      "displayName": "Trần Minh Hải",
+      "displayName": "Trần Gia Lạc",
       "role": "DRIVER",
       "carrierCode": "VRMIENTRUNG",
       "driverCode": "VRDRV11",
@@ -1700,7 +1700,7 @@
     },
     {
       "username": "driver12",
-      "displayName": "Phạm Công Thành",
+      "displayName": "Viên Thừa Chí",
       "role": "DRIVER",
       "carrierCode": "VRMIENTRUNG",
       "driverCode": "VRDRV12",
@@ -1709,7 +1709,7 @@
     },
     {
       "username": "driver13",
-      "displayName": "Hoàng Văn Long",
+      "displayName": "Trương Tam Phong",
       "role": "DRIVER",
       "carrierCode": "VRTAYNGUYEN",
       "driverCode": "VRDRV13",
@@ -1718,7 +1718,7 @@
     },
     {
       "username": "driver14",
-      "displayName": "Đỗ Anh Dũng",
+      "displayName": "Hoàng Dược Sư",
       "role": "DRIVER",
       "carrierCode": "VRTAYNGUYEN",
       "driverCode": "VRDRV14",
@@ -1727,7 +1727,7 @@
     },
     {
       "username": "driver15",
-      "displayName": "Ngô Đức Thắng",
+      "displayName": "Hồng Thất Công",
       "role": "DRIVER",
       "carrierCode": "VRTAYNGUYEN",
       "driverCode": "VRDRV15",
@@ -1736,7 +1736,7 @@
     },
     {
       "username": "driver16",
-      "displayName": "Vũ Tuấn Anh",
+      "displayName": "Chu Bá Thông",
       "role": "DRIVER",
       "carrierCode": "VRTAYNGUYEN",
       "driverCode": "VRDRV16",
@@ -1745,7 +1745,7 @@
     },
     {
       "username": "driver17",
-      "displayName": "Dương Thành Đạt",
+      "displayName": "Vương Trùng Dương",
       "role": "DRIVER",
       "carrierCode": "VRMIENTAY",
       "driverCode": "VRDRV17",
@@ -1754,7 +1754,7 @@
     },
     {
       "username": "driver18",
-      "displayName": "Trịnh Minh Quân",
+      "displayName": "Đoàn Trí Hưng",
       "role": "DRIVER",
       "carrierCode": "VRMIENTAY",
       "driverCode": "VRDRV18",
@@ -1763,7 +1763,7 @@
     },
     {
       "username": "driver19",
-      "displayName": "Đinh Văn Lâm",
+      "displayName": "Khưu Xử Cơ",
       "role": "DRIVER",
       "carrierCode": "VRMIENTAY",
       "driverCode": "VRDRV19",
@@ -1772,7 +1772,7 @@
     },
     {
       "username": "driver20",
-      "displayName": "Phan Quốc Hưng",
+      "displayName": "Mã Ngọc",
       "role": "DRIVER",
       "carrierCode": "VRMIENTAY",
       "driverCode": "VRDRV20",
@@ -1781,7 +1781,7 @@
     },
     {
       "username": "driver21",
-      "displayName": "Lý Văn Bình",
+      "displayName": "Tống Viễn Kiều",
       "role": "DRIVER",
       "carrierCode": "VRDONGBAC",
       "driverCode": "VRDRV21",
@@ -1790,7 +1790,7 @@
     },
     {
       "username": "driver22",
-      "displayName": "Cao Minh Triết",
+      "displayName": "Du Liên Châu",
       "role": "DRIVER",
       "carrierCode": "VRDONGBAC",
       "driverCode": "VRDRV22",
@@ -1799,7 +1799,7 @@
     },
     {
       "username": "driver23",
-      "displayName": "Hồ Thanh Tùng",
+      "displayName": "Du Đại Nham",
       "role": "DRIVER",
       "carrierCode": "VRDONGBAC",
       "driverCode": "VRDRV23",
@@ -1808,7 +1808,7 @@
     },
     {
       "username": "driver24",
-      "displayName": "Mai Đức Hòa",
+      "displayName": "Mạc Thanh Cốc",
       "role": "DRIVER",
       "carrierCode": "VRDONGBAC",
       "driverCode": "VRDRV24",

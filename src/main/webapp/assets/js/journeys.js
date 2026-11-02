@@ -255,7 +255,8 @@
         empty(labels.empty);
         if (labels.authenticated === 'true') {
             const access = await window.VietRouteAccess.load('MY_BOOKING');
-            mayBook = access.view && access.targets.includes('POST /api/v1/my-bookings');
+            mayBook =
+                access.targets.includes('GET /my-bookings') && access.targets.includes('POST /api/v1/my-bookings');
         }
         const id = Number(new URLSearchParams(location.search).get('tripId'));
         if (Number.isSafeInteger(id) && id > 0) await open(id, null);

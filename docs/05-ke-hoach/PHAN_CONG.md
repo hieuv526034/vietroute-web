@@ -1,148 +1,107 @@
-# Phân công và đường học của từng thành viên
+# Phân công và bàn giao của nhóm
 
-Mỗi người đọc [tổng quan](../01-bat-dau/TONG_QUAN_HE_THONG.md), chạy app theo [local](../01-bat-dau/CHAY_LOCAL.md), rồi vào phần tên mình dưới đây. Tập trả lời [bộ hỏi–đáp](DEMO_VA_HOI_DAP.md) bằng một tình huống và một chỗ source có thể chỉ ra. Phân công là trách nhiệm bảo trì/nghiệm thu, không tự biến thành đóng góp đã viết; bằng chứng ở [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md)/commit/PR.
+Áp dụng từ02/11/2026 theo yêu cầu chủ dự án: **hai người phát triển source; hai người làm báo cáo Word, sơ đồ, ảnh chức năng và test thủ công**. Đây là trách nhiệm từ thời điểm phân công, không nhận lại tác giả hoặc đóng góp source đã có. Bằng chứng thực hiện nằm ở commit/PR/test trong [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md).
+
+Mỗi người đọc [tổng quan](../01-bat-dau/TONG_QUAN_HE_THONG.md), [local/tài khoản](../01-bat-dau/CHAY_LOCAL.md), rồi vào phần tên mình. Cả bốn cùng tập [lời thoại demo và55 hỏi–đáp](DEMO_VA_HOI_DAP.md); người viết tài liệu hoặc kiểm thử vẫn cần hiểu luồng màn hình/API và chỉ được bằng chứng thực tế.
 
 ## Thông tin thành viên
 
-| Username GitHub | Email tác giả commit | Khối phụ trách trọn luồng |
+| Username GitHub | Email tác giả commit | Vai trò và phạm vi chính |
 |---|---|---|
-| hieuv526034 | hieuv526034@gmail.com | Auth, common, DB, bootstrap, CI/deploy và review nền |
-| anhhoang104 | hanh104204@gmail.com | catalog + carrier, cả backend/UI/test |
-| BangPhamIT | bangpham.it@gmail.com | trip + booking, cả backend/UI/test |
-| hiencoi250404-design | hiencoi250404@gmail.com | report + dashboard, cả query/API/UI/test |
+| hieuv526034 | hieuv526034@gmail.com | Dev nền: auth/common, DB/migration, cơ chế init, CI/deploy; báo cáo/dashboard và tích hợp |
+| BangPhamIT | bangpham.it@gmail.com | Dev nghiệp vụ: catalog/carrier/trip/booking và UI tương ứng |
+| anhhoang104 | hanh104204@gmail.com | Chủ trì báo cáo Word: nội dung, sơ đồ, bố cục và tổng hợp bản nộp |
+| hiencoi250404-design | hiencoi250404@gmail.com | Test thủ công, chụp ảnh chức năng, bảng kết quả và hoàn thiện Word cùng Anh |
 
-Không suy email từ tên nhánh hoặc đổi author lịch sử. Username Git không phải username app. Nhánh mới <username>/<mã-việc>, từ dev; PR/check/review → dev, chỉ phát hành main khi có lệnh mới. Common/JS fragment/shared config phối hợp Hieu, không tự nhân bản lớp nền trong module.
+Không suy email từ nhánh hoặc sửa author lịch sử. Username Git không phải username app. Cả bốn dùng nhánh riêng <username>/<mã-việc> từ dev; PR/check/review → dev, main/deploy chỉ khi có lệnh phát hành mới. Tài liệu/test cũng có commit/PR của người thực hiện, không tạo commit hộ để đổi thống kê đóng góp.
 
 ## hieuv526034
 
-**Mục tiêu:** giải thích một người được đăng nhập, được mở endpoint và được thấy dữ liệu nào; bảo đảm ứng dụng khởi động/transaction/log/deploy đúng. Account demo: admin để quản trị, custom01/operator01 để kiểm bị chặn. Không dùng role ADMIN thay câu trả lời về grant.
+**Phụ trách source nền, vận hành và chức năng báo cáo/dashboard.** Bảo trì luồng username/password → CSRF/guard → JWT → quyền endpoint từ DB → scope/owner → transaction/repo. Account để học: admin, custom01, operator01/operator02; dùng DB test cho thay đổi quyền/khóa account.
 
-```mermaid
-flowchart LR
-    L[Username và password] --> C[CSRF, guard, UserService.login]
-    C --> P[Khóa user, BCrypt, bộ đếm sai]
-    P --> J[JWT/cookie]
-    J --> E[EndpointAccess đọc grant DB]
-    E --> S[Service kiểm actor và nghiệp vụ]
-    S --> R[Repo lọc scope/owner]
-```
-
-| Cần học | Mở source và giải thích |
+| Phần việc | Source và đầu ra |
 |---|---|
-| Auth 8 bảng/40 lớp | [auth](../../src/main/java/vn/vietroute/auth): User/Role/Function service và 8 repo; bảng ở schema |
-| Xác thực | SecurityConfig, UserService.login/logout/password, JwtService, JwtAuthenticationFilter/AuthCookies |
-| Quyền | EndpointAccess, UserRoleRepo.visibleSql/bindVisible/require, RoleService và FunctionService; mapping DB không enum/action registry |
-| Transaction | [config/database](../../src/main/java/vn/vietroute/common/config/database), JdbcTransactions/SchemaDataSource, BaseRepository |
-| Khởi tạo | [initializer](../../src/main/java/vn/vietroute/common/initializer), AuthInitializer, BusinessDataInitializer; manifest8 bước |
-| Log và vận hành | [api_journal](../../src/main/java/vn/vietroute/common/api_journal), [Dockerfile](../../Dockerfile), [render.yaml](../../render.yaml), workflow |
+| Auth | [auth](../../src/main/java/vn/vietroute/auth):40 lớp/8 bảng; tài khoản, role/function/menu/API, lifecycle và bootstrap |
+| Common | [common](../../src/main/java/vn/vietroute/common): config, transaction JPA/JDBC, API response/lỗi/locale, validation và journal |
+| Database | [migration](../../src/main/resources/db/migration/postgresql): schema/history/index, review bước mới và backup/restore; giữ checksum8 baseline |
+| Khởi tạo | DatabaseInitializer/AuthInitializer/BusinessDataInitializer; cờ init, account/quyền, idempotence và audit system |
+| CI/deploy | [Dockerfile](../../Dockerfile), [render.yaml](../../render.yaml), workflow/env; đúng SHA Live, health/login/API và bằng chứng phát hành |
+| Báo cáo/dashboard | [report](../../src/main/java/vn/vietroute/business/report): query/DTO/API/service, bộ lọc, UI báo cáo và dashboard; tổng hợp bảng hiện có, không thêm bảng báo cáo |
+| UI chung | Review shared layout/JS fragment cùng Bang; giữ contract và quyền backend khi giao diện đổi |
 
-Demo: tạo một account/phân role/function/membership trong DB test → vào đúng page và API → thu hồi một grant → nhập URL trực tiếp bị chặn ở lần kiểm tiếp theo. Mở journal bằng tài khoản được cấp, xem trace/snapshot che dữ liệu và export placeholder; không show password/JWT. Trình bày startup seed một lần, .env local không Git, DB hiện hành và bằng chứng Render đúng commit.
+Tự kiểm:401/403/CSRF, tokenVersion, khóa sai password, thu hồi grant, all_scopes cùng role, hai context Spring, JPA/JDBC rollback, schema LOCAL/pooler và journal che dữ liệu. Không cache grant để bỏ kiểm DB hoặc reset DB thật để kiểm build.
 
-Tự kiểm:401/403/CSRF,5 lần sai/khóa 15 phút, tokenVersion sau logout, role có menu thiếu API, ngoài scope, all_scopes không ghép role khác, version409, history lỗi rollback; guard cả root/servlet context. Không cố tình khóa tài khoản thật hoặc thay grant production chỉ để demo.
+Tự kiểm báo cáo: cùng kỳ theo ngày khởi hành Việt Nam và scope; tách giá trị đơn/thu/hoàn/nợ hoàn, dữ liệu rỗng trả0, không nhân đôi chuyến khi join đơn; confirmedSeats là lượt chỗ. Đối soát bằng đơn/chuyến cụ thể với Bang và Hien.
 
-Bàn giao cho Anh/Bang/Hien: principal + endpoint đã duyệt, contract ApiResponse/DTO/locale/traceId và hàm scope trên connection caller. Học sâu hỏi–đáp Q07–Q18, Q35–Q45.
-
-## anhhoang104
-
-**Mục tiêu:** chuẩn bị đúng dữ liệu nguồn để Bang lập chuyến được; chịu page/API/Request/DTO/service/repo/entity/UI của catalog/carrier. Account demo: admin cho danh mục toàn cục; operator01 Miền Nam và operator02 Bắc Nam để đối chiếu nhà xe.
-
-```mermaid
-flowchart LR
-    P[Tỉnh/thành] --> L[Địa điểm đón trả]
-    K[Loại phương tiện] --> V[Xe và sức chứa]
-    C[Nhà xe/scope] --> V
-    C --> D[Hồ sơ tài xế]
-    U[Account từ auth] --> D
-    L --> B[Bàn giao ID cho tuyến/chuyến]
-    V --> B
-    D --> B
-```
-
-Sáu bảng: catalog_items, location_provinces, location_places, carriers, carrier_vehicles, carrier_drivers. Mỗi nhà xe chứa scope metadata; hồ sơ tài xế nối account, không tự giữ password/role trong form driver.
-
-| Đi từ UI xuống DB | Source cần mở |
-|---|---|
-| Danh mục/tỉnh/địa điểm | [catalog](../../src/main/java/vn/vietroute/business/catalog): CatalogItemAPI/LocationAPI → service → repo/entity; Search/public DTO tách audit/PII |
-| Nhà xe/xe/tài xế | [carrier](../../src/main/java/vn/vietroute/business/carrier): CarrierAPI/VehicleAPI/DriverAPI và service/repo tương ứng |
-| Khách tra nhà xe | CarrierPublicAPI/PublicCarrierService, projection công khai |
-| UI | [fleet.js](../../src/main/webapp/assets/js/fleet.js), [catalog.js](../../src/main/webapp/assets/js/catalog.js), [location.js](../../src/main/webapp/assets/js/location.js), views catalog/fleet |
-
-API tiêu biểu: /api/v1/admin/catalogs, /api/v1/admin/provinces, /api/v1/admin/locations, /api/v1/admin/carriers, /api/v1/admin/vehicles, /api/v1/admin/drivers; tra cứu công khai GET /api/v1/provinces, /locations, /catalogs/{type}, /carriers. Method/template thực đọc controller/Swagger, page grant và mutation grant riêng.
-
-Demo: chuẩn bị tỉnh/địa điểm → loại xe → nhà xe → xe có sức chứa → hồ sơ tài xế gắn account. Sửa tên với version mới, thử trùng mã/biển số hoặc parent inactive; operator01 không được đọc/sửa ID Bắc Nam. Bàn giao **ID**, trạng thái active, scope, capacity và account liên kết cho Bang; không bàn giao tên tự do để Bang tự suy ID.
-
-Tự kiểm: CRUD/version/unique/type/FK, inactive cha, public projection, scope trước count/page, cấp account tài xế đúng scope và rollback. Phần credential/role gọi luồng auth trong cùng transaction, không ghi hash trực tiếp.
-
-Học sâu Q19–Q22; cần trả lời thêm Q11–Q14 về scope/owner/version và Q39 về dữ liệu giả lập.
+Bàn giao Bang: principal/endpoint đã duyệt, ApiResponse/DTO/locale/traceId, scope trên connection caller và quy tắc migration. Review thay đổi ảnh hưởng auth/common/schema của Bang. Cung cấp nội dung kỹ thuật cho Anh, môi trường demo và hướng dẫn thao tác để Hien test thủ công/chụp ảnh. Hai dev viết/chạy test tự động và xác nhận nội dung kỹ thuật trong Word. Học sâu Q07–Q18, Q30–Q34 và Q35–Q44; tập H1–H7 và Q46/Q50–Q52/Q54–Q55 trong kịch bản hai dev.
 
 ## BangPhamIT
 
-**Mục tiêu:** giải thích vòng đời tuyến/chuyến/đơn và vì sao chỗ/tiền không bị cập nhật sai khi có cạnh tranh. Chịu trip + booking trọn backend/UI/test; không GPS. Account demo: operator01 điều hành, driver01 tài xế và custom01 khách; operator02/driver02 thuộc Bắc Nam để thử ngoài scope. Không suy driver03 cùng phạm vi driver02 theo số username, xem bảng account local.
+**Phụ trách catalog/carrier/trip/booking, cả backend/UI và test của thay đổi mình viết.** Hieu phụ trách báo cáo/dashboard và phối hợp cơ chế nền/schema. Hai người tài liệu/test phụ trách đầu ra theo vai trò riêng.
 
 ```mermaid
 flowchart LR
-    R[Tuyến và điểm thứ tự] --> T[Chuyến DRAFT, snapshot]
-    T --> O[OPEN nếu đủ điều kiện]
-    O --> J[Tìm chặng và báo giá]
-    J --> P[Đơn WEB hoặc PHONE: PENDING]
-    P --> C[CONFIRMED: giữ mọi segment]
-    C --> M[Thu tiền]
-    C --> D[START, ARRIVE, DEPART, COMPLETE]
-    C --> X[CANCELLED: trả chỗ nếu còn được hủy]
-    X --> F[Hoàn tiền thực tế riêng]
+    C[Danh mục, địa điểm, nhà xe, xe và tài xế] --> R[Tuyến và điểm dừng]
+    R --> T[Chuyến, phân công và tồn chỗ]
+    T --> B[Tìm chuyến, đặt chỗ, xác nhận và thu–hoàn]
+    B --> D[Tiến độ tài xế]
+    B --> P[Báo cáo và dashboard - Hieu]
+    D --> P
 ```
 
-Tám bảng: carrier_routes/carrier_route_stops/carrier_trips/trip_stops/trip_segments/trip_events và bookings/booking_events. TripStop giữ lịch/giá/tên snapshot, TripSegment giữ capacity/reserved_seats; không lấy số đơn làm số ghế hay dùng một tồn chung toàn tuyến.
-
-| Luồng | Điểm đọc source |
+| Khối | Source, bảng và công việc |
 |---|---|
-| Tuyến/chuyến | [trip](../../src/main/java/vn/vietroute/business/trip): RouteAPI/RouteService/RouteRepo; TripAPI/TripService/TripRepo |
-| Khách tìm | TripSearchAPI → JourneyService/JourneyRepo, JourneySearch và quote DTO |
-| Tài xế | TripDriverAPI → DriverTripService → TripRepo.assigned/TripStopRepo; BookingRepo danh sách đón/trả |
-| Đơn/tiền | [BookingService](../../src/main/java/vn/vietroute/business/booking/service/BookingService.java), BookingRepo và TripSegmentRepo; BookingAPI dùng một BookingRequest |
-| UI | routes.js/trips.js/journeys.js/bookings.js/driver-trips.js trong [assets/js](../../src/main/webapp/assets/js) |
+| catalog | [catalog](../../src/main/java/vn/vietroute/business/catalog): catalog_items/location_provinces/location_places; CRUD, lookup và select phụ thuộc |
+| carrier | [carrier](../../src/main/java/vn/vietroute/business/carrier): carriers/carrier_vehicles/carrier_drivers; scope, xe/sức chứa, tài xế/account và tra cứu công khai |
+| trip | [trip](../../src/main/java/vn/vietroute/business/trip):6 bảng tuyến/điểm/chuyến/snapshot/segment/event; tìm chặng, phân công, lịch và tiến độ tài xế |
+| booking | [booking](../../src/main/java/vn/vietroute/business/booking): bookings/booking_events; WEB/PHONE, xác nhận/hủy, thu–hoàn thủ công và owner |
+| Dữ liệu nghiệp vụ | [bootstrap](../../src/main/resources/bootstrap): nhiều nhà xe/tuyến/lịch/tình huống; phối hợp Hieu khi đổi initializer/account/quyền hoặc schema |
+| UI nghiệp vụ | [assets/js](../../src/main/webapp/assets/js) và views: catalog/location/fleet/routes/trips/journeys/bookings/driver-trips, tab/modal/draft/paging và locale |
 
-API tiêu biểu: /api/v1/admin/routes, /api/v1/admin/trips, GET /api/v1/trips và /{id}/quote; /api/v1/my-bookings; /api/v1/admin/bookings với /{id}/state và /{id}/payment; /api/v1/driver/trips/{id}/progress và /{id}/passengers. Không suy quyền từ prefix/verb.
+Mỗi thay đổi đi đủ page/API → Request/Search/Response → Service → Repo/Entity → UI → test phù hợp. Query/scope/count/page/lock tại repo; service giữ nghiệp vụ/transaction, không for query/save từng bản ghi. Shared JS/common và migration cần phối hợp Hieu trước khi tích hợp.
 
-Demo: tuyến A→B→C → tạo chuyến tương lai, phân xe/tài xế hợp lệ → mở chuyến → custom01 tìm và tạo WEB PENDING → operator01 xác nhận, chỗ giảm trên đúng đoạn → ghi thu → driver01 xác nhận tiến độ theo thứ tự → Hien xem báo cáo. Muốn đặt WEB mới phải xử lý đơn active đang có của custom01 trước. Nhánh hủy/hoàn demo bằng đơn khác để không phá luồng tài xế.
+Tự kiểm: parent inactive/mã trùng/version, cấp account đúng scope, snapshot, chồng lịch, race giữ chỗ, requestKey tiền lặp, history rollback, thứ tự tiến độ và ngày Việt Nam. Khóa trip → booking → segments. Bàn giao Hieu contract/trạng thái/ý nghĩa tiền và dữ liệu đối soát cho report/dashboard.
 
-Tự kiểm: điểm/chiều/ngày đón, snapshot không đổi theo mẫu, chồng lịch xe/tài xế, version/trạng thái sai, race xác nhận còn 1 chỗ, requestKey thu tiền lặp, hủy chuyến batch/history rollback, owner/scope/assignment và tiến độ sai thứ tự. Khóa trip → booking → segments; thao tác tiền không gọi payment gateway.
+Account để học: operator01/driver01/custom01 cho Thiên Hành, operator02/driver02 cho An Phúc; bộ Duy Long dùng account riêng trong [local](../01-bat-dau/CHAY_LOCAL.md#nhà-xe-duy-long). Driver03 thuộc Thiên Hành, không suy scope từ số username. Duy Long là một đơn vị trong bộ demo đa nhà xe, không là mặc định chung của nghiệp vụ.
 
-Bàn giao cho Hien: ID chuyến/đơn, status, giá trị đặt, paid/refunded và ngày khởi hành. Bộ [Duy Long bốn lượt/ngày](../01-bat-dau/CHAY_LOCAL.md#nhà-xe-duy-long) dùng các account riêng để tập luồng này. Học sâu Q20–Q34; luôn minh họa bằng số chỗ/giá ví dụ, không chỉ đọc tên method.
+Bàn giao Anh: contract/màn hình/luồng/giới hạn và ID ví dụ. Bàn giao Hien: commit/môi trường, testcase đã chạy, đầu vào và kết quả mong đợi. Học sâu Q19–Q29 và Q33–Q34; nắm Q30–Q32 để bàn giao dữ liệu báo cáo, Q11–Q15/Q39–Q44 để phối hợp. Tập B1–B8 và Q47–Q49/Q53–Q55 trong kịch bản hai dev.
+
+## anhhoang104
+
+**Chủ trì hoàn thiện báo cáo Word để nộp.** Cùng Hien thu thập sơ đồ, hình chức năng và kết quả test thủ công; hai dev cung cấp và xác nhận nội dung kỹ thuật.
+
+| Phần việc | Đầu ra đưa vào Word |
+|---|---|
+| Nội dung | Giới thiệu đề tài, yêu cầu, tác nhân, chức năng, công nghệ, kết luận và hướng phát triển theo [mẫu báo cáo](DEMO_VA_HOI_DAP.md#báo-cáo-sản-phẩm-theo-mẫu-công-nghệ-java) |
+| Sơ đồ | Thu thập/vẽ lại use case, kiến trúc, ERD và luồng đăng nhập–phân quyền/đặt chỗ; ghi nguồn hoặc tự dựng, nhờ dev kiểm đúng bản |
+| Hướng dẫn chức năng | Viết các bước sử dụng theo role, ghép ảnh Hien chụp, thêm chú thích và liên hệ với sơ đồ |
+| Tổng hợp bản nộp | Ghép chương, mục lục tự động, danh mục hình/bảng, số trang, định dạng và tài liệu tham khảo; kiểm bố cục khi xuất PDF |
+
+Bàn giao file Word chỉnh sửa được và bản PDF đối chiếu; giữ nguồn sơ đồ/ảnh để sửa khi giao diện đổi. Phối hợp Hien test lại các bước hướng dẫn. Thông tin họ tên/MSSV chỉ dùng khi đã xác nhận, không suy từ GitHub. Đọc tổng quan/local và nội dung dev bàn giao để viết đúng; không cần nhận phần lập trình hoặc test tự động.
 
 ## hiencoi250404-design
 
-**Mục tiêu:** giải thích đúng số liệu và giúp người xem điều hướng theo quyền; chịu report + dashboard trọn query/API/UI/test, không nhận toàn bộ UI của các khối khác. Account demo: operator03 Miền Trung và admin để so sánh phạm vi.
+**Test thủ công, chụp hình chức năng và cùng Anh hoàn thiện báo cáo Word.** Thao tác trên giao diện theo hướng dẫn dev, ghi kết quả thật và kiểm lại sau khi dev sửa lỗi.
 
-```mermaid
-flowchart LR
-    I[Khoảng ngày Việt Nam + nhà xe] --> S[Service kiểm khoảng ngày/ID]
-    S --> P[Repo lọc scope trước tổng hợp]
-    P --> T[Tập chuyến theo departure_at]
-    T --> B[Tổng đơn/ghế/giá trị/thu/hoàn]
-    B --> U[DTO, hai tab và dashboard]
-```
-
-Report không thêm bảng: đọc carrier_trips, bookings và carriers, nối scope/grant auth. [ReportAPI](../../src/main/java/vn/vietroute/business/report/controller/api/ReportAPI.java) → [ReportService](../../src/main/java/vn/vietroute/business/report/service/ReportService.java) → [ReportRepo](../../src/main/java/vn/vietroute/business/report/repo/ReportRepo.java). Đọc ReportSearch/ReportSummaryResponse, DashboardPageController và [reports.js](../../src/main/webapp/assets/js/reports.js).
-
-API chính GET /api/v1/admin/reports?fromDate=...&toDate=...&carrierId=... và GET /api/v1/admin/reports/carriers. Page /operations/reports có grant riêng. Picker chỉ chọn nhà xe trong phạm vi, không gọi API tổng hợp để tìm tên.
-
-Demo: chọn khoảng có chuyến → operator03 thấy số liệu Miền Trung → cùng khoảng admin thấy toàn tập được cấp → mở đơn/chuyến đối chiếu1–2 con số. Ghi rõ báo cáo hiện lọc **ngày khởi hành chuyến**, không phải sổ doanh thu theo ngày thu tiền. Nhấn xem lại sau thao tác bên Bang; báo cáo không tự refresh hoặc tự cộng số trên client.
-
-| Chỉ tiêu | Phải nói đúng |
+| Phần việc | Đầu ra đưa vào Word |
 |---|---|
-| confirmedValue | Tổng giá trị đơn CONFIRMED/COMPLETED, chưa đồng nghĩa đã thu tiền |
-| paidAmount/refundedAmount/netAmount | Tiền đã ghi thu/hoàn; thực thu ròng = thu − hoàn |
-| refundOutstanding | Đơn CANCELLED còn paid − refunded phải hoàn |
-| confirmedSeats | Lượt chỗ trên các đơn CONFIRMED/COMPLETED, không số ghế vật lý duy nhất |
-| asOf | Mốc snapshot của một statement tổng hợp, không cam kết không thay đổi ngay sau đó |
+| Test thao tác | Đăng nhập theo role, menu/quyền, select/tìm chuyến, danh mục/nhà xe, tuyến/chuyến, đặt–xác nhận–hủy, thu–hoàn, tiến độ tài xế và báo cáo/dashboard |
+| Bảng kết quả | Mã ca, role, bước/đầu vào, kết quả mong đợi/thực tế và Đạt/Không đạt/Chưa kiểm; mô tả ngắn lỗi để dev tái hiện |
+| Ảnh chức năng | Chụp màn hình rõ, dữ liệu giả lập phù hợp, đúng phiên bản; đặt tên theo chức năng/role, có chú thích, che thông tin nhạy cảm |
+| Sơ đồ và Word | Hỗ trợ Anh thu thập/vẽ sơ đồ, viết phần kiểm thử/hướng dẫn, ghép ảnh/bảng và rà lỗi trình bày bản nộp |
 
-Tự kiểm: khoảng ngày/biên cuối ngày Việt Nam, range đảo/quá rộng, không có dữ liệu trả0, cùng scope cho picker/count/tổng, không nhân đôi số chuyến khi join nhiều đơn, còn nợ hoàn sau hủy và 403/404. Phối hợp Bang đối soát bằng đơn cụ thể, Hieu review scope/transaction/shared layout.
+Bàn giao Anh ảnh gốc, chú thích và bảng test; gửi lỗi cho Hieu nếu auth/common/DB/report/dashboard, cho Bang nếu catalog/carrier/trip/booking/UI tương ứng. Test có ghi dữ liệu chỉ trên môi trường demo đã được phép; dev chuẩn bị dữ liệu/role và hỗ trợ ca khó. Hai dev phụ trách toàn bộ code, script/test tự động, kiểm DB và CI/deploy. Hien không phải tự viết JUnit/Postman script, chạy regression DB hoặc kiểm tải.
 
-Học sâu Q30–Q34 và Q40–Q45; chuẩn bị giải thích ví dụ giá đặt1.000.000, thu 600.000, hoàn 100.000 thì net 500.000, không gọi doanh thu 1.000.000.
+## Bộ tài liệu cần chốt để nộp
 
-## Cách cả nhóm học và bàn giao
+Anh tổng hợp, Hien bổ sung ảnh/test và cùng rà bản cuối: Word theo mẫu, PDF kiểm bố cục, sơ đồ rõ chữ có nguồn sửa, ảnh chức năng theo role và bảng test thủ công. Không cần thêm nhiều tài liệu kỹ thuật riêng; đưa nội dung cần thiết vào đúng chương/phụ lục. Hieu/Bang xác nhận phần kỹ thuật trước khi chốt. Phân công này chưa phải bằng chứng đã soạn xong Word hoặc đã chạy các ca test.
 
-Mỗi người chuẩn bị: một câu mở đầu30 giây → một luồng đúng 2 phút → một lỗi có kiểm soát → chỉ 1 controller/service/query/test → trả lời hai câu ngoài khối mình. Người sau nhận ID/trạng thái từ người trước, dùng tài khoản của đúng tác nhân và DB demo riêng. Ghi kết quả thật, ảnh/PR và phần chưa có vào tiến độ; không đổi author để khớp bảng phân công.
+## Phối hợp và điều kiện bàn giao
 
-Thứ tự đọc chung: tổng quan → account/local → phần tên mình → câu hỏi được gợi ý → tập kịch bản cả nhóm. Chưa hiểu một method thì đi từ page/API xuống Request, Service, Repo và constraint, không học thuộc câu trả lời tách source.
+1. Hieu/Bang thống nhất phạm vi, contract/scope/schema và acceptance trước khi sửa source. Anh chuẩn bị chương/sơ đồ, Hien chuẩn bị các bước test thủ công và danh sách ảnh cần chụp.
+2. Dev làm trên nhánh riêng, tự kiểm và bàn giao commit/test thực tế. Hien test thao tác/chụp ảnh, Anh đối chiếu và đưa kết quả đúng bản vào Word.
+3. Lỗi nền/auth/DB/deploy về Hieu; lỗi báo cáo/dashboard về Hieu; lỗi catalog/carrier/trip/booking và UI tương ứng về Bang. Lỗi giao nhau do hai dev phối hợp, không giao người tài liệu sửa production theo suy đoán.
+4. PR/check/review → dev khi đạt; còn lỗi/chưa kiểm thì ghi rõ. Main/Render chỉ khi có lệnh phát hành mới. Không coi phân công hoặc review AI là nghiệm thu thành viên.
+5. Anh tổng hợp Word/sơ đồ, Hien bổ sung ảnh/bảng test thủ công; Hieu/Bang xác nhận kỹ thuật. Giữ tác giả đóng góp thật, không viết lại lịch sử theo vai trò mới.
+
+Mỗi người trình bày vai trò hiện tại, một luồng hiểu rõ, một ca lỗi và bằng chứng. Thứ tự: Anh mở bài/phạm vi → Hieu nền/quyền → Bang nghiệp vụ → Hieu báo cáo/dashboard → Hien kiểm thử/giới hạn. Chi tiết15 phút ở bộ demo; cả bốn cùng trả lời câu hỏi ngoài phần chính của mình.

@@ -97,16 +97,16 @@
   "carriers": [
     {
       "code": "VRMIENNAM",
-      "name": "VietRoute Miền Nam",
+      "name": "Nhà xe Thiên Hành",
       "phone": "028 0000 1101",
-      "description": "Đơn vị vận tải VietRoute Miền Nam. Văn phòng điều hành: 12 Đường số 8, khu vực Thủ Đức, Thành phố Hồ Chí Minh. Tiếp nhận yêu cầu đặt chỗ trên website và qua điện thoại; quản lý xe ghế ngồi 29 chỗ và xe giường nằm 40 chỗ.",
+      "description": "Đơn vị vận tải Nhà xe Thiên Hành. Văn phòng điều hành: 12 Đường số 8, khu vực Thủ Đức, Thành phố Hồ Chí Minh. Tiếp nhận yêu cầu đặt chỗ trên website và qua điện thoại; quản lý xe ghế ngồi 29 chỗ và xe giường nằm 40 chỗ.",
       "active": true
     },
     {
       "code": "VRBACNAM",
-      "name": "VietRoute Bắc Nam",
+      "name": "Nhà xe An Phúc",
       "phone": "024 0000 2201",
-      "description": "Đơn vị vận tải VietRoute Bắc Nam. Văn phòng điều hành: 36 Đường số 5, khu vực Nam Từ Liêm, Hà Nội. Tiếp nhận yêu cầu đặt chỗ trên website và qua điện thoại; quản lý xe limousine 16 chỗ và xe giường nằm 34 chỗ.",
+      "description": "Đơn vị vận tải Nhà xe An Phúc. Văn phòng điều hành: 36 Đường số 5, khu vực Nam Từ Liêm, Hà Nội. Tiếp nhận yêu cầu đặt chỗ trên website và qua điện thoại; quản lý xe limousine 16 chỗ và xe giường nằm 34 chỗ.",
       "active": true
     }
   ],
@@ -148,34 +148,34 @@
     {
       "code": "DRVSOUTH01",
       "carrierCode": "VRMIENNAM",
-      "name": "Nguyễn Minh Tuấn",
+      "name": "Quách Tĩnh",
       "phone": "028 0000 1111",
       "active": true
     },
     {
       "code": "DRVSOUTH02",
       "carrierCode": "VRMIENNAM",
-      "name": "Trần Quốc Huy",
+      "name": "Lệnh Hồ Xung",
       "phone": "028 0000 1112",
       "active": true
     },
     {
       "code": "DRVNORTH01",
       "carrierCode": "VRBACNAM",
-      "name": "Lê Hoàng Nam",
+      "name": "Dương Quá",
       "phone": "024 0000 2213",
       "active": true
     },
     {
       "code": "DRVNORTH02",
       "carrierCode": "VRBACNAM",
-      "name": "Phạm Đức Anh",
+      "name": "Đoàn Dự",
       "phone": "024 0000 2214",
       "active": true
     }
   ],
   "provenance": {
     "kind": "PROJECT_GENERATED",
-    "description": "Bộ dữ liệu do dự án tạo theo yêu cầu chủ dự án để nghiệm thu. Tên đơn vị, nhân sự, địa chỉ, số liên hệ, biển số và tọa độ không xác nhận hoạt động ngoài thực tế. Số có đầu thuê bao 0000 chỉ phục vụ dữ liệu khởi tạo. Thay bằng dữ liệu đã xác minh trước khi nhận khách thật."
+    "description": "Bộ dữ liệu do dự án tạo theo yêu cầu chủ dự án để nghiệm thu. Tên đơn vị, nhân sự, địa chỉ, số liên hệ, biển số và tọa độ không xác nhận hoạt động ngoài thực tế. Số có đầu thuê bao 0000 chỉ phục vụ dữ liệu khởi tạo. Thay bằng dữ liệu đã xác minh trước khi nhận khách thật. Sáu tên nhà xe là tên giả định riêng; 24 tên tài xế mượn nhân vật kiếm hiệp Kim Dung. Nhà xe Duy Long và Phạm Thành Lương giữ theo đầu vào chủ dự án."
   }
 }
