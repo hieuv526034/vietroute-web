@@ -64,6 +64,7 @@ public class PageModelAdvice {
         model.addAttribute("catalogAllowed", paths.contains(Routes.ADMIN));
         model.addAttribute("accessAllowed", paths.contains(Routes.ACCESS_PAGE));
         model.addAttribute("journalAllowed", paths.contains(Routes.API_JOURNAL_PAGE));
+        model.addAttribute("docsAllowed", paths.contains(Routes.DOCS));
         model.addAttribute("accountAllowed", user != null);
         model.addAttribute("adminUser", UserPrincipal.globalData());
         // Chỉ đánh dấu trang hiện hành; các cờ giao diện không thay thế kiểm quyền ở service.

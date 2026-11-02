@@ -1,4 +1,4 @@
-/* Bảng dùng Bootstrap sẵn có: chỉ tải trang hiện hành, không kéo toàn bộ dữ liệu xuống trình duyệt. */
+/* Phân trang bảng tại server và tải danh mục cho select phụ thuộc bằng API. */
 ((factory) => {
     const tables = factory();
     if (typeof module === 'object' && module.exports) module.exports = tables;
@@ -26,6 +26,15 @@
         return result.page > 0 && result.page >= Math.max(1, result.totalPages)
             ? fetcher({ ...query, page: boundedPage(result.page, result.totalPages) })
             : result;
+    };
+    // Danh mục cho select phụ thuộc: đọc đủ các trang 100 dòng, chỉ công bố sau khi cả danh sách thành công.
+    const readOptions = async (fetcher) => {
+        const items = new Map();
+        for (let page = 0; ; page++) {
+            const result = await fetcher({ page, size: 100 });
+            for (const item of result.content) items.set(String(item.id), item);
+            if (!result.hasNext) return Array.from(items.values());
+        }
     };
     const pager = (prefix, { onChange, busy = () => false } = {}) => {
         const root = document.getElementById(`${prefix}-pagination`);
@@ -176,5 +185,5 @@
         button.addEventListener('click', () => action(button));
         return button;
     };
-    return Object.freeze({ pageWindow, boundedPage, lookupSummary, readPage, pager, actionButton });
+    return Object.freeze({ pageWindow, boundedPage, lookupSummary, readPage, readOptions, pager, actionButton });
 });

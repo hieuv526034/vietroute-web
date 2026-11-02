@@ -1329,6 +1329,26 @@ class BusinessIntegrationTest {
         var customer = actor(customerId, "custom01", "CUSTOMER");
         var operator = actor(operatorId, "operator01", "OPERATOR");
         var driver = actor(driverId, "driver01", "DRIVER");
+        // Tài liệu thuộc bộ bootstrap admin qua mapping DB, ba role nghiệp vụ không được xem trực tiếp.
+        assertEquals(
+            "2",
+            sql(
+                "SELECT count(*) FROM auth_function_resources WHERE function_code='ADMIN_CONSOLE' AND target IN ('GET /docs','GET /v3/api-docs')"
+            )
+        );
+        for (Authentication ordinary : List.of(customer, operator, driver)) {
+            call(403, "GET", "/docs", null, ordinary);
+            call(403, "GET", "/v3/api-docs", null, ordinary);
+        }
+        call(200, "GET", "/docs", null, admin);
+        assertEquals(
+            200,
+            mvc
+                .perform(request(HttpMethod.GET, "/v3/api-docs").with(authentication(admin)))
+                .andReturn()
+                .getResponse()
+                .getStatus()
+        );
         assertEquals(2, call(200, "GET", "/api/v1/my-bookings", null, customer).path("totalElements").asInt());
         assertEquals(71, call(200, "GET", "/api/v1/admin/trips", null, operator).path("totalElements").asInt());
         assertEquals(5, call(200, "GET", "/api/v1/driver/trips", null, driver).path("totalElements").asInt());
@@ -3059,7 +3079,10 @@ class BusinessIntegrationTest {
         var result = json.readTree(response.getContentAsString()).path("data");
         assertEquals(1, result.path("totalElements").asInt());
         assertEquals(150000, result.at("/content/0/unitPrice").asInt());
-        var apiDocument = mvc.perform(request(HttpMethod.GET, "/v3/api-docs")).andReturn().getResponse();
+        var apiDocument = mvc
+            .perform(request(HttpMethod.GET, "/v3/api-docs").with(authentication(admin)))
+            .andReturn()
+            .getResponse();
         assertEquals(200, apiDocument.getStatus());
         var parameters = json.readTree(apiDocument.getContentAsString()).at("/paths/~1api~1v1~1trips/get/parameters");
         assertTrue(

@@ -218,6 +218,7 @@
                     <a
                         class="button button-outline button-small"
                         th:href="@{/docs(lang=${currentLocale})}"
+                        th:if="${docsAllowed}"
                         th:text="#{ui.docs}"
                     ></a>
                 </section>

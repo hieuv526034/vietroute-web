@@ -1,6 +1,24 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { pageWindow, boundedPage, lookupSummary, readPage } = require('../../../main/webapp/assets/js/table.js');
+const { pageWindow, boundedPage, lookupSummary, readPage, readOptions } = require('../../../main/webapp/assets/js/table.js');
+
+test('Select danh mục tải đủ trang sau, gộp ID trùng và không tự thử lại khi lỗi', async () => {
+    const calls = [];
+    const items = await readOptions(async (query) => {
+        calls.push(query);
+        return query.page === 0
+            ? { content: [{ id: 1 }, { id: 2 }], hasNext: true }
+            : { content: [{ id: 2 }, { id: 3 }], hasNext: false };
+    });
+    assert.deepEqual(calls, [{ page: 0, size: 100 }, { page: 1, size: 100 }]);
+    assert.deepEqual(items.map((item) => item.id), [1, 2, 3]);
+    let attempts = 0;
+    await assert.rejects(readOptions(async () => {
+        if (++attempts === 2) throw new Error('offline');
+        return { content: [{ id: 1 }], hasNext: true };
+    }));
+    assert.equal(attempts, 2);
+});
 
 test('Nhãn bộ chọn dùng tổng từ server, dịch đúng trang và không hiển thị trang 0/0 khi rỗng', () => {
     const vi = '{total} kết quả · Trang {page}/{pages}';

@@ -249,6 +249,8 @@ button:focus-visible {
     font: inherit;
 }
 .navigation-group {
+    display: grid;
+    gap: 6px;
     min-width: 0;
     padding: 10px;
     border: 1px solid #e0e9e2;
@@ -281,7 +283,7 @@ button:focus-visible {
 }
 .navigation-group-links {
     display: grid;
-    gap: 3px;
+    gap: 6px;
 }
 .navigation-panel .ui-icon {
     flex-shrink: 0;

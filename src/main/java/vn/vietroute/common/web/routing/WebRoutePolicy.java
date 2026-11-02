@@ -49,9 +49,6 @@ public final class WebRoutePolicy {
             Routes.LOGIN,
             Routes.ASSET_MATCHER,
             Routes.WEBJAR_MATCHER,
-            Routes.DOCS,
-            Routes.DOCS_MATCHER,
-            Routes.OPENAPI,
             Routes.AUTH_LOGIN,
             Routes.AUTH_CSRF,
             Routes.AUTH_LOGOUT
@@ -63,14 +60,9 @@ public final class WebRoutePolicy {
         return path.equals(Routes.HEALTH) || path.startsWith(Routes.ASSETS) || path.startsWith(Routes.WEBJARS);
     }
 
-    /** Trang docs/login API không cần giải mã token cookie cũ; không đồng nghĩa miễn Security cho mọi route. */
+    /** Login/CSRF không cần giải mã token cookie cũ; tài liệu API vẫn cần JWT và grant DB. */
     public static boolean skipsJwt(String path) {
-        return (
-            skipsTrafficGuard(path) ||
-            path.equals(Routes.AUTH_LOGIN) ||
-            path.equals(Routes.AUTH_CSRF) ||
-            path.equals(Routes.OPENAPI)
-        );
+        return skipsTrafficGuard(path) || path.equals(Routes.AUTH_LOGIN) || path.equals(Routes.AUTH_CSRF);
     }
 
     /** Cùng điều kiện cho Swagger mô tả API công khai; thao tác ghi danh mục luôn cần quyền ở service. */
@@ -90,7 +82,6 @@ public final class WebRoutePolicy {
             path.equals(Routes.PUBLIC_CARRIERS_PAGE) ||
             path.equals(Routes.JOURNEYS_PAGE) ||
             path.equals(Routes.LOGIN) ||
-            path.equals(Routes.DOCS) ||
             path.equals(Routes.AUTH_LOGOUT) ||
             publicLookup(path, method)
         );

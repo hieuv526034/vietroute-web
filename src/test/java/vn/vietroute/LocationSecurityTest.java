@@ -197,7 +197,12 @@ class LocationSecurityTest {
 
     @Test
     void openApiCoversInheritedQueryBodyAndPublicSecurityContract() throws Exception {
-        var spec = json.readTree(mvc.perform(get(Routes.OPENAPI)).andReturn().getResponse().getContentAsString());
+        var document = mvc
+            .perform(get(Routes.OPENAPI).with(authentication(actor(true, "GET " + Routes.OPENAPI))))
+            .andReturn()
+            .getResponse();
+        assertEquals(200, document.getStatus());
+        var spec = json.readTree(document.getContentAsString());
         var operation = spec.path("paths").path(Routes.ADMIN_LOCATIONS).path("get");
         String parameters = operation.path("parameters").toString();
         for (String name : List.of("page", "size", "query", "active", "provinceId"))
