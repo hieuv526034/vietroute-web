@@ -1,9 +1,9 @@
 services:
   - type: web
-    name: vietroute-web
+    name: vietroute-web-sg
     runtime: docker
     plan: free
-    region: ohio
+    region: singapore
     branch: main
     dockerfilePath: ./Dockerfile
     dockerContext: .

@@ -86,6 +86,39 @@ HTTP Live đạt46/46 account: username login → dữ liệu theo scope/owner �
 
 Không tạo đơn hoặc thu tiền thật để kiểm production. Lượt OpenAPI đầu tiên timeout40s; lượt sau với timeout90s đạt, các lượt kiểm hoàn chỉnh không lỗi. Đã dùng page size1/tối đa hai phiên để kiểm count/quyền mà không tải thừa dữ liệu; không coi đây là kiểm tải/SLA. Dữ liệu/hash cũ đối chiếu trước các phiên login/logout; thay tokenVersion là tác động vòng đời đăng nhập có chủ đích. PostgreSQL test chứa bản phục hồi đã dừng sau nghiệm thu. Kết quả và link triển khai được bàn giao thêm trong PR157 và PR DUYLONG02.
 
+## PERF04 — chẩn đoán độ trễ sau phát hành
+
+Nhánh hieuv526034/perf04-do-tre-render-db, người thực hiện hieuv526034. Đã kiểm chỉ đọc ngày02/11/2026 sau phản ánh lag:10 GET công khai tuần tự/hai lượt, đối chiếu trace journal của chính các request và EXPLAIN ANALYZE SELECT trong transaction READ ONLY. Không đăng nhập mới, tạo đơn, load test, seed, đổi index/env/plan hoặc deploy. GET vẫn đi qua journal của ứng dụng như traffic thông thường.
+
+Dashboard service srv-dbcve0q9lscs73f81reg xác nhận vùng thực **Virginia (US East)**; render.yaml đang ghi ohio, nên không dùng file này suy vùng của service hiện hữu. Cả hai đều ở Mỹ; DB hieuboy do chủ dự án cấp nằm ngoài Render. Hướng dẫn Render khuyên đặt app/datastore gần nhau; [đổi region cần service mới](https://render.com/docs/regions), không chỉ sửa YAML. Chưa chuyển vùng hoặc tạo tài nguyên.
+
+| Mẫu đo | Kết quả |
+|---|---|
+| /health, không DB | 870–903ms từ máy kiểm |
+| JS tĩnh | 389–871ms từ máy kiểm |
+| HTML /journeys công khai | 330–888ms, không gồm tải danh mục bằng JS |
+| GET /api/v1/provinces?size=100 | 2520–2541ms tải hết response; journal phần xử lý1256/1189ms |
+| GET /api/v1/carriers?size=100 | 2501–2950ms tải hết response; journal phần xử lý1189ms |
+| Sau header đến nhận hết response của bốn API | Khoảng935–937ms, kể cả response tỉnh chỉ912byte |
+| SQL tỉnh, trực tiếp trên PostgreSQL | execution0,307ms; planning0,743ms |
+| SQL tìm chuyến Duy Long count/page, hai điểm/ngày | execution1,323/1,139ms; planning11,302/15,895ms; page2 kết quả |
+| SELECT1 trên connection tái sử dụng, máy kiểm → DB | 5 mẫu24,185–24,584ms; không phải RTT từ Render |
+| pg_stat_activity tại một thời điểm | 3 connection idle/ClientRead, không thấy chờ khóa ở mẫu này |
+
+Source giải thích phần độ trễ: mỗi transaction có LOCAL search_path, SQL count/page và commit; JWT/grant/scope trên route private có thêm các lượt đọc hiện hành. ApiJournalFilter gọi store.add đồng bộ ở finally; append có SELECT schema/INSERT/commit, duration_ms được chụp trước đoạn này nên không thể lấy duration_ms làm toàn bộ HTTP. Khoảng935–937ms sau header phù hợp với đường ghi journal đồng bộ; chưa instrument từng bước trên JVM Render để tách tuyệt đối network/driver/CPU. Metadata entity/index chỉ kiểm lúc startup. Query count/page là số statement cố định, không phải for query từng dòng trong các mẫu đã đọc.
+
+Kết luận trong phạm vi mẫu: SQL server-side chưa giải thích được mức chờ nhiều giây; số lượt trao đổi DB qua mạng xa và journal đồng bộ là hai điểm cần ưu tiên. UI journeys đang chờ danh mục tỉnh xong mới gọi nhóm nhà xe/loại xe, cộng thêm thời gian chờ khi khởi tạo. Chưa đo CPU/GC/pool wait, route private hoặc app Java local; không khẳng định mọi màn có cùng nguyên nhân, không quy toàn bộ cho Render Free/cold start và chưa có SLA/p95/load test.
+
+Bước sửa đề xuất: giảm round trip bằng query theo tập, tải các danh mục độc lập song song, giữ kiểm quyền/scope và transaction LOCAL; chọn hạ tầng app gần DB. Thay cách ghi journal cần giữ hợp đồng lưu bền/giới hạn lỗi, không tự thêm queue/cache RAM hoặc âm thầm bỏ log. PERF04 hiện chỉ chẩn đoán và ghi bàn giao, chưa sửa hành vi/commit/merge/deploy production.
+
+## PERF05 — chuyển node Render sang Singapore
+
+Chủ dự án đã cho phép tạo service Free ở Singapore với URL mới và đo độ mượt, giữ Virginia trong lúc kiểm. Nhánh hieuv526034/perf05-render-singapore, người thực hiện hieuv526034; giữ nguyên báo cáo PERF04 đang dở. render.yaml đổi tên đích thành vietroute-web-sg/region singapore; không đổi code Java/JS, SQL, mật khẩu hoặc DB.
+
+Service mới dự kiến Docker từ main, Auto-Deploy After CI Checks Pass, health /health và build filters khớp source. Cấu hình DB/JWT sao chép trực tiếp trong bộ nhớ giữa hai form Render, không ghi credential vào docs/chat/file tạm. Bốn cờ init/sync/ordinary/business ở node mới tắt vì dùng DB đã có đủ dữ liệu; không migration/seed/reset production để chuyển vùng. Giữ tài khoản/quyền và JWT hiện hành. Chưa ghi nhận service mới Live hoặc kết quả nhanh hơn tại mốc chuẩn bị này; số đo/URL thực bổ sung trong bàn giao PR sau nghiệm thu.
+
+Kiểm source/config qua nhánh riêng → dev → main theo lệnh chuyển vùng hiện hành; Production CI cần đạt trước phát hành thay đổi render.yaml. So sánh cùng tập GET tuần tự, giữ cold start tách biệt với lượt ấm; đọc journal của các trace tự tạo và kiểm đăng nhập/scope/Swagger trên Singapore. Không load test hoặc đặt/thu tiền thật. Chưa có review nghiệm thu từ thành viên khác.
+
 ## Còn lại và bước tiếp
 
 Source DUYLONG01 đã có trên dev/main và Live theo bằng chứng trên; DUYLONG02 chốt tài liệu nghiệm thu. Chưa có Oracle runtime/regression, kiểm tải/SLA hoặc backup di động/PITR/RPO/RTO; DPAPI local phụ thuộc tài khoản Windows. AccountChallengeRepo còn SQL phụ cũ chưa được luồng hiện hành gọi, cần dọn riêng khi sửa auth, không trình bày như chức năng đang hoạt động. Kiểm thêm cách chạy Maven Wrapper trên máy trước khi dùng hướng dẫn local.
