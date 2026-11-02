@@ -4,6 +4,7 @@
 /.m2/
 /node_modules/
 *.log
+__pycache__/
 
 # IDE and operating system
 /.idea/*

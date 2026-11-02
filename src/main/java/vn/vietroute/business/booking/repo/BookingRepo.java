@@ -27,12 +27,13 @@ import vn.vietroute.business.booking.dto.response.DriverPassengerResponse;
 import vn.vietroute.business.booking.dto.search.BookingSearch;
 import vn.vietroute.business.booking.dto.search.BookingTripSearch;
 import vn.vietroute.business.trip.constant.TripStatus;
+import vn.vietroute.business.trip.repo.TripSegmentRepo;
+import vn.vietroute.common.base.BaseRepository;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
-import vn.vietroute.common.jdbc.BaseRepository;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.validation.BusinessRules;
 

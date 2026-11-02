@@ -51,12 +51,6 @@ public class UserDTO {
     @Schema(description = "Version cập nhật")
     private long version;
 
-    @Schema(description = "ID ảnh đại diện")
-    private Long avatarMediaId;
-
-    @Schema(description = "URL ảnh READY")
-    private String avatarUrl;
-
     @Schema(description = "Audit UTC")
     private Instant updatedAt;
 
@@ -92,8 +86,6 @@ public class UserDTO {
         dto.roles = value.getRoles();
         dto.targets = value.getTargets();
         dto.version = value.getVersion();
-        dto.avatarMediaId = value.getAvatarMediaId();
-        dto.avatarUrl = value.getAvatarUrl();
         dto.updatedAt = value.getUpdatedAt();
         dto.updatedBy = value.getUpdatedBy();
         return dto;

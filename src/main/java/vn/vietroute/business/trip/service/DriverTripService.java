@@ -8,7 +8,6 @@ import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.booking.dto.response.DriverPassengerResponse;
 import vn.vietroute.business.booking.repo.BookingRepo;
 import vn.vietroute.business.carrier.repo.CarrierRepo;
-import vn.vietroute.business.tracking.repo.TrackingRepo;
 import vn.vietroute.business.trip.constant.TripProgressAction;
 import vn.vietroute.business.trip.constant.TripStatus;
 import vn.vietroute.business.trip.dto.request.TripRequest;
@@ -34,7 +33,6 @@ public class DriverTripService {
     private final TripStopRepo progress;
     private final JdbcTransactions transactions;
     private final BookingRepo bookings;
-    private final TrackingRepo tracking;
 
     /** Driver không cần grant GET quản trị booking; chỉ projection đón/trả sau kiểm chính phân công hiện hành. */
     public PageResponse<DriverPassengerResponse> passengers(long id, PageRequest page, UserPrincipal actor) {
@@ -154,7 +152,6 @@ public class DriverTripService {
                 actor.id()
             );
             trips.state(connection, trip, state, trip.getOperationNote(), actor.id());
-            if (state == TripStatus.COMPLETED) tracking.stop(connection, id, actor.id());
             trips.event(
                 connection,
                 id,

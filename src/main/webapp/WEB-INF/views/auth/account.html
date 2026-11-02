@@ -143,35 +143,8 @@
                             maxlength="120"
                             autocomplete="name"
                         />
-                        <label
-                            for="profile-file"
-                            class="mt-3"
-                            th:text="#{ui.profile.avatar}"
-                        ></label>
-                        <input
-                            id="profile-file"
-                            name="file"
-                            type="file"
-                            class="form-control"
-                            accept="image/jpeg,image/png"
-                        />
-                        <p
-                            class="muted"
-                            th:text="#{ui.profile.avatarNote}"
-                        ></p>
-                        <img
-                            id="profile-preview"
-                            class="avatar avatar-preview"
-                            alt=""
-                            hidden
-                        />
+
                         <div class="dialog-actions">
-                            <button
-                                id="profile-remove-avatar"
-                                class="button button-outline"
-                                type="button"
-                                th:text="#{ui.profile.removeAvatar}"
-                            ></button>
                             <button
                                 class="button button-outline"
                                 type="button"

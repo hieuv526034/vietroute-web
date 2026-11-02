@@ -42,23 +42,6 @@
                             Khám phá API
                         </a>
                     </div>
-                    <div
-                        class="guest-account-links"
-                        th:if="${currentUser == null}"
-                    >
-                        <a
-                            th:href="@{/account-access(lang=${currentLocale},view='register')}"
-                            th:text="#{ui.accountFlow.register}"
-                        ></a>
-                        <a
-                            th:href="@{/account-access(lang=${currentLocale},view='forgot')}"
-                            th:text="#{ui.accountFlow.forgot}"
-                        ></a>
-                        <a
-                            th:href="@{/account-access(lang=${currentLocale},view='activate')}"
-                            th:text="#{ui.accountFlow.activate}"
-                        ></a>
-                    </div>
                 </div>
                 <div
                     class="journey-art"
@@ -95,8 +78,8 @@
                 </article>
                 <article>
                     <span class="feature-number">03 /</span>
-                    <h2 th:text="#{ui.featureTracking}">Theo dõi hành trình</h2>
-                    <p th:text="#{ui.featureTrackingDesc}">Thông tin chuyến xe.</p>
+                    <h2 th:text="#{ui.featureProgress}">Tiến độ chuyến đi</h2>
+                    <p th:text="#{ui.featureProgressDesc}">Thông tin chuyến xe.</p>
                 </article>
             </section>
             <p

@@ -49,6 +49,11 @@ class OpenApiContractTest {
             var response = mvc.perform(get(Routes.OPENAPI)).andReturn().getResponse();
             assertEquals(200, response.getStatus());
             var spec = json.readTree(response.getContentAsString());
+            spec.path("paths")
+                .properties()
+                .forEach(path ->
+                    assertFalse(path.getKey().contains("/tracking"), "GPS endpoint đã bỏ: " + path.getKey())
+                );
             Set<String> ids = new HashSet<>();
             var mapping = child.getBean(RequestMappingHandlerMapping.class);
             mapping.getHandlerMethods().forEach((route, handler) -> {

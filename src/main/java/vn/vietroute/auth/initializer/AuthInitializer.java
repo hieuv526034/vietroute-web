@@ -21,10 +21,9 @@ import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.application.ConfigValues;
 import vn.vietroute.common.config.application.ConfigurationEnvironment;
-import vn.vietroute.common.config.integration.MailSettings;
 import vn.vietroute.common.constant.ApplicationConstants.Env;
 import vn.vietroute.common.jdbc.JdbcTransactions;
-import vn.vietroute.common.validation.StrongPasswordValidator;
+import vn.vietroute.common.validation.BusinessRules;
 
 /** Khởi tạo opt-in theo JSON/env; giữ hash/khóa cũ và không tự cấp lại mapping ordinary role. */
 @Component
@@ -83,11 +82,13 @@ public class AuthInitializer {
         for (JsonNode item : data.path("accounts")) {
             String username = item.path("username").asText();
             if (existing.contains(username)) continue;
-            String email = environment.apply(item.path("emailEnv").asText());
+            String email = item.hasNonNull("emailEnv")
+                ? environment.apply(item.path("emailEnv").asText())
+                : item.path("email").asText();
             String password = environment.apply(item.path("passwordEnv").asText());
             if (
-                !MailSettings.validAddress(email) ||
-                !StrongPasswordValidator.valid(password) ||
+                !BusinessRules.validEmail(email) ||
+                !BusinessRules.validInitialPassword(password) ||
                 email.startsWith("replace_")
             ) throw new IllegalStateException("Cần cấu hình email/mật khẩu tài khoản mặc định trên máy");
             User account = new User();

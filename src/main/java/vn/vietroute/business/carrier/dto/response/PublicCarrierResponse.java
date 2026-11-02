@@ -29,7 +29,4 @@ public class PublicCarrierResponse {
 
     @Schema(description = "Giới thiệu được công bố")
     private String description;
-
-    @Schema(description = "URL logo READY công khai, null khi chưa có ảnh")
-    private String logoUrl;
 }

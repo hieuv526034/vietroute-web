@@ -9,7 +9,7 @@ Hướng dẫn theo source AUTHDB04/AUTHDTO02 ngày 01/11/2026. Không nhận m�
 | /operations/accounts | Danh sách, tạo/sửa tên, khóa/mở/xóa mềm và xem quyền đích | Grant GET page và từng API riêng |
 | /operations/access | Ba tab Role, Chức năng, Phạm vi dữ liệu | Grant GET page; API CRUD/gán/tra cứu tương ứng |
 | /operations/access/resources | Xem inventory menu/API từ MVC | GET page + GET access/resources |
-| /account | Hồ sơ, avatar và đổi password của chính mình | Đăng nhập hợp lệ; self-service |
+| /account | Tên hiển thị và đổi password của chính mình | Đăng nhập hợp lệ; self-service |
 | /dashboard | Tổng quan và liên kết theo capabilities | Đăng nhập, trạng thái được filter chấp nhận |
 | /operations/jobs | Tra/retry công việc nền | GET page, API list và API retry độc lập |
 | /operations/configuration | Cấu hình whitelist chỉ đọc | GET page và GET system/configuration |
@@ -45,14 +45,14 @@ all_scopes chỉ có hiệu lực cho target được chính role đó cấp; kh
 
 Admin bootstrap lấy username/email/password từ cấu hình, không đồng nhất mọi account tên ADMIN. DB_INIT có thể tạo/chuẩn hóa đúng identity gốc, giữ hash/history/khóa cũ; ACCESS_SYNC sửa role/function bootstrap với target nguồn hiện tại. Không có API recovery riêng. [Cờ và phạm vi init](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#khởi-tạo-và-bảo-vệ-bootstrap) là hướng dẫn chính, không dùng restart tùy tiện như thao tác reset password.
 
-custom01/driver01/operator01 được tạo một lần khi DEFAULT_ACCOUNTS_ENABLED trong init và env hợp lệ. Account đã có giữ trạng thái/hash; ordinary grants và membership đã thu hồi không tự phục hồi sau restart. Dữ liệu nhà xe/xe/tuyến khởi tạo do dự án tạo theo yêu cầu, chưa xác minh là hoạt động thực của một đơn vị. Lịch chuyến/đơn và số dư hiện tại phải xem DB thực; không lấy số liệu fixture hoặc mốc triển khai cũ làm lời hứa môi trường mới.
+Bộ 12 khách/24 tài xế/6 điều hành được tạo một lần khi DEFAULT_ACCOUNTS_ENABLED trong init và env hợp lệ; admin bootstrap riêng. Xem [bảng account/key mật khẩu và luồng thao tác](../01-bat-dau/CHAY_LOCAL.md#tài-khoản-và-dữ-liệu-khởi-tạo). Account đã có giữ trạng thái/hash; ordinary grants và membership đã thu hồi không tự phục hồi sau restart. Dữ liệu nhà xe/xe/tuyến khởi tạo do dự án tạo theo yêu cầu, chưa xác minh là hoạt động thực của một đơn vị. Lịch chuyến/đơn và số dư hiện tại phải xem DB thực; không lấy số liệu fixture hoặc mốc triển khai cũ làm lời hứa môi trường mới.
 
-## Job, cấu hình và nhật ký
+## Nhật ký request và phạm vi đã bỏ
 
-Job có trạng thái/attempt/lease, retry là mutation cần grant riêng và CSRF; không sửa payload job từ UI. Retry có thể gọi provider nên kiểm provider/config trước. Trang cấu hình chỉ whitelist thông số, không đọc/ghi env/secret qua browser. `/health` không thử DB; readiness có DB; metrics scrape dùng token riêng.
+Mở /operations/api-journal với grant page/API chính xác trong DB. Danh sách hiển thị user đã xác thực, endpoint, status, thời điểm/duration; chi tiết là payload/response đã lọc. Copy cURL hoặc xuất Postman dùng URL thực và placeholder token; không tự gửi lại request. Xem [hướng dẫn debug](NHAT_KY_API_VA_DEBUG.md).
 
-AccessChange vẫn ghi lịch sử mutation nguyên tử nhưng không có tab/API tra history riêng. API journal là trace đã lọc trong common.monitoring, không thay history quyền hoặc DB audit. Đọc [nhật ký/debug](NHAT_KY_API_VA_DEBUG.md) và [giám sát](GIAM_SAT_VA_VAN_HANH.md) cho projection, retention, missed-write và giới hạn nhiều node. Config/template không chứng minh provider, backup hoặc cảnh báo production đã chạy.
+Đã bỏ job/retry/mail/upload/media/status/runtime/configuration/activity/metrics và các màn tương ứng; không còn provider/collector hoặc env cũ để bật lại. /health chỉ liveness, không thử DB. AccessChange ghi mutation nguyên tử và không có màn/API tra history riêng. Journal trong common.api_journal là chẩn đoán có retention/missed-write, không thay DB audit bất biến.
 
 ## Cách phát triển và nghiệm thu tiếp
 
-Đọc [schema/luồng auth](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md), [36 API auth](../02-phat-trien/API_BASE.md#api-auth-hiện-hành), [cấu trúc 40 class](../02-phat-trien/QUY_UOC_PHAT_TRIEN.md#authdb04--auth-gọn-40-class-tám-bảng-01112026) và tiến độ đúng commit. Kiểm cả hai context WAR, URL trực tiếp, stale version, grant/revoke, scope/owner và rollback history. Không bật init hoặc ghi Neon để nghiệm thu build. Merge vào dev theo PR; main/deploy chỉ khi có lệnh phát hành mới.
+Đọc [schema/luồng auth](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md), [36 API auth](../02-phat-trien/API_BASE.md#api-auth-hiện-hành), [cấu trúc 40 class](../02-phat-trien/QUY_UOC_PHAT_TRIEN.md#auth-gọn-40-class-tám-bảng) và tiến độ đúng commit. Kiểm cả hai context WAR, URL trực tiếp, stale version, grant/revoke, scope/owner và rollback history. Không bật init hoặc ghi Neon để nghiệm thu build. Merge vào dev theo PR; main/deploy chỉ khi có lệnh phát hành mới.

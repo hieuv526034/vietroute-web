@@ -3,7 +3,7 @@ package vn.vietroute.common.base;
 import jakarta.persistence.EntityManager;
 import java.io.Serializable;
 import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
-import vn.vietroute.common.jdbc.BaseRepository.SqlWork;
+import vn.vietroute.common.base.BaseRepository.SqlWork;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 
 /** CRUD Spring Data JPA và callback JDBC dùng cùng transaction; không có SQL nghiệp vụ trong lớp nền. */

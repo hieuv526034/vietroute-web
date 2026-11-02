@@ -72,7 +72,7 @@ public class UserAPI extends BaseController {
     @PostMapping(Routes.AUTH_LOGIN)
     @Operation(
         summary = "Đăng nhập",
-        description = "Bắt buộc username/password; 5 lần sai khóa 15 phút, browser nhận cookie HttpOnly"
+        description = "Chỉ đăng nhập bằng username/password, không dùng email; 5 lần sai khóa 15 phút, browser nhận cookie HttpOnly"
     )
     public ApiResult<UserDTO> login(
         @Valid @RequestBody UserRequest body,
@@ -132,7 +132,7 @@ public class UserAPI extends BaseController {
     @PutMapping(Routes.AUTH + Routes.AUTH_PROFILE)
     @Operation(
         summary = "Sửa hồ sơ của chính mình",
-        description = "displayName/avatarMediaId/version; không đổi email, role hoặc trạng thái"
+        description = "displayName/version; không đổi email, role hoặc trạng thái"
     )
     public ApiResult<UserDTO> profile(
         @Valid @RequestBody UserRequest body,

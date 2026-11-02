@@ -9,7 +9,6 @@ import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.booking.repo.BookingRepo;
 import vn.vietroute.business.carrier.entity.Carrier;
 import vn.vietroute.business.carrier.repo.CarrierRepo;
-import vn.vietroute.business.tracking.repo.TrackingRepo;
 import vn.vietroute.business.trip.constant.TripStatus;
 import vn.vietroute.business.trip.dto.request.TripRequest;
 import vn.vietroute.business.trip.dto.response.TripChoiceResponse;
@@ -29,8 +28,6 @@ import vn.vietroute.common.validation.BusinessRules;
 @Service
 @RequiredArgsConstructor
 public class TripService {
-
-    private final TrackingRepo tracking;
 
     private final TripRepo trips;
     private final CarrierRepo carriers;
@@ -139,7 +136,6 @@ public class TripService {
                 actor.id()
             );
             trips.state(connection, trip, body.getStatus(), body.getNote().strip(), actor.id());
-            if (body.getStatus() == TripStatus.CANCELLED) tracking.stop(connection, id, actor.id());
             trips.event(
                 connection,
                 id,
@@ -197,7 +193,6 @@ public class TripService {
             );
             if (trip.getStatus() == TripStatus.OPEN) trips.requireAvailable(connection, id, assets, start, end, false);
             trips.assignment(connection, trip, assets, body.getCapacity(), start, end, actor.id());
-            tracking.stop(connection, id, actor.id());
             trips.event(
                 connection,
                 id,

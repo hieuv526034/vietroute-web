@@ -22,9 +22,9 @@ import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.SharedEntityManagerCreator;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.PlatformTransactionManager;
-import vn.vietroute.business.catalog.dto.request.CatalogRequest;
+import vn.vietroute.business.catalog.dto.request.CatalogItemRequest;
 import vn.vietroute.business.catalog.entity.CatalogItem;
-import vn.vietroute.business.catalog.repo.CatalogRepo;
+import vn.vietroute.business.catalog.repo.CatalogItemRepo;
 import vn.vietroute.common.constant.ApplicationConstants.CatalogType;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
@@ -36,7 +36,7 @@ import vn.vietroute.common.jdbc.JdbcTransactions;
 class BusinessJpaH2Test {
 
     private LocalContainerEntityManagerFactoryBean factory;
-    private CatalogRepo catalogs;
+    private CatalogItemRepo catalogs;
     private JdbcTransactions transactions;
 
     @BeforeEach
@@ -64,7 +64,7 @@ class BusinessJpaH2Test {
             new JdbcConnectionFactory(new TransactionAwareDataSourceProxy(source), new JdbcSchema("h2_business")),
             beans.getBeanProvider(PlatformTransactionManager.class)
         );
-        catalogs = new CatalogRepo(shared, transactions);
+        catalogs = new CatalogItemRepo(shared, transactions);
     }
 
     @AfterEach
@@ -137,16 +137,16 @@ class BusinessJpaH2Test {
         });
     }
 
-    private CatalogRequest create() {
-        CatalogRequest body = new CatalogRequest();
+    private CatalogItemRequest create() {
+        CatalogItemRequest body = new CatalogItemRequest();
         body.setType(CatalogType.VEHICLE_TYPE);
         body.setNameVi("Ghế ngồi");
         body.setNameEn("Seated coach");
         return body;
     }
 
-    private CatalogRequest update(long version) {
-        CatalogRequest body = new CatalogRequest();
+    private CatalogItemRequest update(long version) {
+        CatalogItemRequest body = new CatalogItemRequest();
         body.setNameVi("Tên mới");
         body.setNameEn("Updated name");
         body.setActive(false);

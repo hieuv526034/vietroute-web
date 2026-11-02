@@ -23,8 +23,7 @@ import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.constant.SuccessCode;
 import vn.vietroute.common.constant.ValidationCode;
 import vn.vietroute.common.exception.BusinessException;
-import vn.vietroute.common.util.CodeGenerator;
-import vn.vietroute.common.validation.StrongPasswordValidator;
+import vn.vietroute.common.validation.BusinessRules;
 
 /** Các ràng buộc có ý nghĩa với bảo mật và hợp đồng dịch, không dùng Neon production. */
 class FoundationRulesTest {
@@ -48,12 +47,12 @@ class FoundationRulesTest {
     @Test
     void codeAndPasswordRulesPreserveVietnameseTextAndBcryptByteLimit() {
         for (int i = 0; i < 50; i++) {
-            assertTrue(CodeGenerator.generate("CAT").matches(Regex.BUSINESS_CODE));
+            assertTrue(BusinessRules.generateCode("CAT").matches(Regex.BUSINESS_CODE));
         }
-        assertThrows(BusinessException.class, () -> CodeGenerator.generate("bad!"));
-        assertTrue(StrongPasswordValidator.valid("Valid-Password-2026"));
-        assertFalse(StrongPasswordValidator.valid("weak"));
-        assertFalse(StrongPasswordValidator.valid("Ab1!" + "ệ".repeat(30)));
+        assertThrows(BusinessException.class, () -> BusinessRules.generateCode("bad!"));
+        assertTrue(BusinessRules.validPassword("Valid-Password-2026"));
+        assertFalse(BusinessRules.validPassword("weak"));
+        assertFalse(BusinessRules.validPassword("Ab1!" + "ệ".repeat(30)));
     }
 
     @Test
@@ -78,6 +77,18 @@ class FoundationRulesTest {
             .issue(user)
             .getAccessToken();
         assertThrows(JwtException.class, () -> current.decode(expired));
+    }
+
+    @Test
+    void initialAccountPasswordAllowsConfiguredFormatWithoutWeakeningPasswordChanges() {
+        assertTrue(BusinessRules.validInitialPassword("sample.seed"));
+        assertFalse(BusinessRules.validPassword("sample.seed"));
+        for (String invalid : new String[] { "", "short", "        ", "a".repeat(73), "ệ".repeat(25) }) {
+            assertFalse(BusinessRules.validInitialPassword(invalid));
+        }
+        assertFalse(BusinessRules.validInitialPassword(null));
+        assertTrue(BusinessRules.validInitialPassword("a".repeat(72)));
+        assertTrue(BusinessRules.validPassword("Valid-Password-2026"));
     }
 
     @Test

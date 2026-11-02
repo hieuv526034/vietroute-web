@@ -39,6 +39,6 @@ indent_size = 2
 end_of_line = crlf
 
 # SQL migration da ap dung: khong trim/chen newline ngau nhien khi luu file.
-[src/main/resources/db/migration/*.sql]
+[src/main/resources/db/migration/**/*.sql]
 trim_trailing_whitespace = false
 insert_final_newline = false

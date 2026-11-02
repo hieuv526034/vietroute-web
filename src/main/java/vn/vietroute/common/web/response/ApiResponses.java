@@ -1,17 +1,22 @@
 package vn.vietroute.common.web.response;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
+import vn.vietroute.common.api_journal.filter.ApiJournalFilter.ApiJournalState;
+import vn.vietroute.common.api_journal.service.ApiJournalService;
+import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.constant.SuccessCode;
-import vn.vietroute.common.monitoring.service.ApiJournalProjection;
-import vn.vietroute.common.monitoring.service.ApiJournalState;
 import vn.vietroute.common.web.filter.RequestTraceFilter;
 import vn.vietroute.common.web.locale.SupportedLocaleResolver;
 
@@ -20,13 +25,15 @@ import vn.vietroute.common.web.locale.SupportedLocaleResolver;
 @RequiredArgsConstructor
 public class ApiResponses {
 
+    private final ObjectMapper mapper;
+
     private final MessageSource messages;
 
     private final SupportedLocaleResolver localeResolver;
 
     private final Clock clock;
 
-    private final ApiJournalProjection journal;
+    private final ApiJournalService journal;
 
     /** Dịch bằng key ổn định; args chỉ chứa dữ liệu được phép xuất hiện trong thông báo công khai. */
     public String message(String key, Object[] args, Locale locale) {
@@ -90,5 +97,14 @@ public class ApiResponses {
             }
         }
         return result;
+    }
+
+    public void write(HttpServletRequest request, HttpServletResponse response, ErrorCode code) throws IOException {
+        RequestTraceFilter.ensure(request, response);
+        response.setStatus(code.getStatus().value());
+        response.setContentType(Http.JSON_UTF8);
+        response.setHeader(HttpHeaders.CONTENT_LANGUAGE, locale(request).getLanguage());
+        response.setHeader(HttpHeaders.CACHE_CONTROL, Http.NO_STORE);
+        mapper.writeValue(response.getOutputStream(), error(code, new Object[0], List.of(), request));
     }
 }

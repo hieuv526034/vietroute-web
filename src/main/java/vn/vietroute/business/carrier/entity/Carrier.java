@@ -22,7 +22,6 @@ import vn.vietroute.common.jdbc.JdbcTable;
         @Index(name = "carriers_code_key", columnList = "code", unique = true),
         @Index(name = "carriers_scope_id_key", columnList = "scope_id", unique = true),
         @Index(name = "idx_carriers_active_name", columnList = "active, name, id"),
-        @Index(name = "idx_carriers_logo", columnList = "logo_media_id"),
         @Index(name = "idx_carriers_created_by", columnList = "created_by"),
         @Index(name = "idx_carriers_updated_by", columnList = "updated_by"),
     }
@@ -35,7 +34,6 @@ import vn.vietroute.common.jdbc.JdbcTable;
         @JdbcIndex(name = "carriers_code_key", columns = { "code" }, unique = true),
         @JdbcIndex(name = "carriers_scope_id_key", columns = { "scope_id" }, unique = true),
         @JdbcIndex(name = "idx_carriers_active_name", columns = { "active", "name", "id" }, unique = false),
-        @JdbcIndex(name = "idx_carriers_logo", columns = { "logo_media_id" }, unique = false),
         @JdbcIndex(name = "idx_carriers_created_by", columns = { "created_by" }, unique = false),
         @JdbcIndex(name = "idx_carriers_updated_by", columns = { "updated_by" }, unique = false),
     }
@@ -63,9 +61,6 @@ public class Carrier extends BaseEntity {
 
     @Column(name = "active", nullable = false)
     private boolean active;
-
-    @Column(name = "logo_media_id")
-    private Long logoMediaId;
 
     @Column(name = "scope_code", nullable = false, length = 50)
     private String scopeCode;

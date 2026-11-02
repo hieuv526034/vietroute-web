@@ -4,7 +4,6 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import java.util.Properties;
 import javax.sql.DataSource;
-import org.hibernate.dialect.PostgreSQLDialect;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -46,7 +45,8 @@ public class JpaConfig {
     @Bean
     public LocalContainerEntityManagerFactoryBean entityManagerFactory(
         SchemaDataSource jpaDataSource,
-        JdbcSchema schema
+        JdbcSchema schema,
+        DatabaseSettings settings
     ) {
         HibernateJpaVendorAdapter vendor = new HibernateJpaVendorAdapter();
         vendor.setGenerateDdl(false);
@@ -58,9 +58,14 @@ public class JpaConfig {
         factory.setJpaVendorAdapter(vendor);
         factory.setJpaDialect(dialect);
         factory.setDataSource(jpaDataSource);
-        factory.setPackagesToScan("vn.vietroute.auth.entity", "vn.vietroute.business");
+        factory.setPackagesToScan(
+            "vn.vietroute.auth.entity",
+            "vn.vietroute.business",
+            "vn.vietroute.common.api_journal.entity"
+        );
         Properties properties = new Properties();
-        properties.setProperty("hibernate.dialect", PostgreSQLDialect.class.getName());
+        settings.getDialect().requireApplicationSupport();
+        properties.setProperty("hibernate.dialect", settings.getDialect().hibernateDialectClassName());
         properties.setProperty("hibernate.default_schema", schema.name());
         properties.setProperty("hibernate.hbm2ddl.auto", "none");
         properties.setProperty("jakarta.persistence.schema-generation.database.action", "none");

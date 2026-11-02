@@ -19,7 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.auth.security.EndpointAccess;
-import vn.vietroute.common.jdbc.BaseRepository.SqlWork;
+import vn.vietroute.common.base.BaseRepository.SqlWork;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.jdbc.JdbcTransactions;

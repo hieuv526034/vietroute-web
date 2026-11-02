@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import vn.vietroute.common.base.BaseRepository;
 
 /** Service chia sẻ cùng connection cho mọi DAO trong một giao dịch; lỗi bất kỳ sẽ rollback. */
 @Component

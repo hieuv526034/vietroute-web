@@ -17,7 +17,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import vn.vietroute.business.booking.constant.BookingPaymentKind;
 import vn.vietroute.business.booking.constant.BookingStatus;
-import vn.vietroute.common.base.BaseRequest;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.validation.RequestGroups;
 
@@ -26,7 +25,7 @@ import vn.vietroute.common.validation.RequestGroups;
 @Setter
 @NoArgsConstructor
 @Schema(description = "Dữ liệu Booking; trường bắt buộc phụ thuộc thao tác, xem schema từng API")
-public class BookingRequest extends BaseRequest {
+public class BookingRequest {
 
     @Min(value = 1, message = "{validation.invalid}")
     @Schema(description = "ID chuyến đang nhận khách")

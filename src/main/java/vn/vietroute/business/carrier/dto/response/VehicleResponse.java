@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietroute.business.carrier.entity.Vehicle;
-import vn.vietroute.common.base.BaseResponse;
+import vn.vietroute.common.base.BaseDTO;
 
 /** Projection staff tường minh sau kiểm quyền/scope; không chứa mật khẩu/email/JWT. */
 @Getter
@@ -14,7 +14,7 @@ import vn.vietroute.common.base.BaseResponse;
 @NoArgsConstructor
 @SuperBuilder
 @Schema(description = "Dữ liệu Vehicle trong phạm vi được phép")
-public class VehicleResponse extends BaseResponse {
+public class VehicleResponse extends BaseDTO {
 
     @Schema(description = "ID nhà xe")
     private long carrierId;
@@ -43,9 +43,6 @@ public class VehicleResponse extends BaseResponse {
     @Schema(description = "Đang hoạt động")
     private boolean active;
 
-    @Schema(description = "ID ảnh công khai")
-    private Long photoMediaId;
-
     @Schema(
         description = "Có quyền scoped UPDATE tại thời điểm đọc; UI còn phải giao capabilities/policy chung, backend luôn kiểm lại"
     )
@@ -69,7 +66,6 @@ public class VehicleResponse extends BaseResponse {
             .vehicleTypeName(item.getVehicleTypeName())
             .capacity(item.getCapacity())
             .active(item.isActive())
-            .photoMediaId(item.getPhotoMediaId())
             .build();
     }
 }

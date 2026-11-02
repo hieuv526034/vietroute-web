@@ -1,4 +1,4 @@
-/* Tra cứu công khai theo cặp điểm/ngày đón; giá và chỗ do server, không suy GPS từ lịch dự kiến. */
+/* Tra cứu công khai theo cặp điểm/ngày đón; giá và chỗ do server, giữ lịch dự kiến và mốc tài xế xác nhận riêng biệt. */
 (() => {
     'use strict';
     const root = document.getElementById('journey-workspace');
@@ -67,10 +67,14 @@
     const sync = () => {
         node('journey-dialog-controls').disabled = busy;
         for (const picker of pickers) {
+            picker.element.querySelector('[data-place-prev]').hidden = picker.page === 0 && !picker.hasNext;
+            picker.element.querySelector('[data-place-next]').hidden = picker.page === 0 && !picker.hasNext;
             picker.element.querySelector('[data-place-prev]').disabled = busy || picker.page === 0;
             picker.element.querySelector('[data-place-next]').disabled = busy || !picker.hasNext;
         }
         for (const filter of filters) {
+            filter.element.querySelector('[data-filter-prev]').hidden = filter.page === 0 && !filter.hasNext;
+            filter.element.querySelector('[data-filter-next]').hidden = filter.page === 0 && !filter.hasNext;
             filter.element.querySelector('[data-filter-prev]').disabled = busy || filter.page === 0;
             filter.element.querySelector('[data-filter-next]').disabled = busy || !filter.hasNext;
         }
@@ -114,8 +118,8 @@
         if (current?.value) picker.select.value = current.value;
         picker.page = result.page;
         picker.hasNext = result.hasNext;
-        picker.element.querySelector('[data-place-count]').textContent =
-            `${result.totalElements ? result.page + 1 : 0} / ${result.totalPages}`;
+        const count = picker.element.querySelector('[data-place-count]');
+        count.textContent = tables.lookupSummary(result, count.dataset.summary, count.dataset.empty);
     };
     const load = async (query = pager.query) => {
         if (!criteria) {
@@ -166,8 +170,8 @@
         if (current?.value) filter.select.value = current.value;
         filter.page = result.page;
         filter.hasNext = result.hasNext;
-        filter.element.querySelector('[data-filter-count]').textContent =
-            `${result.totalElements ? result.page + 1 : 0} / ${result.totalPages}`;
+        const count = filter.element.querySelector('[data-filter-count]');
+        count.textContent = tables.lookupSummary(result, count.dataset.summary, count.dataset.empty);
     };
     const detail = () => {
         const item = selected,

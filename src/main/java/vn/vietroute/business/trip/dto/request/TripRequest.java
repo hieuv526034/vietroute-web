@@ -13,7 +13,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import vn.vietroute.business.trip.constant.TripProgressAction;
 import vn.vietroute.business.trip.constant.TripStatus;
-import vn.vietroute.common.base.BaseRequest;
 import vn.vietroute.common.validation.BusinessCode;
 import vn.vietroute.common.validation.RequestGroups;
 
@@ -22,7 +21,7 @@ import vn.vietroute.common.validation.RequestGroups;
 @Setter
 @NoArgsConstructor
 @Schema(description = "Dữ liệu Trip; trường bắt buộc phụ thuộc thao tác, xem schema từng API")
-public class TripRequest extends BaseRequest {
+public class TripRequest {
 
     @NotBlank(message = "{validation.required}", groups = { RequestGroups.Create.class })
     @BusinessCode

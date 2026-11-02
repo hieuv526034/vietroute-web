@@ -1,6 +1,5 @@
 package vn.vietroute.auth.config;
 
-import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,21 +27,14 @@ import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.auth.security.AuthCookies;
 import vn.vietroute.auth.security.JwtAuthenticationFilter;
 import vn.vietroute.auth.service.JwtService;
+import vn.vietroute.common.api_journal.filter.ApiJournalFilter;
+import vn.vietroute.common.api_journal.service.ApiJournalService;
 import vn.vietroute.common.config.application.AppSettings;
-import vn.vietroute.common.config.monitoring.MonitoringSettings;
-import vn.vietroute.common.config.traffic.TrafficSettings;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
-import vn.vietroute.common.monitoring.filter.ActivityFilter;
-import vn.vietroute.common.monitoring.filter.ApiJournalFilter;
-import vn.vietroute.common.monitoring.filter.HttpMetricsFilter;
-import vn.vietroute.common.monitoring.filter.MetricsScrapeFilter;
-import vn.vietroute.common.monitoring.service.ActivityService;
-import vn.vietroute.common.monitoring.service.ApiJournalStore;
-import vn.vietroute.common.monitoring.service.ApplicationMetrics;
-import vn.vietroute.common.traffic.TrafficGuardFilter;
-import vn.vietroute.common.web.response.ApiErrorWriter;
+import vn.vietroute.common.web.filter.RequestGuardFilter;
+import vn.vietroute.common.web.response.ApiResponses;
 import vn.vietroute.common.web.routing.WebRoutePolicy;
 
 /** Security chạy ở root context, dùng matcher tường minh và không tạo HTTP session đăng nhập. */
@@ -50,26 +42,6 @@ import vn.vietroute.common.web.routing.WebRoutePolicy;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
-
-    /** Chain riêng chỉ đọc metrics; không chạy JWT/DB/quota nên vẫn scrape được khi DB hoặc quota lỗi. */
-    @Bean
-    @Order(1)
-    public SecurityFilterChain metricsFilterChain(
-        HttpSecurity http,
-        MonitoringSettings settings,
-        PrometheusMeterRegistry registry
-    ) throws Exception {
-        http.securityMatcher(matcher(Routes.METRICS))
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .requestCache(AbstractHttpConfigurer::disable)
-            .csrf(AbstractHttpConfigurer::disable)
-            .formLogin(AbstractHttpConfigurer::disable)
-            .httpBasic(AbstractHttpConfigurer::disable)
-            .logout(AbstractHttpConfigurer::disable)
-            .authorizeHttpRequests(auth -> auth.anyRequest().denyAll())
-            .addFilterBefore(new MetricsScrapeFilter(settings, registry), AuthorizationFilter.class);
-        return http.build();
-    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -81,14 +53,10 @@ public class SecurityConfig {
         HttpSecurity http,
         JwtService jwt,
         UserRepo users,
-        ApiErrorWriter errors,
+        ApiResponses errors,
         AuthCookies cookies,
         AppSettings settings,
-        TrafficGuardFilter traffic,
-        ApplicationMetrics metrics,
-        ActivityService activity,
-        TrafficSettings trafficSettings,
-        ApiJournalStore journal,
+        ApiJournalService journal,
         Clock clock
     ) throws Exception {
         CookieCsrfTokenRepository csrf = CookieCsrfTokenRepository.withHttpOnlyFalse();
@@ -159,16 +127,13 @@ public class SecurityConfig {
             .headers(headers ->
                 headers.contentSecurityPolicy(csp ->
                     csp.policyDirectives(
-                        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://res.cloudinary.com; font-src 'self'; " +
+                        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; " +
                             "connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
                     )
                 )
             )
-            .addFilterBefore(new HttpMetricsFilter(metrics), SecurityContextHolderFilter.class)
-            // Metrics bao cả thời gian I/O ghi log; journal vẫn đứng trước CSRF/JWT/authorization.
-            .addFilterAfter(new ActivityFilter(activity, settings, trafficSettings), HttpMetricsFilter.class)
-            .addFilterAfter(new ApiJournalFilter(journal, clock), ActivityFilter.class)
-            .addFilterBefore(traffic, CsrfFilter.class)
+            .addFilterBefore(new ApiJournalFilter(journal, clock), SecurityContextHolderFilter.class)
+            .addFilterBefore(new RequestGuardFilter(errors), CsrfFilter.class)
             .addFilterBefore(
                 new JwtAuthenticationFilter(jwt, users, errors, cookies),
                 UsernamePasswordAuthenticationFilter.class

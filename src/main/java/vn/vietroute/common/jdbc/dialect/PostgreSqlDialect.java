@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Properties;
+import org.hibernate.dialect.PostgreSQLDialect;
 import vn.vietroute.common.constant.ApplicationConstants.Env;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 
@@ -13,6 +14,16 @@ public final class PostgreSqlDialect implements JdbcDialect {
     static final PostgreSqlDialect INSTANCE = new PostgreSqlDialect();
 
     private PostgreSqlDialect() {}
+
+    @Override
+    public String vendor() {
+        return "postgresql";
+    }
+
+    @Override
+    public String hibernateDialectClassName() {
+        return PostgreSQLDialect.class.getName();
+    }
 
     @Override
     public String driverClassName() {

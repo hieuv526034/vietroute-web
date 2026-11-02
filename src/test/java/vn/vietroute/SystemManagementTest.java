@@ -39,18 +39,10 @@ import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.database.DatabaseSettings;
-import vn.vietroute.common.config.integration.JobSettings;
-import vn.vietroute.common.config.integration.MailSettings;
-import vn.vietroute.common.config.integration.MediaSettings;
-import vn.vietroute.common.config.integration.TrackingSettings;
-import vn.vietroute.common.config.monitoring.ActivitySettings;
-import vn.vietroute.common.config.monitoring.MonitoringSettings;
-import vn.vietroute.common.config.traffic.TrafficSettings;
 import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
-import vn.vietroute.common.monitoring.service.SystemConfigurationService;
 import vn.vietroute.support.AccessTestConfig;
 
 /** Kiểm quyền UI/API và whitelist cấu hình trước khi mở DB; SQL integration chạy trên PostgreSQL CI tạm. */
@@ -82,12 +74,10 @@ class SystemManagementTest {
         try (var context = context()) {
             var mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
             Map<String, String> pages = Map.of(
-                Routes.JOBS_PAGE,
-                "GET " + Routes.JOBS_PAGE,
                 Routes.ACCESS_PAGE,
                 "GET " + Routes.ACCESS_PAGE,
-                Routes.CONFIGURATION_PAGE,
-                "GET " + Routes.CONFIGURATION_PAGE
+                Routes.API_JOURNAL_PAGE,
+                "GET " + Routes.API_JOURNAL_PAGE
             );
             for (var entry : pages.entrySet()) {
                 assertEquals(302, mvc.perform(get(entry.getKey())).andReturn().getResponse().getStatus());
@@ -112,75 +102,16 @@ class SystemManagementTest {
                     String html = response.getContentAsString();
                     assertTrue(
                         html.contains(
-                            entry.getKey().equals(Routes.ACCESS_PAGE) ? "data-role-workspace" : "data-operations="
+                            entry.getKey().equals(Routes.ACCESS_PAGE) ? "data-role-workspace" : "id=\"api-journal\""
                         )
                     );
                     assertTrue(
-                        html.contains(entry.getKey().equals(Routes.ACCESS_PAGE) ? "roles-controls" : "ops-controls")
+                        html.contains(entry.getKey().equals(Routes.ACCESS_PAGE) ? "roles-controls" : "journal-controls")
                     );
                     assertFalse(html.contains("th:text="));
                     assertFalse(html.contains("??ui.ops"));
                 }
             }
-            assertNull(context.getBean(HikariDataSource.class).getHikariPoolMXBean());
-        }
-    }
-
-    @Test
-    void configApiIsReadOnlyAndProtectedAndDocumented() throws Exception {
-        try (var context = context()) {
-            var mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
-            assertEquals(401, mvc.perform(get(Routes.SYSTEM_CONFIGURATION)).andReturn().getResponse().getStatus());
-            assertEquals(
-                403,
-                mvc
-                    .perform(get(Routes.SYSTEM_CONFIGURATION).with(authentication(actor("ACCESS_READ"))))
-                    .andReturn()
-                    .getResponse()
-                    .getStatus()
-            );
-            assertEquals(
-                405,
-                mvc
-                    .perform(
-                        post(Routes.SYSTEM_CONFIGURATION)
-                            .with(csrf())
-                            .with(authentication(actor("GET " + Routes.SYSTEM_CONFIGURATION)))
-                    )
-                    .andReturn()
-                    .getResponse()
-                    .getStatus()
-            );
-            var result = mvc
-                .perform(
-                    get(Routes.SYSTEM_CONFIGURATION).with(authentication(actor("GET " + Routes.SYSTEM_CONFIGURATION)))
-                )
-                .andReturn()
-                .getResponse();
-            assertEquals(200, result.getStatus());
-            var data = context.getBean(ObjectMapper.class).readTree(result.getContentAsString()).get("data");
-            assertTrue(data.get("readOnly").asBoolean());
-            assertEquals(4, data.path("database").size());
-            assertTrue(data.path("database").has("maximumPoolSize"));
-            assertFalse(data.path("database").has("url"));
-            assertEquals(
-                403,
-                mvc
-                    .perform(
-                        post(Routes.SYSTEM_CONFIGURATION).with(
-                            authentication(actor("GET " + Routes.SYSTEM_CONFIGURATION))
-                        )
-                    )
-                    .andReturn()
-                    .getResponse()
-                    .getStatus()
-            );
-            var document = context
-                .getBean(ObjectMapper.class)
-                .readTree(mvc.perform(get(Routes.OPENAPI)).andReturn().getResponse().getContentAsString());
-            assertTrue(document.get("paths").has(Routes.SYSTEM_CONFIGURATION));
-            assertTrue(document.get("paths").has(Routes.ACCESS + Routes.USERS_ACTION));
-            assertTrue(document.get("components").get("schemas").has("UserDTO"));
             assertNull(context.getBean(HikariDataSource.class).getHikariPoolMXBean());
         }
     }
@@ -196,7 +127,7 @@ class SystemManagementTest {
                 .getBean(EndpointAccess.class)
                 .authorize(actor("ACCESS_READ"), "GET /api/v1/admin/access/users", false);
             SecurityContextHolder.getContext().setAuthentication(approved);
-            assertEquals(0, access.search(new UserSearch()).totalElements());
+            assertEquals(0, access.search(new UserSearch()).getTotalElements());
             assertNull(context.getBean(HikariDataSource.class).getHikariPoolMXBean());
         } finally {
             SecurityContextHolder.clearContext();
@@ -221,14 +152,6 @@ class SystemManagementTest {
             assertEquals(
                 400,
                 mvc
-                    .perform(get(Routes.JOBS).param("status", "INVALID").with(authentication(admin)))
-                    .andReturn()
-                    .getResponse()
-                    .getStatus()
-            );
-            assertEquals(
-                400,
-                mvc
                     .perform(
                         get(Routes.ACCESS + Routes.USERS_ACTION)
                             .param("size", "101")
@@ -240,46 +163,5 @@ class SystemManagementTest {
             );
             assertNull(context.getBean(HikariDataSource.class).getHikariPoolMXBean());
         }
-    }
-
-    @Test
-    void configWhitelistNeverSerializesConfiguredSecretsOrEndpoints() throws Exception {
-        Map<String, String> source = Map.ofEntries(
-            Map.entry("VIETROUTE_DB_URL", "jdbc:postgresql://private-host.invalid/private_database"),
-            Map.entry("VIETROUTE_DB_USER", "private_database_user"),
-            Map.entry("VIETROUTE_DB_PASSWORD", "private_database_password"),
-            Map.entry("VIETROUTE_DB_SCHEMA", "private_schema"),
-            Map.entry("VIETROUTE_JWT_SECRET", "private-jwt-secret-012345678901234567890"),
-            Map.entry("VIETROUTE_BOOTSTRAP_ADMIN_PASSWORD", "private_bootstrap_password"),
-            Map.entry("VIETROUTE_MAIL_FROM", "private-sender@example.invalid"),
-            Map.entry("VIETROUTE_GMAIL_CLIENT_SECRET", "private_google_secret"),
-            Map.entry("VIETROUTE_GMAIL_REFRESH_TOKEN", "private_google_refresh"),
-            Map.entry("VIETROUTE_SMTP_HOST", "private-mail-host.invalid"),
-            Map.entry("VIETROUTE_SMTP_PASSWORD", "private_smtp_password"),
-            Map.entry("VIETROUTE_CLOUDINARY_API_SECRET", "private_cloudinary_secret"),
-            Map.entry("VIETROUTE_METRICS_TOKEN", "private-metrics-token-012345678901234567890"),
-            Map.entry("VIETROUTE_TRUSTED_PROXY_CIDRS", "192.0.2.0/24")
-        );
-        var service = new SystemConfigurationService(
-            new AppSettings(source::get),
-            new DatabaseSettings(source::get, false),
-            new TrafficSettings(source::get),
-            new JobSettings(source::get),
-            new MailSettings(source::get),
-            new MediaSettings(source::get),
-            new TrackingSettings(source::get),
-            new MonitoringSettings(source::get),
-            new ActivitySettings(source::get),
-            Clock.systemUTC()
-        );
-        String json = new RootConfig().objectMapper().writeValueAsString(service.read());
-        for (String secret : source.values()) {
-            assertFalse(json.contains(secret), "Không được serialize giá trị cấu hình nhạy cảm");
-        }
-        assertFalse(json.contains("jwtKey"));
-        assertFalse(json.contains("password"));
-        assertFalse(json.contains("refreshToken"));
-        assertTrue(json.contains("\"trackingEnabled\":true"));
-        assertTrue(json.contains("\"mapStatus\":\"UNCONFIGURED\""));
     }
 }

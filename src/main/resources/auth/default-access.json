@@ -154,14 +154,6 @@
         },
         {
           "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/trips/{id}/tracking",
-          "nameVi": "Xem vị trí trong nhà xe",
-          "nameEn": "Xem vị trí trong nhà xe",
-          "icon": "menu",
-          "sortOrder": 18
-        },
-        {
-          "kind": "ENDPOINT",
           "target": "GET /api/v1/admin/vehicle-types",
           "nameVi": "Danh sách loại xe",
           "nameEn": "Danh sách loại xe",
@@ -419,38 +411,6 @@
         },
         {
           "kind": "ENDPOINT",
-          "target": "GET /api/v1/driver/trips/{id}/tracking",
-          "nameVi": "Xem vị trí chuyến được giao",
-          "nameEn": "Xem vị trí chuyến được giao",
-          "icon": "menu",
-          "sortOrder": 3
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "POST /api/v1/driver/trips/{id}/tracking/samples",
-          "nameVi": "Gửi mẫu thiết bị trong consent hiện hành",
-          "nameEn": "Gửi mẫu thiết bị trong consent hiện hành",
-          "icon": "menu",
-          "sortOrder": 4
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "POST /api/v1/driver/trips/{id}/tracking/start",
-          "nameVi": "Bật chia sẻ vị trí có consent",
-          "nameEn": "Bật chia sẻ vị trí có consent",
-          "icon": "menu",
-          "sortOrder": 5
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "POST /api/v1/driver/trips/{id}/tracking/stop",
-          "nameVi": "Dừng chia sẻ và xóa snapshot tọa độ",
-          "nameEn": "Dừng chia sẻ và xóa snapshot tọa độ",
-          "icon": "menu",
-          "sortOrder": 6
-        },
-        {
-          "kind": "ENDPOINT",
           "target": "PUT /api/v1/driver/trips/{id}/progress",
           "nameVi": "Cập nhật tiến độ chuyến đúng tài xế",
           "nameEn": "Cập nhật tiến độ chuyến đúng tài xế",
@@ -489,14 +449,6 @@
           "nameEn": "Chi tiết đơn và lịch sử",
           "icon": "menu",
           "sortOrder": 1
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/my-bookings/{id}/tracking",
-          "nameVi": "Xem vị trí cho đơn của chính khách",
-          "nameEn": "Xem vị trí cho đơn của chính khách",
-          "icon": "menu",
-          "sortOrder": 2
         },
         {
           "kind": "ENDPOINT",
@@ -578,14 +530,6 @@
           "nameEn": "Ngừng dùng loại xe",
           "icon": "menu",
           "sortOrder": 5
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "DELETE /api/v1/media/{id}",
-          "nameVi": "Yêu cầu xóa ảnh",
-          "nameEn": "Yêu cầu xóa ảnh",
-          "icon": "menu",
-          "sortOrder": 6
         },
         {
           "kind": "ENDPOINT",
@@ -829,22 +773,6 @@
         },
         {
           "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/jobs",
-          "nameVi": "Danh sách job có phân trang",
-          "nameEn": "Danh sách job có phân trang",
-          "icon": "menu",
-          "sortOrder": 37
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/jobs/{id}",
-          "nameVi": "Xem trạng thái job",
-          "nameEn": "Xem trạng thái job",
-          "icon": "menu",
-          "sortOrder": 38
-        },
-        {
-          "kind": "ENDPOINT",
           "target": "GET /api/v1/admin/locations",
           "nameVi": "Danh sách địa điểm quản trị",
           "nameEn": "Danh sách địa điểm quản trị",
@@ -917,30 +845,6 @@
         },
         {
           "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/system/activity",
-          "nameVi": "Tổng quan online và request",
-          "nameEn": "Tổng quan online và request",
-          "icon": "menu",
-          "sortOrder": 48
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/system/activity/anomalies",
-          "nameVi": "Tín hiệu request bất thường",
-          "nameEn": "Tín hiệu request bất thường",
-          "icon": "menu",
-          "sortOrder": 49
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/system/activity/online",
-          "nameVi": "Phân trang trình duyệt online",
-          "nameEn": "Phân trang trình duyệt online",
-          "icon": "menu",
-          "sortOrder": 50
-        },
-        {
-          "kind": "ENDPOINT",
           "target": "GET /api/v1/admin/system/api-journal",
           "nameVi": "Tra nhật ký API",
           "nameEn": "Tra nhật ký API",
@@ -954,30 +858,6 @@
           "nameEn": "Xem request/response đã lọc",
           "icon": "menu",
           "sortOrder": 52
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/system/configuration",
-          "nameVi": "Xem cấu hình hệ thống an toàn",
-          "nameEn": "Xem cấu hình hệ thống an toàn",
-          "icon": "menu",
-          "sortOrder": 53
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/system/runtime",
-          "nameVi": "Đọc tài nguyên và lưu lượng instance",
-          "nameEn": "Đọc tài nguyên và lưu lượng instance",
-          "icon": "menu",
-          "sortOrder": 54
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/system/status",
-          "nameVi": "Kiểm tra readiness và tình trạng instance",
-          "nameEn": "Kiểm tra readiness và tình trạng instance",
-          "icon": "menu",
-          "sortOrder": 55
         },
         {
           "kind": "ENDPOINT",
@@ -1002,14 +882,6 @@
           "nameEn": "Chi tiết chuyến và snapshot điểm",
           "icon": "menu",
           "sortOrder": 58
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/trips/{id}/tracking",
-          "nameVi": "Xem vị trí trong nhà xe",
-          "nameEn": "Xem vị trí trong nhà xe",
-          "icon": "menu",
-          "sortOrder": 59
         },
         {
           "kind": "ENDPOINT",
@@ -1077,30 +949,6 @@
         },
         {
           "kind": "ENDPOINT",
-          "target": "GET /api/v1/driver/trips/{id}/tracking",
-          "nameVi": "Xem vị trí chuyến được giao",
-          "nameEn": "Xem vị trí chuyến được giao",
-          "icon": "menu",
-          "sortOrder": 68
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/media",
-          "nameVi": "Đọc thư viện ảnh",
-          "nameEn": "Đọc thư viện ảnh",
-          "icon": "menu",
-          "sortOrder": 69
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/media/{id}",
-          "nameVi": "Đọc metadata ảnh",
-          "nameEn": "Đọc metadata ảnh",
-          "icon": "menu",
-          "sortOrder": 70
-        },
-        {
-          "kind": "ENDPOINT",
           "target": "GET /api/v1/my-bookings",
           "nameVi": "Tra đơn của chính khách hàng",
           "nameEn": "Tra đơn của chính khách hàng",
@@ -1114,14 +962,6 @@
           "nameEn": "Chi tiết đơn và lịch sử",
           "icon": "menu",
           "sortOrder": 72
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/my-bookings/{id}/tracking",
-          "nameVi": "Xem vị trí cho đơn của chính khách",
-          "nameEn": "Xem vị trí cho đơn của chính khách",
-          "icon": "menu",
-          "sortOrder": 73
         },
         {
           "kind": "ENDPOINT",
@@ -1205,27 +1045,11 @@
         },
         {
           "kind": "ENDPOINT",
-          "target": "POST /api/v1/admin/jobs/{id}/retry",
-          "nameVi": "Chạy lại job DEAD",
-          "nameEn": "Chạy lại job DEAD",
-          "icon": "menu",
-          "sortOrder": 84
-        },
-        {
-          "kind": "ENDPOINT",
           "target": "POST /api/v1/admin/locations",
           "nameVi": "Tạo địa điểm",
           "nameEn": "Tạo địa điểm",
           "icon": "menu",
           "sortOrder": 85
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "POST /api/v1/admin/mail",
-          "nameVi": "Xếp email vào hàng đợi",
-          "nameEn": "Xếp email vào hàng đợi",
-          "icon": "menu",
-          "sortOrder": 86
         },
         {
           "kind": "ENDPOINT",
@@ -1266,38 +1090,6 @@
           "nameEn": "Tạo xe",
           "icon": "menu",
           "sortOrder": 91
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "POST /api/v1/driver/trips/{id}/tracking/samples",
-          "nameVi": "Gửi mẫu thiết bị trong consent hiện hành",
-          "nameEn": "Gửi mẫu thiết bị trong consent hiện hành",
-          "icon": "menu",
-          "sortOrder": 92
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "POST /api/v1/driver/trips/{id}/tracking/start",
-          "nameVi": "Bật chia sẻ vị trí có consent",
-          "nameEn": "Bật chia sẻ vị trí có consent",
-          "icon": "menu",
-          "sortOrder": 93
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "POST /api/v1/driver/trips/{id}/tracking/stop",
-          "nameVi": "Dừng chia sẻ và xóa snapshot tọa độ",
-          "nameEn": "Dừng chia sẻ và xóa snapshot tọa độ",
-          "icon": "menu",
-          "sortOrder": 94
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "POST /api/v1/media",
-          "nameVi": "Upload một ảnh công khai",
-          "nameEn": "Upload một ảnh công khai",
-          "icon": "menu",
-          "sortOrder": 95
         },
         {
           "kind": "ENDPOINT",
@@ -1509,14 +1301,6 @@
         },
         {
           "kind": "ENDPOINT",
-          "target": "PUT /api/v1/media/{id}",
-          "nameVi": "Sửa tên và mô tả ảnh",
-          "nameEn": "Sửa tên và mô tả ảnh",
-          "icon": "menu",
-          "sortOrder": 122
-        },
-        {
-          "kind": "ENDPOINT",
           "target": "PUT /api/v1/my-bookings/{id}/state",
           "nameVi": "Hủy đơn của chính khách hàng",
           "nameEn": "Hủy đơn của chính khách hàng",
@@ -1570,22 +1354,6 @@
           "nameEn": "Assigned trips",
           "icon": "menu",
           "sortOrder": 129
-        },
-        {
-          "kind": "MENU",
-          "target": "GET /media",
-          "nameVi": "Thư viện ảnh",
-          "nameEn": "Media library",
-          "icon": "menu",
-          "sortOrder": 130
-        },
-        {
-          "kind": "MENU",
-          "target": "GET /monitoring",
-          "nameVi": "Giám sát",
-          "nameEn": "Monitoring",
-          "icon": "menu",
-          "sortOrder": 131
         },
         {
           "kind": "MENU",
@@ -1645,14 +1413,6 @@
         },
         {
           "kind": "MENU",
-          "target": "GET /operations/configuration",
-          "nameVi": "Cấu hình",
-          "nameEn": "Configuration",
-          "icon": "menu",
-          "sortOrder": 139
-        },
-        {
-          "kind": "MENU",
           "target": "GET /operations/demo",
           "nameVi": "Dữ liệu khởi tạo",
           "nameEn": "Initial data",
@@ -1666,14 +1426,6 @@
           "nameEn": "Driver profiles",
           "icon": "menu",
           "sortOrder": 141
-        },
-        {
-          "kind": "MENU",
-          "target": "GET /operations/jobs",
-          "nameVi": "Công việc nền",
-          "nameEn": "Background jobs",
-          "icon": "menu",
-          "sortOrder": 142
         },
         {
           "kind": "MENU",
@@ -1765,24 +1517,351 @@
   "accounts": [
     {
       "username": "custom01",
-      "displayName": "Khách hàng VietRoute",
+      "displayName": "Nguyễn Thu Hà",
       "role": "CUSTOMER",
-      "emailEnv": "VIETROUTE_DEFAULT_CUSTOMER_EMAIL",
-      "passwordEnv": "VIETROUTE_DEFAULT_CUSTOMER_PASSWORD"
+      "passwordEnv": "VIETROUTE_DEFAULT_CUSTOMER_PASSWORD",
+      "emailEnv": "VIETROUTE_DEFAULT_CUSTOMER_EMAIL"
+    },
+    {
+      "username": "custom02",
+      "displayName": "Trần Minh Ngọc",
+      "role": "CUSTOMER",
+      "passwordEnv": "VIETROUTE_DEFAULT_CUSTOMER_PASSWORD",
+      "email": "custom02@vietroute.example"
+    },
+    {
+      "username": "custom03",
+      "displayName": "Phạm Hoàng Anh",
+      "role": "CUSTOMER",
+      "passwordEnv": "VIETROUTE_DEFAULT_CUSTOMER_PASSWORD",
+      "email": "custom03@vietroute.example"
+    },
+    {
+      "username": "custom04",
+      "displayName": "Lê Thanh Trúc",
+      "role": "CUSTOMER",
+      "passwordEnv": "VIETROUTE_DEFAULT_CUSTOMER_PASSWORD",
+      "email": "custom04@vietroute.example"
+    },
+    {
+      "username": "custom05",
+      "displayName": "Võ Bảo Châu",
+      "role": "CUSTOMER",
+      "passwordEnv": "VIETROUTE_DEFAULT_CUSTOMER_PASSWORD",
+      "email": "custom05@vietroute.example"
+    },
+    {
+      "username": "custom06",
+      "displayName": "Đỗ Ngọc Mai",
+      "role": "CUSTOMER",
+      "passwordEnv": "VIETROUTE_DEFAULT_CUSTOMER_PASSWORD",
+      "email": "custom06@vietroute.example"
+    },
+    {
+      "username": "custom07",
+      "displayName": "Bùi Đức Huy",
+      "role": "CUSTOMER",
+      "passwordEnv": "VIETROUTE_DEFAULT_CUSTOMER_PASSWORD",
+      "email": "custom07@vietroute.example"
+    },
+    {
+      "username": "custom08",
+      "displayName": "Ngô Minh Tâm",
+      "role": "CUSTOMER",
+      "passwordEnv": "VIETROUTE_DEFAULT_CUSTOMER_PASSWORD",
+      "email": "custom08@vietroute.example"
+    },
+    {
+      "username": "custom09",
+      "displayName": "Hoàng Quỳnh Anh",
+      "role": "CUSTOMER",
+      "passwordEnv": "VIETROUTE_DEFAULT_CUSTOMER_PASSWORD",
+      "email": "custom09@vietroute.example"
+    },
+    {
+      "username": "custom10",
+      "displayName": "Đặng Văn Phúc",
+      "role": "CUSTOMER",
+      "passwordEnv": "VIETROUTE_DEFAULT_CUSTOMER_PASSWORD",
+      "email": "custom10@vietroute.example"
+    },
+    {
+      "username": "custom11",
+      "displayName": "Phan Thảo Vy",
+      "role": "CUSTOMER",
+      "passwordEnv": "VIETROUTE_DEFAULT_CUSTOMER_PASSWORD",
+      "email": "custom11@vietroute.example"
+    },
+    {
+      "username": "custom12",
+      "displayName": "Mai Hồng Nhung",
+      "role": "CUSTOMER",
+      "passwordEnv": "VIETROUTE_DEFAULT_CUSTOMER_PASSWORD",
+      "email": "custom12@vietroute.example"
     },
     {
       "username": "driver01",
-      "displayName": "Tài xế VietRoute",
+      "displayName": "Nguyễn Minh Tuấn",
       "role": "DRIVER",
-      "emailEnv": "VIETROUTE_DEFAULT_DRIVER_EMAIL",
-      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD"
+      "carrierCode": "VRMIENNAM",
+      "driverCode": "DRVSOUTH01",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "emailEnv": "VIETROUTE_DEFAULT_DRIVER_EMAIL"
+    },
+    {
+      "username": "driver02",
+      "displayName": "Lê Hoàng Nam",
+      "role": "DRIVER",
+      "carrierCode": "VRBACNAM",
+      "driverCode": "DRVNORTH01",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver02@vietroute.example"
+    },
+    {
+      "username": "driver03",
+      "displayName": "Trần Quốc Huy",
+      "role": "DRIVER",
+      "carrierCode": "VRMIENNAM",
+      "driverCode": "DRVSOUTH02",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver03@vietroute.example"
+    },
+    {
+      "username": "driver04",
+      "displayName": "Lê Hoàng Nam",
+      "role": "DRIVER",
+      "carrierCode": "VRMIENNAM",
+      "driverCode": "VRDRV03",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver04@vietroute.example"
+    },
+    {
+      "username": "driver05",
+      "displayName": "Phạm Đức Anh",
+      "role": "DRIVER",
+      "carrierCode": "VRMIENNAM",
+      "driverCode": "VRDRV04",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver05@vietroute.example"
+    },
+    {
+      "username": "driver06",
+      "displayName": "Phạm Đức Anh",
+      "role": "DRIVER",
+      "carrierCode": "VRBACNAM",
+      "driverCode": "DRVNORTH02",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver06@vietroute.example"
+    },
+    {
+      "username": "driver07",
+      "displayName": "Bùi Trung Kiên",
+      "role": "DRIVER",
+      "carrierCode": "VRBACNAM",
+      "driverCode": "VRDRV07",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver07@vietroute.example"
+    },
+    {
+      "username": "driver08",
+      "displayName": "Võ Minh Khoa",
+      "role": "DRIVER",
+      "carrierCode": "VRBACNAM",
+      "driverCode": "VRDRV08",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver08@vietroute.example"
+    },
+    {
+      "username": "driver09",
+      "displayName": "Lê Quốc Bảo",
+      "role": "DRIVER",
+      "carrierCode": "VRMIENTRUNG",
+      "driverCode": "VRDRV09",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver09@vietroute.example"
+    },
+    {
+      "username": "driver10",
+      "displayName": "Nguyễn Hữu Phúc",
+      "role": "DRIVER",
+      "carrierCode": "VRMIENTRUNG",
+      "driverCode": "VRDRV10",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver10@vietroute.example"
+    },
+    {
+      "username": "driver11",
+      "displayName": "Trần Minh Hải",
+      "role": "DRIVER",
+      "carrierCode": "VRMIENTRUNG",
+      "driverCode": "VRDRV11",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver11@vietroute.example"
+    },
+    {
+      "username": "driver12",
+      "displayName": "Phạm Công Thành",
+      "role": "DRIVER",
+      "carrierCode": "VRMIENTRUNG",
+      "driverCode": "VRDRV12",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver12@vietroute.example"
+    },
+    {
+      "username": "driver13",
+      "displayName": "Hoàng Văn Long",
+      "role": "DRIVER",
+      "carrierCode": "VRTAYNGUYEN",
+      "driverCode": "VRDRV13",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver13@vietroute.example"
+    },
+    {
+      "username": "driver14",
+      "displayName": "Đỗ Anh Dũng",
+      "role": "DRIVER",
+      "carrierCode": "VRTAYNGUYEN",
+      "driverCode": "VRDRV14",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver14@vietroute.example"
+    },
+    {
+      "username": "driver15",
+      "displayName": "Ngô Đức Thắng",
+      "role": "DRIVER",
+      "carrierCode": "VRTAYNGUYEN",
+      "driverCode": "VRDRV15",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver15@vietroute.example"
+    },
+    {
+      "username": "driver16",
+      "displayName": "Vũ Tuấn Anh",
+      "role": "DRIVER",
+      "carrierCode": "VRTAYNGUYEN",
+      "driverCode": "VRDRV16",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver16@vietroute.example"
+    },
+    {
+      "username": "driver17",
+      "displayName": "Dương Thành Đạt",
+      "role": "DRIVER",
+      "carrierCode": "VRMIENTAY",
+      "driverCode": "VRDRV17",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver17@vietroute.example"
+    },
+    {
+      "username": "driver18",
+      "displayName": "Trịnh Minh Quân",
+      "role": "DRIVER",
+      "carrierCode": "VRMIENTAY",
+      "driverCode": "VRDRV18",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver18@vietroute.example"
+    },
+    {
+      "username": "driver19",
+      "displayName": "Đinh Văn Lâm",
+      "role": "DRIVER",
+      "carrierCode": "VRMIENTAY",
+      "driverCode": "VRDRV19",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver19@vietroute.example"
+    },
+    {
+      "username": "driver20",
+      "displayName": "Phan Quốc Hưng",
+      "role": "DRIVER",
+      "carrierCode": "VRMIENTAY",
+      "driverCode": "VRDRV20",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver20@vietroute.example"
+    },
+    {
+      "username": "driver21",
+      "displayName": "Lý Văn Bình",
+      "role": "DRIVER",
+      "carrierCode": "VRDONGBAC",
+      "driverCode": "VRDRV21",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver21@vietroute.example"
+    },
+    {
+      "username": "driver22",
+      "displayName": "Cao Minh Triết",
+      "role": "DRIVER",
+      "carrierCode": "VRDONGBAC",
+      "driverCode": "VRDRV22",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver22@vietroute.example"
+    },
+    {
+      "username": "driver23",
+      "displayName": "Hồ Thanh Tùng",
+      "role": "DRIVER",
+      "carrierCode": "VRDONGBAC",
+      "driverCode": "VRDRV23",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver23@vietroute.example"
+    },
+    {
+      "username": "driver24",
+      "displayName": "Mai Đức Hòa",
+      "role": "DRIVER",
+      "carrierCode": "VRDONGBAC",
+      "driverCode": "VRDRV24",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driver24@vietroute.example"
     },
     {
       "username": "operator01",
-      "displayName": "Điều hành VietRoute",
+      "displayName": "Nguyễn Phương Linh",
       "role": "OPERATOR",
-      "emailEnv": "VIETROUTE_DEFAULT_OPERATOR_EMAIL",
-      "passwordEnv": "VIETROUTE_DEFAULT_OPERATOR_PASSWORD"
+      "carrierCode": "VRMIENNAM",
+      "passwordEnv": "VIETROUTE_DEFAULT_OPERATOR_PASSWORD",
+      "emailEnv": "VIETROUTE_DEFAULT_OPERATOR_EMAIL"
+    },
+    {
+      "username": "operator02",
+      "displayName": "Trần Quốc Việt",
+      "role": "OPERATOR",
+      "carrierCode": "VRBACNAM",
+      "passwordEnv": "VIETROUTE_DEFAULT_OPERATOR_PASSWORD",
+      "email": "operator02@vietroute.example"
+    },
+    {
+      "username": "operator03",
+      "displayName": "Lê Ngọc Hân",
+      "role": "OPERATOR",
+      "carrierCode": "VRMIENTRUNG",
+      "passwordEnv": "VIETROUTE_DEFAULT_OPERATOR_PASSWORD",
+      "email": "operator03@vietroute.example"
+    },
+    {
+      "username": "operator04",
+      "displayName": "Phạm Minh Thư",
+      "role": "OPERATOR",
+      "carrierCode": "VRTAYNGUYEN",
+      "passwordEnv": "VIETROUTE_DEFAULT_OPERATOR_PASSWORD",
+      "email": "operator04@vietroute.example"
+    },
+    {
+      "username": "operator05",
+      "displayName": "Võ Thanh Bình",
+      "role": "OPERATOR",
+      "carrierCode": "VRMIENTAY",
+      "passwordEnv": "VIETROUTE_DEFAULT_OPERATOR_PASSWORD",
+      "email": "operator05@vietroute.example"
+    },
+    {
+      "username": "operator06",
+      "displayName": "Đỗ Bảo Ngân",
+      "role": "OPERATOR",
+      "carrierCode": "VRDONGBAC",
+      "passwordEnv": "VIETROUTE_DEFAULT_OPERATOR_PASSWORD",
+      "email": "operator06@vietroute.example"
     }
   ]
 }

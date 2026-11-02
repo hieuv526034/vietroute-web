@@ -12,12 +12,11 @@ import java.util.function.Function;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import lombok.Getter;
-import vn.vietroute.common.config.integration.MailSettings;
 import vn.vietroute.common.constant.ApplicationConstants.BootstrapProperties;
 import vn.vietroute.common.constant.ApplicationConstants.Env;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
-import vn.vietroute.common.validation.StrongPasswordValidator;
+import vn.vietroute.common.validation.BusinessRules;
 
 /** Đọc cấu hình một lần; không có toString để tránh vô tình ghi secrets ra log. */
 @Getter
@@ -56,11 +55,18 @@ public final class AppSettings {
     /** JWT hết hạn sau 30 phút; chưa có refresh token. */
     private final Duration accessTokenLifetime = Duration.ofMinutes(30);
 
+    private final boolean journalEnabled;
+    private final int journalCapacity;
+    private final int journalRetentionMinutes;
+
     private final int authRegistryCapacity;
     private final int scopeCapacity;
 
     public AppSettings(Function<String, String> source) {
         ConfigValues values = new ConfigValues(source);
+        journalEnabled = values.flag(Env.API_JOURNAL_ENABLED, true);
+        journalCapacity = values.number(Env.API_JOURNAL_CAPACITY, 10000, 20, 100000);
+        journalRetentionMinutes = values.number(Env.API_JOURNAL_MINUTES, 10080, 1, 43200);
         authRegistryCapacity = values.number(Env.ACCESS_REGISTRY_CAPACITY, 512, 64, 2048);
         scopeCapacity = values.number(Env.ACCESS_SCOPE_CAPACITY, 2048, 2, 10000);
         String environment = values.text(Env.ENV, "development").toLowerCase(Locale.ROOT);
@@ -74,13 +80,13 @@ public final class AppSettings {
         bootstrapUsername = values.text(Env.BOOTSTRAP_ADMIN_USERNAME, "admin");
         bootstrapPassword = values.text(Env.BOOTSTRAP_ADMIN_PASSWORD, "");
         bootstrapEmail = values.text(Env.BOOTSTRAP_ADMIN_EMAIL, bootstrapEmailDefault()).toLowerCase(Locale.ROOT);
-        if (!MailSettings.validAddress(bootstrapEmail)) {
+        if (!BusinessRules.validEmail(bootstrapEmail)) {
             throw new IllegalStateException(Env.BOOTSTRAP_ADMIN_EMAIL.key() + " is invalid");
         }
         if (!bootstrapUsername.matches(Regex.USERNAME) || bootstrapUsername.equalsIgnoreCase(SystemActor.USERNAME)) {
             throw new IllegalStateException(Env.BOOTSTRAP_ADMIN_USERNAME.key() + " is invalid");
         }
-        if (databaseInitEnabled && !StrongPasswordValidator.valid(bootstrapPassword)) {
+        if (databaseInitEnabled && !BusinessRules.validPassword(bootstrapPassword)) {
             throw new IllegalStateException(Env.BOOTSTRAP_ADMIN_PASSWORD.key() + " must satisfy the password policy");
         }
         String secret = values.raw(Env.JWT_SECRET);

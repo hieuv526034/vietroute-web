@@ -8,8 +8,7 @@ db_password="$(openssl rand -hex 24)"
 admin_password="CiA1!$(openssl rand -hex 16)"
 next_password="CiB2!$(openssl rand -hex 16)"
 jwt_secret="$(openssl rand -hex 48)"
-metrics_token="$(openssl rand -hex 32)"
-printf '::add-mask::%s\n' "$db_password" "$admin_password" "$next_password" "$jwt_secret" "$metrics_token"
+printf '::add-mask::%s\n' "$db_password" "$admin_password" "$next_password" "$jwt_secret"
 docker rm --force vietroute-ci >/dev/null
 docker network create vietroute-auth-net >/dev/null
 docker run --detach --name vietroute-db-ci --network vietroute-auth-net \
@@ -25,15 +24,7 @@ start_app() {
   docker run --detach --name "$1" --network vietroute-auth-net --memory 512m \
     -e PORT=10001 -p "127.0.0.1:$2:10001" \
     -e VIETROUTE_ENV=production -e VIETROUTE_COOKIE_SECURE=false -e VIETROUTE_DB_INIT_ENABLED=true \
-    -e VIETROUTE_WORKER_ENABLED=false -e VIETROUTE_WORKER_POLL_SECONDS=1 \
-    -e VIETROUTE_ACTIVITY_ENABLED=true -e VIETROUTE_ACTIVITY_REQUEST_THRESHOLD=120 \
-    -e VIETROUTE_METRICS_TOKEN="$metrics_token" -e VIETROUTE_MONITORING_DB_ENABLED=true -e VIETROUTE_MONITORING_POLL_SECONDS=15 \
-    -e VIETROUTE_RATE_REQUESTS="${4:-1000}" -e VIETROUTE_RATE_LOGINS=200 \
     -e VIETROUTE_ACCESS_REGISTRY_CAPACITY=600 \
-    -e VIETROUTE_MAIL_ENABLED=false \
-    -e VIETROUTE_MAIL_PROVIDER=smtp -e VIETROUTE_MAIL_FROM=noreply@example.invalid \
-    -e VIETROUTE_SMTP_HOST=127.0.0.1 -e VIETROUTE_SMTP_PORT=1 -e VIETROUTE_SMTP_USER=ci-only -e VIETROUTE_SMTP_PASSWORD=ci-only \
-    -e VIETROUTE_REDIS_URL="${5:-}" \
     -e VIETROUTE_DB_SCHEMA="${6:-vietroute}" \
     -e VIETROUTE_DB_POOL_SIZE="${CI_APPLICATION_POOL_SIZE:-4}" \
     -e VIETROUTE_DB_URL="jdbc:postgresql://vietroute-db-ci:$database_port/$database$database_options" \
@@ -51,14 +42,14 @@ for port in 18080 18081; do
 done
 sql() { docker exec -e PGOPTIONS=-csearch_path=vietroute vietroute-db-ci psql -U vietroute_ci -d vietroute_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
 [[ "$(sql "SELECT count(*) FROM auth_users WHERE username='admin'")" == 1 ]]
-[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 26 ]]
+[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 8 ]]
 [[ "$(sql 'SELECT count(*) FROM catalog_items')" == 5 ]]
 [[ "$(sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','catalog_items','vietroute_schema_history')")" == 0 ]]
 [[ "$(sql "SELECT count(*) FROM pg_indexes WHERE schemaname='vietroute' AND indexname IN ('idx_auth_users_created_by','idx_auth_users_updated_by','idx_user_roles_role','idx_catalog_created_by','idx_catalog_updated_by')")" == 5 ]]
 printf 'Audit stage: reserved actor, non-null seed and database guards\n'
 [[ "$(sql "SELECT count(*) FROM auth_users WHERE id=0 AND username='system' AND NOT active AND NOT must_change_password AND created_by=0 AND updated_by=0")" == 1 ]]
 [[ "$(sql "SELECT id FROM auth_users WHERE username='admin'")" == 1 ]]
-for audit_table in auth_users auth_roles auth_user_roles auth_functions auth_role_functions auth_function_resources auth_account_challenges auth_access_changes catalog_items system_jobs media_assets api_request_journal system_visitor_presence system_activity_buckets; do
+for audit_table in auth_users auth_roles auth_user_roles auth_functions auth_role_functions auth_function_resources auth_account_challenges auth_access_changes catalog_items api_request_journal; do
   [[ "$(sql "SELECT count(*) FROM $audit_table WHERE created_by IS NULL OR updated_by IS NULL")" == 0 ]]
   [[ "$(sql "SELECT count(*) FROM information_schema.columns WHERE table_schema='vietroute' AND table_name='$audit_table' AND column_name IN ('created_by','updated_by') AND is_nullable='NO'")" == 2 ]]
 done

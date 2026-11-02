@@ -1,6 +1,7 @@
 package vn.vietroute.common.web.advice;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -22,7 +23,6 @@ import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.FunctionService;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.web.locale.SupportedLocaleResolver;
-import vn.vietroute.common.web.response.PageBreadcrumbs;
 
 /** Model layout dùng chung: base path, locale và thông tin principal an toàn, không chứa token/hash. */
 @ControllerAdvice
@@ -56,17 +56,13 @@ public class PageModelAdvice {
         Locale locale = new SupportedLocaleResolver().resolveLocale(request);
         List<FunctionDTO> menu = menus.navigation(user, current, locale);
         model.addAttribute("functionNavigation", menu);
-        model.addAttribute("breadcrumbs", PageBreadcrumbs.build(menu, current, locale, messages));
+        model.addAttribute("breadcrumbs", build(menu, current, locale, messages));
         Set<String> paths = menu
             .stream()
             .map(item -> item.path())
             .collect(Collectors.toSet());
         model.addAttribute("catalogAllowed", paths.contains(Routes.ADMIN));
-        model.addAttribute("mediaAllowed", paths.contains(Routes.MEDIA_PAGE));
-        model.addAttribute("jobsAllowed", paths.contains(Routes.JOBS_PAGE));
         model.addAttribute("accessAllowed", paths.contains(Routes.ACCESS_PAGE));
-        model.addAttribute("monitoringAllowed", paths.contains(Routes.MONITORING_PAGE));
-        model.addAttribute("configurationAllowed", paths.contains(Routes.CONFIGURATION_PAGE));
         model.addAttribute("journalAllowed", paths.contains(Routes.API_JOURNAL_PAGE));
         model.addAttribute("accountAllowed", user != null);
         model.addAttribute("adminUser", UserPrincipal.globalData());
@@ -79,26 +75,66 @@ public class PageModelAdvice {
             path.equals(Routes.ACCOUNT),
             "docs",
             path.equals(Routes.DOCS),
-            "media",
-            path.equals(Routes.MEDIA_PAGE),
-            "monitoring",
-            path.equals(Routes.MONITORING_PAGE),
-            "jobs",
-            path.equals(Routes.JOBS_PAGE),
             "access",
             path.equals(Routes.ACCESS_PAGE),
-            "configuration",
-            path.equals(Routes.CONFIGURATION_PAGE),
             "journal",
             path.equals(Routes.API_JOURNAL_PAGE)
         );
         model.addAttribute("navigation", navigation);
-        model.addAttribute(
-            "operationsActive",
-            navigation.get("monitoring") ||
-                navigation.get("jobs") ||
-                navigation.get("configuration") ||
-                navigation.get("journal")
-        );
+        model.addAttribute("operationsActive", navigation.get("journal"));
+    }
+
+    /** Mỗi mục có link trong ứng dụng; nhóm không có trang chọn trang con đầu tiên mà người dùng được mở. */
+    public static List<FunctionDTO> build(List<FunctionDTO> menu, String path, Locale locale, MessageSource messages) {
+        if (Routes.HOME.equals(path)) return List.of();
+        ArrayList<FunctionDTO> result = new ArrayList<FunctionDTO>();
+        result.add(item(messages.getMessage("ui.home", null, locale), Routes.HOME, false));
+        String canonical = Routes.LOCATION_PAGE.equals(path) ? Routes.CATALOG_LOCATIONS_PAGE : path;
+        if (append(menu, canonical, result)) return List.copyOf(result);
+        String key = switch (path) {
+            case Routes.DASHBOARD -> "ui.dashboard.title";
+            case Routes.ACCOUNT -> "ui.account";
+            case Routes.LOGIN -> "ui.login";
+            case Routes.PUBLIC_CARRIERS_PAGE -> "ui.publicCarrier.title";
+            case Routes.JOURNEYS_PAGE -> "ui.journey.search";
+            case Routes.DOCS -> "ui.nav.swagger";
+            default -> null;
+        };
+        if (key != null) result.add(item(messages.getMessage(key, null, locale), path, true));
+        return result.size() > 1 ? List.copyOf(result) : List.of();
+    }
+
+    private static boolean append(List<FunctionDTO> nodes, String path, List<FunctionDTO> trail) {
+        for (FunctionDTO node : nodes) {
+            if (path.equals(node.path())) {
+                trail.add(item(node.name(), path, true));
+                return true;
+            }
+            ArrayList<FunctionDTO> nested = new ArrayList<FunctionDTO>();
+            if (append(node.children(), path, nested)) {
+                trail.add(item(node.name(), node.path() != null ? node.path() : firstPath(node.children()), false));
+                trail.addAll(nested);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String firstPath(List<FunctionDTO> nodes) {
+        for (FunctionDTO node : nodes) {
+            if (node.path() != null) return node.path();
+            String child = firstPath(node.children());
+            if (child != null) return child;
+        }
+        return null;
+    }
+
+    private static FunctionDTO item(String name, String path, boolean active) {
+        FunctionDTO result = new FunctionDTO();
+        result.setName(name);
+        result.setPath(path);
+        result.setIcon("");
+        result.setActive(active);
+        return result;
     }
 }

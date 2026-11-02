@@ -2,7 +2,7 @@
 
 ## Đọc code theo luồng request
 
-Đọc theo thứ tự: [RootConfig](../../src/main/java/vn/vietroute/common/config/RootConfig.java) → SecurityConfig/JwtAuthenticationFilter → WebConfig/EndpointAccess → controller/api → service → repo → DTO/envelope. [Schema auth](SCHEMA_VA_PHAN_QUYEN.md#luồng-xác-thực-và-kiểm-endpoint) là hợp đồng hiện hành; không học theo class AccessFunction/Permission/AccessGuard đã xóa. Auth có 40 class, ba DTO trực tiếp ở auth.dto, request/search riêng; business cũng dùng JPA CRUD đơn giản và repo JDBC cho query/khóa phức tạp theo BUSINESSDB01.
+Đọc theo thứ tự: [RootConfig](../../src/main/java/vn/vietroute/common/config/RootConfig.java) → SecurityConfig/JwtAuthenticationFilter → WebConfig/EndpointAccess → controller/api → service → repo → DTO/envelope. [Schema auth](SCHEMA_VA_PHAN_QUYEN.md#luồng-xác-thực-và-kiểm-endpoint) là hợp đồng hiện hành; không học theo class AccessFunction/Permission/AccessGuard đã xóa. Auth có 40 class, ba DTO trực tiếp ở auth.dto, request/search riêng; business cũng dùng JPA CRUD đơn giản và repo JDBC cho query/khóa phức tạp theo [quy ước hiện hành](QUY_UOC_PHAT_TRIEN.md).
 
 ```mermaid
 sequenceDiagram
@@ -30,7 +30,7 @@ Public endpoint được WebRoutePolicy phân loại và có thể bỏ bước 
 
 Auth/business API kế thừa BaseController, gọi execute(status,SuccessCode,request,callback), trả ApiResult<T>. HTTP body vẫn ApiResponse<T> gồm code/messageKey/message/data/errors/timestamp/path/traceId/locale. Tạo mới chọn HTTP201 trong execute; không đổi lỗi thành200/201. Không cần thêm @ResponseStatus nếu execute đã trả ResponseEntity đúng status.
 
-ApiExceptionMapper dùng chung với GlobalExceptionHandler; advice xử lý JSON/binding/validation trước controller, ApiErrorWriter xử lý lỗi filter. Không catch rồi trả exception.getMessage() của SQL/provider. Client xử lý HTTP status + code, không so câu dịch. Thêm message key vào cả vi/en.
+ApiExceptionMapper dùng chung với GlobalExceptionHandler; advice xử lý JSON/binding/validation trước controller, ApiResponses.write xử lý lỗi filter. Không catch rồi trả exception.getMessage() của SQL/provider. Client xử lý HTTP status + code, không so câu dịch. Thêm message key vào cả vi/en.
 
 DTO không phải entity. Auth DTO/request/search dùng class/getter/setter, không record hoặc var; UserDTO có projection tài khoản và wrapper login/preview để giữ ngân sách lớp. Request dùng chung theo tài nguyên, field bắt buộc từng operation kiểm tại service và mô tả trong [API base](API_BASE.md#api-auth-hiện-hành). Không tạo compatibility class ở package cũ.
 
@@ -44,9 +44,9 @@ Sau SQL atomic tăng version, phải refresh entity đang managed trước khi s
 
 ## Schema, table và index trong entity
 
-Auth có tám @Entity/@Table ánh xạ đầy đủ @Column, @Id/@Version theo model, không schema cứng và không hậu tố Entity. User kế thừa BaseEntity; các entity khác khai báo rõ cột theo bảng, không ép kế thừa khi định danh khác. Mapping/challenge có identity kỹ thuật từ V026, PK/FK ghép của DB vẫn giữ. Entity không sinh schema tự động; migrations là nguồn DDL.
+Auth có tám @Entity/@Table ánh xạ đầy đủ @Column, @Id/@Version theo model, không schema cứng và không hậu tố Entity. User kế thừa BaseEntity; các entity khác khai báo rõ cột theo bảng, không ép kế thừa khi định danh khác. Mapping/challenge có identity kỹ thuật trong baseline, PK/FK ghép của DB vẫn giữ. Entity không sinh schema tự động; migrations là nguồn DDL.
 
-@JdbcTable/@JdbcIndex dùng kiểm metadata DB, không thay JPA annotations và không tự tạo index. 16 entity business cũng ánh xạ JPA đủ cột; metadata JDBC/index và DDL giữ theo migration. Timestamp JDBC chỉ chuyển tại repo; hợp đồng entity/DTO/service dùng Instant, audit actor hệ thống0.
+@JdbcTable/@JdbcIndex dùng kiểm metadata DB, không thay JPA annotations và không tự tạo index. 14 entity business cũng ánh xạ JPA đủ cột; metadata JDBC/index và DDL giữ theo migration. Timestamp JDBC chỉ chuyển tại repo; hợp đồng entity/DTO/service dùng Instant, audit actor hệ thống0.
 
 ## Import, callback và cách viết dễ học
 
@@ -67,8 +67,10 @@ public ApiResult<UserDTO> me(
 
 Đoạn này lấy từ hợp đồng UserAPI: principal/servlet là tham số server, không khai báo như query/body Swagger. Page dùng @Controller trong controller; API dùng @RestController trong controller/api. Mỗi operation công khai mô tả @Operation, request/DTO field có @Schema; kiểm cả path/query/header/body và phân trang kế thừa bằng OpenApiContractTest.
 
+BaseRepository ở common.base cung cấp callback JDBC và dịch SQLState; JpaRepositorySupport dùng cùng SqlWork. MigrationCatalog/DatabaseInitializer ở common.initializer, chỉ chạy khởi tạo khi bật cờ; common.jdbc chỉ giữ connection/transaction/schema/metadata/dialect.
+
 ## Ranh giới transaction và schema — AUTH19
 
-JdbcConnectionFactory/SchemaDataSource bắt đầu transaction trước set LOCAL search_path, schema đã validate và pg_temp cuối; không fallback public/$user hoặc session state qua transaction pooler. JdbcTransactions tham gia Spring transaction không tự commit riêng. History failure rollback mutation; journal/activity có cơ chế ghi/commit riêng theo chuyên đề, không gộp chúng vào audit quyền.
+JdbcConnectionFactory/SchemaDataSource bắt đầu transaction trước set LOCAL search_path, schema đã validate và pg_temp cuối; không fallback public/$user hoặc session state qua transaction pooler. JdbcTransactions tham gia Spring transaction không tự commit riêng. History failure rollback mutation; journal có cơ chế ghi/commit riêng theo chuyên đề, không gộp chúng vào audit quyền.
 
-Đọc [schema/migration](SCHEMA_VA_PHAN_QUYEN.md#schema-và-migration), [audit](AUDIT_VA_SYSTEM.md) và [kiểm query](QUY_UOC_PHAT_TRIEN.md#rà-query-và-ghi-theo-tập--perf02) khi thêm DAO. Xong thay đổi: formatter/rules/docs, kiểm thử phù hợp trên H2/PostgreSQL riêng và regression hai context khi động tới quyền; không dùng Neon để kiểm build.
+Đọc [schema/migration](SCHEMA_VA_PHAN_QUYEN.md#schema-và-migration), [audit](AUDIT_VA_SYSTEM.md) và [kiểm query](QUY_UOC_PHAT_TRIEN.md#sql-trong-repo) khi thêm DAO. Xong thay đổi: formatter/rules/docs, kiểm thử phù hợp trên H2/PostgreSQL riêng và regression hai context khi động tới quyền; không dùng Neon để kiểm build.

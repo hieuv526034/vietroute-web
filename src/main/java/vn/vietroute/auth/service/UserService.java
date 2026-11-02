@@ -31,9 +31,7 @@ import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.JdbcTransactions;
-import vn.vietroute.common.media.repository.MediaRepository;
 import vn.vietroute.common.validation.BusinessRules;
-import vn.vietroute.common.validation.StrongPasswordValidator;
 
 /** Luồng tài khoản tập trung: đăng nhập/khóa, đổi mật khẩu, profile và CRUD; không còn email/outbox/recovery phụ. */
 @Service
@@ -49,7 +47,6 @@ public class UserService {
     private final JdbcTransactions transactions;
     private final AppSettings settings;
     private final AuthInitializer initializer;
-    private final MediaRepository images;
     private final Clock clock;
     private String dummyHash;
 
@@ -265,7 +262,6 @@ public class UserService {
     public UserDTO profile(UserRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
-            if (body.getAvatarMediaId() != null) images.requireAvatar(connection, body.getAvatarMediaId(), actor.id());
             User value = BusinessRules.requireFound(users.lock(actor.id()));
             requireSession(value, actor);
             version(value, body.getVersion());
@@ -274,7 +270,6 @@ public class UserService {
                 ErrorCode.INVALID_REQUEST
             );
             value.setDisplayName(body.getDisplayName().strip());
-            value.setAvatarMediaId(body.getAvatarMediaId());
             audit(value, actor.id());
             users.saveAndFlush(value);
             return UserDTO.from(users.load(connection, actor.id(), false));
@@ -282,7 +277,7 @@ public class UserService {
     }
 
     public String passwordHash(String value) {
-        BusinessRules.require(StrongPasswordValidator.valid(value), ErrorCode.VALIDATION_FAILED);
+        BusinessRules.require(BusinessRules.validPassword(value), ErrorCode.VALIDATION_FAILED);
         return passwords.encode(value);
     }
 

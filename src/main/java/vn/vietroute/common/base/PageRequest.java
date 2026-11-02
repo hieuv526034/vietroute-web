@@ -10,7 +10,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Schema(description = "Tham số phân trang, page bắt đầu từ 0")
-public class PageRequest extends BaseRequest {
+public class PageRequest {
 
     @Min(value = 0, message = "{validation.page}")
     @Max(value = 1000000, message = "{validation.page}")

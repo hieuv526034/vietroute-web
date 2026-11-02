@@ -18,11 +18,10 @@ import vn.vietroute.business.booking.constant.BookingPaymentKind;
 import vn.vietroute.business.booking.constant.BookingStatus;
 import vn.vietroute.business.booking.dto.request.BookingRequest;
 import vn.vietroute.business.carrier.dto.request.CarrierRequest;
-import vn.vietroute.business.route.dto.request.RouteRequest;
-import vn.vietroute.business.route.dto.request.RouteStopRequest;
-import vn.vietroute.business.tracking.dto.request.TrackingRequest;
 import vn.vietroute.business.trip.constant.TripProgressAction;
 import vn.vietroute.business.trip.constant.TripStatus;
+import vn.vietroute.business.trip.dto.request.RouteRequest;
+import vn.vietroute.business.trip.dto.request.RouteStopRequest;
 import vn.vietroute.business.trip.dto.request.TripRequest;
 import vn.vietroute.common.validation.RequestGroups;
 
@@ -75,7 +74,7 @@ class BusinessRequestTest {
     }
 
     @Test
-    void paymentAndTrackingStopRetainTheirOwnRequiredFields() {
+    void paymentRetainsItsRequiredFields() {
         BookingRequest booking = new BookingRequest();
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setVersion(0L);
@@ -86,12 +85,6 @@ class BusinessRequestTest {
         booking.setAmount(BigDecimal.ONE);
         booking.setRequestKey(UUID.randomUUID());
         assertTrue(fields(booking, RequestGroups.Payment.class).isEmpty());
-        TrackingRequest tracking = new TrackingRequest();
-        tracking.setTripVersion(0L);
-        assertTrue(fields(tracking, RequestGroups.Create.class).isEmpty());
-        assertEquals(Set.of("sessionKey"), fields(tracking, RequestGroups.Delete.class));
-        tracking.setSessionKey(UUID.randomUUID());
-        assertTrue(fields(tracking, RequestGroups.Delete.class).isEmpty());
     }
 
     @Test

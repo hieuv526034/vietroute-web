@@ -10,7 +10,6 @@ import jakarta.validation.groups.Default;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import vn.vietroute.common.base.BaseRequest;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.validation.BusinessCode;
 import vn.vietroute.common.validation.RequestGroups;
@@ -20,7 +19,7 @@ import vn.vietroute.common.validation.RequestGroups;
 @Setter
 @NoArgsConstructor
 @Schema(description = "Dữ liệu Carrier; trường bắt buộc phụ thuộc thao tác, xem schema từng API")
-public class CarrierRequest extends BaseRequest {
+public class CarrierRequest {
 
     @NotBlank(message = "{validation.required}")
     @Size(max = 120, message = "{validation.length}")
@@ -39,10 +38,6 @@ public class CarrierRequest extends BaseRequest {
 
     @Schema(description = "Đang nhận nghiệp vụ mới")
     private boolean active = true;
-
-    @Min(value = 1, message = "{validation.invalid}")
-    @Schema(description = "ID ảnh logo READY do chính actor sở hữu, null để gỡ")
-    private Long logoMediaId;
 
     @NotBlank(message = "{validation.required}", groups = { RequestGroups.Create.class })
     @BusinessCode

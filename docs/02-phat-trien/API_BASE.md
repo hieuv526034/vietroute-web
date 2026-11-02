@@ -2,7 +2,7 @@
 
 ## API auth hiện hành
 
-AUTHDB04/AUTHDTO02 ngày 01/11/2026. Đối chiếu ba controller [UserAPI](../../src/main/java/vn/vietroute/auth/controller/api/UserAPI.java), [RoleAPI](../../src/main/java/vn/vietroute/auth/controller/api/RoleAPI.java), [FunctionAPI](../../src/main/java/vn/vietroute/auth/controller/api/FunctionAPI.java). Source có **36 mapping REST auth**, không tính page controller. Swagger /docs và JSON /v3/api-docs tạo từ MVC/@Operation/@Schema là hợp đồng để thử trên đúng phiên bản app đang chạy. [Schema/phân quyền](SCHEMA_VA_PHAN_QUYEN.md) giải thích cơ chế; [quy ước](QUY_UOC_PHAT_TRIEN.md#authdb04--auth-gọn-40-class-tám-bảng-01112026) liệt kê 40 class.
+Đối chiếu source ngày 02/11/2026. Đối chiếu ba controller [UserAPI](../../src/main/java/vn/vietroute/auth/controller/api/UserAPI.java), [RoleAPI](../../src/main/java/vn/vietroute/auth/controller/api/RoleAPI.java), [FunctionAPI](../../src/main/java/vn/vietroute/auth/controller/api/FunctionAPI.java). Source có **36 mapping REST auth**, không tính page controller. Swagger /docs và JSON /v3/api-docs tạo từ MVC/@Operation/@Schema là hợp đồng để thử trên đúng phiên bản app đang chạy. [Schema/phân quyền](SCHEMA_VA_PHAN_QUYEN.md) giải thích cơ chế; [quy ước](QUY_UOC_PHAT_TRIEN.md#auth-gọn-40-class-tám-bảng) liệt kê 40 class.
 
 Tất cả URL dưới đây là khi WAR ở ROOT; thêm context khi deploy /vietroute. API private kiểm đúng method + template từ DB, không suy quyền từ tên ADMIN/OPERATOR/DRIVER/CUSTOMER. Public/self-service là phân loại ứng dụng; self-service vẫn phải có tài khoản/token hợp lệ. Actor, ID chủ sở hữu, audit và quyền hiệu lực lấy từ server.
 
@@ -11,11 +11,11 @@ Tất cả URL dưới đây là khi WAR ở ROOT; thêm context khi deploy /vie
 | Method | URL | Input chính | Data khi thành công |
 |---|---|---|---|
 | GET | /api/v1/auth/csrf | Public | headerName, token; cookie CSRF tương ứng |
-| POST | /api/v1/auth/login | username, password | UserDTO wrapper có accessToken/tokenType/expiresAt/user; cookie HttpOnly |
+| POST | /api/v1/auth/login | username, password; không dùng email | UserDTO wrapper có accessToken/tokenType/expiresAt/user; cookie HttpOnly |
 | GET | /api/v1/auth/me | Self-service | UserDTO tài khoản hiện tại |
 | POST | /api/v1/auth/change-password | currentPassword, newPassword; self-service | null; thu hồi mọi token và xóa cookie, đăng nhập lại |
 | POST | /api/v1/auth/logout | Public, có principal thì thu hồi token | null; xóa cookie |
-| PUT | /api/v1/auth/profile | displayName, version; avatarMediaId tùy chọn; self-service | UserDTO; avatar null là gỡ ảnh, ảnh có ID phải owner/READY |
+| PUT | /api/v1/auth/profile | displayName, version; self-service | UserDTO với tên hiển thị đã cập nhật |
 | GET | /api/v1/auth/capabilities | Self-service | List FunctionDTO của chính user, targets/menu đã lọc trạng thái |
 
 Login sai 5 lần khóa 15 phút; khóa tạm chặn xác minh password, không tự đổi password hoặc thay cho active=false. Password mới ít nhất 8 ký tự, có hoa/thường/số/ký tự khác, tối đa 72 byte UTF-8; không trùng hash hiện tại và hai hash trước. Thời hạn JWT 30 phút, HS256 đúng issuer/audience/exp/iat/jti, chưa refresh token. TokenVersion thay đổi thu hồi token trên mọi thiết bị.
@@ -102,9 +102,9 @@ Body POST Function ở trên. Sau POST Role code VEHICLE_READER với nameVi/nam
 
 ### Các luồng đã bỏ và tương thích
 
-Không có controller đăng ký/activate/resend/forgot/reset/email/options, admin-recovery, registry permission/policy/tree cũ, gán role resources/permissions hoặc API history. Tên route/field cũ còn trong migration/constants hay URL scopes/{id}/permissions không tạo lại một chức năng đã bỏ. Không gửi password reset qua mail hoặc hứa người dùng cũ tự xác minh email; xử lý chuyển đổi theo [bootstrap](SCHEMA_VA_PHAN_QUYEN.md#khởi-tạo-và-bảo-vệ-bootstrap).
+Không có controller đăng ký/activate/resend/forgot/reset/email/options, admin-recovery, registry permission/policy/tree cũ, gán role resources/permissions hoặc API history. Một số URL hiện hành như scopes/{id}/permissions giữ tên để tương thích contract; tên URL không tạo thêm bảng permission hoặc cơ chế action. Không gửi password reset qua mail hoặc hứa người dùng cũ tự xác minh email; xử lý chuyển đổi theo [bootstrap](SCHEMA_VA_PHAN_QUYEN.md#khởi-tạo-và-bảo-vệ-bootstrap).
 
-Các page auth trong UserPageController: /login, /account, /operations/accounts, /operations/access, /operations/access/resources, /admin và /docs. /dashboard thuộc module dashboard. Page private kiểm riêng target GET; query lang không thay grant. /login với principal redirect /dashboard và giữ locale, filter có thể đưa phiên chưa hoàn tất về /account.
+Các page auth trong UserPageController: /login, /account, /operations/accounts, /operations/access, /operations/access/resources, /admin và /docs. /dashboard thuộc business/report. Page private kiểm riêng target GET; query lang không thay grant. /login với principal redirect /dashboard và giữ locale, filter có thể đưa phiên chưa hoàn tất về /account.
 
 ## Locale và envelope
 
@@ -133,30 +133,30 @@ Lỗi binding/JSON trước controller qua GlobalExceptionHandler; lỗi trong e
 
 Browser lấy GET csrf, giữ cookie XSRF-TOKEN và gửi header data.headerName/token trước mutation. Axios client chung đã làm; JWT ở cookie HttpOnly/SameSite=Lax/Secure theo môi trường, không localStorage/sessionStorage. API client cũng cần CSRF/cookie khi login ban đầu, sau đó dùng Authorization: Bearer <token>. Logout/password thu hồi tất cả token, không phát token thay thế sau đổi password. Cookie path theo context ứng dụng.
 
-Không có quyền offline: private request đọc account/grants DB hiện hành, DB lỗi từ chối. Public lookup được khai báo trong WebRoutePolicy, không lấy role/quyền từ header. Token scrape /internal/metrics là hợp đồng riêng ở [vận hành](../04-van-hanh/GIAM_SAT_VA_VAN_HANH.md).
+Không có quyền offline: private request đọc account/grants DB hiện hành, DB lỗi từ chối. Public lookup được khai báo trong WebRoutePolicy, không lấy role/quyền từ header.
 
 ## Transaction, Swagger và kiểm thử
 
-Đọc [luồng base](LUONG_XU_LY_BASE.md) trước khi thêm API. JPA CRUD auth và JDBC batch/history cùng JpaTransactionManager; không commit riêng trong repo, không query/save theo từng phần tử. Auth DTO là whitelist riêng; không yêu cầu kế thừa BaseResponse khi model hiện hành dùng class trực tiếp. Các module business JDBC đang có giữ base/repository của chúng.
+Đọc [luồng base](LUONG_XU_LY_BASE.md) trước khi thêm API. JPA CRUD auth và JDBC batch/history cùng JpaTransactionManager; không commit riêng trong repo, không query/save theo từng phần tử. Auth DTO là whitelist riêng; không yêu cầu kế thừa BaseDTO khi model hiện hành dùng class trực tiếp. Các module business JDBC đang có giữ base/repository của chúng.
 
-Swagger mô tả path/query/header/body, multipart, inherited pagination và generic envelope. @Operation có trên API, @Schema có trên field; principal/servlet là server-injected. HTTP 201 do execute chọn; lỗi vẫn status thực. Auth source inventory dùng /targets hoặc /resources, không lấy từ OpenAPI như nguồn cấp quyền.
+Swagger mô tả path/query/header/body, inherited pagination và generic envelope. @Operation có trên API, @Schema có trên field; principal/servlet là server-injected. HTTP 201 do execute chọn; lỗi vẫn status thực. Auth source inventory dùng /targets hoặc /resources, không lấy từ OpenAPI như nguồn cấp quyền.
 
-Maven/test không tự đọc `.env`, không migration Neon. Init/sync theo cờ chỉ ở runtime; [chạy local](../01-bat-dau/CHAY_LOCAL_VA_CLOUDINARY.md) mô tả OS/IDE → file launcher → default properties. `.env` gốc được theo dõi Git theo yêu cầu, có thể còn placeholder; không đưa giá trị vào docs/log/WAR/image. H2 kiểm phần portable, PostgreSQL riêng kiểm dialect/migration/FK/batch và hai context. Bằng chứng kết quả/giới hạn nằm tại tiến độ; code local không đồng nghĩa đã lên dev/main/Render.
+Maven/test không tự đọc `.env`, không migration Neon. Init/sync theo cờ chỉ ở runtime; [chạy local](../01-bat-dau/CHAY_LOCAL.md) mô tả OS/IDE → file launcher → default properties. `.env` gốc được theo dõi Git theo yêu cầu, không đưa giá trị vào docs/log/WAR/image. H2 kiểm phần portable, PostgreSQL riêng kiểm dialect/migration/FK/batch và hai context. Bằng chứng kết quả/giới hạn nằm tại tiến độ; code local không đồng nghĩa đã lên dev/main/Render.
 
-## BUSINESSDB01 — Ranh giới JPA, JDBC và hợp đồng giữ nguyên
+## Hợp đồng business và ranh giới JPA/JDBC
 
-Quy hoạch source business ngày 01/11/2026 giữ URL/method, payload, status, locale/envelope, Bean Validation, Swagger và kiểm quyền endpoint hiện hành. Các response/request record đã chuyển thành class trong dto/request và dto/response; query/lookup/picker chuyển thành *Search ở dto/search. Java caller dùng getter chuẩn. BUSINESSDB02 gộp request theo tài nguyên; payload JSON hiện có vẫn dùng được, tên schema request chuyển về *Request. [Cấu trúc và số file](QUY_UOC_PHAT_TRIEN.md#businessdb01--cấu-trúc-business-theo-auth-01112026) là nguồn quy ước.
+Quy hoạch source business ngày 01/11/2026 giữ URL/method, payload, status, locale/envelope, Bean Validation, Swagger và kiểm quyền endpoint hiện hành. Các response/request record đã chuyển thành class trong dto/request và dto/response; query/lookup/picker chuyển thành *Search ở dto/search. Java caller dùng getter chuẩn. BUSINESSDB02 gộp request theo tài nguyên; payload JSON hiện có vẫn dùng được, tên schema request chuyển về *Request. [Cấu trúc và số file](QUY_UOC_PHAT_TRIEN.md#stack-và-cấu-trúc) là nguồn quy ước.
 
-JPA CRUD: danh mục, tỉnh/địa điểm, nhà xe/xe/tài xế. JDBC trong repo: join/count/page/scope/owner, khóa cha và kiểm quan hệ, snapshot tuyến/chuyến, batch stops/segments, confirm/cancel/thu-hoàn tiền/history, tracking, public lookup và báo cáo. Không chuyển cơ chế tồn chỗ hoặc cascade sang save từng đơn; không đổi lock order hoặc ngữ nghĩa tiền thật chỉ vì đổi ORM. JPA/JDBC cùng transaction và connection; lỗi constraint/version vẫn trả 409, lỗi history rollback mutation.
+JPA CRUD: danh mục, tỉnh/địa điểm, nhà xe/xe/tài xế. JDBC trong repo: join/count/page/scope/owner, khóa cha và kiểm quan hệ, snapshot tuyến/chuyến, batch stops/segments, confirm/cancel/thu-hoàn tiền/history, public lookup và báo cáo. Không chuyển cơ chế tồn chỗ hoặc cascade sang save từng đơn; không đổi lock order hoặc ngữ nghĩa tiền thật chỉ vì đổi ORM. JPA/JDBC cùng transaction và connection; lỗi constraint/version vẫn trả 409, lỗi history rollback mutation.
 
-CatalogItemAPI gộp public/legacy và hai nhóm typed; type cố định ở handler giữ chống sửa chéo ID. BookingAPI gộp staff và owner, gọi phương thức BookingService tương ứng; TripTrackingAPI gộp ba nhóm staff/customer/driver nhưng đường dẫn và guard/owner/assignment vẫn riêng. Service không suy quyền từ tên role, không có API chọn tùy ý nhánh staff hoặc actor. Public projection vẫn không có PII của booking/driver/staff. Class/package đổi không tự cấp quyền mới; target method+template được giữ.
+CatalogItemAPI gộp public/sẵn có và hai nhóm typed; type cố định ở handler giữ chống sửa chéo ID. BookingAPI gộp staff và owner, gọi phương thức BookingService tương ứng. Service không suy quyền từ tên role, không có API chọn tùy ý nhánh staff hoặc actor. Public projection vẫn không có PII của booking/driver/staff. Class/package đổi không tự cấp quyền mới; target method+template được giữ.
 
-Initializer chỉ chạy khi bật cờ runtime, không trong Maven. V001–V026 không đổi, không cần migrate/xóa dữ liệu vì đổi class. Hibernate không tự DDL; restart/clean WAR cần loại class cũ đã gộp. Kiểm thử không đọc .env/ghi Neon; kết quả và giới hạn triển khai xem tiến độ.
+Initializer chỉ chạy khi bật cờ runtime, không trong Maven. DDL hiện hành nằm trong baseline theo cụm; chuyển package không thay contract HTTP. Hibernate không tự DDL; restart/clean WAR cần loại class cũ đã gộp. Kiểm thử không đọc .env/ghi Neon; kết quả và giới hạn triển khai xem tiến độ.
 
 
-### Một request cho tạo/sửa và nhóm thao tác — BUSINESSDB02
+### Một request cho mỗi tài nguyên
 
-Tất cả request business ở [quy ước BUSINESSDB02](QUY_UOC_PHAT_TRIEN.md#request-dùng-chung-và-constant--businessdb02). Không còn class CreateRequest/UpdateRequest/WriteRequest/ManageUpdateRequest/DeleteRequest theo cùng tài nguyên. Trường cần gửi được Swagger required theo operation, không dùng schema union bắt nhập cả field POST lẫn PUT. Các enum nghiệp vụ chuyển sang constant, giữ nguyên giá trị JSON và trạng thái DB.
+Tất cả request business ở [quy ước BUSINESSDB02](QUY_UOC_PHAT_TRIEN.md#request-dùng-chung-và-constant). Không còn class CreateRequest/UpdateRequest/WriteRequest/ManageUpdateRequest/DeleteRequest theo cùng tài nguyên. Trường cần gửi được Swagger required theo operation, không dùng schema union bắt nhập cả field POST lẫn PUT. Các enum nghiệp vụ chuyển sang constant, giữ nguyên giá trị JSON và trạng thái DB.
 
 Ví dụ cùng VehicleRequest:
 
@@ -170,18 +170,18 @@ POST /api/v1/admin/vehicles không cần version. PUT /api/v1/admin/vehicles/{id
 {"plateNumber":"51A-123.45","vehicleTypeId":5,"capacity":16,"active":true,"version":0}
 ```
 
-Code/carrierId không bắt buộc ở PUT; nếu gửi lại phải trùng giá trị đã lưu. Không đổi quan hệ bằng cách thêm field create vào payload sửa. ID/version ở trên chỉ minh họa hợp đồng, phải lấy giá trị thật từ môi trường thử. Province/Location/Driver/Carrier/Catalog kiểm định danh tương tự; Route giữ trường code/carrierId của hợp đồng trước. Booking payment không bắt gửi contact/trip của lúc tạo; Tracking stop chỉ yêu cầu nonce hiện hành. Guard/scope/owner/version/history và CSRF vẫn độc lập validation.
+Code/carrierId không bắt buộc ở PUT; nếu gửi lại phải trùng giá trị đã lưu. Không đổi quan hệ bằng cách thêm field create vào payload sửa. ID/version ở trên chỉ minh họa hợp đồng, phải lấy giá trị thật từ môi trường thử. Province/Location/Driver/Carrier/Catalog kiểm định danh tương tự; Route giữ trường code/carrierId của hợp đồng trước. Booking payment không bắt gửi contact/trip của lúc tạo. Guard/scope/owner/version/history và CSRF vẫn độc lập validation.
 
 
-## Danh mục địa lý — LOCATION01
+## Catalog: danh mục và địa lý
 
-GET /api/v1/provinces và /api/v1/locations là lookup public theo active/locale. CRUD quản trị /api/v1/admin/provinces và /api/v1/admin/locations dùng target cụ thể từ MVC; menu /catalogs/provinces, /catalogs/locations và /operations/locations kiểm GET riêng. Cập nhật kiểm version, quan hệ tỉnh-địa điểm và tọa độ hợp lệ; owner/scope không được client tự gán. Chi tiết field/coordinate validation đọc các DTO trong business/location và Swagger của phiên bản đang chạy.
+GET /api/v1/provinces và /api/v1/locations là lookup public theo active/locale. CRUD quản trị /api/v1/admin/provinces và /api/v1/admin/locations dùng target cụ thể từ MVC; menu /catalogs/provinces, /catalogs/locations và /operations/locations kiểm GET riêng. Cập nhật kiểm version, quan hệ tỉnh-địa điểm và tọa độ hợp lệ; owner/scope không được client tự gán. Chi tiết field/coordinate validation đọc các DTO trong business/catalog và Swagger của phiên bản đang chạy.
 
-## Ảnh công khai và chạy local
+## Common: nhật ký và hợp đồng HTTP
 
-API /api/v1/media dùng common.media, upload multipart JPEG/PNG và projection whitelist; kiểm grant target + owner/globalData theo cùng role và ảnh READY khi tham chiếu. Không nhận publicId/remote URL từ client. Tái sử dụng MediaService, không tạo upload auth riêng. [Chạy local/Cloudinary](../01-bat-dau/CHAY_LOCAL_VA_CLOUDINARY.md) mô tả giới hạn/provider; có adapter không chứng minh provider đã bật.
+Chỉ giữ nhật ký request có grant page/API chính xác: [hợp đồng debug/cURL/Postman](../04-van-hanh/NHAT_KY_API_VA_DEBUG.md). Bỏ API/mail/job/media/status/runtime/configuration/activity/metrics và các màn tương ứng. User profile bỏ avatarMediaId; carrier/vehicle bỏ logoMediaId/photoMediaId, public carrier bỏ logoUrl. JSON gửi trường đã bỏ bị từ chối, không bỏ qua âm thầm. Không cần multipart/credential provider. Envelope/page/field-error chuyển từ record sang class, tên JSON giữ nguyên.
 
-## Danh mục riêng và nhà xe/phương tiện/tài xế — BUSINESS02
+## Carrier: nhà xe, phương tiện, tài xế
 
 Mỗi danh mục có trang riêng dưới menu Danh mục: `/catalogs/vehicle-types`, `/catalogs/booking-sources`, `/catalogs/provinces`, `/catalogs/locations`. `/admin` là tổng quan. URL cũ `/operations/locations` và API `/api/v1/admin/catalogs` giữ hợp đồng tương thích; không còn là nơi chọn mọi loại mới. Grant GET menu độc lập từng API GET/POST/PUT/DELETE. Không có bộ 20 function cố định trong Java.
 
@@ -189,31 +189,31 @@ Mỗi danh mục có trang riêng dưới menu Danh mục: `/catalogs/vehicle-ty
 |---|---|---|
 | `/vehicle-types`, `/booking-sources` | Từng GET list/id, POST, PUT id, DELETE id theo đúng path | Lọc query/active, count/page PostgreSQL; cập nhật active + version; DELETE nhận JSON version và ngừng sử dụng. ID/type khác endpoint trả 404/400. Các API catalog tương thích vẫn kiểm target riêng. |
 | `/provinces`, `/locations` | Từng target page/API địa lý trong DB | Các route địa lý tương thích vẫn kiểm target riêng; public lookup vẫn chỉ active. |
-| `/carriers` | Từng target page/API carriers | Actor có endpoint + globalTargets tạo scope+nhà xe trong một giao dịch qua auth, cùng quota/khóa gán role và lịch sử SCOPE_CREATED; đổi active cần global grant của chính target đó. Thành viên có scope sửa thông tin; scope security không bị tắt theo business active. |
+| `/carriers` | Từng target page/API carriers | Actor có endpoint + globalTargets tạo scope+nhà xe trong một giao dịch qua auth, với kiểm global target và lịch sử SCOPE_CREATED; đổi active cần global grant của chính target đó. Thành viên có scope sửa thông tin; scope security không bị tắt theo business active. |
 | `/vehicles` | Từng target page/API vehicles | Tạo cần carrierId được kiểm scope; code/carrier/scope bất biến khi sửa. Biển số chuẩn hóa chữ hoa, DB unique theo ký tự chữ/số, capacity 1–200, loại VEHICLE_TYPE active. |
 | `/drivers` | Từng target page/API drivers | Hồ sơ có thể chưa có account. Khi gắn account: account ready, có global DRIVER và scoped DRIVER đúng nhà xe. Không suy membership từ tên role. |
 | `/vehicles/carriers`, `/drivers/carriers` | Grant GET picker tương ứng và scope | Picker tìm/phân trang tại DB bằng đúng quyền scoped của tài nguyên con, chỉ trả id/code/name; không đòi GET danh sách carrier riêng hoặc lộ hồ sơ đầy đủ. |
-| `/demo` POST | POST /api/v1/admin/demo + global scope cho endpoint đó | Thao tác chủ động từ `/operations/demo`; không tự seed lúc startup. Một transaction/advisory lock, mã từ JSON trong source, chỉ INSERT phần thiếu, giữ nguyên bản đã có, collision đơn vị cùng code khác tên rollback toàn bộ. |
+| `/demo` POST | POST /api/v1/admin/demo + global scope cho endpoint đó | Thao tác chủ động từ `/operations/demo`; chỉ startup khi bật riêng BUSINESS_INIT và DB_INIT. Một transaction/advisory lock, mã từ JSON trong source, chỉ INSERT phần thiếu, giữ nguyên bản đã có, collision đơn vị cùng code khác tên rollback toàn bộ. |
 
-Danh sách carrier/vehicle/driver nhận query/active/carrierId/page/size; cả count lẫn trang dữ liệu kiểm account/tokenVersion/scope/membership/role/function/target hiện hành. Truy cập ID ngoài scope trả 404; filter carrierId không cấp quyền. CREATE/UPDATE suy scope từ cha trong DB, khóa cha trước con, audit lấy principal; stale version 409 và không tự gửi lại. Mỗi dòng trả canUpdate từ guard SQL cùng scope; UI giao cờ này với capabilities target chung. Ngừng sử dụng thay xóa vật lý. Ảnh logo/photo chỉ nhận ID ảnh chung READY thuộc actor; xóa media bị chặn khi carrier/vehicle còn tham chiếu, kể cả inactive. Không gọi provider trong transaction này.
+Danh sách carrier/vehicle/driver nhận query/active/carrierId/page/size; cả count lẫn trang dữ liệu kiểm account/tokenVersion/scope/membership/role/function/target hiện hành. Truy cập ID ngoài scope trả 404; filter carrierId không cấp quyền. CREATE/UPDATE suy scope từ cha trong DB, khóa cha trước con, audit lấy principal; stale version 409 và không tự gửi lại. Mỗi dòng trả canUpdate từ guard SQL cùng scope; UI giao cờ này với capabilities target chung. Ngừng sử dụng thay xóa vật lý. COMMON01 bỏ trường ảnh và luồng upload; CRUD/version/scope/lock giữ nguyên.
 
-Bộ dữ liệu `src/main/resources/demo/business.json` và catalog seed gồm danh mục, tỉnh/địa điểm, hai nhà xe, bốn xe/bốn hồ sơ tài xế. Scope là cột carriers theo V024, không thêm hai bảng/dòng scope rời. Không tạo account, membership, grant hoặc email; mã/biển số/điện thoại/tọa độ minh họa. Chạy lại trả created=0/reused=21 nếu bộ đã đủ theo dữ liệu source hiện hành; không đặt lại trạng thái/nội dung người dùng đã sửa. Không xóa hoặc ghi đè để ép seed thành công. BusinessDataInitializer có thể thêm hai tuyến nền khi BUSINESS_INIT bật; không tự công bố chuyến/đơn hoặc bán vé thật. Mặc định role thường không được tự cấp quyền source mới; quản trị gán global role/quyền rồi membership đúng carrier scope qua màn Phạm vi dữ liệu.
+Bộ dữ liệu `src/main/resources/bootstrap/foundation.json` và catalog seed gồm danh mục, tỉnh/địa điểm, hai nhà xe, bốn xe/bốn hồ sơ tài xế. Scope là cột carriers, không thêm hai bảng/dòng scope rời. Không tạo account, membership, grant hoặc email; mã/biển số/điện thoại/tọa độ minh họa. Chạy lại trả created=0/reused=21 nếu bộ đã đủ theo dữ liệu source hiện hành; không đặt lại trạng thái/nội dung người dùng đã sửa. Không xóa hoặc ghi đè để ép seed thành công. BusinessDataInitializer có bộ vận hành mở rộng trong bootstrap/operations.json: khi BUSINESS_INIT và DEFAULT_ACCOUNTS bật sẽ tạo tuyến/chuyến/đơn giả lập theo cấu hình, tách khỏi API nền. [Danh sách tài khoản và luồng dùng thử](../01-bat-dau/CHAY_LOCAL.md#tài-khoản-và-dữ-liệu-khởi-tạo) mô tả đầy đủ. Mặc định role thường không được tự cấp quyền source mới; quản trị gán global role/quyền rồi membership đúng carrier scope qua màn Phạm vi dữ liệu.
 
-V017 thêm carriers/carrier_vehicles/carrier_drivers và FK composite vào scope/parent/catalog; giữ V001–V016. Triển khai source cùng migration qua startup init đã bật, sync role/function bootstrap khi enabled; không chạy migration/seed trong Maven. Account mới do quản trị cấp được xác minh và bắt đổi password; account cũ chưa xác minh cần người vận hành xử lý, không có auth email self-service. AUTH03 cấp account nhân sự, ROUTE01/TRIP01/BOOKING01/TRACK01 vẫn là các phần riêng theo đặc tả, chưa được coi hoàn thành bởi CRUD này.
+Nhà xe/phương tiện/tài xế nằm trong carrier/001_schema.sql với FK composite sang auth/catalog. Tài khoản quản trị cấp đã xác minh và bắt đổi password; không có email self-service.
 
-Regression `BusinessIntegrationTest` chỉ chạy với `-Dbusiness.test.database=jdbc:postgresql://127.0.0.1:15439/vietroute_business_test`, PostgreSQL test user ciadmin, database dành riêng không có app schema khác; tạo/drop schema random `business02_it_*` sau mỗi ca. Không đọc .env; CI dựng PostgreSQL 17 cô lập và chạy Maven verify trước image build. Kiểm hai context WAR, menu/API/type độc lập, scope count/ID/picker/revoke, stale/concurrent version, unique plate, parent inactive, account DRIVER, rollback/idempotence seed và media reference. Preview phải dùng DB khác (ví dụ vietroute_business_preview) vì startup chủ động chặn nhiều app history trong cùng DB.
+Regression `BusinessIntegrationTest` chỉ chạy với `-Dbusiness.test.database=jdbc:postgresql://127.0.0.1:<port>/vietroute_business_test`, PostgreSQL test user ciadmin, database dành riêng không có app schema khác; tạo/drop schema random `business02_it_*` sau mỗi ca. Không đọc .env; CI dựng PostgreSQL 17 cô lập và chạy Maven verify trước image build. Kiểm hai context WAR, menu/API/type độc lập, scope count/ID/picker/revoke, stale/concurrent version, unique plate, parent inactive, account DRIVER, rollback/idempotence seed. Preview phải dùng DB khác (ví dụ vietroute_business_preview) vì startup chủ động chặn nhiều app history trong cùng DB.
 
-## Tuyến và điểm dừng — ROUTE01 trong BUSINESS04
+## Trip: tuyến và điểm dừng
 
-V018 bổ sung carrier_routes/carrier_route_stops, FK composite route/carrier/scope và địa điểm danh mục. Giữ V001–V017. GET `/api/v1/admin/routes` nhận query/active/carrierId/page/size, GET `/{id}` trả toàn bộ điểm; grant GET route tương ứng và predicate scope trong SQL count/trang/ID. GET `/carriers` chỉ trả picker nhà xe active có grant POST tuyến tương ứng, không đòi GET danh sách carrier riêng.
+Tuyến/điểm thuộc trip/001_schema.sql, có FK composite route/carrier/scope và địa điểm. GET `/api/v1/admin/routes` nhận query/active/carrierId/page/size, GET `/{id}` trả toàn bộ điểm; grant GET route tương ứng và predicate scope trong SQL count/trang/ID. GET `/carriers` chỉ trả picker nhà xe active có grant POST tuyến tương ứng, không đòi GET danh sách carrier riêng.
 
 POST tuyến cần grant POST tuyến tương ứng, PUT `/{id}` cần grant PUT tuyến tương ứng. JSON gồm carrierId/code/nameVi/nameEn/description/active/stops; PUT thêm version và giữ carrierId/code cũ. Mỗi điểm gồm locationId, arrivalOffsetMinutes, departureOffsetMinutes, cumulativeFare, pickupAllowed, dropoffAllowed. 2–32 địa điểm khác nhau, thứ tự theo mảng; phút đến tăng qua mốc rời trước, 0–43200 phút, giá cộng dồn không giảm và tối đa 2 chữ số thập phân. Điểm đầu arrival=0/fare=0/pickup=true; điểm cuối dropoff=true. Hai chiều là hai tuyến riêng; không tự đảo điểm/giá.
 
-Transaction khóa nhà xe → tuyến → danh mục, thay điểm nguyên tử và CAS version. Lỗi ROUTE001/400 giữ draft, version cũ 409, parent ngừng dùng 409; ngoài scope 404. Chuyến sẽ dùng snapshot độc lập khi module TRIP01 được triển khai, không tham chiếu ID mẫu điểm để sửa lịch sử. `/operations/routes` đòi grant GET menu tuyến độc lập API GET. Không auto cấp các quyền này cho role thường; mapping vận hành được gán qua quản trị theo yêu cầu chủ dự án.
+Transaction khóa nhà xe → tuyến → danh mục, thay điểm nguyên tử và CAS version. Lỗi ROUTE001/400 giữ draft, version cũ 409, parent ngừng dùng 409; ngoài scope 404. Chuyến dùng snapshot độc lập, không tham chiếu ID mẫu điểm để sửa lịch sử. `/operations/routes` đòi grant GET menu tuyến độc lập API GET. Không auto cấp các quyền này cho role thường; mapping vận hành được gán qua quản trị theo yêu cầu chủ dự án.
 
-## Điều hành chuyến — TRIP01 trong BUSINESS04
+## Trip: điều hành chuyến
 
-V019 thêm `carrier_trips`, `trip_stops`, `trip_segments`, `trip_events`; giữ V001–V018. Chuyến lưu snapshot tên tuyến, loại xe/biển số, tài xế và điểm/địa chỉ/tọa độ/giờ/giá. Sửa mẫu/danh mục không sửa lịch sử đã chụp. Tồn chỗ có một dòng cho mỗi đoạn liên tiếp, capacity 1–200 và reserved_seats 0..capacity; module booking dùng các dòng này trong transaction riêng theo thứ tự khóa chung.
+Chuyến thuộc trip/001_schema.sql. Chuyến lưu snapshot tên tuyến, loại xe/biển số, tài xế và điểm/địa chỉ/tọa độ/giờ/giá. Sửa mẫu/danh mục không sửa lịch sử đã chụp. Tồn chỗ có một dòng cho mỗi đoạn liên tiếp, capacity 1–200 và reserved_seats 0..capacity; module booking dùng các dòng này trong transaction riêng theo thứ tự khóa chung.
 
 | API | Quyền và hợp đồng |
 |---|---|
@@ -225,9 +225,9 @@ V019 thêm `carrier_trips`, `trip_stops`, `trip_segments`, `trip_events`; giữ 
 
 Mở bán khóa trip → nhà xe → source → xe → tài xế/account; khóa xe/tài xế tuần tự hóa cạnh tranh lịch. Đổi phân công dùng trip → nhà xe → xe → tài xế/account → segments tăng dần. Lịch chồng dùng `start < other.end AND end > other.start` cho OPEN/IN_PROGRESS, gồm qua đêm/nhiều ngày; hai chuyến tiếp giáp được phép. Không khóa trip khác khi kiểm lịch để tránh vòng chờ. Mutation tăng version/CAS và ghi trip_events cùng transaction; lỗi lịch sử rollback cả thay đổi. Snapshot địa điểm cũ cũng phải active trước mở bán, kể cả mẫu đã thay điểm.
 
-`/operations/trips` có grant GET menu chuyến riêng, modal thông tin/điểm/lịch sử, picker tìm và phân trang server, lỗi giữ draft. TRIP001 là dữ liệu không hợp lệ (400), TRIP002 lịch trùng và TRIP003 trạng thái không cho phép (409); version cũ COM008/409. Không auto grant role thường. Đây là điều hành staff; luồng tài xế tiến độ, booking/giải phóng chỗ khi hủy, tìm công khai, GPS và báo cáo được tích hợp ở các bước BUSINESS04 kế tiếp, chưa suy từ CRUD chuyến là đã hoàn tất các luồng đó.
+`/operations/trips` có grant GET menu chuyến riêng, modal thông tin/điểm/lịch sử, picker tìm và phân trang server, lỗi giữ draft. TRIP001 là dữ liệu không hợp lệ (400), TRIP002 lịch trùng và TRIP003 trạng thái không cho phép (409); version cũ COM008/409. Không auto grant role thường. Luồng điều hành được nối với tiến độ tài xế, hủy/giải phóng chỗ, tìm công khai và báo cáo theo các contract dưới đây; không có theo dõi GPS.
 
-## Chuyến được giao và tiến độ — DRIVER02
+## Trip: chuyến được giao và tiến độ
 
 GET `/api/v1/driver/trips` và `/{id}` dùng grant GET API tài xế tương ứng; PUT `/{id}/progress` dùng grant PUT /api/v1/driver/trips/{id}/progress. Trang `/driver/trips` dùng grant GET menu tài xế riêng. SQL count/page/ID đồng thời yêu cầu user là driver_user_id, hồ sơ driver vẫn active/liên kết user và global + scoped DRIVER còn hiệu lực trong đúng scope. Không trả DRAFT hoặc chuyến người khác; ADMIN không tự đóng vai tài xế. Thu hồi liên kết/membership/role có hiệu lực tại lần kiểm tiếp theo, không hứa hủy request đã chạy.
 
@@ -235,11 +235,11 @@ Progress JSON gồm action START/ARRIVE/DEPART/COMPLETE, stopOrder, version, not
 
 PUT `/api/v1/admin/trips/{id}/notice` dùng grant PUT trip tương ứng trong scope, JSON note không rỗng + version. Chỉ OPEN/IN_PROGRESS; tăng version, giữ trạng thái và lưu thông báo + NOTICE nguyên tử. Không cho hủy IN_PROGRESS hoặc tự hoàn tiền/chuyển khách. UI staff cho ghi chú/thông báo trong modal ngay cả khi chuyến đang chạy; không mở lại form phân công.
 
-BOOKING01 bổ sung hooks cùng connection ở mục dưới: đóng PENDING tại điểm rời, hoàn thành CONFIRMED tại điểm trả và cascade hủy chuyến. Tiến độ xác nhận vẫn tách khỏi GPS.
+BookingRepo phối hợp trên cùng connection: đóng PENDING tại điểm rời, hoàn thành CONFIRMED tại điểm trả và cascade hủy chuyến. Tiến độ xác nhận vẫn tách khỏi GPS.
 
-## Đặt chỗ theo chặng và tìm công khai — BOOKING01/SEARCH01
+## Booking và tìm chuyến công khai
 
-V020 thêm `bookings`/`booking_events`, giữ V001–V019. Đơn gắn FK composite trip/carrier/scope và hai điểm snapshot. WEB phải có customer; PHONE không cần tài khoản khách. Giá chốt bằng giá cộng dồn của snapshot tại lúc gửi, không nhận owner/source/giá/audit từ client. Partial unique chỉ một WEB PENDING/CONFIRMED mỗi customer; khi tạo WEB khóa user sau trip để tuần tự hóa cả hai chuyến khác nhau. PENDING không giữ chỗ.
+Đơn gắn FK composite trip/carrier/scope và hai điểm snapshot. WEB phải có customer; PHONE không cần tài khoản khách. Giá chốt bằng giá cộng dồn của snapshot tại lúc gửi, không nhận owner/source/giá/audit từ client. Partial unique chỉ một WEB PENDING/CONFIRMED mỗi customer; khi tạo WEB khóa user sau trip để tuần tự hóa cả hai chuyến khác nhau. PENDING không giữ chỗ.
 
 | API | Quyền và dữ liệu |
 |---|---|
@@ -257,17 +257,17 @@ V020 thêm `bookings`/`booking_events`, giữ V001–V019. Đơn gắn FK compos
 
 Mutation khóa trip → user (chỉ tạo WEB) → booking → segments tăng dần. `TripSegmentRepo` là một thuật toán dùng chung; confirm tăng đúng [pickup,dropoff), hủy CONFIRMED giảm đúng một lần, kiểm liên tục và đủ mọi chặng. CAS và booking_events cùng transaction; history lỗi rollback. UUID tạo/tiền replay cùng actor và nội dung trả kết quả cũ, khác nội dung bị chặn; không tự retry mutation. Hủy trip cascade PENDING/CONFIRMED và giải phóng chỗ trong transaction trip. START/DEPART đóng PENDING tại điểm đã rời; ARRIVE hoàn thành CONFIRMED ở điểm trả, giữ reserved lịch sử. Hoàn thành/hủy kết thúc ràng buộc một WEB active.
 
-BOOKING001 dữ liệu sai/400, BOOKING002 thiếu chỗ/409, BOOKING003 trạng thái/409, BOOKING004 đã có WEB active/409, BOOKING005 UUID khác nội dung/409, BOOKING006 thu/hoàn vượt giới hạn/400; version cũ COM008/409. Tiền hủy chưa hoàn có refundDue, không tự ghi đã hoàn. Trang `/journeys` công khai, `/my-bookings` grant GET menu đơn của tôi và `/operations/bookings` grant GET menu booking độc lập API GET. Startup sync bindings/bootstrap khi bật; role thường vẫn cần mapping DB tường minh. Maps/GPS và báo cáo tiếp tục riêng; không suy từ chi tiết text là đã có GPS thật.
+BOOKING001 dữ liệu sai/400, BOOKING002 thiếu chỗ/409, BOOKING003 trạng thái/409, BOOKING004 đã có WEB active/409, BOOKING005 UUID khác nội dung/409, BOOKING006 thu/hoàn vượt giới hạn/400; version cũ COM008/409. Tiền hủy chưa hoàn có refundDue, không tự ghi đã hoàn. Trang `/journeys` công khai, `/my-bookings` grant GET menu đơn của tôi và `/operations/bookings` grant GET menu booking độc lập API GET. Startup sync bindings/bootstrap khi bật; role thường vẫn cần mapping DB tường minh. Báo cáo nằm trong business/report; tiến độ là mốc tài xế xác nhận, không có phát vị trí thiết bị.
 
-## Tra cứu nhà xe và bộ lọc chuyến — DETAIL01/SEARCH02
+## Trip: tra cứu công khai và bộ lọc
 
-GET `/api/v1/carriers` công khai nhận query/page/size; count/trang trong SQL, từ khóa nguyên văn không phân biệt hoa/thường, thứ tự tên/id ổn định. GET `/{id}` chỉ nhà xe và scope còn active, còn lại 404. DTO chỉ id/code/name/phone/description/logoUrl, không scope/audit/version/nhân sự/customer. Đây là thông tin và liên hệ nhà xe đã công bố; không dùng staff membership để lọc lựa chọn của khách. Các API quản trị `/api/v1/admin/carriers` và metadata `/api/v1/media/{id}` vẫn có guard riêng, không mở theo matcher public.
+GET `/api/v1/carriers` công khai nhận query/page/size; count/trang trong SQL, từ khóa nguyên văn không phân biệt hoa/thường, thứ tự tên/id ổn định. GET `/{id}` chỉ nhà xe và scope còn active, còn lại 404. DTO chỉ id/code/name/phone/description, không scope/audit/version/nhân sự/customer. Đây là thông tin và liên hệ nhà xe đã công bố; không dùng staff membership để lọc lựa chọn của khách. Các API quản trị `/api/v1/admin/carriers` vẫn có guard riêng, không mở theo matcher public. COMMON01 đã bỏ logoUrl và API media.
 
 Logo được lấy từ FK server sau kiểm công bố, dùng MediaService đọc URL READY theo lô tối đa 100 ID trên cùng connection, không gọi CDN/N+1 hoặc trả provider ID/metadata thư viện. Ảnh không READY không công bố URL. Trang `/carriers` có tìm/phân trang, modal liên hệ và link `/journeys?carrierId=...`; URL chỉ là bộ lọc, không là quyền/scope.
 
 GET `/api/v1/trips` thêm minPrice/maxPrice nullable: giá một chỗ VND trên đúng cặp điểm, gồm hai cận, không âm, tối đa 10 chữ số phần nguyên/2 thập phân và min≤max. Khoảng đảo trả 400/COM001 với field priceRangeValid, VAL015/validation.priceRange; OpenAPI gồm cả from/to, date/seats/carrierId/vehicleTypeId/minPrice/maxPrice/page/size kế thừa. Picker nhà xe dùng public projection trên; loại xe dùng catalog lookup active, đều có tìm/trang và giữ lựa chọn ngoài trang. Giá và count vẫn tính tại DB, không lọc sau phân trang ở JavaScript. Không migration hoặc ordinary role grant mới.
 
-## Báo cáo vận hành — REPORT01
+## Report: báo cáo vận hành
 
 `GET /api/v1/admin/reports` dùng grant GET báo cáo tương ứng scoped; `GET /api/v1/admin/reports/carriers` là picker query/page/size cùng quyền, không đòi GET danh sách carrier riêng. GET menu riêng bảo vệ `/operations/reports`. Role có all_scopes và chính grant endpoint đó tổng hợp mọi nhà xe trong scope active; các trường hợp khác chỉ các membership/role hiện hành có grant GET báo cáo tương ứng, không union quyền từ scope khác. Carrier ID ngoài phạm vi trả 404. Picker chỉ có id/code/name/active, không xuất scope/audit/nhân sự. Nhà xe ngừng kinh doanh vẫn có lịch sử khi scope bảo mật còn active.
 
@@ -275,22 +275,12 @@ GET `/api/v1/trips` thêm minPrice/maxPrice nullable: giá một chỗ VND trên
 
 Tiền là số hiện tại của đơn thuộc nhóm chuyến khởi hành trong khoảng, kể cả đơn hủy; không phải dòng tiền theo ngày ghi nhận payment. PENDING không là chỗ đã bán hoặc doanh thu; confirmedValue không là paidAmount. Mỗi chỗ của một đơn là một lượt, không phải ghế vật lý duy nhất. Không migration, không tự cấp endpoint báo cáo cho role thường; vận hành gán mapping bằng API quản trị sau triển khai. Không phát sinh thanh toán hoặc hoàn tiền khi đọc báo cáo.
 
-## Cấp tài khoản tài xế theo nhà xe — AUTH03
+## Carrier: cấp tài khoản tài xế
 
 POST /api/v1/admin/drivers/{id}/account nhận UserRequest với username/email/password/version. Actor cần endpoint này và phạm vi nhà xe của hồ sơ; UserService còn kiểm toàn bộ endpoint của role tài xế định cấp không vượt quyền actor. Nhà xe/hồ sơ bị khóa cùng transaction, hồ sơ chưa liên kết account và chưa có chuyến được phân công. Không cấp tùy ý role từ payload.
 
 Account mới active/verified, must_change_password=true, email chuẩn hóa; global/scoped role và history ghi nguyên tử. Hồ sơ tài xế được liên kết nhưng inactive; sau đổi password, người có quyền nghiệp vụ bật hồ sơ mới có thể phân chuyến. Không có bước email tự phục vụ. Response dùng UserDTO với id/username/mustChangePassword/version cần thiết, không hash/password, không hợp đồng DriverProvisionResponse cũ. UI đọc canAssign theo endpoint mutation riêng. Snapshot chuyến cũ không tự chuyển sang account mới.
 
-## Trang tổng quan và điều hướng — BUSINESS05
+## Report: dashboard và điều hướng
 
-`GET /dashboard` là trang HTML cần xác thực, không có endpoint aggregate hoặc bảng mới. Home/login đưa phiên sẵn sàng tới dashboard; cờ mustChangePassword/emailVerificationRequired vẫn đưa tới account. Dashboard chỉ GET các API hiện hành theo capabilities: my-bookings theo owner, driver/trips theo phân công hiện hành, reports và admin/bookings theo grant endpoint. Guard/scope/owner/version vẫn do các service cũ kiểm, không lấy role/tenant từ query. Mỗi danh sách lấy tối đa 5 bản ghi và tổng PostgreSQL; báo cáo dùng nhóm ngày khởi hành từ đầu tháng tới hết tháng kế tiếp tại Việt Nam, tiền thực thu không phải giá chốt. Menu/breadcrumb giữ locale/context và lọc target GET menu; role owner/phân công là điều kiện nghiệp vụ bổ sung, không thay grant endpoint GET. Chi tiết trình bày ở [quy ước UI](../03-giao-dien/QUY_UOC_UI.md#breadcrumb-và-khoảng-cách-khối--business05).
-
-## Chia sẻ vị trí riêng tư — TRACK01
-
-V021 thêm trip_tracking (consent/snapshot) và trip_locations (mẫu thiết bị) có FK trip/carrier/scope/actor, audit Instant/TIMESTAMPTZ, giữ V001–V020 nguyên vẹn. API riêng tư dưới `/api/v1/driver/trips/{id}/tracking` (GET snapshot và POST start/stop/samples có target riêng), `/api/v1/admin/trips/{id}/tracking` (grant GET trip tương ứng scoped) và `/api/v1/my-bookings/{id}/tracking` (grant GET API owner tương ứng, account ready, owner). Không đặt GPS dưới matcher public trips; chỉ đơn CONFIRMED hiện hành được nhận vị trí, hủy/hoàn tất/chờ trả UNAVAILABLE. ADMIN không phát mẫu thay tài xế; assigned driver/profile/membership vẫn kiểm hiện hành. Việc công bố còn kiểm quyền cập nhật hiệu lực của tài xế từ các role trong đúng scope, không bắt quyền chỉ nằm ở role DRIVER và không union role nhà xe khác; không suy all_scopes hoặc grant từ tên ADMIN khi chính người đó cũng là tài xế được giao.
-
-Bật chia sẻ cần version chuyến và chủ động của tài xế, trước lịch khởi hành tối đa 30 phút hoặc khi đang chạy. Server cấp nonce mới, xóa snapshot cũ; nonce không thay JWT/quyền và chỉ trả qua POST bật, không có trong DTO xem. Mẫu WGS84/accuracy/source BROWSER với measuredAt UTC độ phân giải millisecond; server gán actor/receivedAt. Giới hạn tuổi 120 giây, tương lai 15 giây, tối thiểu 10 giây mỗi mẫu mới. Mẫu sai thứ tự hoặc cùng timestamp khác dữ liệu bị chặn; replay đúng không thêm trace/gia hạn lease. Lease 120 giây, stale sau 90 giây; hết lease ẩn tọa độ và trace. Stop cùng nonce lặp lại an toàn; nonce cũ không tắt lần consent mới.
-
-Khóa trip trước state/sample; snapshot và trace cùng transaction, lỗi insert rollback snapshot. Hủy, đổi phân công hoặc hoàn tất trip xóa snapshot/tắt chia sẻ cùng transaction. Tọa độ không tự đóng điểm, đổi trạng thái trip hoặc đơn. Viewer được kiểm owner/assigned/scope, không trả actor/scope/nonce. Google Maps giữ UNCONFIGURED theo lựa chọn chủ dự án, chưa gửi tọa độ sang provider; không tạo mẫu GPS DEMO trên Neon.
-
-`VIETROUTE_TRACKING_ENABLED` mặc định true chỉ cho phép tính năng, không tự xin quyền thiết bị hoặc bật chia sẻ. Trace trả tối đa 100 mẫu cùng consent, bỏ mẫu nhận quá 7 ngày ngay trong query. Khi nhận mẫu mới, cleanup PostgreSQL theo lô 500 với advisory lock, tối đa 2000 mẫu/trip và mục tiêu 10000 toàn app; không có hàng đợi lịch sử RAM. Việc xóa vật lý quá hạn chạy theo hoạt động gửi mẫu, không cam kết job xóa đúng hạn khi toàn hệ thống ngừng tracking. TRACK001 invalid/400, TRACK002 consent/trạng thái/409, TRACK003 tần suất/429, TRACK004 feature tắt/503. Bốn ca PostgreSQL cô lập kiểm quyền/owner/scope, thu hồi quyền tài xế ẩn vị trí, lease/time/replay/race, rollback/retention và kết thúc. UI có tab vị trí riêng và watchPosition opt-in; 8 ca Node adapter thiết bị giả kiểm từ chối/timeout/mất mạng/race đóng trong lúc bật, không thay nghiệm thu GPS vật lý. Cấu hình an toàn có trackingEnabled/mapStatus, không secret.
+`GET /dashboard` là trang HTML cần xác thực, không có endpoint aggregate hoặc bảng mới. Home/login đưa phiên sẵn sàng tới dashboard; cờ mustChangePassword/emailVerificationRequired vẫn đưa tới account. Dashboard chỉ GET các API hiện hành theo capabilities: my-bookings theo owner, driver/trips theo phân công hiện hành, reports và admin/bookings theo grant endpoint. Guard/scope/owner/version vẫn do các service cũ kiểm, không lấy role/tenant từ query. Mỗi danh sách lấy tối đa 5 bản ghi và tổng PostgreSQL; báo cáo dùng nhóm ngày khởi hành từ đầu tháng tới hết tháng kế tiếp tại Việt Nam, tiền thực thu không phải giá chốt. Menu/breadcrumb giữ locale/context và lọc target GET menu; role owner/phân công là điều kiện nghiệp vụ bổ sung, không thay grant endpoint GET. Chi tiết trình bày ở [quy ước UI](../03-giao-dien/QUY_UOC_UI.md).

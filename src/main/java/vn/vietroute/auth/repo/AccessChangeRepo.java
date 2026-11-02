@@ -117,34 +117,37 @@ public class AccessChangeRepo extends JpaRepositorySupport<AccessChange, Long> {
     }
 
     public int cleanup() {
-        return read(connection -> {
-            try (PreparedStatement lock = connection.prepareStatement("SELECT pg_try_advisory_xact_lock(781205618)")) {
-                try (ResultSet row = lock.executeQuery()) {
-                    row.next();
-                    if (!row.getBoolean(1)) return 0;
-                }
+        return read(AccessChangeRepo::cleanup);
+    }
+
+    /** Dọn một lô trong transaction startup/nhật ký, không thêm query vào từng mutation. */
+    public static int cleanup(Connection connection) throws SQLException {
+        try (PreparedStatement lock = connection.prepareStatement("SELECT pg_try_advisory_xact_lock(781205618)")) {
+            try (ResultSet row = lock.executeQuery()) {
+                row.next();
+                if (!row.getBoolean(1)) return 0;
             }
-            try (
-                PreparedStatement query = connection.prepareStatement(
-                    """
-                    DELETE
+        }
+        try (
+            PreparedStatement query = connection.prepareStatement(
+                """
+                DELETE
+                FROM auth_access_changes
+                WHERE id IN (
+                    SELECT id
                     FROM auth_access_changes
-                    WHERE id IN (
-                        SELECT id
-                        FROM auth_access_changes
-                        WHERE created_at < CURRENT_TIMESTAMP - INTERVAL '7 days'
-                            OR id < (
-                                SELECT COALESCE(max(id), 0) - 1000
-                                FROM auth_access_changes
-                            )
-                        ORDER BY id
-                        LIMIT 200
-                    )
-                    """
+                    WHERE created_at < CURRENT_TIMESTAMP - INTERVAL '7 days'
+                        OR id < (
+                            SELECT COALESCE(max(id), 0) - 1000
+                            FROM auth_access_changes
+                        )
+                    ORDER BY id
+                    LIMIT 200
                 )
-            ) {
-                return query.executeUpdate();
-            }
-        });
+                """
+            )
+        ) {
+            return query.executeUpdate();
+        }
     }
 }

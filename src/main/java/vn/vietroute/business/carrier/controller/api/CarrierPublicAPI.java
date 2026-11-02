@@ -46,7 +46,7 @@ public class CarrierPublicAPI extends BaseController {
     @GetMapping(Routes.PUBLIC_CARRIERS + Routes.BY_ID)
     @Operation(
         summary = "Thông tin và liên hệ nhà xe công khai",
-        description = "Nhà xe/scope ngừng công bố trả 404; logo READY từ media chung, không có metadata thư viện"
+        description = "Nhà xe/scope ngừng công bố trả 404; thông tin công bố, không có dữ liệu nội bộ"
     )
     public ApiResult<PublicCarrierResponse> find(
         @Parameter(description = "ID nhà xe dương") @PathVariable @Min(

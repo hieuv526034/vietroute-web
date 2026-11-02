@@ -13,7 +13,6 @@ import vn.vietroute.business.carrier.repo.CarrierRepo;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.jdbc.JdbcTransactions;
-import vn.vietroute.common.media.service.MediaService;
 import vn.vietroute.common.validation.BusinessRules;
 
 /** Xe thuộc một nhà xe cố định; plate chuẩn hóa UNIQUE, số chỗ và loại xe được kiểm ở cả DB/service. */
@@ -26,30 +25,29 @@ public class VehicleService {
         page.setActive(true);
         PageResponse<Carrier> result = carriers.choices(page);
         return new PageResponse<>(
-            result.content().stream().map(CarrierChoiceResponse::from).toList(),
-            result.page(),
-            result.size(),
-            result.totalElements(),
-            result.totalPages(),
-            result.hasNext(),
-            result.hasPrevious()
+            result.getContent().stream().map(CarrierChoiceResponse::from).toList(),
+            result.getPage(),
+            result.getSize(),
+            result.getTotalElements(),
+            result.getTotalPages(),
+            result.isHasNext(),
+            result.isHasPrevious()
         );
     }
 
     private final CarrierRepo carriers;
     private final JdbcTransactions transactions;
-    private final MediaService media;
 
     public PageResponse<VehicleResponse> page(CarrierSearch page) {
         PageResponse<Vehicle> result = carriers.vehicles(page);
         return new PageResponse<>(
-            result.content().stream().map(VehicleResponse::from).toList(),
-            result.page(),
-            result.size(),
-            result.totalElements(),
-            result.totalPages(),
-            result.hasNext(),
-            result.hasPrevious()
+            result.getContent().stream().map(VehicleResponse::from).toList(),
+            result.getPage(),
+            result.getSize(),
+            result.getTotalElements(),
+            result.getTotalPages(),
+            result.isHasNext(),
+            result.isHasPrevious()
         );
     }
 
@@ -61,7 +59,6 @@ public class VehicleService {
     public VehicleResponse create(VehicleRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
-            if (body.getPhotoMediaId() != null) media.requireReference(connection, body.getPhotoMediaId(), actor);
             Carrier parent = carriers.carrier(connection, body.getCarrierId(), true);
             BusinessRules.require(parent.isActive(), ErrorCode.RESOURCE_IN_USE);
             carriers.requireVehicleType(connection, body.getVehicleTypeId());
@@ -74,7 +71,6 @@ public class VehicleService {
     public VehicleResponse update(long id, VehicleRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
-            if (body.getPhotoMediaId() != null) media.requireReference(connection, body.getPhotoMediaId(), actor);
             Vehicle snapshot = carriers.vehicle(connection, id, false);
             Carrier parent = carriers.carrier(connection, snapshot.getCarrierId(), true);
             Vehicle current = carriers.vehicle(connection, id, true);

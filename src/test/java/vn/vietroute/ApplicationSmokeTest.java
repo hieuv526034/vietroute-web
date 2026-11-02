@@ -39,6 +39,7 @@ class ApplicationSmokeTest {
             assertTrue(html.contains("Quản lý nhà xe"), html);
             assertTrue(html.contains("href=\"/assets/css/app.css\""));
             assertTrue(!html.contains("th:text="), "Thymeleaf must render, not return the raw template");
+            assertFalse(html.contains("/account-access"), "Trang chủ không giữ link đăng ký/recovery đã gỡ");
 
             MvcResult stylesheet = mvc.perform(get("/assets/css/app.css")).andReturn();
             assertEquals(200, stylesheet.getResponse().getStatus());
@@ -58,19 +59,10 @@ class ApplicationSmokeTest {
             var document = context.getBean(ObjectMapper.class).readTree(spec);
             assertTrue(document.isObject(), "OpenAPI phải trả JSON object, không encode thành JSON string");
             assertTrue(document.get("paths").has("/api/v1/auth/change-password"));
-            assertTrue(document.get("components").get("schemas").has("CatalogResponse"));
+            assertTrue(document.get("components").get("schemas").has("CatalogItemResponse"));
             assertTrue(document.at("/paths/~1api~1v1~1admin~1catalogs/post/responses").has("201"));
-            assertTrue(document.at("/paths/~1api~1v1~1admin~1mail/post/responses").has("202"));
-            var idempotency = StreamSupport.stream(
-                document.at("/paths/~1api~1v1~1admin~1mail/post/parameters").spliterator(),
-                false
-            )
-                .filter(parameter -> parameter.path("name").asText().equals("Idempotency-Key"))
-                .findFirst()
-                .orElseThrow();
-            assertEquals("Idempotency-Key", idempotency.get("name").asText());
-            assertEquals("header", idempotency.get("in").asText());
-            assertTrue(idempotency.get("required").asBoolean());
+            assertFalse(document.get("paths").has("/api/v1/admin/mail"));
+            assertFalse(document.get("paths").has("/api/v1/media"));
             assertTrue(document.get("paths").has("/api/v1/admin/access/roles/{role}/functions"));
             var errorExample = document.at(
                 "/paths/~1api~1v1~1auth~1login/post/responses/401/content/application~1json/example"
@@ -80,7 +72,7 @@ class ApplicationSmokeTest {
             assertTrue(spec.contains("/api/v1/auth/login"));
             assertTrue(spec.contains("/api/v1/admin/catalogs"));
             assertTrue(spec.contains("createdAt"));
-            assertTrue(spec.contains("PageResponseCatalogResponse"));
+            assertTrue(spec.contains("PageResponseCatalogItemResponse"));
 
             assertEquals(200, mvc.perform(get("/login")).andReturn().getResponse().getStatus());
             assertEquals(200, mvc.perform(get("/docs")).andReturn().getResponse().getStatus());

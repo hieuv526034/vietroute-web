@@ -8,7 +8,7 @@ import java.util.Locale;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.StaticMessageSource;
 import vn.vietroute.auth.dto.FunctionDTO;
-import vn.vietroute.common.web.response.PageBreadcrumbs;
+import vn.vietroute.common.web.advice.PageModelAdvice;
 
 /** Kiểm breadcrumb dùng cây đã lọc quyền, có link nhóm và giữ đường dẫn tương thích địa lý. */
 class PageBreadcrumbsTest {
@@ -29,7 +29,7 @@ class PageBreadcrumbsTest {
         messages.addMessage("ui.home", Locale.ENGLISH, "Home");
         var leaf = menu("Trips", "/operations/trips", "", true, List.of());
         var group = menu("Operations", null, "", true, List.of(leaf));
-        var result = PageBreadcrumbs.build(List.of(group), "/operations/trips", Locale.ENGLISH, messages);
+        var result = PageModelAdvice.build(List.of(group), "/operations/trips", Locale.ENGLISH, messages);
         assertEquals(List.of("Home", "Operations", "Trips"), result.stream().map(FunctionDTO::name).toList());
         assertEquals(
             List.of("/", "/operations/trips", "/operations/trips"),
@@ -37,7 +37,7 @@ class PageBreadcrumbsTest {
         );
         assertFalse(result.get(1).active());
         assertEquals(true, result.get(2).active());
-        assertEquals(List.of(), PageBreadcrumbs.build(List.of(), "/operations/trips", Locale.ENGLISH, messages));
+        assertEquals(List.of(), PageModelAdvice.build(List.of(), "/operations/trips", Locale.ENGLISH, messages));
     }
 
     @Test
@@ -47,13 +47,13 @@ class PageBreadcrumbsTest {
         messages.addMessage("ui.journey.search", Locale.ENGLISH, "Find a trip");
         assertEquals(
             "Find a trip",
-            PageBreadcrumbs.build(List.of(), "/journeys", Locale.ENGLISH, messages).get(1).name()
+            PageModelAdvice.build(List.of(), "/journeys", Locale.ENGLISH, messages).get(1).name()
         );
         var places = menu("Places", "/catalogs/locations", "", true, List.of());
         assertEquals(
             "/catalogs/locations",
-            PageBreadcrumbs.build(List.of(places), "/operations/locations", Locale.ENGLISH, messages).get(1).path()
+            PageModelAdvice.build(List.of(places), "/operations/locations", Locale.ENGLISH, messages).get(1).path()
         );
-        assertEquals(List.of(), PageBreadcrumbs.build(List.of(), "/", Locale.ENGLISH, messages));
+        assertEquals(List.of(), PageModelAdvice.build(List.of(), "/", Locale.ENGLISH, messages));
     }
 }

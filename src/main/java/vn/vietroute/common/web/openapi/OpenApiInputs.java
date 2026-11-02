@@ -16,6 +16,9 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.validation.annotation.Validated;
 
@@ -24,7 +27,21 @@ final class OpenApiInputs {
 
     private OpenApiInputs() {}
 
-    record Description(String text, String example, boolean hidden, boolean deprecated, String summary) {}
+    @Getter
+    @AllArgsConstructor
+    @EqualsAndHashCode
+    static class Description {
+
+        private final String text;
+
+        private final String example;
+
+        private final boolean hidden;
+
+        private final boolean deprecated;
+
+        private final String summary;
+    }
 
     static Description operation(AnnotatedElement element) {
         Operation annotation = element.getAnnotation(Operation.class);

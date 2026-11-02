@@ -99,7 +99,7 @@ public class OpenApiAPI {
             Method method = handler.getMethod();
             Description description = OpenApiInputs.operation(method);
             // Endpoint mới cần @Operation để xuất hiện trong tài liệu; không đưa view/static route vào API.
-            if (description == null || description.hidden()) {
+            if (description == null || description.isHidden()) {
                 return;
             }
             Tag tag = handler.getBeanType().getAnnotation(Tag.class);
@@ -109,8 +109,8 @@ public class OpenApiAPI {
                 }
                 for (RequestMethod verb : mapping.getMethodsCondition().getMethods()) {
                     Operation operation = OpenApiModels.operation(
-                        description.summary(),
-                        description.text(),
+                        description.getSummary(),
+                        description.getText(),
                         handler.getBeanType().getSimpleName() + "_" + method.getName(),
                         tag == null ? "API" : tag.name()
                     );
@@ -135,7 +135,7 @@ public class OpenApiAPI {
                         Class<?> parameterClass = method.getParameterTypes()[index];
                         String parameterName = method.getParameters()[index].getName();
                         Description input = OpenApiInputs.description(parameter);
-                        if (input.hidden()) continue;
+                        if (input.isHidden()) continue;
                         if (
                             parameter.isAnnotationPresent(ModelAttribute.class) &&
                             mapping
@@ -167,17 +167,17 @@ public class OpenApiAPI {
                                 .name(name)
                                 .in(pv != null ? "path" : "query")
                                 .description(
-                                    input.text().isBlank()
+                                    input.getText().isBlank()
                                         ? (pv != null ? "Định danh " : "Tham số ") + name
-                                        : input.text()
+                                        : input.getText()
                                 )
                                 .required(
                                     pv != null ||
                                         (rp.required() && ValueConstants.DEFAULT_NONE.equals(rp.defaultValue()))
                                 )
-                                .deprecated(input.deprecated())
+                                .deprecated(input.isDeprecated())
                                 .schema(parameterSchema);
-                            if (!input.example().isBlank()) documented.example(input.example());
+                            if (!input.getExample().isBlank()) documented.example(input.getExample());
                             operation.addParametersItem(documented);
                         } else if (parameter.isAnnotationPresent(RequestHeader.class)) {
                             // Header bắt buộc như Idempotency-Key phải có ô nhập trên Swagger Try it out.
@@ -190,8 +190,8 @@ public class OpenApiAPI {
                                 new Parameter()
                                     .name(name)
                                     .in("header")
-                                    .description(input.text())
-                                    .example(input.example().isBlank() ? null : input.example())
+                                    .description(input.getText())
+                                    .example(input.getExample().isBlank() ? null : input.getExample())
                                     .required(
                                         header.required() && ValueConstants.DEFAULT_NONE.equals(header.defaultValue())
                                     )
@@ -257,9 +257,9 @@ public class OpenApiAPI {
                         Map.entry("409", "Trùng dữ liệu/phiên bản cũ"),
                         Map.entry("413", "Body vượt kích thước cho phép"),
                         Map.entry("415", "Media type không được hỗ trợ"),
-                        Map.entry("429", "Vượt quota hoặc tài khoản tạm khóa; xem code và Retry-After"),
+                        Map.entry("429", "Tài khoản tạm khóa sau nhiều lần đăng nhập sai"),
                         Map.entry("500", "Lỗi nội bộ có traceId"),
-                        Map.entry("503", "Database/Redis chưa sẵn sàng, hệ thống bận hoặc email chưa cấu hình")
+                        Map.entry("503", "Database chưa sẵn sàng hoặc hệ thống đang bận")
                     );
                     failures.forEach((code, text) ->
                         OpenApiModels.response(

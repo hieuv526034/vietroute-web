@@ -20,13 +20,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import vn.vietroute.auth.entity.User;
 import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.auth.service.JwtService;
+import vn.vietroute.common.api_journal.filter.ApiJournalFilter.ApiJournalState;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
-import vn.vietroute.common.monitoring.service.ApiJournalState;
-import vn.vietroute.common.web.response.ApiErrorWriter;
+import vn.vietroute.common.web.response.ApiResponses;
 import vn.vietroute.common.web.routing.WebRoutePolicy;
 
 /** Xác minh JWT rồi đọc lại tài khoản/quyền để khóa user hoặc logout có hiệu lực ngay. */
@@ -36,11 +36,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final UserRepo users;
 
-    private final ApiErrorWriter errors;
+    private final ApiResponses errors;
 
     private final AuthCookies cookies;
 
-    public JwtAuthenticationFilter(JwtService jwt, UserRepo users, ApiErrorWriter errors, AuthCookies cookies) {
+    public JwtAuthenticationFilter(JwtService jwt, UserRepo users, ApiResponses errors, AuthCookies cookies) {
         this.jwt = jwt;
         this.users = users;
         this.errors = errors;
@@ -55,10 +55,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Routes.ACCOUNT,
                 Routes.HOME,
                 Routes.LOGIN,
-                Routes.AUTH_LIFECYCLE_PAGE,
                 Routes.AUTH + Routes.ME_ACTION,
                 Routes.AUTH + Routes.PASSWORD_ACTION,
-                Routes.AUTH + Routes.AUTH_EMAIL,
                 Routes.AUTH + Routes.AUTH_CAPABILITIES
             ).contains(path)
         );

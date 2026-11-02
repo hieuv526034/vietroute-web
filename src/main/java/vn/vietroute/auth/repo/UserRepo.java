@@ -1,5 +1,6 @@
 package vn.vietroute.auth.repo;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import java.sql.Array;
@@ -28,7 +29,6 @@ import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.validation.BusinessRules;
-import vn.vietroute.common.validation.StrongPasswordValidator;
 
 /** Repository bảng User; CRUD JPA và SQL batch/query phức tạp cùng transaction server. */
 @Repository
@@ -88,14 +88,9 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
     }
 
     private static final String ACCOUNT_COLUMNS = """
-    u.id, u.username, u.display_name, u.email, u.avatar_media_id, u.email_verified_at, u.activation_pending,
+    u.id, u.username, u.display_name, u.email, u.email_verified_at, u.activation_pending,
         u.password_hash, u.active, u.must_change_password, u.failed_login_attempts, u.locked_until,
-        u.token_version, u.version, u.created_at, u.updated_at, u.created_by, u.updated_by, (
-            SELECT thumbnail_url
-            FROM media_assets
-            WHERE id = u.avatar_media_id
-                AND status = 'READY'
-        ) AS avatar_url
+        u.token_version, u.version, u.created_at, u.updated_at, u.created_by, u.updated_by
     %s
     """.formatted(ARRAYS);
 
@@ -105,16 +100,11 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
             try (
                 PreparedStatement query = connection.prepareStatement(
                     """
-                    SELECT u.id, u.username, u.display_name, u.email, u.avatar_media_id, u.email_verified_at,
+                    SELECT u.id, u.username, u.display_name, u.email, u.email_verified_at,
                         u.activation_pending,
                         u.active, u.must_change_password, u.token_version, u.version, u.created_at, u.updated_at,
                             u.created_by,
-                        u.updated_by, (
-                            SELECT thumbnail_url
-                            FROM media_assets
-                            WHERE id = u.avatar_media_id
-                                AND status = 'READY'
-                        ) AS avatar_url
+                        u.updated_by
                     %s
                     FROM auth_users u
                     WHERE u.id = ? AND NOT u.deleted
@@ -129,8 +119,6 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
                         .username(row.getString("username"))
                         .displayName(row.getString("display_name"))
                         .email(row.getString("email"))
-                        .avatarMediaId(row.getObject("avatar_media_id", Long.class))
-                        .avatarUrl(row.getString("avatar_url"))
                         .emailVerifiedAt(instant(row, "email_verified_at"))
                         .activationPending(row.getBoolean("activation_pending"))
                         .active(row.getBoolean("active"))
@@ -188,8 +176,6 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
             .username(result.getString("username"))
             .displayName(result.getString("display_name"))
             .email(result.getString("email"))
-            .avatarMediaId(result.getObject("avatar_media_id", Long.class))
-            .avatarUrl(result.getString("avatar_url"))
             .emailVerifiedAt(instant(result, "email_verified_at"))
             .activationPending(result.getBoolean("activation_pending"))
             .passwordHash(result.getString("password_hash"))
@@ -290,7 +276,7 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
     /** Không so sánh chuỗi hash vì BCrypt có salt; đối chiếu cả hash hiện tại và hai hash cũ dưới cùng khóa user. */
     public void requireNewPassword(Connection connection, User user, String candidate, PasswordEncoder encoder)
         throws SQLException {
-        BusinessRules.require(StrongPasswordValidator.valid(candidate), ErrorCode.VALIDATION_FAILED);
+        BusinessRules.require(BusinessRules.validPassword(candidate), ErrorCode.VALIDATION_FAILED);
         BusinessRules.require(!encoder.matches(candidate, user.getPasswordHash()), ErrorCode.PASSWORD_REUSED);
         try (
             PreparedStatement query = connection.prepareStatement(
@@ -616,22 +602,26 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
     }
 
     /** Chỉ account vừa init mới nhận scope mặc định một lần; không tự khôi phục mapping đã bị quản trị thu hồi. */
-    public void assignInitialScopes(Connection connection) throws SQLException {
+    public void assignInitialScopes(Connection connection, JsonNode accounts) throws SQLException {
         try (
             PreparedStatement query = connection.prepareStatement(
                 """
                 INSERT INTO auth_user_roles(user_id, role_code, scope_id)
                 SELECT u.id, ur.role_code, c.scope_id
-                FROM auth_users u
+                FROM jsonb_to_recordset(?::jsonb) x(username text, role text, "carrierCode" text, "driverCode" text)
+                JOIN auth_users u ON u.username = x.username
                 JOIN auth_user_roles ur ON ur.user_id = u.id AND ur.scope_id = 0
-                JOIN carriers c ON c.code = 'VRMIENNAM'
-                WHERE u.bootstrap_scope_pending
-                    AND (u.username = 'operator01' AND ur.role_code = 'OPERATOR' OR u.username = 'driver01' AND
-                        ur.role_code = 'DRIVER')
+                    AND ur.role_code = x.role
+                JOIN carriers c ON c.code = x."carrierCode"
+                WHERE u.bootstrap_scope_pending AND (x."driverCode" IS NULL OR EXISTS (
+                    SELECT 1 FROM carrier_drivers d WHERE d.carrier_id=c.id AND d.code=x."driverCode"
+                        AND (d.user_id IS NULL OR d.user_id=u.id)
+                ))
                 ON CONFLICT DO NOTHING
                 """
             )
         ) {
+            query.setString(1, accounts.toString());
             query.executeUpdate();
         }
         try (
@@ -639,15 +629,17 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
                 """
                 UPDATE carrier_drivers d
                 SET user_id = u.id, updated_at = CURRENT_TIMESTAMP, updated_by = 0, version = d.version + 1
-                FROM auth_users u, carriers c
-                WHERE u.username = 'driver01' AND u.bootstrap_scope_pending
-                    AND c.code = 'VRMIENNAM'
+                FROM jsonb_to_recordset(?::jsonb) x(username text, "carrierCode" text, "driverCode" text)
+                JOIN auth_users u ON u.username = x.username
+                JOIN carriers c ON c.code = x."carrierCode"
+                WHERE u.bootstrap_scope_pending
                     AND d.carrier_id = c.id
-                    AND d.code = 'DRVSOUTH01'
+                    AND d.code = x."driverCode"
                     AND d.user_id IS NULL
                 """
             )
         ) {
+            query.setString(1, accounts.toString());
             query.executeUpdate();
         }
         try (
@@ -656,7 +648,11 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
                 UPDATE auth_users
                 SET bootstrap_scope_pending = false
                 WHERE bootstrap_scope_pending
-                    AND (username = 'custom01' OR EXISTS (
+                    AND (username IN (
+                        SELECT x.username FROM jsonb_to_recordset(?::jsonb)
+                            x(username text, "carrierCode" text)
+                        WHERE x."carrierCode" IS NULL
+                    ) OR EXISTS (
                         SELECT 1
                         FROM auth_user_roles ur
                         WHERE ur.user_id = auth_users.id AND ur.scope_id > 0
@@ -664,6 +660,7 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
                 """
             )
         ) {
+            query.setString(1, accounts.toString());
             query.executeUpdate();
         }
     }

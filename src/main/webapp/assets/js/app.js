@@ -235,14 +235,7 @@
         });
         document.querySelectorAll('[data-avatar-shell]').forEach((node) => {
             node.replaceChildren();
-            if (user.avatarUrl) {
-                const img = document.createElement('img');
-                img.src = user.avatarUrl;
-                img.alt = '';
-                node.append(img);
-            } else {
-                node.textContent = user.username.slice(0, 1).toUpperCase();
-            }
+            node.textContent = user.username.slice(0, 1).toUpperCase();
         });
         void loadAccount();
     });

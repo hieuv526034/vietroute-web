@@ -20,7 +20,7 @@ import vn.vietroute.common.constant.ApplicationConstants.Regex;
 @Schema(description = "Payload UserRequest; không nhận actor/audit hoặc hash")
 public class UserRequest {
 
-    @Schema(description = "Tên đăng nhập; bắt buộc khi tạo/đăng nhập")
+    @Schema(description = "Username bắt buộc khi tạo/đăng nhập; không nhận email làm tên đăng nhập")
     @Pattern(regexp = Regex.USERNAME, message = "{validation.username}")
     private String username;
 
@@ -28,7 +28,7 @@ public class UserRequest {
     @Size(max = 120, message = "{validation.length}")
     private String displayName;
 
-    @Schema(description = "Email do quản trị cấp, xác minh khi khởi tạo")
+    @Schema(description = "Email thông tin tài khoản do quản trị cấp; không dùng đăng nhập")
     @Email(message = "{validation.email}")
     @Size(max = 254)
     private String email;
@@ -58,10 +58,6 @@ public class UserRequest {
     @Schema(description = "Version bắt buộc khi sửa/gán")
     @Min(0)
     private Long version;
-
-    @Schema(description = "ID ảnh READY của chính tài khoản")
-    @Positive
-    private Long avatarMediaId;
 
     @Schema(description = "0 là role toàn cục, lớn hơn 0 là phạm vi nhà xe")
     @Min(0)

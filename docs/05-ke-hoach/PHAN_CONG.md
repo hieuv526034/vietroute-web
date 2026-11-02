@@ -1,8 +1,6 @@
 # Phân công VietRoute — nền tảng và nghiệp vụ
 
-Cập nhật ngày 22/10/2026 theo username GitHub và email do chủ dự án cung cấp.
-
-Đọc [bảng tiến độ và kế hoạch nhóm](TIEN_DO_VA_KE_HOACH_NHOM.md) để xem phần đã có trên main, phần chỉ có API/chưa có UI, công việc tiếp theo của từng người và điều kiện bàn giao. Tài liệu này giữ phạm vi phụ trách; bảng tiến độ mới là nơi cập nhật trạng thái cùng bằng chứng PR.
+Cập nhật ngày 02/11/2026 theo yêu cầu chủ dự án, áp dụng cách gom package BUSINESSPKG01. Bảng này phân công trách nhiệm bảo trì/nghiệm thu/phát triển tiếp; không ghi lại tác giả source đã làm. Phân công mới thay bảng ngày 22/10 và các dòng chủ trì dự kiến cũ trong tiến độ khi khác nhau. [Tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md) giữ bằng chứng đã làm, [quy hoạch package](../02-phat-trien/QUY_UOC_PHAT_TRIEN.md#package-theo-nhóm-nghiệp-vụ) giữ cấu trúc đích.
 
 ## Thông tin thành viên
 
@@ -15,75 +13,84 @@ Cập nhật ngày 22/10/2026 theo username GitHub và email do chủ dự án c
 
 Dùng đúng bảng này khi tham chiếu thành viên, chuẩn bị phân công/PR và hướng dẫn cấu hình Git. Email cần được chính thành viên thêm/xác minh trong tài khoản GitHub để liên kết commit. Không suy diễn email từ username hoặc tên nhánh; không đổi tác giả các commit cũ theo bảng này.
 
-## Phần nền tảng đã có trên main
+GPS01 (02/11/2026): đã bỏ theo dõi vị trí thiết bị; BangPhamIT giữ tuyến/chuyến/đặt chỗ và các mốc đến/rời điểm, không nhận GPS/Maps/consent hoặc lịch sử tọa độ. Business còn 14 bảng. Mỗi username vẫn nhận trọn khối, gồm backend/UI/test.
 
-**hieuv526034 <hieuv526034@gmail.com>** đã triển khai source base, cấu hình/build/Docker/Render Blueprint, database/migration/audit, common/locale/error/validation, JWT/auth/bootstrap, quyền theo hành động, nền transaction/worker/mail/media và giám sát. Mốc đối chiếu là `b1f3cde` sau PR #13. Đây là code nền tảng có trên main, không phân bổ lại tác giả commit cho người khác; không tự coi Render/provider/cảnh báo production đã được kết nối.
+Username GitHub ở bảng trên dùng cho commit/nhánh và phân công, không phải tài khoản ứng dụng. Tài khoản đăng nhập, key mật khẩu, nhà xe/phạm vi và kịch bản thao tác được liệt kê riêng tại [chạy local và bộ dữ liệu](../01-bat-dau/CHAY_LOCAL.md#tài-khoản-và-dữ-liệu-khởi-tạo). Bảng trọn khối dưới đây đã ghi rõ mỗi người làm gì; chỉ ghi hoàn thành khi có bằng chứng commit/PR.
 
-Các module nghiệp vụ bên dưới là kế hoạch triển khai tiếp, trừ phần được ghi rõ đã có source trong tiến độ. Catalog có API/UI CRUD; BUSINESS02/PR #109 đã tách menu từng danh mục và bổ sung CRUD nhà xe/xe/hồ sơ tài xế có scope do Hieu thực hiện. Anh tiếp tục nghiệm thu/tích hợp và không viết lại bộ CRUD. LOCATION01 đã có API/UI tỉnh–địa điểm qua PR #102 do hieuv526034 triển khai trên nhánh phần việc của Hien; Hien nghiệm thu/tích hợp tuyến theo phụ thuộc, không ghi commit của Hieu thành đóng góp đã làm của Hien. Trạng thái/bằng chứng ở bảng tiến độ. Thư viện ảnh public có API/UI và liên kết nhà xe/xe nhưng cần credentials để thử Cloudinary thật. Đọc `QUY_UOC_PHAT_TRIEN.md` và `API_BASE.md` trước khi bắt đầu; dùng catalog/location/carrier làm ví dụ controller → service → repository → entity/response.
+## Phân công hiện hành
 
-## Chia theo độ khó
-
-| Người phụ trách | Mức độ | Phạm vi chính | Phối hợp |
-|---|---|---|---|
-| hieuv526034 | Khó nhất, nền tảng/tích hợp | Common, auth, CI/CD, schema và chuẩn SQL; khóa/tồn chỗ theo chặng và xử lý cạnh tranh; hủy chuyến xuyên module; tracking/Geolocation/Google Maps; tích hợp và nghiệm thu | Đưa hợp đồng transaction và quyền cho Bang; ghép giao diện từ cả nhóm |
-| BangPhamIT | Gần khó | Vòng đời chuyến: phân xe/tài xế, kiểm tra lịch chồng, snapshot; vòng đời booking WEB/PHONE, xác nhận/từ chối/hủy, chặn thao tác lặp | Dùng cơ chế khóa/tồn chỗ do Hieu cung cấp, không tự làm phiên bản tồn chỗ khác |
-| anhhoang104 | Dễ hơn, CRUD có phạm vi | Hoàn thiện danh mục; nhà xe, loại xe/xe, thông tin tài xế và form quản trị; validation nhập liệu, phân trang và trạng thái | Tài khoản/quyền dùng auth chung; không sửa mật khẩu bằng CRUD entity |
-| hiencoi250404-design | Dễ hơn, danh mục và giao diện tra cứu | Địa điểm, tuyến một chiều, điểm dừng theo thứ tự và tên vi/en; trang tìm chuyến, chi tiết hiển thị và lịch sử đơn khách | Service tìm/tồn chỗ/đặt vé lấy từ Bang/Hieu, không tự tính lại ở JavaScript |
-
-Tuyến đi và về là hai bản ghi riêng. Mọi người viết UI Thymeleaf, API, request/response, SQL và kiểm thử liên quan cho phần mình. Phạm vi nhà xe lấy từ principal/server; không tin companyId do client gửi. Không để hai người cùng sửa một migration đã áp dụng.
-
-## Nhánh theo người phụ trách
-
-| Người phụ trách | Nhánh chuẩn bị | Phần việc |
+| Thành viên | Trách nhiệm chính | Đầu ra chịu trách nhiệm |
 |---|---|---|
-| hieuv526034 | `hieuv526034/application-foundation` | Base/common/auth/schema/CI và tích hợp nền tảng |
-| BangPhamIT | `bangpham.it/trip-booking` | TRIP01 và BOOKING01, theo thứ tự phụ thuộc |
-| anhhoang104 | `anhhoang104/carrier-catalog` | CAT01/CARRIER01: danh mục, nhà xe, xe, tài xế |
-| hiencoi250404-design | `hiencoi250404-design/route-search-ui` | ROUTE01/SEARCH01: tuyến, điểm dừng và giao diện tra cứu |
+| hieuv526034 | Auth, common, database, bootstrap và deploy | Tài khoản/quyền/scope, JWT/CSRF, nền MVC/JPA/JDBC/journal; schema/index/FK/migration/seed; CI/build/Render và review tích hợp |
+| anhhoang104 | catalog và carrier trọn luồng | Danh mục, tỉnh/địa điểm, nhà xe/xe/hồ sơ tài xế; entity/repo/service/DTO/API/page/UI và test của hai nhóm |
+| BangPhamIT | Khối tuyến/chuyến và đặt chỗ: trip + booking | Tuyến/điểm dừng, chuyến/phân công, snapshot, tồn chỗ, tìm chuyến; đặt chỗ WEB/PHONE, trạng thái/thu-hoàn tiền/history; chịu trọn entity/repo/service/DTO/API/PageController/UI và test |
+| hiencoi250404-design | Khối báo cáo và tổng quan: report + dashboard | Chỉ tiêu chuyến/đặt chỗ/thu-hoàn, bộ lọc và số liệu theo scope; chịu trọn query/repo/service/DTO/API/PageController/UI, vi/en và test của khối báo cáo |
 
-Nhánh có sẵn `bangpham.it/trip-booking` thuộc `BangPhamIT`; `bangpham.it` là nhãn nhánh cũ, không phải username GitHub. Nhánh mới của Bang dùng tiền tố `BangPhamIT/`; các thành viên còn lại dùng username trong bảng thông tin. Ba nhánh nghiệp vụ được chuẩn bị từ cùng commit nền tảng đã kiểm tra, chưa thể hiện thành viên đã viết code. Nhánh `hieuv526034/neon-render-cicd` giữ lịch sử phần CI đã merge.
+Mỗi người sở hữu trọn khối nghiệp vụ của mình: PageController/API → DTO → service → repo/entity → UI và kiểm thử. Không chia backend cho một thành viên và UI cùng chức năng cho thành viên khác. Catalog/carrier thuộc anhhoang104; trip/booking thuộc BangPhamIT; report/dashboard thuộc hiencoi250404-design. Hieuv526034 giữ auth/common/DB/bootstrap/deploy và review phần nền; query nghiệp vụ vẫn nằm trong repo do chủ trì khối viết.
 
-Từ 31/10/2026 mọi thay đổi đi từ nhánh phụ trách → PR → CI/review → merge commit vào `dev`. Không dùng nhánh `codex/`, không commit source trực tiếp lên `dev`/`main`. Nhánh mới lấy từ `dev` mới nhất theo mẫu `<tiền-tố-thành-viên>/<mã-việc>-<mô-tả>`. Với nhánh chuẩn bị cũ, đọc diff và cập nhật dev trước khi code; không tự merge mọi nhánh cũ. Chỉ đưa `dev` lên `main` để chạy CI production/deploy khi chủ dự án yêu cầu phát hành, theo [CONTRIBUTING](../../CONTRIBUTING.md#tích-hợp-dev-và-phát-hành-main-từ-31102026).
+## Tài khoản gợi ý để nghiệm thu phần được giao
 
-```powershell
-git fetch origin
-git switch bangpham.it/trip-booking
-git merge origin/dev
-# Chỉ bắt đầu phần việc khi các API/schema phụ thuộc đã sẵn sàng.
-```
+| Thành viên | Tài khoản ứng dụng dùng thử | Luồng cần đối chiếu |
+|---|---|---|
+| hieuv526034 | admin, thêm operator01/custom01 để kiểm thiếu quyền | Auth/grant/scope, bootstrap, nhật ký và nền DB; kiểm cả người không có quyền |
+| anhhoang104 | admin cho danh mục toàn cục; operator01/operator02 cho hai nhà xe | Danh mục, địa điểm, nhà xe/xe/tài xế; ngoài scope không được đọc/sửa |
+| BangPhamIT | operator01 + driver01 + custom01; operator02/driver02 để đối chiếu scope | Lập/điều hành chuyến, đặt/xác nhận/thu-hoàn, tiến độ và owner/assignment |
+| hiencoi250404-design | operator03 và admin | Báo cáo nhà xe Miền Trung so với toàn hệ thống, đối soát tiền thực thu/hoàn và dashboard |
+
+Đây là gợi ý kiểm trên bộ dữ liệu giả lập, không gán danh tính Git cho tài khoản ứng dụng hoặc thay ownership source. Không dùng admin để kết luận luồng operator/driver/customer đã được bảo vệ đúng. Mật khẩu khởi tạo và đầy đủ 43 tài khoản xem [hướng dẫn đăng nhập](../01-bat-dau/CHAY_LOCAL.md#tài-khoản-và-dữ-liệu-khởi-tạo); không sao chép credential vào bảng phân công.
+
+## Phạm vi package và bảng
+
+| Package đích | Khối nghiệp vụ | Người chịu trọn khối |
+|---|---|---|
+| auth | Tài khoản, đăng nhập, role/function/menu/API, scope | hieuv526034 |
+| common | Nền MVC/JPA/JDBC, HTTP guard, nhật ký request và component dùng chung | hieuv526034 |
+| business/catalog | Danh mục dùng chung, tỉnh/thành, địa điểm | anhhoang104 |
+| business/carrier | Nhà xe, phương tiện, hồ sơ tài xế | anhhoang104 |
+| business/trip | Tuyến, điểm dừng, chuyến, phân công, tồn chỗ, tìm chuyến | BangPhamIT |
+| business/booking | Đặt chỗ WEB/PHONE, xác nhận/hủy, thu/hoàn và lịch sử đơn | BangPhamIT |
+| business/report | Báo cáo, số liệu và dashboard | hiencoi250404-design |
+| business/bootstrap | Khởi tạo dữ liệu nền xuyên khối | hieuv526034 |
+
+TripSegmentRepo về cùng nhóm trip với entity TripSegment; BookingService gọi cơ chế giữ/trả chỗ trong transaction hiện hành. Mọi thay đổi schema/FK/index/SQL migration do Hieu chốt, nhưng member vẫn chịu trách nhiệm thiết kế nghiệp vụ, query trong repo và ca kiểm của module. Thay package không tự thay URL/grant/schema hoặc chuyển dữ liệu.
+
+## Ranh giới phối hợp
+
+- Auth sở hữu credential, role/function/grant và principal; hồ sơ tài xế thuộc carrier. Anh không tự ghi password hash/role từ form hồ sơ. Luồng cấp account tài xế do auth phối hợp carrier trong đúng scope/transaction.
+- anhhoang104 cung cấp dữ liệu danh mục/địa điểm/nhà xe/xe/tài xế. BangPhamIT dùng ID/trạng thái từ DB để lập tuyến/chuyến và thực hiện đặt chỗ, giữ cả UI của khối đó. hiencoi250404-design đọc số liệu nghiệp vụ qua contract/report query đã kiểm scope, đối soát cách tính với BangPhamIT; mọi UI không tính lại tồn chỗ/quyền bằng JavaScript.
+- Người chủ trì khối sửa cả PageController/controller/api, template/JavaScript và lớp dữ liệu của chức năng đó. Các file/component dùng chung phối hợp với hieuv526034 bằng PR riêng; không tạo ownership UI chồng lên khối của người khác.
+- Common component, Root/Web/Security config, journal, locale/envelope và workflow là phần nền của Hieu. Member đề xuất chỉnh sửa nền qua PR nhỏ, không tự sửa formatter/checker hoặc đưa logic business vào common để giảm số file.
+- Hieu phụ trách deploy nhưng chỉ thực hiện dev → main/build production/deploy khi chủ dự án có lệnh phát hành mới. Bảng phân công này không cấp quyền phát hành.
 
 ## Thứ tự làm từng mục
 
-| Giai đoạn | Mã việc | Chủ trì | Điều kiện nghiệm thu |
-|---|---|---|---|
-| 1 | BASE01 — common/locale/error/audit/Swagger | Hieu | vi/en cùng mã lỗi, validation field có key, schema đầy đủ, build production bỏ test |
-| 1 | AUTH01 — JWT/bootstrap | Hieu | Deploy seed admin một lần; login/me/đổi mật khẩu/logout; CSRF; khóa tạm; thu hồi token cũ |
-| 1 | CAT01 — danh mục mẫu | Hieu khởi tạo, Anh hoàn thiện | Seed lặp không trùng; API vi/en, mã hợp lệ, ADMIN tạo được; người khác bị chặn |
-| 2 | CARRIER01 — nhà xe/xe/tài xế | Anh | CRUD đúng tenant, mã/biển số/sức chứa hợp lệ, trạng thái và phân trang |
-| 2 | ROUTE01 — địa điểm/tuyến/điểm dừng | Hien | Hai chiều riêng, thứ tự/giờ/giá hợp lệ; tên vi/en; không đảo dữ liệu lịch sử |
-| 3 | TRIP01 — tạo chuyến/phân công/snapshot | Bang | Qua ngày đúng; chặn xe/tài xế trùng lịch; dữ liệu chuyến độc lập mẫu tuyến |
-| 3 | CAPACITY01 — transaction chỗ theo chặng | Hieu | Khóa thống nhất, không bán vượt chỗ khi xác nhận đồng thời, rollback toàn bộ khi lỗi |
-| 4 | BOOKING01 — yêu cầu/xác nhận/hủy WEB/PHONE | Bang | Luồng trạng thái đúng, chống thao tác lặp, ghi lịch sử; gọi CAPACITY01 trong cùng transaction |
-| 4 | SEARCH01 — tìm/chi tiết/lịch sử khách | Hien | Gọi API chung, hiển thị trạng thái/tồn chỗ thật, responsive và vi/en |
-| 5 | TRACK01 — bản đồ/vị trí/tiến độ | Hieu | Quyền chuyến được giao, hiển thị timestamp/stale; xử lý từ chối vị trí/mất mạng; không giả lập GPS thật |
-| 5 | INTEGRATION01 — hủy chuyến/tổng hợp | Hieu + Bang | Không lọt booking sau hủy; audit/khóa/rollback nhất quán; nghiệm thu theo đặc tả |
+1. Source đã gom theo BUSINESSPKG01: năm nhóm nghiệp vụ và bootstrap, 121 file/14 bảng. Kết quả kiểm và giới hạn ở tiến độ; phân công này không xác nhận đã tích hợp dev/main hoặc thành viên đã viết phần được giao.
+2. anhhoang104 nghiệm thu catalog/carrier trọn luồng; BangPhamIT nghiệm thu trip/booking trọn luồng; hiencoi250404-design nghiệm thu report/dashboard trọn luồng. Không viết lại bộ CRUD/tồn chỗ đã có chỉ để tạo đóng góp mới.
+3. Hieu review schema/security/transaction, Bang + Hien đối soát báo cáo với booking thật trong DB test; mỗi người cung cấp ca lỗi/scope/version/rollback của phần mình.
+4. PR theo phần việc vào dev sau checks/review. Nghiệm thu tích hợp đủ luồng trước khi đề nghị phát hành; không lấy kế hoạch hoặc source cục bộ làm bằng chứng đã deploy.
 
-Trước giai đoạn 2 phải chốt SCOPE01 (membership/scope nhà xe) và hợp đồng AUTH03 (cấp tài khoản). AUTH02 đăng ký CUSTOMER, CAT02 hoàn thiện UI catalog và LOCATION01 được tách thành các việc rõ ràng trong bảng tiến độ. DRIVERUI01, DETAIL01/HISTORY01, REPORT01 và ACCEPT01 cũng có người phối hợp/đầu ra tại đó, tránh bỏ sót luồng F01–F19.
+## Nhánh theo người phụ trách
 
-Không làm tất cả cùng lúc. Chốt schema và hợp đồng trước mỗi giai đoạn; chức năng tiếp theo chỉ bắt đầu khi phần phụ thuộc đã có API dùng được. Bảng này là kế hoạch, chưa tạo Issue/assign trên GitHub. Backlog UI quản lý job/quyền/cấu hình, triển khai provider/cảnh báo/backup được ghi riêng, không đánh dấu xong bằng API hoặc mẫu cấu hình.
+| Người phụ trách | Ví dụ nhánh mới từ dev | Phần việc |
+|---|---|---|
+| hieuv526034 | hieuv526034/auth-db-deploy | Auth/common/schema/bootstrap/CI và vận hành |
+| anhhoang104 | anhhoang104/catalog-carrier | Danh mục/địa điểm/nhà xe/xe/tài xế |
+| BangPhamIT | BangPhamIT/trip-booking | Trọn khối chuyến/tồn chỗ/đặt chỗ, gồm UI/API/test |
+| hiencoi250404-design | hiencoi250404-design/report-dashboard | Trọn khối báo cáo/dashboard, gồm UI/API/test |
 
-Yêu cầu ngày 23/10: ưu tiên hoàn thiện nền tảng trước nghiệp vụ. Hieu bổ sung UI quản trị job/quyền/xem cấu hình an toàn; xem [quản trị hệ thống](../04-van-hanh/QUAN_TRI_HE_THONG.md) và trạng thái OPSUI01/ACCESSUI01/CONFIGUI01 trong bảng tiến độ. Không ghi phần UI này thành đóng góp đã hoàn thành của Anh/Hien chỉ vì có tên phối hợp dự kiến.
+Các tên trên là ví dụ cho công việc tiếp theo, chưa tạo/chuyển nhánh hoặc assign Issue GitHub trong lượt phân công. Nhánh hiện tại hieuv526034/businessdb01-chuan-hoa-nghiep-vu tiếp tục giữ thay đổi chưa commit; không đổi author hoặc tự di chuyển việc đang dở của người khác. Nhánh bangpham.it/trip-booking là nhãn lịch sử, không phải username; nhánh mới dùng đúng BangPhamIT/.
+
+Mỗi người dùng nhánh riêng, PR → CI/review → merge commit vào dev; không commit trực tiếp dev/main, không tự merge các nhánh cũ. Main/deploy chỉ theo lệnh phát hành mới, xem [CONTRIBUTING](../../CONTRIBUTING.md#tích-hợp-dev-và-phát-hành-main-từ-31102026).
 
 ## Quy tắc bàn giao và commit
 
-- Tên module: `business/<module>/{controller,dto/request,dto/response,entity,repository,service}`; auth và common là hai phần riêng.
-- Mỗi task có PR nhỏ, API/Swagger, hướng dẫn UI, migration mới nếu cần, ca thành công và lỗi thực tế. Comment/Javadoc tiếng Việt giải thích luồng và transaction.
-- Phần nền tảng hiện tại ghi dưới định danh hieuv526034 đã cấu hình. Khi thành viên tự triển khai, họ commit bằng tài khoản/email của mình; bảng phân công không phải căn cứ tạo đóng góp giả.
-- Hieu review transaction/schema/security/Maps; Bang review các hợp đồng booking/chuyến; Anh và Hien review UI/validation giao tiếp trực tiếp.
-- Báo cáo/slide: mỗi người cung cấp ảnh, luồng, SQL và ca kiểm thử của phần mình; Hieu tổng hợp nội dung tích hợp, không ghi mọi nghiệp vụ thành đóng góp cá nhân của người tổng hợp.
+- Mỗi nhóm dùng controller/ cho page, controller/api/ cho REST, entity/, repo/, service/, dto/request/, dto/response/, dto/search/. Chỉ có constant/config/initializer khi cần; initializer ngang service. Class dưới 1000 dòng, không record/var production, một Request/tài nguyên.
+- Member chịu cả hợp đồng Swagger, validation, vi/en, quyền/scope/owner và test cho phần mình. Repo giữ query, service giữ nghiệp vụ/transaction; JPA CRUD và JDBC batch/query phức tạp cùng rollback. Không query/save trong vòng lặp dữ liệu.
+- Ghi rõ đã làm/còn dở/test/giới hạn và commit đối chiếu trong PR/tiến độ. Commit/PR tiếng Việt, identity đúng người; không sửa lịch sử author để khớp bảng phân công.
+- Báo cáo/slide chỉ ghi đóng góp có commit/PR/bằng chứng; mỗi người cung cấp luồng, bảng, SQL, ảnh và ca kiểm của phần mình. Việc nhận bảo trì không biến source đã có thành phần mình viết.
 
-## Tiếp nhận nghiệp vụ sau BUSINESS04
+## Phần nền tảng đã có trên main
 
-Theo yêu cầu chủ dự án ngày 25/10/2026, hieuv526034 đã tiếp tục triển khai các module còn thiếu theo chuỗi PR được ghi trong tiến độ. Phạm vi chủ trì dự kiến trong bảng bên trên vẫn dùng để phân chia nghiên cứu/nghiệm thu; không phải căn cứ đổi tác giả source hoặc tạo commit thay BangPhamIT/anhhoang104/hiencoi250404-design. Thành viên bắt đầu từ dev đã merge, đọc module của mình và ca kiểm tương ứng, nhận một thay đổi cụ thể rồi commit bằng đúng username/email của bản thân. Không viết lại CRUD/tồn chỗ/chuyến/booking chỉ để có bản triển khai thứ hai.
+hieuv526034 đã triển khai nền tảng tại mốc b1f3cde sau PR #13 và các đợt nghiệp vụ tiếp theo theo PR trong tiến độ. Catalog/carrier (PR #109), địa điểm (PR #102) và các module đã có vẫn giữ tác giả commit thực tế. Không gán lại phần Hieu đã viết cho Anh/Bang/Hien theo trách nhiệm mới. Các chức năng job/mail/media/metrics/activity ở mốc lịch sử đã được COMMON01 loại bỏ trong source hiện hành trên nhánh; không phục hồi theo backlog cũ.
 
-Điểm đọc khi nghiên cứu: Anh theo carrier/catalog/location và AUTH03 ở auth; Bang theo trip/booking/report và transaction chặng; Hien theo route/journey/carrier public/My bookings; Hieu giữ tích hợp auth/scope/tracking/CI. Mỗi người cần trình bày được request → controller → service guard → transaction/SQL → DTO → UI, bảng liên quan, ít nhất một ca lỗi scope/version và một ca rollback/race của phần mình. PR thực tế, kết quả kiểm và việc nhận tiếp ở [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md), không suy từ bảng phân công là đã có đóng góp cá nhân.
+Phân công này áp dụng cho nghiên cứu/nghiệm thu/phát triển tiếp; không xác nhận các thành viên đã hoàn thành phần được giao hoặc main/Render đã nhận source mới. Trạng thái, bằng chứng và phần chưa tích hợp nằm ở [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md).

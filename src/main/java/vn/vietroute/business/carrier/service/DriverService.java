@@ -30,13 +30,13 @@ public class DriverService {
         page.setActive(true);
         PageResponse<Carrier> result = carriers.choices(page);
         return new PageResponse<>(
-            result.content().stream().map(CarrierChoiceResponse::from).toList(),
-            result.page(),
-            result.size(),
-            result.totalElements(),
-            result.totalPages(),
-            result.hasNext(),
-            result.hasPrevious()
+            result.getContent().stream().map(CarrierChoiceResponse::from).toList(),
+            result.getPage(),
+            result.getSize(),
+            result.getTotalElements(),
+            result.getTotalPages(),
+            result.isHasNext(),
+            result.isHasPrevious()
         );
     }
 
@@ -76,13 +76,13 @@ public class DriverService {
     public PageResponse<DriverResponse> page(CarrierSearch page) {
         PageResponse<Driver> result = carriers.drivers(page);
         return new PageResponse<>(
-            result.content().stream().map(DriverResponse::from).toList(),
-            result.page(),
-            result.size(),
-            result.totalElements(),
-            result.totalPages(),
-            result.hasNext(),
-            result.hasPrevious()
+            result.getContent().stream().map(DriverResponse::from).toList(),
+            result.getPage(),
+            result.getSize(),
+            result.getTotalElements(),
+            result.getTotalPages(),
+            result.isHasNext(),
+            result.isHasPrevious()
         );
     }
 

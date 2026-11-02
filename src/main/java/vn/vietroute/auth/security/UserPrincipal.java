@@ -33,7 +33,6 @@ public class UserPrincipal implements Principal {
     private final Set<String> roles;
     private final long tokenVersion;
     private final String displayName;
-    private final String avatarUrl;
     private final Set<String> targets;
     private final Set<String> globalTargets;
     private final String target;
@@ -44,7 +43,6 @@ public class UserPrincipal implements Principal {
         this.roles = Set.copyOf(user.getRoles());
         this.tokenVersion = user.getTokenVersion();
         this.displayName = user.getDisplayName();
-        this.avatarUrl = user.getAvatarUrl();
         this.targets = Set.copyOf(user.getTargets());
         this.globalTargets = Set.copyOf(user.getGlobalTargets());
         this.target = target;
@@ -68,10 +66,6 @@ public class UserPrincipal implements Principal {
 
     public String displayName() {
         return displayName;
-    }
-
-    public String avatarUrl() {
-        return avatarUrl;
     }
 
     @Override

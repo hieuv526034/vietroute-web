@@ -23,7 +23,6 @@ import vn.vietroute.common.jdbc.JdbcTable;
         @Index(name = "carrier_vehicles_carrier_id_code_key", columnList = "carrier_id, code", unique = true),
         @Index(name = "idx_vehicles_carrier_state", columnList = "carrier_id, active, id"),
         @Index(name = "idx_vehicles_type", columnList = "vehicle_type_id"),
-        @Index(name = "idx_vehicles_photo", columnList = "photo_media_id"),
         @Index(name = "idx_vehicles_created_by", columnList = "created_by"),
         @Index(name = "idx_vehicles_updated_by", columnList = "updated_by"),
     }
@@ -37,7 +36,6 @@ import vn.vietroute.common.jdbc.JdbcTable;
         @JdbcIndex(name = "carrier_vehicles_carrier_id_code_key", columns = { "carrier_id", "code" }, unique = true),
         @JdbcIndex(name = "idx_vehicles_carrier_state", columns = { "carrier_id", "active", "id" }, unique = false),
         @JdbcIndex(name = "idx_vehicles_type", columns = { "vehicle_type_id" }, unique = false),
-        @JdbcIndex(name = "idx_vehicles_photo", columns = { "photo_media_id" }, unique = false),
         @JdbcIndex(name = "idx_vehicles_created_by", columns = { "created_by" }, unique = false),
         @JdbcIndex(name = "idx_vehicles_updated_by", columns = { "updated_by" }, unique = false),
     }
@@ -74,9 +72,6 @@ public class Vehicle extends BaseEntity {
 
     @Column(name = "active", nullable = false)
     private boolean active;
-
-    @Column(name = "photo_media_id")
-    private Long photoMediaId;
 
     /** Projection từ JOIN/guard SQL, không nhận quyền từ client hoặc lưu xuống bảng. */
     @Transient

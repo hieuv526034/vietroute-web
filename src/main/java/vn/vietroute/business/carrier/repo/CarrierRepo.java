@@ -44,7 +44,7 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
             "owner",
             """
             owner.id, owner.scope_id, owner.code, owner.name, owner.phone, owner.description, owner.active,
-                owner.logo_media_id, owner.created_at, owner.updated_at, owner.created_by, owner.updated_by,
+                owner.created_at, owner.updated_at, owner.created_by, owner.updated_by,
                 owner.version
             """,
             "owner.code,owner.name,owner.phone"
@@ -58,7 +58,7 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
             "item",
             """
             item.id, item.scope_id, item.carrier_id, owner.name AS carrier_name, item.code, item.plate_number,
-                item.vehicle_type_id, vt.name_vi AS vehicle_type_name, item.capacity, item.active, item.photo_media_id,
+                item.vehicle_type_id, vt.name_vi AS vehicle_type_name, item.capacity, item.active,
                 item.created_at, item.updated_at, item.created_by, item.updated_by, item.version
             """,
             "item.code,item.plate_number,owner.name"
@@ -246,7 +246,6 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
             .phone(body.getPhone().strip())
             .description(body.getDescription().strip())
             .active(body.isActive())
-            .logoMediaId(body.getLogoMediaId())
             .scopeCode("CARRIER_" + scope)
             .scopeNameVi(body.getName().strip())
             .scopeNameEn(body.getName().strip())
@@ -269,7 +268,6 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
         value.setPhone(body.getPhone().strip());
         value.setDescription(body.getDescription().strip());
         value.setActive(body.isActive());
-        value.setLogoMediaId(body.getLogoMediaId());
         changed(value, actor);
     }
 
@@ -377,7 +375,6 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
             .vehicleType("VEHICLE_TYPE")
             .capacity(body.getCapacity())
             .active(body.isActive())
-            .photoMediaId(body.getPhotoMediaId())
             .build();
         return created(value, actor).getId();
     }
@@ -397,7 +394,6 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
         value.setVehicleTypeId(body.getVehicleTypeId());
         value.setCapacity(body.getCapacity());
         value.setActive(body.isActive());
-        value.setPhotoMediaId(body.getPhotoMediaId());
         changed(value, actor);
     }
 
@@ -456,7 +452,6 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
                 .phone(row.getString("phone"))
                 .description(row.getString("description"))
                 .active(row.getBoolean("active"))
-                .logoMediaId(row.getObject("logo_media_id", Long.class))
                 .build(),
             row
         );
@@ -475,7 +470,6 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
                 .vehicleTypeName(row.getString("vehicle_type_name"))
                 .capacity(row.getInt("capacity"))
                 .active(row.getBoolean("active"))
-                .photoMediaId(row.getObject("photo_media_id", Long.class))
                 .build(),
             row
         );
@@ -540,8 +534,6 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
         private String phone;
 
         private String description;
-
-        private Long logoId;
     }
 
     private static final String FROM = """
@@ -553,7 +545,7 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
     ) s ON s.id = c.scope_id
     WHERE c.active AND s.active
     """;
-    private static final String COLUMNS = "c.id,c.code,c.name,c.phone,c.description,c.logo_media_id";
+    private static final String COLUMNS = "c.id,c.code,c.name,c.phone,c.description";
 
     /** Từ khóa nguyên văn và phân trang ổn định name/id được xử lý hoàn toàn trong PostgreSQL. */
     public PageResponse<Published> page(Connection connection, PublicCarrierSearch body) throws SQLException {
@@ -610,13 +602,6 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
     }
 
     private Published map(ResultSet row) throws SQLException {
-        return new Published(
-            row.getLong(1),
-            row.getString(2),
-            row.getString(3),
-            row.getString(4),
-            row.getString(5),
-            row.getObject(6, Long.class)
-        );
+        return new Published(row.getLong(1), row.getString(2), row.getString(3), row.getString(4), row.getString(5));
     }
 }

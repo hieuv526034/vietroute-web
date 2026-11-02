@@ -7,7 +7,7 @@ import xml.etree.ElementTree as XML
 groups = {
     'account': ['AccountSecurityTest', 'AccountMailTemplateTest', 'BusinessIntegrationTest'],
     'managed-accounts': ['ManagedAccountSecurityTest', 'BusinessIntegrationTest'],
-    'foundation': ['FoundationSecurityTest', 'FoundationRulesTest', 'SystemAuditTest', 'SystemManagementTest', 'OpenApiContractTest', 'MediaFlowTest', 'MailFoundationTest'],
+    'foundation': ['FoundationSecurityTest', 'FoundationRulesTest', 'SystemAuditTest', 'SystemManagementTest', 'OpenApiContractTest', 'ApiJournalTest', 'SchemaMigrationTest'],
     'access-tree': ['AccessTreeTest', 'AccessPermissionDefinitionsTest'],
     'database-guard': ['EndpointSecurityTest', 'DatabaseAccessGuardTest', 'DirectServiceAuthorityTest'],
     'data-scope': ['DataScopeSecurityTest', 'BusinessIntegrationTest'],
@@ -17,7 +17,7 @@ groups = {
     'access-registry': ['AccessRegistrySecurityTest', 'BusinessIntegrationTest'],
     'access-cost': ['BusinessIntegrationTest'],
     'business-load': ['BusinessIntegrationTest'],
-    'admin-recovery': ['AdminRecoverySecurityTest', 'AccountSecurityTest', 'TrafficGuardTest'],
+    'admin-recovery': ['AdminRecoverySecurityTest', 'AccountSecurityTest'],
 }
 
 if os.environ.get('GITHUB_ACTIONS') != 'true':
@@ -35,6 +35,11 @@ for name in groups[sys.argv[1]]:
                     'jpaUserCrudAndJdbcHistoryShareRollbackAndOptimisticVersion',
                     'roleGrantSnapshotAndMembershipHistoryStayBoundedAndBatchFailureRollsBackAllEntries',
                     'inactiveAllScopesRoleStillProtectsFunctionFromScopedEditor',
-                    'nativeScopeCannotBorrowDetailEndpointFromRoleOutsideThatScope'}
+                    'nativeScopeCannotBorrowDetailEndpointFromRoleOutsideThatScope',
+                    'checksumMismatchStopsBeforeChangingBusinessOrCredentials',
+                    'unexpectedHistoryRequiresExplicitOfflineRebaseline',
+                    'baselineStartupIsIdempotentAndPreservesCredentialsAndBusiness'}
+        required.update({'completeInitializationCreatesRunnableAccountsTripsAndBookingsWithCorrectScopes',
+                         'completeInitializationIsIdempotentAndKeepsUserChangesAndRevokedScope'})
         assert required <= cases, 'Thiếu regression endpoint/JPA/batch/scope bắt buộc'
 print('Regression ' + sys.argv[1] + ': đủ ca kiểm, không fail/error/skip')

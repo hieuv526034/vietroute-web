@@ -13,7 +13,6 @@ import vn.vietroute.business.carrier.entity.Carrier;
 import vn.vietroute.business.carrier.repo.CarrierRepo;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.jdbc.JdbcTransactions;
-import vn.vietroute.common.media.service.MediaService;
 
 /** Nhà xe sở hữu scope duy nhất; scope active khác trạng thái nhận chuyến/đặt của doanh nghiệp. */
 @Service
@@ -22,7 +21,6 @@ public class CarrierService {
 
     private final CarrierRepo carriers;
     private final JdbcTransactions transactions;
-    private final MediaService media;
 
     private final AccessChangeRepo changes;
 
@@ -30,13 +28,13 @@ public class CarrierService {
     public PageResponse<CarrierResponse> page(CarrierSearch page) {
         PageResponse<Carrier> result = carriers.carriers(page);
         return new PageResponse<>(
-            result.content().stream().map(CarrierResponse::from).toList(),
-            result.page(),
-            result.size(),
-            result.totalElements(),
-            result.totalPages(),
-            result.hasNext(),
-            result.hasPrevious()
+            result.getContent().stream().map(CarrierResponse::from).toList(),
+            result.getPage(),
+            result.getSize(),
+            result.getTotalElements(),
+            result.getTotalPages(),
+            result.isHasNext(),
+            result.isHasPrevious()
         );
     }
 
@@ -49,7 +47,6 @@ public class CarrierService {
         UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
             UserRoleRepo.requireGlobal(connection, actor);
-            if (body.getLogoMediaId() != null) media.requireReference(connection, body.getLogoMediaId(), actor);
             long id = carriers.insertCarrier(connection, body, actor.id());
             Carrier value = carriers.carrier(connection, id, false);
             changes.append(
@@ -69,7 +66,6 @@ public class CarrierService {
     public CarrierResponse update(long id, CarrierRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
-            if (body.getLogoMediaId() != null) media.requireReference(connection, body.getLogoMediaId(), actor);
             Carrier current = carriers.carrier(connection, id, true);
             if (current.isActive() != body.isActive()) UserRoleRepo.requireGlobal(connection, actor);
             carriers.updateCarrier(connection, current, body, actor.id());

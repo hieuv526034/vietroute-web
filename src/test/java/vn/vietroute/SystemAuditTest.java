@@ -31,6 +31,7 @@ import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.auth.service.UserService;
+import vn.vietroute.common.base.BaseRepository.SqlWork;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.web.WebConfig;
@@ -38,11 +39,7 @@ import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
-import vn.vietroute.common.jdbc.BaseRepository.SqlWork;
 import vn.vietroute.common.jdbc.JdbcTransactions;
-import vn.vietroute.common.job.dto.response.JobResponse;
-import vn.vietroute.common.job.repository.JobRepository;
-import vn.vietroute.common.job.service.JobService;
 import vn.vietroute.support.AccessTestConfig;
 import vn.vietroute.support.JournalTestConfig;
 import vn.vietroute.support.TestJpa;
@@ -98,7 +95,6 @@ class SystemAuditTest {
             transactions,
             null,
             null,
-            null,
             Clock.systemUTC()
         );
         auth.initializePasswordTiming();
@@ -144,35 +140,6 @@ class SystemAuditTest {
             assertEquals(403, response.getStatus());
             assertTrue(response.getContentAsString().contains("AUTH003"));
         }
-    }
-
-    @Test
-    void manualJobRetryPassesAuthenticatedActorToRepository() {
-        var recorded = new AtomicLong(-1);
-        var repository = new JobRepository(null) {
-            @Override
-            public void retry(Connection connection, UUID id, long version, long actor) {
-                recorded.set(actor);
-            }
-
-            @Override
-            public JobResponse find(UUID id) {
-                return null;
-            }
-        };
-        var transactions = new JdbcTransactions(null) {
-            @Override
-            public <T> T execute(SqlWork<T> work) {
-                try {
-                    return work.apply(null);
-                } catch (SQLException exception) {
-                    throw new AssertionError(exception);
-                }
-            }
-        };
-        var actor = new UserPrincipal(42L, "operator", Set.of("OPERATOR"), 0);
-        new JobService(repository, transactions).retry(UUID.randomUUID(), 3, actor);
-        assertEquals(actor.id(), recorded.get());
     }
 
     private User system() {

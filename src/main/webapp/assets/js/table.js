@@ -12,6 +12,14 @@
         return Array.from({ length: Math.min(5, Math.max(0, total)) }, (_, index) => start + index);
     };
     const boundedPage = (page, total) => Math.max(0, Math.min(page, Math.max(0, total - 1), 1000000));
+    // Bộ chọn chỉ hiển thị một trang kết quả; nhãn dịch do template cung cấp, không suy tổng từ option đã giữ.
+    const lookupSummary = (page, pattern, empty) =>
+        page.totalElements
+            ? pattern
+                  .replace('{total}', page.totalElements)
+                  .replace('{page}', page.page + 1)
+                  .replace('{pages}', page.totalPages)
+            : empty;
     const readPage = async (fetcher, query) => {
         const result = await fetcher(query);
         // Sau xóa/lọc, trang cuối có thể biến mất; chỉ đọc lại một lần với số trang đã được DB xác nhận.
@@ -168,5 +176,5 @@
         button.addEventListener('click', () => action(button));
         return button;
     };
-    return Object.freeze({ pageWindow, boundedPage, readPage, pager, actionButton });
+    return Object.freeze({ pageWindow, boundedPage, lookupSummary, readPage, pager, actionButton });
 });

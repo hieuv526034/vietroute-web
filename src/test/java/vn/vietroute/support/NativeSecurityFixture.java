@@ -78,7 +78,6 @@ public class NativeSecurityFixture extends UserRepo {
             .id(id)
             .username(username)
             .displayName(name)
-            .avatarUrl(avatar)
             .active(active)
             .activationPending(pending)
             .mustChangePassword(temporary)

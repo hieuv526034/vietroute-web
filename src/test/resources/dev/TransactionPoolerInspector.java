@@ -1,9 +1,9 @@
 import java.sql.Connection;
 import java.sql.SQLException;
 import org.postgresql.ds.PGSimpleDataSource;
+import vn.vietroute.common.base.BaseRepository;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
-import vn.vietroute.common.jdbc.BaseRepository;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.jdbc.JdbcTransactions;

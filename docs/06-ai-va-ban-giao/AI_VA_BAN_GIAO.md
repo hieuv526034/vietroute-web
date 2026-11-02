@@ -52,13 +52,13 @@ npm run check:docs
 node --test src/test/resources/dev/*.test.cjs
 ```
 
-Linux/macOS dùng `./mvnw` hoặc `sh ./mvnw`. Cấu hình Git identity của chính thành viên theo CONTRIBUTING. Cách Run/Debug IntelliJ, profile `local` và env nằm trong [chạy local](../01-bat-dau/CHAY_LOCAL_VA_CLOUDINARY.md#nút-rundebug-trong-intellij); không bật DB_INIT/worker/provider chỉ để thử giao diện trên Neon production. `/health` lên chưa chứng minh DB/login hoạt động.
+Linux/macOS dùng `./mvnw` hoặc `sh ./mvnw`. Cấu hình Git identity của chính thành viên theo CONTRIBUTING. Cách Run/Debug IntelliJ, profile `local` và env nằm trong [chạy local](../01-bat-dau/CHAY_LOCAL.md#nút-rundebug-trong-intellij); không bật DB_INIT/seed chỉ để thử giao diện trên Neon production. `/health` lên chưa chứng minh DB/login hoạt động.
 
 | Theo clone | Cần chuẩn bị riêng |
 |---|---|
 | Source/docs/AGENTS, migrations, lockfile, `.run`, codeStyles và `.env` ở gốc đã push theo yêu cầu 01/11/2026 | Git credentials, env/thiết lập IDE cá nhân; `.env.*` khác vẫn ignore, key mẫu tại [.env.example](../../.env.example) |
 | Test chia sẻ ở `src/test`, CI và bằng chứng PR | Dựng lại `target/`, `node_modules/`, cache; `.tools/` và process localhost máy cũ không phải công cụ/dịch vụ bàn giao |
-| Cấu hình mẫu và adapter | Quyền/dữ liệu PostgreSQL, Cloudinary, Gmail, Render thuộc dịch vụ ngoài Git; có mẫu không đồng nghĩa đã hoạt động |
+| Cấu hình DB/triển khai | Quyền/dữ liệu PostgreSQL và Render thuộc dịch vụ ngoài Git; có mẫu không đồng nghĩa đã hoạt động |
 
 Chủ dự án cho phép commit chính `.env` ở gốc ngày 01/11/2026 để đổi máy; chỉ có sau khi commit đã được push/clone đúng nhánh. Thành viên có quyền đọc repo cũng đọc được lịch sử file này; không sao chép giá trị vào docs/chat/log.
 

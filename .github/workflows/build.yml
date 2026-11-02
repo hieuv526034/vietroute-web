@@ -92,7 +92,6 @@ jobs:
             exit 1
           fi
           grep -q 'WEB-INF/lib/postgresql-' "$RUNNER_TEMP/war-contents.txt"
-          grep -q 'WEB-INF/lib/cloudinary-http5-' "$RUNNER_TEMP/war-contents.txt"
       - name: Verify bootstrap and JWT flows with isolated PostgreSQL
         shell: bash
         run: bash .github/scripts/verify-auth.sh

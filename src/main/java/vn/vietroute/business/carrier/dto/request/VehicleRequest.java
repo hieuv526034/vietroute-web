@@ -10,7 +10,6 @@ import jakarta.validation.groups.Default;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import vn.vietroute.common.base.BaseRequest;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.validation.BusinessCode;
 import vn.vietroute.common.validation.RequestGroups;
@@ -20,7 +19,7 @@ import vn.vietroute.common.validation.RequestGroups;
 @Setter
 @NoArgsConstructor
 @Schema(description = "Dữ liệu Vehicle; trường bắt buộc phụ thuộc thao tác, xem schema từng API")
-public class VehicleRequest extends BaseRequest {
+public class VehicleRequest {
 
     @NotBlank(message = "{validation.required}")
     @Pattern(regexp = Regex.VEHICLE_PLATE, message = "{validation.invalid}")
@@ -39,10 +38,6 @@ public class VehicleRequest extends BaseRequest {
 
     @Schema(description = "Xe đang hoạt động")
     private boolean active = true;
-
-    @Min(value = 1, message = "{validation.invalid}")
-    @Schema(description = "ID ảnh READY của chính actor hoặc null")
-    private Long photoMediaId;
 
     @NotBlank(message = "{validation.required}", groups = { RequestGroups.Create.class })
     @BusinessCode

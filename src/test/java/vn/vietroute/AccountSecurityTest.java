@@ -71,6 +71,18 @@ class AccountSecurityTest {
                 .getResponse();
             assertEquals(400, response.getStatus());
             assertFalse(response.getContentAsString().contains("secret-value"));
+            // Email không thay thế username; cả hai dạng bị từ chối trước khi truy cập DB.
+            for (String body : new String[] {
+                "{\"email\":\"person@example.invalid\",\"password\":\"test-only-value\"}",
+                "{\"username\":\"person@example.invalid\",\"password\":\"test-only-value\"}",
+            }) {
+                var emailLogin = mvc
+                    .perform(post("/api/v1/auth/login").with(csrf()).contentType("application/json").content(body))
+                    .andReturn()
+                    .getResponse();
+                assertEquals(400, emailLogin.getStatus());
+                assertFalse(emailLogin.getContentAsString().contains("test-only-value"));
+            }
         }
     }
 

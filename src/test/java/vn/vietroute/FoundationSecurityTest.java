@@ -32,12 +32,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.business.catalog.service.CatalogService;
+import vn.vietroute.business.catalog.service.CatalogItemService;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
-import vn.vietroute.common.media.service.MediaService;
 import vn.vietroute.support.AccessTestConfig;
 
 /** Kiểm tra biên bảo mật/locale mà không kết nối DB; nghiệp vụ SQL kiểm tra bằng PostgreSQL tạm ở CI. */
@@ -103,45 +102,22 @@ class FoundationSecurityTest {
         );
     }
 
-    @Test
-    void swaggerDescribesMultipartBinaryAndMediaResponse() throws Exception {
-        var response = mvc.perform(get("/v3/api-docs")).andReturn().getResponse();
-        JsonNode doc = json.readTree(response.getContentAsString());
-        String ref = doc
-            .at("/paths/~1api~1v1~1media/post/requestBody/content/multipart~1form-data/schema/$ref")
-            .asText();
-        assertEquals("#/components/schemas/MediaUploadRequest", ref);
-        var file = doc.at("/components/schemas/MediaUploadRequest/properties/file");
-        assertEquals("string", file.path("type").asText());
-        assertEquals("binary", file.path("format").asText());
-        assertFalse(doc.at("/components/schemas/MediaResponse/properties").has("publicId"));
-    }
-
-    @Test
-    void mediaPageRendersVietnameseAndEnglishWithoutDatabase() throws Exception {
-        var viewer = UsernamePasswordAuthenticationToken.authenticated(
-            new UserPrincipal(2L, "viewer", Set.of("OPERATOR"), 0),
-            null,
-            List.of(new SimpleGrantedAuthority("MEDIA_READ"), new SimpleGrantedAuthority("MEDIA_VIEW"))
-        );
-        var vi = mvc
-            .perform(get("/media").param("lang", "vi").with(authentication(viewer)))
-            .andReturn()
-            .getResponse();
-        var en = mvc
-            .perform(get("/media").param("lang", "en").with(authentication(viewer)))
-            .andReturn()
-            .getResponse();
-        assertEquals(200, vi.getStatus());
-        assertEquals(200, en.getStatus());
-        assertTrue(vi.getContentAsString(StandardCharsets.UTF_8).contains("Thư viện ảnh"));
-        assertTrue(en.getContentAsString(StandardCharsets.UTF_8).contains("Image library"));
-        assertTrue(vi.getContentAsString(StandardCharsets.UTF_8).contains("/assets/js/media.js"));
-    }
-
     @AfterEach
     void clearAuthentication() {
         SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void jsonBodyLimitAlsoAppliesWhenContentLengthDoesNotDeclareTheFullBody() throws Exception {
+        for (String contentType : List.of("application/json", "application/problem+json")) {
+            var response = mvc
+                .perform(post("/api/v1/auth/login").with(csrf()).contentType(contentType).content(" ".repeat(65537)))
+                .andReturn()
+                .getResponse();
+            assertEquals(413, response.getStatus());
+            assertTrue(response.getContentAsString().contains("COM014"));
+            assertFalse(response.getContentAsString().contains(" ".repeat(100)));
+        }
     }
 
     @Test
