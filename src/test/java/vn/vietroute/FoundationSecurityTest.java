@@ -65,6 +65,17 @@ class FoundationSecurityTest {
     }
 
     @Test
+    void browserLanguageDoesNotOverrideVietnameseDefaultForSecurityErrors() throws Exception {
+        var response = mvc
+            .perform(get("/api/v1/auth/me").header("Accept-Language", "en-US,en;q=0.9"))
+            .andReturn()
+            .getResponse();
+        assertEquals(401, response.getStatus());
+        assertEquals("vi", response.getHeader("Content-Language"));
+        assertEquals("vi", json.readTree(response.getContentAsString(StandardCharsets.UTF_8)).get("locale").asText());
+    }
+
+    @Test
     void protectedApiUsesLocalizedEnvelopeAndTraceId() throws Exception {
         var vi = mvc.perform(get("/api/v1/auth/me").header("X-Locale", "vi")).andReturn().getResponse();
         var en = mvc.perform(get("/api/v1/auth/me").header("X-Locale", "en")).andReturn().getResponse();

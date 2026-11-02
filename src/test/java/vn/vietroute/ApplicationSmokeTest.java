@@ -37,7 +37,7 @@ class ApplicationSmokeTest {
             assertTrue(context.getBean(HikariDataSource.class).getHikariPoolMXBean() == null);
             MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
 
-            MvcResult home = mvc.perform(get("/")).andReturn();
+            MvcResult home = mvc.perform(get("/").header("Accept-Language", "en-US,en;q=0.9")).andReturn();
             assertEquals(200, home.getResponse().getStatus());
             assertEquals("vi", RequestContextUtils.getLocale(home.getRequest()).getLanguage());
             String html = home.getResponse().getContentAsString();

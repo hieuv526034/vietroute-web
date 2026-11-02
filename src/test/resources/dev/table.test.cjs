@@ -1,6 +1,37 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { pageWindow, boundedPage, lookupSummary, readPage, readOptions } = require('../../../main/webapp/assets/js/table.js');
+const { pageWindow, boundedPage, lookupSummary, readPage, readOptions, pager } = require('../../../main/webapp/assets/js/table.js');
+
+test('Bảng rỗng không hiện pager; một trang ẩn điều hướng và nhiều trang mở lại', () => {
+    const previousDocument = global.document;
+    const nodes = new Map();
+    const element = () => ({
+        value: '10', dataset: {}, parentElement: { classList: { toggle() {} } },
+        addEventListener() {}, setCustomValidity() {}, setAttribute() {}, append() {}, before() {},
+    });
+    const root = {
+        dataset: { summary: '{start}–{end}/{total}', pageLabel: 'Page {page}' },
+        querySelector(selector) {
+            if (!nodes.has(selector)) nodes.set(selector, element());
+            return nodes.get(selector);
+        },
+        querySelectorAll() { return []; },
+    };
+    global.document = { getElementById: () => root, createElement: element };
+    try {
+        const control = pager('sample', { onChange() {} });
+        assert.equal(root.hidden, true);
+        control.update({ page: 0, size: 10, totalPages: 1, totalElements: 4 });
+        assert.equal(root.hidden, false);
+        assert.equal(root.dataset.singlePage, 'true');
+        control.update({ page: 0, size: 10, totalPages: 2, totalElements: 14 });
+        assert.equal(root.dataset.singlePage, 'false');
+        control.update({ page: 0, size: 10, totalPages: 0, totalElements: 0 });
+        assert.equal(root.hidden, true);
+    } finally {
+        global.document = previousDocument;
+    }
+});
 
 test('Select danh mục tải đủ trang sau, gộp ID trùng và không tự thử lại khi lỗi', async () => {
     const calls = [];

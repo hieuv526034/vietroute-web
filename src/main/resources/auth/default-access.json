@@ -1862,6 +1862,30 @@
       "carrierCode": "VRDONGBAC",
       "passwordEnv": "VIETROUTE_DEFAULT_OPERATOR_PASSWORD",
       "email": "operator06@vietroute.example"
+    },
+    {
+      "username": "driverduylong",
+      "displayName": "Phạm Thành Lương",
+      "role": "DRIVER",
+      "carrierCode": "DUYLONG",
+      "driverCode": "DLGLUONG",
+      "passwordEnv": "VIETROUTE_DEFAULT_DRIVER_PASSWORD",
+      "email": "driverduylong@vietroute.example"
+    },
+    {
+      "username": "operatorduylong",
+      "displayName": "Điều hành Duy Long",
+      "role": "OPERATOR",
+      "carrierCode": "DUYLONG",
+      "passwordEnv": "VIETROUTE_DEFAULT_OPERATOR_PASSWORD",
+      "email": "operatorduylong@vietroute.example"
+    },
+    {
+      "username": "customduylong",
+      "displayName": "Khách hàng Duy Long",
+      "role": "CUSTOMER",
+      "passwordEnv": "VIETROUTE_DEFAULT_CUSTOMER_PASSWORD",
+      "email": "customduylong@vietroute.example"
     }
   ]
 }

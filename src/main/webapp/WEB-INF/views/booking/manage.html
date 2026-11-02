@@ -161,55 +161,6 @@
                         id="booking-create-controls"
                         class="border-0 p-0 m-0 w-100"
                     >
-                        <div
-                            th:unless="${customerBookings}"
-                            id="booking-trip-picker"
-                        >
-                            <label
-                                for="booking-trip-query"
-                                th:text="#{ui.booking.trip}"
-                            ></label>
-                            <div class="record-search">
-                                <input
-                                    id="booking-trip-query"
-                                    maxlength="160"
-                                    class="form-control"
-                                />
-                                <button
-                                    id="booking-trip-search"
-                                    type="button"
-                                    class="button button-outline"
-                                    th:text="#{ui.search}"
-                                ></button>
-                            </div>
-                            <div class="trip-picker-paging lookup-pager">
-                                <button
-                                    id="booking-trip-prev"
-                                    type="button"
-                                    class="button button-outline lookup-page-button"
-                                    hidden
-                                    disabled
-                                    th:attr="aria-label=#{ui.mediaPrevious},title=#{ui.mediaPrevious}"
-                                >
-                                    <span aria-hidden="true">‹</span>
-                                </button>
-                                <span
-                                    id="booking-trip-count"
-                                    aria-live="polite"
-                                    th:attr="data-summary=#{ui.picker.summary},data-empty=#{ui.empty}"
-                                ></span>
-                                <button
-                                    id="booking-trip-next"
-                                    type="button"
-                                    class="button button-outline lookup-page-button"
-                                    hidden
-                                    disabled
-                                    th:attr="aria-label=#{ui.mediaNext},title=#{ui.mediaNext}"
-                                >
-                                    <span aria-hidden="true">›</span>
-                                </button>
-                            </div>
-                        </div>
                         <div class="dialog-form-grid">
                             <label class="grid-span">
                                 <span th:text="#{ui.booking.trip}"></span>

@@ -138,18 +138,13 @@
     };
 
     const searchProvinces = async () => {
-        const select = node('place-province');
-        const previous = select.selectedOptions[0];
-        const response = await api.get('/api/v1/provinces', {
-            params: { query: node('place-province-query').value.trim(), size: 20 },
-            timeout: 10000,
-        });
-        select.replaceChildren(option('', labels.choose));
-        for (const item of response.data.data.content) select.append(option(item.id, `${item.name} · ${item.code}`));
-        // Tìm tiếp không làm mất tỉnh đã chọn ngoài trang hiện tại.
-        if (previous?.value && !Array.from(select.options).some((item) => item.value === previous.value))
-            select.append(previous.cloneNode(true));
-        if (previous?.value) select.value = previous.value;
+        const items = await tables.readOptions(
+            async (paging) => (await api.get('/api/v1/provinces', { params: paging, timeout: 10000 })).data.data,
+        );
+        node('place-province').replaceChildren(
+            option('', labels.choose),
+            ...items.map((item) => option(item.id, `${item.name} · ${item.code}`)),
+        );
     };
 
     const open = async (resource, id, trigger) => {
@@ -157,7 +152,6 @@
         kind = resource;
         selected = current;
         form.reset();
-        node('place-province-query').value = '';
         feedback('', false, 'location-form-feedback');
         node('place-details').hidden = resource === 'provinces';
         node('place-details').disabled = resource === 'provinces';
@@ -169,12 +163,8 @@
         for (const field of ['address', 'latitude', 'longitude'])
             form.elements[field].disabled = resource === 'provinces';
         node('place-province').disabled = resource === 'provinces' || Boolean(current);
-        node('place-province-query').disabled = resource === 'provinces' || Boolean(current);
-        node('place-province-search').disabled = resource === 'provinces' || Boolean(current);
         node('place-province').replaceChildren(option('', labels.choose));
         node('location-editor-note').textContent = resource === 'provinces' ? labels.provinceNote : labels.placeNote;
-        node('place-province-query').parentElement.parentElement.hidden = Boolean(current);
-        node('place-picker-note').hidden = Boolean(current);
         if (resource === 'locations') {
             if (current) {
                 const name = document.documentElement.lang === 'en' ? current.provinceNameEn : current.provinceNameVi;
@@ -224,13 +214,6 @@
             feedback(response.data.message, true, 'location-feedback');
             await load(resource, { ...pagers[resource].query, page: 0 });
         });
-    });
-    node('place-province-search').addEventListener('click', () => perform(searchProvinces));
-    node('place-province-query').addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            void perform(searchProvinces);
-        }
     });
     root.querySelectorAll('[data-create]').forEach((button) =>
         button.addEventListener('click', () => perform(() => open(button.dataset.create, null, button))),

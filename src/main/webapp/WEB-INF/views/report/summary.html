@@ -74,28 +74,17 @@
                         </div>
                         <div>
                             <label
-                                for="report-carrier-name"
+                                for="report-carrier"
                                 th:text="#{ui.report.carrier}"
                             ></label>
-                            <input
-                                id="report-carrier-name"
-                                class="form-control"
-                                readonly
-                                th:value="#{ui.report.all}"
-                            />
-                            <input
+
+                            <select
                                 id="report-carrier"
-                                type="hidden"
                                 name="carrierId"
-                            />
+                                class="form-select"
+                            ></select>
                         </div>
                         <div class="toolbar-actions report-actions">
-                            <button
-                                id="report-carrier-open"
-                                type="button"
-                                class="button button-outline"
-                                th:text="#{ui.report.chooseCarrier}"
-                            ></button>
                             <button
                                 type="submit"
                                 class="button"
@@ -228,97 +217,6 @@
                     </dl>
                 </section>
             </div>
-            <dialog
-                id="report-carrier-dialog"
-                class="workspace-dialog workspace-dialog-wide"
-                aria-labelledby="report-carrier-title"
-            >
-                <div class="dialog-heading">
-                    <h2
-                        id="report-carrier-title"
-                        th:text="#{ui.report.chooseCarrier}"
-                    ></h2>
-                    <button
-                        type="button"
-                        class="dialog-close"
-                        data-dialog-close
-                        th:attr="aria-label=#{ui.ops.close}"
-                    >
-                        ×
-                    </button>
-                </div>
-                <p
-                    id="report-picker-feedback"
-                    class="feedback"
-                    role="alert"
-                    hidden
-                ></p>
-                <fieldset
-                    id="report-picker-controls"
-                    class="dialog-controls"
-                >
-                    <div class="report-picker-content">
-                        <form
-                            id="report-carrier-search"
-                            class="table-filter record-search"
-                        >
-                            <label
-                                for="report-query"
-                                th:text="#{ui.report.searchCarriers}"
-                            ></label>
-                            <input
-                                id="report-query"
-                                class="form-control"
-                                type="search"
-                                maxlength="160"
-                            />
-                            <div class="toolbar-actions">
-                                <button
-                                    type="submit"
-                                    class="button button-outline"
-                                    th:text="#{ui.search}"
-                                ></button>
-                                <button
-                                    id="report-carrier-all"
-                                    type="button"
-                                    class="button button-outline"
-                                    th:text="#{ui.report.all}"
-                                ></button>
-                            </div>
-                        </form>
-                        <div
-                            class="table-responsive"
-                            tabindex="0"
-                            role="region"
-                            th:attr="aria-label=#{ui.table.scroll}"
-                        >
-                            <table class="table align-middle">
-                                <thead>
-                                    <tr>
-                                        <th th:text="#{ui.code}"></th>
-                                        <th th:text="#{ui.name}"></th>
-                                        <th th:text="#{ui.location.state}"></th>
-                                        <th
-                                            class="table-actions"
-                                            th:text="#{ui.ops.actions}"
-                                        ></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="report-carriers-body"></tbody>
-                            </table>
-                        </div>
-                        <nav th:replace="~{fragments/pagination :: pager('report-carriers', 10)}"></nav>
-                        <div class="dialog-actions">
-                            <button
-                                type="button"
-                                class="button button-outline"
-                                data-dialog-close
-                                th:text="#{ui.ops.close}"
-                            ></button>
-                        </div>
-                    </div>
-                </fieldset>
-            </dialog>
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>

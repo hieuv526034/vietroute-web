@@ -50,8 +50,6 @@
         );
         node('route-save').hidden = readOnly;
         node('route-add-stop').hidden = readOnly;
-        node('route-carrier-picker').hidden = Boolean(selected) || readOnly;
-        node('route-location-picker').hidden = readOnly;
     };
     const perform = async (action) => {
         if (busy) return;
@@ -139,36 +137,26 @@
             select.value = value;
         }
     };
+    const choices = (url) =>
+        tables.readOptions(async (paging) => (await api.get(url, { params: paging, timeout: 10000 })).data.data);
     const findLocations = async () => {
-        const page = (
-            await api.get('/api/v1/locations', {
-                params: { query: node('route-location-query').value.trim(), size: 20 },
-                timeout: 10000,
-            })
-        ).data.data;
+        const items = await choices('/api/v1/locations');
         const keep = new Set(
             Array.from(node('route-stop-list').querySelectorAll('select')).map((select) => Number(select.value)),
         );
         for (const id of locations.keys()) if (!keep.has(id)) locations.delete(id);
-        for (const item of page.content) locations.set(item.id, item);
+        for (const item of items) locations.set(item.id, item);
         updateLocations();
-        node('route-location-count').textContent = `${page.content.length} / ${page.totalElements}`;
     };
     const findCarriers = async () => {
-        const page = (
-            await api.get(`${path}/carriers`, {
-                params: { query: node('route-carrier-query').value.trim(), size: 20 },
-                timeout: 10000,
-            })
-        ).data.data;
+        const items = await choices(`${path}/carriers`);
         const select = form.elements.carrierId,
-            current = select.selectedOptions[0],
-            options = page.content.map((item) => option(item.id, `${item.code} · ${item.name}`));
-        if (current?.value && !page.content.some((item) => String(item.id) === current.value))
+            current = select.selectedOptions[0];
+        const options = items.map((item) => option(item.id, `${item.code} · ${item.name}`));
+        if (current?.value && !items.some((item) => String(item.id) === current.value))
             options.unshift(option(current.value, current.textContent));
         select.replaceChildren(option('', labels.choose), ...options);
         if (current?.value) select.value = current.value;
-        node('route-carrier-count').textContent = `${page.content.length} / ${page.totalElements}`;
     };
     const renumber = () =>
         Array.from(node('route-stop-list').children).forEach((row, index) => {
@@ -259,6 +247,7 @@
             for (const stop of selected.stops)
                 locations.set(stop.locationId, { id: stop.locationId, nameVi: stop.nameVi, nameEn: stop.nameEn });
             for (const stop of selected.stops) addStop(stop);
+            if (!view) await findLocations();
         } else {
             await findCarriers();
             await findLocations();
@@ -330,15 +319,6 @@
             sync();
         }
     });
-    node('route-location-search').addEventListener('click', () => perform(findLocations));
-    node('route-carrier-search').addEventListener('click', () => perform(findCarriers));
-    for (const id of ['route-location-query', 'route-carrier-query'])
-        node(id).addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                void perform(id === 'route-location-query' ? findLocations : findCarriers);
-            }
-        });
     void perform(async () => {
         await refresh();
         await load();

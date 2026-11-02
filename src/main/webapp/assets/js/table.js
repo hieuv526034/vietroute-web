@@ -45,6 +45,8 @@
         let pending = false;
         const render = () => {
             const locked = pending;
+            root.hidden = current.totalElements === 0;
+            root.dataset.singlePage = String(current.totalPages <= 1);
             size.disabled = locked;
             size.value = String(current.size);
             jump.disabled = locked || !current.totalPages;

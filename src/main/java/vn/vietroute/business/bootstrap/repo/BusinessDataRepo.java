@@ -308,13 +308,15 @@ public class BusinessDataRepo {
             """
             CREATE TEMP TABLE vr_init_trips ON COMMIT DROP AS
             WITH config AS (SELECT ?::jsonb data), input AS (
-                SELECT x.*,d.day,(config.data->'profile'->>'version') profile,
+                SELECT x.*,d.day,coalesce(x."codePrefix",config.data->'profile'->>'version') profile,
                     date_trunc('minute',CURRENT_TIMESTAMP)+INTERVAL '10 minutes' anchor
                 FROM config CROSS JOIN LATERAL jsonb_to_recordset(config.data->'routes')
                     x("carrierCode" text,code text,"vehicleCode" text,"driverCode" text,
-                        "driverUsername" text,"intervalDays" integer,slot integer)
-                CROSS JOIN LATERAL generate_series(-(config.data->'profile'->>'pastDays')::integer,
-                    (config.data->'profile'->>'futureDays')::integer) d(day)
+                        "driverUsername" text,"intervalDays" integer,slot integer,"departureTime" text,
+                        "pastDays" integer,"futureDays" integer,"codePrefix" text)
+                CROSS JOIN LATERAL generate_series(
+                    -coalesce(x."pastDays",(config.data->'profile'->>'pastDays')::integer),
+                    coalesce(x."futureDays",(config.data->'profile'->>'futureDays')::integer)) d(day)
                 WHERE d.day % x."intervalDays"=0
             ), added AS (
                 INSERT INTO carrier_trips(carrier_id,scope_id,route_id,vehicle_id,driver_id,driver_user_id,
@@ -322,15 +324,23 @@ public class BusinessDataRepo {
                     vehicle_type_name_en,driver_name,driver_phone,departure_at,end_at,capacity,status,
                     operation_note,created_at,updated_at)
                 SELECT c.id,c.scope_id,r.id,v.id,drv.id,u.id,
-                    x.profile||'R'||lpad(x.slot::text,2,'0')||'D'||lpad((x.day+7)::text,2,'0'),
+                    x.profile||'R'||lpad(x.slot::text,2,'0')||'D'||
+                        CASE WHEN x."departureTime" IS NOT NULL
+                            THEN to_char(t.departure AT TIME ZONE 'Asia/Ho_Chi_Minh','YYYYMMDD')
+                            ELSE lpad((x.day+7)::text,2,'0') END,
                     r.name_vi,r.name_en,v.plate_number,v.vehicle_type_id,kind.name_vi,kind.name_en,
                     drv.name,drv.phone,t.departure,t.departure+duration.minutes*INTERVAL '1 minute',
                     v.capacity,
-                    CASE WHEN x.day<0 THEN CASE WHEN x.day % 5=0 THEN 'CANCELLED' ELSE 'COMPLETED' END
+                    CASE WHEN x."departureTime" IS NOT NULL THEN CASE
+                            WHEN t.departure+duration.minutes*INTERVAL '1 minute'<=CURRENT_TIMESTAMP THEN 'COMPLETED'
+                            WHEN t.departure<=CURRENT_TIMESTAMP THEN 'IN_PROGRESS' ELSE 'OPEN' END
+                        WHEN x.day<0 THEN CASE WHEN x.day % 5=0 THEN 'CANCELLED' ELSE 'COMPLETED' END
                         WHEN x.day=0 AND x.slot%4=2 THEN 'IN_PROGRESS'
                         WHEN x.day=3 AND x.slot%4=0 THEN 'DRAFT'
                         WHEN x.day=8 AND x.slot%5=0 THEN 'CANCELLED' ELSE 'OPEN' END,
-                    CASE WHEN x.day=8 AND x.slot%5=0 THEN 'Hủy lịch chạy do điều chỉnh kế hoạch khai thác'
+                    CASE WHEN x."departureTime" IS NOT NULL
+                            THEN 'Lịch cố định theo giờ Việt Nam; có mặt trước giờ khởi hành 20 phút'
+                        WHEN x.day=8 AND x.slot%5=0 THEN 'Hủy lịch chạy do điều chỉnh kế hoạch khai thác'
                         WHEN x.day=0 AND x.slot%4=2 THEN 'Đã khởi hành, đang phục vụ hành khách'
                         ELSE 'Có mặt tại điểm đón trước giờ khởi hành 20 phút' END,
                     least(t.departure-INTERVAL '3 days',CURRENT_TIMESTAMP-INTERVAL '1 day'),
@@ -344,10 +354,13 @@ public class BusinessDataRepo {
                 JOIN catalog_items kind ON kind.id=v.vehicle_type_id AND kind.active
                 CROSS JOIN LATERAL (SELECT max(departure_offset_minutes) minutes,
                     count(*) count FROM carrier_route_stops WHERE route_id=r.id) duration
-                CROSS JOIN LATERAL (SELECT x.anchor+x.day*INTERVAL '1 day'
-                    +CASE WHEN x.day=0 AND x.slot=1 THEN INTERVAL '0 minutes'
-                        WHEN x.day=0 AND x.slot%4=2 THEN INTERVAL '-90 minutes'
-                        ELSE (x.slot%4)*INTERVAL '45 minutes' END departure) t
+                CROSS JOIN LATERAL (SELECT CASE WHEN x."departureTime" IS NOT NULL THEN
+                        ((c.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date+x.day+x."departureTime"::time)
+                            AT TIME ZONE 'Asia/Ho_Chi_Minh'
+                    ELSE x.anchor+x.day*INTERVAL '1 day'
+                        +CASE WHEN x.day=0 AND x.slot=1 THEN INTERVAL '0 minutes'
+                            WHEN x.day=0 AND x.slot%4=2 THEN INTERVAL '-90 minutes'
+                            ELSE (x.slot%4)*INTERVAL '45 minutes' END END departure) t
                 WHERE duration.count>=2
                     AND EXISTS (SELECT 1 FROM auth_user_roles ur JOIN auth_roles role ON role.code=ur.role_code
                         WHERE ur.user_id=u.id AND ur.scope_id=c.scope_id AND ur.active

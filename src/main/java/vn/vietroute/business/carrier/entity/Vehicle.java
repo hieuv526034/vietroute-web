@@ -46,30 +46,39 @@ import vn.vietroute.common.jdbc.JdbcTable;
 @SuperBuilder
 public class Vehicle extends BaseEntity {
 
+    // ID nhà xe sở hữu dữ liệu.
     @Column(name = "carrier_id", nullable = false)
     private long carrierId;
 
+    // ID phạm vi nhà xe để kiểm quyền trên dữ liệu.
     @Column(name = "scope_id", nullable = false)
     private long scopeId;
 
+    // Mã nghiệp vụ dùng để tra cứu và đối chiếu.
     @Column(name = "code", nullable = false, length = 40)
     private String code;
 
+    // Biển số hiển thị.
     @Column(name = "plate_number", nullable = false, length = 20)
     private String plateNumber;
 
+    // Biển số chuẩn hóa do DB sinh, dùng kiểm trùng.
     @Column(name = "plate_key", nullable = false, length = 20, insertable = false, updatable = false)
     private String plateKey;
 
+    // ID loại xe trong catalog_items.
     @Column(name = "vehicle_type_id", nullable = false)
     private long vehicleTypeId;
 
+    // Nhóm danh mục cố định để ràng buộc đúng loại xe.
     @Column(name = "vehicle_type", nullable = false, length = 40)
     private String vehicleType;
 
+    // Số chỗ tối đa cho phép.
     @Column(name = "capacity", nullable = false)
     private int capacity;
 
+    // Trạng thái cho phép sử dụng bản ghi.
     @Column(name = "active", nullable = false)
     private boolean active;
 

@@ -151,41 +151,24 @@
         );
         render(page);
     };
-    // Picker tìm tại DB, giữ lựa chọn đang có dù nằm ngoài 20 kết quả hiện tại; không tải toàn bộ danh bạ.
+    const choices = (url) =>
+        tables.readOptions(async (paging) => (await api.get(url, { params: paging, timeout: 10000 })).data.data);
     const carrierChoices = async () => {
-        const select = form.elements.carrierId;
-        const current = select.selectedOptions[0];
-        const page = (
-            await api.get(`${path}/carriers`, {
-                params: { query: node('fleet-carrier-query').value.trim(), size: 20 },
-                timeout: 10000,
-            })
-        ).data.data;
-        const options = page.content.map((item) => option(item.id, `${item.code} · ${item.name}`));
-        if (current?.value && !page.content.some((item) => String(item.id) === current.value))
+        const items = await choices(`${path}/carriers`);
+        form.elements.carrierId.replaceChildren(
+            option('', labels.choose),
+            ...items.map((item) => option(item.id, `${item.code} · ${item.name}`)),
+        );
+    };
+    const vehicleTypes = async () => {
+        const select = form.elements.vehicleTypeId,
+            current = select.selectedOptions[0];
+        const items = await choices('/api/v1/catalogs/VEHICLE_TYPE');
+        const options = items.map((item) => option(item.id, item.name));
+        if (current?.value && !items.some((item) => String(item.id) === current.value))
             options.unshift(option(current.value, current.textContent));
         select.replaceChildren(option('', labels.choose), ...options);
         if (current?.value) select.value = current.value;
-        node('fleet-carrier-count').textContent =
-            `${Math.min(page.totalElements, 20)} / ${page.totalElements} · ${labels.pickCount}`;
-    };
-    const vehicleTypes = async () => {
-        // Tìm tại DB thay vì giới hạn âm thầm 100 loại; giữ lựa chọn hiện có ngoài trang kết quả.
-        const select = form.elements.vehicleTypeId;
-        const current = select.selectedOptions[0];
-        const page = (
-            await api.get('/api/v1/catalogs/VEHICLE_TYPE', {
-                params: { size: 20, query: node('fleet-type-query').value.trim() },
-                timeout: 10000,
-            })
-        ).data.data;
-        const options = page.content.map((item) => option(item.id, item.name));
-        if (current?.value && !page.content.some((item) => String(item.id) === current.value))
-            options.unshift(option(current.value, current.textContent));
-        select.replaceChildren(option('', '—'), ...options);
-        if (current?.value) select.value = current.value;
-        node('fleet-type-count').textContent =
-            `${Math.min(page.totalElements, 20)} / ${page.totalElements} · ${labels.pickCount}`;
     };
     const open = async (item, trigger) => {
         const current = item ? (await api.get(`${path}/${item.id}`, { timeout: 10000 })).data.data : null;
@@ -199,16 +182,12 @@
         form.elements.active.checked = current?.active ?? true;
         if (kind !== 'carriers') {
             form.elements.carrierId.disabled = Boolean(current);
-            node('fleet-carrier-picker').hidden = Boolean(current);
-            node('fleet-carrier-count').textContent = '';
-            node('fleet-carrier-query').value = '';
             form.elements.carrierId.replaceChildren(
                 current ? option(current.carrierId, current.carrierName) : option('', labels.choose),
             );
             if (!current) await carrierChoices();
         }
         if (kind === 'vehicles') {
-            node('fleet-type-query').value = '';
             form.elements.vehicleTypeId.replaceChildren(
                 current ? option(current.vehicleTypeId, current.vehicleTypeName) : option('', '—'),
             );
@@ -282,24 +261,6 @@
         event.preventDefault();
         if (window.VietRouteForms.validate(search)) void perform(() => load({ ...pager.query, page: 0 }));
     });
-    if (kind !== 'carriers') {
-        node('fleet-carrier-search').addEventListener('click', () => perform(carrierChoices));
-        node('fleet-carrier-query').addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                void perform(carrierChoices);
-            }
-        });
-    }
-    if (kind === 'vehicles') {
-        node('fleet-type-search').addEventListener('click', () => perform(vehicleTypes));
-        node('fleet-type-query').addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                void perform(vehicleTypes);
-            }
-        });
-    }
     void perform(async () => {
         await refreshCapability();
         await load();

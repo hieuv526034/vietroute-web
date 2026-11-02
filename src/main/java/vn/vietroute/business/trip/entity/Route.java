@@ -39,24 +39,31 @@ import vn.vietroute.common.jdbc.JdbcTable;
 @SuperBuilder
 public class Route extends BaseEntity {
 
+    // ID nhà xe sở hữu dữ liệu.
     @Column(name = "carrier_id", nullable = false)
     private long carrierId;
 
+    // ID phạm vi nhà xe để kiểm quyền trên dữ liệu.
     @Column(name = "scope_id", nullable = false)
     private long scopeId;
 
+    // Mã nghiệp vụ dùng để tra cứu và đối chiếu.
     @Column(name = "code", nullable = false, length = 40)
     private String code;
 
+    // Tên hiển thị tiếng Việt.
     @Column(name = "name_vi", nullable = false, length = 160)
     private String nameVi;
 
+    // Tên hiển thị tiếng Anh.
     @Column(name = "name_en", nullable = false, length = 160)
     private String nameEn;
 
+    // Mô tả bổ sung.
     @Column(name = "description", nullable = false, length = 2000)
     private String description;
 
+    // Trạng thái cho phép sử dụng bản ghi.
     @Column(name = "active", nullable = false)
     private boolean active;
 }

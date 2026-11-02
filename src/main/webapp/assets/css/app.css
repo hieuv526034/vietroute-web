@@ -2220,6 +2220,9 @@ body:has(dialog[open]) {
     font-size: 12px;
     color: var(--muted);
 }
+.table-pager[data-single-page='true'] .pager-navigation {
+    display: none;
+}
 .pager-summary,
 .pager-navigation,
 .pager-jump {

@@ -30,7 +30,12 @@ class ApplicationConstantsTest {
             .filter(line -> line.startsWith("VIETROUTE_"))
             .map(line -> line.substring(0, line.indexOf('=')))
             .collect(Collectors.toSet());
-        assertEquals(example, keys, "Key mới cần được khai báo cả registry lẫn file mẫu môi trường");
+        // LOCAL_ENV_FILE chọn file trước khi đọc .env, chỉ cấu hình ở OS/IDE; không bắt file tự trỏ đến nó.
+        Set<String> fileKeys = keys
+            .stream()
+            .filter(key -> !key.equals(Env.LOCAL_ENV_FILE.key()))
+            .collect(Collectors.toSet());
+        assertEquals(fileKeys, example, "Key ứng dụng cần có trong registry và file mẫu; launcher chọn file từ OS/IDE");
         // Không đọc .env thật. Run configuration và Blueprint chỉ tham chiếu key đã đăng ký.
         for (Path file : new Path[] { Path.of("render.yaml"), Path.of(".run/VietRoute Local.run.xml") }) {
             var matcher = Pattern.compile("VIETROUTE_[A-Z_]+").matcher(Files.readString(file));

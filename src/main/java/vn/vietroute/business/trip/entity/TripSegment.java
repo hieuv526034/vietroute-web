@@ -40,32 +40,41 @@ import vn.vietroute.common.jdbc.JdbcTable;
 @IdClass(TripSegment.Key.class)
 public class TripSegment {
 
+    // ID chuyến trong carrier_trips.
     @Id
     @Column(name = "trip_id", nullable = false)
     private long tripId;
 
+    // ID nhà xe sở hữu dữ liệu.
     @Column(name = "carrier_id", nullable = false)
     private long carrierId;
 
+    // ID phạm vi nhà xe để kiểm quyền trên dữ liệu.
     @Column(name = "scope_id", nullable = false)
     private long scopeId;
 
+    // Đoạn nối điểm thứ n với n+1; là thành phần khóa chính cùng tripId.
     @Id
     @Column(name = "segment_order", nullable = false)
     private int segmentOrder;
 
+    // Số chỗ tối đa cho phép.
     @Column(name = "capacity", nullable = false)
     private int capacity;
 
+    // Số chỗ đã giữ trên đoạn; không tính đơn PENDING.
     @Column(name = "reserved_seats", nullable = false)
     private int reservedSeats;
 
+    // Thời điểm cập nhật gần nhất, lưu theo UTC.
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    // ID người sửa gần nhất; tác vụ hệ thống dùng system (0).
     @Column(name = "updated_by", nullable = false)
     private long updatedBy;
 
+    // Phiên bản khóa lạc quan; từ chối cập nhật từ dữ liệu đã cũ.
     @Version
     @Column(name = "version", nullable = false)
     private long version;
@@ -78,10 +87,13 @@ public class TripSegment {
     @EqualsAndHashCode
     public static class Key implements Serializable {
 
+        // Phiên bản định dạng khóa ghép khi Java serialize.
         private static final long serialVersionUID = 1L;
 
+        // ID chuyến, thành phần thứ nhất của khóa ghép.
         private long tripId;
 
+        // Thứ tự đoạn, thành phần thứ hai của khóa ghép.
         private int segmentOrder;
     }
 }
