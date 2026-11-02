@@ -109,7 +109,8 @@ public class SecurityConfig {
                             request
                                 .getRequestURI()
                                 .substring(request.getContextPath().length())
-                                .startsWith(Routes.API_ROOT)
+                                .startsWith(Routes.API_ROOT) ||
+                            request.getRequestURI().substring(request.getContextPath().length()).equals(Routes.OPENAPI)
                         ) {
                             errors.write(request, response, ErrorCode.UNAUTHENTICATED);
                         } else {

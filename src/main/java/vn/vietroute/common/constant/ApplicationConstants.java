@@ -277,8 +277,6 @@ public final class ApplicationConstants {
 
         public static final String WEBJAR_MATCHER = WEBJARS + "**";
 
-        public static final String DOCS_MATCHER = DOCS + "/**";
-
         public static final String CATALOG_MATCHER = CATALOG_PREFIX + "**";
 
         public static final String ADMIN_API_MATCHER = ADMIN_API + "/**";

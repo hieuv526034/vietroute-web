@@ -7,15 +7,21 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariDataSource;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.FileSystemResourceLoader;
 import org.springframework.mock.web.MockServletContext;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.support.RequestContextUtils;
+import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.support.AccessTestConfig;
@@ -31,7 +37,7 @@ class ApplicationSmokeTest {
             assertTrue(context.getBean(HikariDataSource.class).getHikariPoolMXBean() == null);
             MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
 
-            MvcResult home = mvc.perform(get("/")).andReturn();
+            MvcResult home = mvc.perform(get("/").header("Accept-Language", "en-US,en;q=0.9")).andReturn();
             assertEquals(200, home.getResponse().getStatus());
             assertEquals("vi", RequestContextUtils.getLocale(home.getRequest()).getLanguage());
             String html = home.getResponse().getContentAsString();
@@ -53,6 +59,13 @@ class ApplicationSmokeTest {
             assertTrue(english.getResponse().getContentAsString().contains("Manage your fleet"));
             assertEquals("en", english.getResponse().getHeader("Content-Language"));
 
+            SecurityContextHolder.getContext().setAuthentication(
+                UsernamePasswordAuthenticationToken.authenticated(
+                    new UserPrincipal(7L, "contractadmin", Set.of("ADMIN"), 0),
+                    null,
+                    List.of(new SimpleGrantedAuthority("GET /docs"), new SimpleGrantedAuthority("GET /v3/api-docs"))
+                )
+            );
             MvcResult docs = mvc.perform(get("/v3/api-docs")).andReturn();
             assertEquals(200, docs.getResponse().getStatus());
             String spec = docs.getResponse().getContentAsString();
@@ -74,12 +87,15 @@ class ApplicationSmokeTest {
             assertTrue(spec.contains("createdAt"));
             assertTrue(spec.contains("PageResponseCatalogItemResponse"));
 
-            assertEquals(200, mvc.perform(get("/login")).andReturn().getResponse().getStatus());
             assertEquals(200, mvc.perform(get("/docs")).andReturn().getResponse().getStatus());
+            SecurityContextHolder.clearContext();
+            assertEquals(200, mvc.perform(get("/login")).andReturn().getResponse().getStatus());
             assertEquals(
                 200,
                 mvc.perform(get("/webjars/axios/1.20.0/dist/axios.min.js")).andReturn().getResponse().getStatus()
             );
+        } finally {
+            SecurityContextHolder.clearContext();
         }
     }
 }

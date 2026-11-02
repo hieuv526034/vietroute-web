@@ -27,24 +27,24 @@ Ba thành viên còn lại dùng tên hiển thị và email của chính mình 
 
 ## 3. Quy trình cho từng chức năng
 
-Ví dụ thành viên phụ trách tracking làm màn hình theo dõi:
+Ví dụ Hieu sửa phần quản trị tài khoản:
 
 ```powershell
 git switch dev
 git pull --ff-only origin dev
-git switch -c hieuv526034/tracking-trip-progress
+git switch -c hieuv526034/auth-account-controls
 # Code và kiểm tra chức năng của mình.
 npm ci
 npm run format
 npm run format:check
 .\mvnw.cmd verify
 git status
-git add src/main/java/vn/vietroute/business/tracking src/main/webapp/WEB-INF/views/tracking
-git commit -m "Bổ sung trang theo dõi tiến độ chuyến đi (tracking)" -m "Hiển thị trạng thái chuyến và điểm dừng hiện tại để điều hành theo dõi tiến độ." -m "Kiểm tra: ghi đúng lệnh đã chạy, kết quả và luồng đã kiểm tra trước khi commit."
-git push -u origin hieuv526034/tracking-trip-progress
+git add src/main/java/vn/vietroute/auth src/main/webapp/WEB-INF/views/operations/accounts.html
+git commit -m "Sửa điều khiển tài khoản theo quyền hiện hành (auth)" -m "Kiểm quyền thao tác tài khoản và giữ thông báo lỗi trên form." -m "Kiểm tra: ghi đúng lệnh đã chạy, kết quả và luồng đã kiểm tra trước khi commit."
+git push -u origin hieuv526034/auth-account-controls
 ```
 
-Lệnh `git add` trên minh họa các thư mục sẽ được tạo khi có chức năng; chỉ thêm đường dẫn đã tồn tại và đúng thay đổi của mình. CSS/JS/SQL/tài liệu liên quan cũng được thêm rõ ràng. Không thêm `target/`, mật khẩu hoặc file IDE.
+Lệnh `git add` trên minh họa đường dẫn phần auth; chỉ thêm đường dẫn đã tồn tại và đúng thay đổi của mình. CSS/JS/SQL/tài liệu liên quan cũng được thêm rõ ràng. Không thêm `target/`, mật khẩu hoặc file IDE.
 
 Sau đó mở Pull request vào `dev`, mô tả Issue, chức năng, cách kiểm tra và hình ảnh nếu có giao diện. Một thành viên khác review. Chỉ merge khi kiểm tra và luồng liên quan đạt; không tự nhận review AI là nghiệm thu thành viên. Nhánh theo mẫu `<người-phụ-trách>/<chức-năng>`, dùng đúng tiền tố trong `docs/05-ke-hoach/PHAN_CONG.md`, không dùng `codex/`. Không commit source trực tiếp lên `dev`/`main`. Nhánh nên gắn với chức năng nhỏ, không giữ một nhánh khổng lồ suốt 2 tuần.
 
@@ -86,7 +86,7 @@ Kiểm tra:
 - [Giới hạn hoặc phần chưa kiểm tra, nếu có.]
 ```
 
-Lệnh commit ở ví dụ tracking phía trên chỉ minh họa cách dùng nhiều tham số `-m` để tách các đoạn; phải thay phần kiểm tra bằng kết quả thực tế, không commit nguyên câu hướng dẫn. Với mô tả dài, soạn thông điệp vào file UTF-8 rồi dùng `git commit --file <đường-dẫn-file>`. Không ghi mật khẩu, token hoặc chuỗi kết nối có thông tin đăng nhập vào commit/PR. Không sửa lịch sử đã chia sẻ chỉ để đổi các thông điệp cũ sang tiếng Việt.
+Lệnh commit ở ví dụ auth phía trên chỉ minh họa cách dùng nhiều tham số `-m` để tách các đoạn; phải thay phần kiểm tra bằng kết quả thực tế, không commit nguyên câu hướng dẫn. Với mô tả dài, soạn thông điệp vào file UTF-8 rồi dùng `git commit --file <đường-dẫn-file>`. Không ghi mật khẩu, token hoặc chuỗi kết nối có thông tin đăng nhập vào commit/PR. Không sửa lịch sử đã chia sẻ chỉ để đổi các thông điệp cũ sang tiếng Việt.
 
 ## 4. Merge để giữ nguyên tác giả
 
@@ -98,7 +98,7 @@ Commit trên nhánh chức năng đã có tác giả, nhưng để được tín
 
 ## 5. Ghi nhận theo phân công
 
-Mỗi nhiệm vụ có một GitHub Issue với mã module, người thực hiện thực tế, điều kiện nghiệm thu và PR liên quan. Dùng tiền tố `common`, `auth`, `catalog`, `carrier`, `network`, `booking`, `tracking` trong Issue/nhánh/commit để truy vết, không dùng tiền tố để giả định tác giả. Đọc quy ước base và phân công mới trong `docs/` trước khi code.
+Mỗi nhiệm vụ có một GitHub Issue với mã module, người thực hiện thực tế, điều kiện nghiệm thu và PR liên quan. Dùng tiền tố `common`, `auth`, `catalog`, `carrier`, `trip`, `booking`, `report` trong Issue/nhánh/commit để truy vết, không dùng tiền tố để giả định tác giả. Đọc quy ước base và phân công mới trong `docs/` trước khi code.
 
 - Issue thể hiện phần được giao.
 - PR và diff thể hiện kết quả thực hiện.

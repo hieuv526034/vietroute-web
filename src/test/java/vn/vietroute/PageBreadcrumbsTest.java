@@ -2,6 +2,7 @@ package vn.vietroute;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Locale;
@@ -12,6 +13,30 @@ import vn.vietroute.common.web.advice.PageModelAdvice;
 
 /** Kiểm breadcrumb dùng cây đã lọc quyền, có link nhóm và giữ đường dẫn tương thích địa lý. */
 class PageBreadcrumbsTest {
+
+    @Test
+    void navigationGroupsKeepOnlyGrantedLinksAndUseBusinessOrder() {
+        StaticMessageSource messages = new StaticMessageSource();
+        messages.addMessage("ui.nav.group.catalog", Locale.ENGLISH, "Catalogs");
+        messages.addMessage("ui.nav.group.transport", Locale.ENGLISH, "Routes and trips");
+        messages.addMessage("ui.nav.group.other", Locale.ENGLISH, "Other");
+        FunctionDTO trip = menu("Trips", "/operations/trips", "clock", true, List.of());
+        FunctionDTO catalog = menu("Places", "/catalogs/locations", "catalog", false, List.of());
+        FunctionDTO custom = menu("Custom page", "/extension", "menu", false, List.of());
+        List<FunctionDTO> result = PageModelAdvice.group(List.of(trip, custom, catalog), Locale.ENGLISH, messages);
+        assertEquals(List.of("Catalogs", "Routes and trips", "Other"), result.stream().map(FunctionDTO::name).toList());
+        assertEquals(
+            List.of(catalog, trip, custom),
+            result
+                .stream()
+                .flatMap(value -> value.children().stream())
+                .toList()
+        );
+        assertTrue(result.get(1).active());
+        assertFalse(result.get(0).active());
+        assertEquals(List.of(), PageModelAdvice.group(List.of(), Locale.ENGLISH, messages));
+        assertTrue(result.stream().allMatch(value -> value.path() == null));
+    }
 
     private static FunctionDTO menu(String name, String path, String icon, boolean active, List<FunctionDTO> children) {
         var value = new FunctionDTO();

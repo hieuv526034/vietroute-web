@@ -18,9 +18,13 @@ import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.FileSystemResourceLoader;
 import org.springframework.mock.web.MockServletContext;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
@@ -46,6 +50,13 @@ class OpenApiContractTest {
             child.refresh();
             var mvc = MockMvcBuilders.webAppContextSetup(child).build();
             var json = root.getBean(ObjectMapper.class);
+            SecurityContextHolder.getContext().setAuthentication(
+                UsernamePasswordAuthenticationToken.authenticated(
+                    new UserPrincipal(7L, "contractadmin", Set.of("ADMIN"), 0),
+                    null,
+                    List.of(new SimpleGrantedAuthority("GET /docs"), new SimpleGrantedAuthority("GET /v3/api-docs"))
+                )
+            );
             var response = mvc.perform(get(Routes.OPENAPI)).andReturn().getResponse();
             assertEquals(200, response.getStatus());
             var spec = json.readTree(response.getContentAsString());
@@ -138,6 +149,8 @@ class OpenApiContractTest {
                 Set.of("kind", "amount", "requestKey", "version", "note")
             );
             assertEquals("CUSTOM_ROLE", json.readValue("\"CUSTOM_ROLE\"", String.class));
+        } finally {
+            SecurityContextHolder.clearContext();
         }
     }
 

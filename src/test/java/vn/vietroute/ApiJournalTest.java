@@ -543,7 +543,12 @@ class ApiJournalTest {
                 assertTrue(result.getContentAsString().contains("journal-dialog"));
                 assertFalse(result.getContentAsString().contains("??ui.journal"));
             }
-            String api = mvc.perform(get(Routes.OPENAPI)).andReturn().getResponse().getContentAsString();
+            var document = mvc
+                .perform(get(Routes.OPENAPI).with(authentication(actor("GET " + Routes.OPENAPI))))
+                .andReturn()
+                .getResponse();
+            assertEquals(200, document.getStatus());
+            String api = document.getContentAsString();
             assertTrue(api.contains(Routes.API_JOURNAL));
             assertTrue(api.contains("ApiJournalDetail"));
             assertNull(context.getBean(HikariDataSource.class).getHikariPoolMXBean());

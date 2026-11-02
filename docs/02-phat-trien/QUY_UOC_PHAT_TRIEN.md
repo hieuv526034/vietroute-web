@@ -1,115 +1,84 @@
-# Quy ước phát triển VietRoute
+# Quy ước và luồng backend
 
-## Stack và cấu trúc
-
-Java 17+ (JDK 21 khi phát triển), Spring MVC 6/Security, Thymeleaf, PostgreSQL; WAR/Tomcat 10.1. CRUD đơn giản dùng Spring Data JPA/Hibernate, JDBC dành cho batch/query phức tạp/khóa nguyên tử. Không Spring Boot. PostgreSQL là DB chạy ứng dụng; [profile JDBC Oracle 26ai](../01-bat-dau/CHAY_LOCAL.md#chọn-postgresql-hoặc-chuẩn-bị-oracle-26ai) mới chuẩn bị cấu hình, runtime chặn trước SQL đến khi có migration/query và regression Oracle.
-
-```text
-vn.vietroute/
-  auth/               Tài khoản và phân quyền
-  business/
-    catalog/          Danh mục, tỉnh, địa điểm
-    carrier/          Nhà xe, phương tiện, tài xế
-    trip/             Tuyến, chuyến, tìm chuyến, tồn chỗ, tiến độ
-    booking/          Đặt chỗ, thu/hoàn, sự kiện đơn
-    report/           Báo cáo và dashboard
-    bootstrap/        Khởi tạo dữ liệu nền
-  common/             Nền MVC/JPA/JDBC, lỗi, validation, nhật ký
-```
+Đọc [AGENTS](../../AGENTS.md) cho quy tắc bắt buộc, [schema/quyền](SCHEMA_VA_PHAN_QUYEN.md) cho ràng buộc DB và [phần thành viên](../05-ke-hoach/PHAN_CONG.md) cho đường đọc source. Tài liệu này là điểm tra cứu chung, không liệt kê lại mọi DTO/endpoint đã có Swagger.
 
 ## Package theo nhóm nghiệp vụ
 
-| Nhóm | Bảng | File Java | Trách nhiệm chính |
-|---|---:|---:|---|
-| catalog | 3 | 25 | CatalogItem, Province, Location |
-| carrier | 3 | 23 | Carrier, Vehicle, Driver |
-| trip | 6 | 42 | Route/RouteStop, Trip/TripStop/TripSegment/TripEvent, Journey |
-| booking | 2 | 15 | Booking/BookingEvent |
-| report | 0 | 10 | Query báo cáo và DashboardPageController |
-| bootstrap | 0 | 6 | BusinessDataRepo/Service/API/PageController/Response/Initializer |
-| **Tổng business** | **14** | **121** | Người phụ trách tại [phân công](../05-ke-hoach/PHAN_CONG.md) |
-
-Trong mỗi nhóm: controller/ cho PageController, controller/api/ cho REST; entity/, repo/, service/, dto/request/, dto/response/, dto/search/. constant/config/initializer chỉ có khi cần. Initializer ngang service. Không tạo thêm cấp package theo tài nguyên hoặc wrapper rỗng. Không sinh service/API chỉ để mỗi bảng nối có đủ bộ lớp.
-
-CatalogItemRepo/Service/API/PageController/Request/Response/Search bám tài nguyên CatalogItem. LocationRepo/Service xử lý cả Province và Location. TripSegmentRepo cùng package trip với entity, BookingRepo gọi trên connection caller để giữ khóa trip → booking → segments. Journey/PublicCarrier giữ projection public riêng; Dashboard không tự cần REPORT grant chỉ vì ở package report. Bootstrap dùng opt-in/idempotency; giữ URL/template hiện hành trong [API](API_BASE.md).
-
-## Auth gọn: 40 class, tám bảng
-
-| Thư mục trong auth | Class hiện hành | Số file |
-|---|---|---:|
-| entity | User, Role, UserRole, Function, RoleFunction, FunctionResource, AccountChallenge, AccessChange | 8 |
-| repo | UserRepo, RoleRepo, UserRoleRepo, FunctionRepo, RoleFunctionRepo, FunctionResourceRepo, AccountChallengeRepo, AccessChangeRepo | 8 |
-| service | UserService, RoleService, FunctionService, JwtService | 4 |
-| controller/api | UserAPI, RoleAPI, FunctionAPI | 3 |
-| controller | UserPageController | 1 |
-| dto/request | UserRequest, RoleRequest, FunctionRequest | 3 |
-| dto | UserDTO, RoleDTO, FunctionDTO | 3 |
-| dto/search | UserSearch, RoleSearch, FunctionSearch | 3 |
-| config | SecurityConfig, SecurityInitializer | 2 |
-| security | UserPrincipal, EndpointAccess, JwtAuthenticationFilter, AuthCookies | 4 |
-| initializer | AuthInitializer | 1 |
-| **Tổng** | Mỗi file một class top-level, không giấu class DTO/ID bên trong | **40** |
-
-
-UserDTO/RoleDTO/FunctionDTO nằm trực tiếp auth.dto. Request trong dto/request, Search trong dto/search, tên *Search. Tám entity JPA đủ cột, identity/version/audit theo schema; không hậu tố Entity. Role là nhóm quyền duy nhất, code do DB quản lý. User → Role → Function → Menu/API kiểm bằng method + route template. Hợp đồng đầy đủ tại [schema/phân quyền](SCHEMA_VA_PHAN_QUYEN.md).
-
-## Request dùng chung và constant
-
-Mỗi tài nguyên dùng một *Request cho tạo/sửa và các thao tác liên quan, không Create/Update/Write/Delete DTO riêng. Controller chọn RequestGroups Create/Update/Delete/State/Payment/Notice/Progress; client không chọn group. Field bắt buộc và Swagger required theo operation; Default/cascade @Valid giữ ràng buộc chung. Version bắt buộc khi sửa theo contract; ID/code/quan hệ cha gửi lại phải khớp DB, không lợi dụng DTO chung để đổi identity/scope.
-
-| Nhóm | Request |
-|---|---|
-| catalog | CatalogItemRequest, ProvinceRequest, LocationRequest |
-| carrier | CarrierRequest, VehicleRequest, DriverRequest |
-| trip | RouteRequest, RouteStopRequest (điểm con), TripRequest |
-| booking | BookingRequest |
-
-Response dùng class, không entity; DTO HTTP nằm riêng, không giấu nested class để giảm số file. Search/lookup/picker thuộc dto/search. Enum/hằng nghiệp vụ ở module/constant, không entity/DTO. Env/Routes/Regex/Http ở ApplicationConstants, đọc env qua ConfigValues, dùng HttpHeaders chuẩn. WebRoutePolicy giữ public/JWT/self-service; thêm route constant không cấp quyền.
-
-## SQL trong repo
-
-SQL dài/nhiều mệnh đề dùng text block, SELECT/FROM/JOIN/WHERE/CTE/CASE/khóa/phân trang xuống dòng rõ, hướng tới 120 ký tự. Query ngắn có thể dùng string thường. Fragment/định danh động chỉ từ whitelist server; dữ liệu tiếp tục bind PreparedStatement. Không nối input hoặc sửa literal để đạt giới hạn dòng.
-
-```java
-String sql = """
-    SELECT segment_order, capacity, reserved_seats
-    FROM trip_segments
-    WHERE trip_id = ?
-        AND segment_order >= ?
-        AND segment_order < ?
-    ORDER BY segment_order
-    FOR UPDATE
-    """;
+```text
+vn.vietroute/
+  auth/
+  business/{catalog,carrier,trip,booking,report,bootstrap}/
+    controller/           PageController
+    controller/api/       REST API
+    dto/{request,response,search}/
+    entity/ repo/ service/
+    constant/ initializer/   chỉ tạo khi có trách nhiệm thật
+  common/
+    config/{application,database,web}/
+    initializer/ jdbc/ base/ web/ api_journal/
+    constant/ exception/ validation/
 ```
 
-Repo giữ query/count/page/scope/owner/lock/CAS; service giữ nghiệp vụ, principal, transaction và mapping. Không query/save từng phần tử; dùng mảng/CTE/batch. Vòng ResultSet/bind batch/xử lý dữ liệu đã tải không là N+1; đếm execute thực tế khi kiểm hiệu năng. List phân trang DB, sort từ whitelist. Lỗi history rollback mutation; hủy chuyến và tiến độ cập nhật tập booking/event nguyên tử, không tải toàn bộ PII để loop update.
+Tên bám tài nguyên: User/UserRepo/UserService/UserAPI/UserPageController. Auth UserDTO/RoleDTO/FunctionDTO ở auth.dto; *Request ở dto/request, *Search ở dto/search. Không entity hậu tố Entity, không *SearchRequest. Không tạo service/API rỗng cho đủ số bảng nối; không giấu nghiệp vụ trong common để giảm thống kê.
 
-## Entity, transaction và audit
+Một Request/tài nguyên cho create/update/state theo RequestGroups; response tách public/PII. Không record/var production, wrapper rỗng hoặc nested DTO để giấu số class. Mỗi class dưới 1000 dòng; xem phương án tách khi thêm trách nhiệm, không tăng trần. Initializer ngang service; hằng nghiệp vụ ở module/constant, hằng môi trường/route/regex/HTTP ở ApplicationConstants.
 
-Entity ánh xạ đủ @Column/@Id/@Version/@Index theo migration. Generated column chỉ đọc; projection JOIN là @Transient. Không schema cứng, không hậu tố Entity. Hibernate không tự DDL, không Open Session in View. Timestamp nghiệp vụ dùng Instant/TIMESTAMPTZ; JDBC Timestamp chỉ chuyển ở repo boundary, không Date hoặc Timestamp trong entity/DTO/service.
+## Luồng request và trách nhiệm mỗi tầng
 
-JpaTransactionManager + TransactionAwareDataSourceProxy giữ JPA/JDBC cùng connection/rollback. Caller bắt đầu transaction trước LOCAL search_path đã validate, pg_temp cuối, không public/$user fallback, không bật autocommit trên connection đã mượn. Không dựa session state qua pooler. JdbcTransactions chịu commit/rollback; repo mutation không commit riêng. Không gọi dịch vụ mạng trong transaction đang giữ khóa. Journal có pool/transaction ghi riêng theo chuyên đề.
+| Tầng | Làm gì | Không đặt ở đây |
+|---|---|---|
+| Filter/Security/EndpointAccess | Trace/body limit, CSRF/JWT, account và grant endpoint từ DB | Quyết định giá/chỗ, tin role client |
+| API | Bind Request/Search, validation và Swagger, lấy actor server, gọi execute | SQL và transaction nghiệp vụ |
+| Service | Trạng thái, version, trần ủy quyền, transaction, phối hợp repo | Ghép SQL hoặc loop query/save từng row |
+| Repo | Query, scope/owner/parent, count/page, khóa/CAS, batch/JPA | Commit riêng hoặc cấp quyền theo tên role |
+| DTO/envelope | Projection được phép, lỗi vi/en và traceId | Entity/hash/tokenVersion/PII không được công bố |
 
-Audit lấy từ principal; startup/bảo trì dùng system=0, không NULL. Request không nhận audit/actor/tenant đáng tin. Entity có version đúng model, stale trả 409. [Audit](AUDIT_VA_SYSTEM.md), [baseline](SCHEMA_VA_PHAN_QUYEN.md#baseline-theo-cụm-bảng) và @JdbcTable/@JdbcIndex giữ ràng buộc DB. Khi thay schema, thêm bước mới và snapshot/checksum phù hợp, không sửa file đã áp dụng.
+Page dùng @Controller trong controller; API @RestController trong controller/api. Auth/business API kế thừa BaseController, trả ApiResult<T> qua execute; HTTP body thực là ApiResponse<T>. Lỗi trước controller dùng ApiExceptionMapper/GlobalExceptionHandler để giữ status, locale và traceId. Service gọi UserPrincipal.current/requireCurrent đúng ranh giới đã duyệt; không truyền principal giả vào helper ghi dữ liệu.
 
-## API, locale, bảo mật và UI
+## Hợp đồng API
 
-API trả ApiResult<T>, extends BaseController, dùng execute/try-catch; body là ApiResponse<T>. ApiExceptionMapper dùng chung với GlobalExceptionHandler cho lỗi trước controller; giữ HTTP status, locale, traceId và lỗi đã lọc. Mọi API có @Operation; request/response có @Schema, đủ path/query/header/body và pagination kế thừa. Thêm message key vào cả vi/en. Lỗi nghiệp vụ dùng BusinessException(ErrorCode,args).
+Envelope có success/code/messageKey/message/data/errors/timestamp/path/traceId/locale. Không dùng HTTP200 chứa cờ lỗi để thay status. BusinessException(ErrorCode,args), key thông báo có đủ vi/en; lỗi không phản chiếu password, SQL hoặc stack trace. Chọn ngôn ngữ bằng lang, rồi X-Locale, theo SupportedLocaleResolver.
 
-WAR có root/servlet context riêng, @EnableMethodSecurity ở SecurityConfig và WebConfig. EndpointAccess kiểm trước handler; service kiểm principal/context/nghiệp vụ và transaction; SQL kiểm scope/owner/parent/driver. Menu ẩn không thay bảo vệ URL/API; regression quyền dựng hai context và nhập URL trực tiếp. Không cache authority hoặc bypass lúc DB lỗi; all_scopes phải thuộc chính role cấp endpoint.
+| Status thường gặp | Ý nghĩa cần trình bày |
+|---|---|
+| 400 | Request/quan hệ field sai; sửa field và chủ động gửi lại |
+| 401 | Chưa xác thực hoặc phiên không hợp lệ |
+| 403 | Thiếu grant, CSRF hoặc quyền phù hợp; đọc code/messageKey để phân biệt |
+| 404 | Không tồn tại hoặc ngoài scope/owner nhằm tránh lộ dữ liệu |
+| 409 | Stale version, xung đột trạng thái, mã hoặc requestKey |
+| 413/429/503 | Body quá lớn, giới hạn đồng thời hoặc tài nguyên tạm không sẵn sàng |
 
-Spring Security/Nimbus JWT/BCrypt, CSRF cho cookie mutation, không localStorage token. RequestGuardFilter giữ JSON 64 KiB và tối đa hai BCrypt đồng thời; khóa đăng nhập sai vẫn hoạt động. Không phục hồi GPS/upload/mail/job/metrics/online khi chưa có nghiệp vụ mới được yêu cầu. [UI](../03-giao-dien/QUY_UOC_UI.md) dùng tab/modal chung, server paging, ARIA/focus, giữ draft/lỗi trong modal và không tự gửi lại mutation.
+Mỗi API có @Operation; field Request/DTO/Search có @Schema và validation theo operation. Principal/HttpServletRequest là server-injected, không là query/body. Paging page từ 0, size tối đa 100; count/page phải lọc cùng scope, sort/identifier whitelist phía server. Dữ liệu bind PreparedStatement, không nối giá trị client vào SQL. Swagger/OpenAPI lấy từ MVC; inventory quyền cũng lấy MVC nhưng không dùng JSON Swagger làm nguồn cấp grant.
 
-Common có 61 file: jdbc chín file cho connection/transaction/schema/metadata/dialect, gồm cấu hình Oracle 26ai; BaseRepository trong common.base; DatabaseInitializer/MigrationCatalog trong common.initializer. Chuẩn bị schema/history là helper private của DatabaseInitializer, không tách lớp chỉ cho một caller. Chi tiết [cấu trúc common](CONSTANTS_VA_CAU_TRUC_WEB.md).
+Đọc payload chi tiết tại API source của khối mình hoặc Swagger đúng bản đang chạy. Trạng thái yêu cầu Swagger chỉ quản trị nằm tại [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md); không hứa bản chưa merge đã được triển khai.
 
-## Đặt tên và format source
+## JPA và JDBC chung transaction
 
-Không var/record production, import tường minh, không wildcard hoặc fully qualified class name trong code. Tên DTO viết hoa DTO; package nhiều từ dùng dấu gạch dưới khi cần. Class dưới 1000 dòng; không chuyển chức năng sang common chỉ để giấu số file. Comment/Javadoc tiếng Việt giải thích luồng, method service và transaction. Method reference cho callback chỉ chuyển tiếp nguyên invocation.
+JpaConfig dùng JpaTransactionManager, SharedEntityManagerCreator và TransactionAwareDataSourceProxy. JdbcTransactions.execute tham gia transaction hiện tại hoặc tạo transaction qua manager; JPA saveAndFlush và JDBC mapping/history cùng rollback. Repo không bật autocommit hoặc commit connection riêng. Sau SQL atomic đổi version, refresh entity đang managed trước save tiếp.
 
-Bốn spaces, mỗi statement/annotation riêng dòng, dòng trống giữa field/method/khối. npm ci → npm run format → format:check; chạy check:rules/check:docs và test phù hợp. Stage file mới trước checker đọc Git. Không sửa rule/formatter để xanh, không format SQL đã áp dụng. Node/formatter chỉ phát triển, không thêm vào production Docker.
+SQL dài dùng text block, format SELECT/FROM/JOIN/WHERE/CTE/CASE/khóa/paging rõ ràng. Loop tính dữ liệu đã tải, bind addBatch hoặc lặp tập enum hữu hạn để dựng SQL whitelist là hợp lệ; tránh loop query/save theo từng bản ghi. Khóa nghiệp vụ theo trip → booking → segments; không gọi provider mạng khi giữ khóa. Lỗi history nghiệp vụ phải rollback mutation; journal là cơ chế ghi riêng có thể thất bại mà nghiệp vụ vẫn thành công.
 
-## Git và bàn giao
+Connection bắt đầu transaction trước SET LOCAL search_path; schema validated, pg_temp cuối, không fallback public/$user hoặc session state qua pooler. Hibernate không tự DDL, không OSIV. @JdbcTable/@JdbcIndex kiểm metadata theo schema connection, không tự sinh index.
 
-Mỗi thành viên dùng <member>/<task> từ dev theo [phân công](../05-ke-hoach/PHAN_CONG.md), PR/check/review → dev, không commit trực tiếp dev/main. Chỉ phát hành dev → main/build production/deploy khi có lệnh mới. Commit/merge/PR tiếng Việt có dấu, nêu thay đổi/lý do/kết quả/giới hạn; không đổi lịch sử tác giả.
+## Entity, audit và thời gian
 
-Test Java trong src/test/java, fixture src/test/resources; production -Pproduction chỉ đóng src/main, không compile/test/đóng gói fixture. .env gốc được phép theo dõi Git, .env.example chỉ placeholder; không đưa secret vào chat/docs/log/image/file khác. Local launcher chủ động đọc file, OS/IDE ưu tiên; WAR/Render chỉ nhận env, test/build không tự đọc .env hoặc ghi Neon. Đọc [AI và bàn giao](../06-ai-va-ban-giao/AI_VA_BAN_GIAO.md) trước mỗi phiên; trạng thái/bằng chứng chỉ ghi [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
+Entity đủ @Id/@Column/@Version/@Index theo migration, không schema cứng. Mỗi field có chú thích tiếng Việt: ngắn dùng //, giải thích dài dùng Javadoc. Generated column chỉ đọc, projection @Transient; DTO không phải entity. Thời gian nghiệp vụ/audit dùng Instant/TIMESTAMPTZ; Timestamp JDBC chỉ chuyển tại repo. Ngày tìm chuyến/báo cáo hiểu theo Asia/Ho_Chi_Minh, không mặc định timezone của browser.
+
+| Thao tác | Actor audit |
+|---|---|
+| Startup/seed/bảo trì, bộ đếm sai password | SystemActor.ID=0, username system |
+| CRUD/gán quyền/đơn/tiền/tiến độ | ID principal đã xác thực, kiểm endpoint/scope |
+| Đổi password/logout | ID tài khoản đã xác thực |
+| Journal | Actor kỹ thuật0; request_user_id riêng từ xác thực server |
+
+System inactive/không role/không JWT; không dùng NULL hoặc hardcode ID admin. Giữ created_at/created_by khi update; updated_* và version từ server, không tin audit client. AccessChangeRepo chỉ append whitelist state cùng mutation; không có màn/API auth history.
+
+Locale mặc định luôn vi, kể cả browser gửi Accept-Language tiếng Anh; chỉ đổi qua ?lang=en hoặc X-Locale: en. Chọn query ưu tiên header; locale tường minh không hỗ trợ trả400.
+
+## Cấu trúc common và quy trình kiểm
+
+RootConfig/WebApplicationInitializer ở gốc config; config con theo application/database/web. DatabaseInitializer/MigrationCatalog ở initializer; BaseRepository ở base, không alias JDBC cũ. common.web chỉ controller/response/filter/locale/advice/openapi/routing; journal ở api_journal. Không BaseRequest/BaseResponse rỗng hoặc khôi phục job/mail/media/metrics/GPS.
+
+Import tường minh, không wildcard/FQCN trong code. Comment/Javadoc luồng và transaction bằng tiếng Việt; lambda chỉ chuyển tiếp invocation nguyên vẹn dùng method reference. Formatter khóa trong .idea/codeStyles/Project.xml và .editorconfig; không sửa rule để xanh.
+
+Sau thay đổi: npm ci → format → format:check → check:rules → check:docs → kiểm thử phù hợp → git diff --check. Stage file mới sau review để checker đọc Git thấy đủ. H2 cho phần portable; PostgreSQL test loopback riêng cho array/JSONB/lock/index/FK/migration, không dùng .env/DB thật. Lệnh cụ thể và chuẩn bị demo tại [demo–hỏi đáp](../05-ke-hoach/DEMO_VA_HOI_DAP.md#kiểm-tra-trước-buổi-demo). Git/PR theo [CONTRIBUTING](../../CONTRIBUTING.md).

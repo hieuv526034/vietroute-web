@@ -21,9 +21,7 @@
         capability = { targets: [] },
         requestKey = null,
         moneyKey = null,
-        quoteReady = false,
-        tripPage = 0,
-        tripHasNext = false;
+        quoteReady = false;
     const createModal = window.VietRouteUI.modal('booking-create-dialog', { busy: () => busy }),
         detailModal = window.VietRouteUI.modal('booking-detail-dialog', { busy: () => busy }),
         tabs = window.VietRouteUI.tabs(node('booking-tabs'));
@@ -68,10 +66,6 @@
         if (node('booking-create')) {
             node('booking-create').hidden = !can('POST');
             node('booking-create').disabled = busy || !can('POST');
-            node('booking-trip-prev').disabled = busy || tripPage === 0;
-            node('booking-trip-next').disabled = busy || !tripHasNext;
-            node('booking-trip-prev').hidden = tripPage === 0 && !tripHasNext;
-            node('booking-trip-next').hidden = tripPage === 0 && !tripHasNext;
         }
         node('booking-submit').disabled = busy || !can('POST') || !quoteReady;
         node('booking-confirm').hidden = customer || !writable() || selected.status !== 'PENDING';
@@ -159,25 +153,14 @@
         if (!page.content.length) empty(labels.empty);
         pager.update(page);
     };
-    const findTrips = async (page = 0) => {
-        const result = (
-                await api.get(`${path}/trips`, {
-                    params: { query: node('booking-trip-query').value.trim(), page, size: 10 },
-                    timeout: 10000,
-                })
-            ).data.data,
-            current = form.elements.tripId.selectedOptions[0],
-            options = result.content.map((item) =>
-                option(item.id, `${item.code} · ${item.carrierName} · ${date(item.departureAt)}`),
-            );
-        if (current?.value && !result.content.some((item) => String(item.id) === current.value))
-            options.unshift(option(current.value, current.textContent));
-        form.elements.tripId.replaceChildren(option('', labels.choose), ...options);
-        if (current?.value) form.elements.tripId.value = current.value;
-        tripPage = result.page;
-        tripHasNext = result.hasNext;
-        const count = node('booking-trip-count');
-        count.textContent = tables.lookupSummary(result, count.dataset.summary, count.dataset.empty);
+    const findTrips = async () => {
+        const items = await tables.readOptions(
+            async (paging) => (await api.get(`${path}/trips`, { params: paging, timeout: 10000 })).data.data,
+        );
+        form.elements.tripId.replaceChildren(
+            option('', labels.choose),
+            ...items.map((item) => option(item.id, `${item.code} · ${item.carrierName} · ${date(item.departureAt)}`)),
+        );
     };
     const quote = async () => {
         quoteReady = false;
@@ -375,15 +358,6 @@
     node('booking-quote-refresh').addEventListener('click', () => perform(quote));
     if (!customer) {
         node('booking-create').addEventListener('click', (event) => perform(() => openCreate(event.currentTarget)));
-        node('booking-trip-search').addEventListener('click', () => perform(() => findTrips()));
-        node('booking-trip-prev').addEventListener('click', () => perform(() => findTrips(tripPage - 1)));
-        node('booking-trip-next').addEventListener('click', () => perform(() => findTrips(tripPage + 1)));
-        node('booking-trip-query').addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                void perform(() => findTrips());
-            }
-        });
     }
     search.addEventListener('submit', (event) => {
         event.preventDefault();

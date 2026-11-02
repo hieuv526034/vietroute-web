@@ -1,6 +1,55 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { pageWindow, boundedPage, lookupSummary, readPage } = require('../../../main/webapp/assets/js/table.js');
+const { pageWindow, boundedPage, lookupSummary, readPage, readOptions, pager } = require('../../../main/webapp/assets/js/table.js');
+
+test('Bảng rỗng không hiện pager; một trang ẩn điều hướng và nhiều trang mở lại', () => {
+    const previousDocument = global.document;
+    const nodes = new Map();
+    const element = () => ({
+        value: '10', dataset: {}, parentElement: { classList: { toggle() {} } },
+        addEventListener() {}, setCustomValidity() {}, setAttribute() {}, append() {}, before() {},
+    });
+    const root = {
+        dataset: { summary: '{start}–{end}/{total}', pageLabel: 'Page {page}' },
+        querySelector(selector) {
+            if (!nodes.has(selector)) nodes.set(selector, element());
+            return nodes.get(selector);
+        },
+        querySelectorAll() { return []; },
+    };
+    global.document = { getElementById: () => root, createElement: element };
+    try {
+        const control = pager('sample', { onChange() {} });
+        assert.equal(root.hidden, true);
+        control.update({ page: 0, size: 10, totalPages: 1, totalElements: 4 });
+        assert.equal(root.hidden, false);
+        assert.equal(root.dataset.singlePage, 'true');
+        control.update({ page: 0, size: 10, totalPages: 2, totalElements: 14 });
+        assert.equal(root.dataset.singlePage, 'false');
+        control.update({ page: 0, size: 10, totalPages: 0, totalElements: 0 });
+        assert.equal(root.hidden, true);
+    } finally {
+        global.document = previousDocument;
+    }
+});
+
+test('Select danh mục tải đủ trang sau, gộp ID trùng và không tự thử lại khi lỗi', async () => {
+    const calls = [];
+    const items = await readOptions(async (query) => {
+        calls.push(query);
+        return query.page === 0
+            ? { content: [{ id: 1 }, { id: 2 }], hasNext: true }
+            : { content: [{ id: 2 }, { id: 3 }], hasNext: false };
+    });
+    assert.deepEqual(calls, [{ page: 0, size: 100 }, { page: 1, size: 100 }]);
+    assert.deepEqual(items.map((item) => item.id), [1, 2, 3]);
+    let attempts = 0;
+    await assert.rejects(readOptions(async () => {
+        if (++attempts === 2) throw new Error('offline');
+        return { content: [{ id: 1 }], hasNext: true };
+    }));
+    assert.equal(attempts, 2);
+});
 
 test('Nhãn bộ chọn dùng tổng từ server, dịch đúng trang và không hiển thị trang 0/0 khi rỗng', () => {
     const vi = '{total} kết quả · Trang {page}/{pages}';

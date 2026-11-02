@@ -164,6 +164,28 @@
       "longitude": 107.08,
       "sortOrder": 210,
       "active": true
+    },
+    {
+      "code": "DLGHAIPHONG",
+      "provinceCode": "HAIPHONG",
+      "nameVi": "Điểm đón Duy Long Hải Phòng",
+      "nameEn": "Duy Long Hai Phong pickup point",
+      "address": "Hải Phòng — điểm đầu và cuối vòng khứ hồi Duy Long",
+      "latitude": 20.861,
+      "longitude": 106.684,
+      "sortOrder": 220,
+      "active": true
+    },
+    {
+      "code": "DLGHANOI",
+      "provinceCode": "HANOI",
+      "nameVi": "Điểm đón Duy Long Hà Nội",
+      "nameEn": "Duy Long Hanoi pickup point",
+      "address": "Hà Nội — điểm quay đầu vòng khứ hồi Duy Long",
+      "latitude": 21.028,
+      "longitude": 105.834,
+      "sortOrder": 230,
+      "active": true
     }
   ],
   "carriers": [
@@ -193,6 +215,13 @@
       "name": "VietRoute Đông Bắc",
       "phone": "0203 0000 6601",
       "description": "VietRoute Đông Bắc: tiếp nhận đặt chỗ qua website và tổng đài, phục vụ tuyến liên tỉnh theo lịch công bố. Đội xe ghế ngồi, giường nằm và limousine.",
+      "active": true
+    },
+    {
+      "code": "DUYLONG",
+      "name": "Nhà xe Duy Long",
+      "phone": "0225 000 1600",
+      "description": "Nhà xe Duy Long tại Hải Phòng, khai thác xe 16 chỗ tuyến Hải Phòng – Hà Nội hai vòng khứ hồi mỗi ngày. Đi sáng 05:00–09:00, về 09:30–11:30; đi chiều 12:00–15:00, về 15:30–17:30. Tài xế Phạm Thành Lương. Có mặt trước giờ khởi hành 20 phút; tiếp nhận yêu cầu trên website và qua điều hành.",
       "active": true
     }
   ],
@@ -356,6 +385,14 @@
       "plateNumber": "14F-305.04",
       "capacity": 34,
       "active": true
+    },
+    {
+      "carrierCode": "DUYLONG",
+      "code": "DLG16",
+      "plateNumber": "15B-000.16",
+      "capacity": 16,
+      "active": true,
+      "typeCode": "SEAT"
     }
   ],
   "drivers": [
@@ -497,6 +534,13 @@
       "carrierCode": "VRDONGBAC",
       "name": "Mai Đức Hòa",
       "phone": "028 0000 3024",
+      "active": true
+    },
+    {
+      "carrierCode": "DUYLONG",
+      "code": "DLGLUONG",
+      "name": "Phạm Thành Lương",
+      "phone": "0225 000 1616",
       "active": true
     }
   ],
@@ -1415,6 +1459,146 @@
           "dropoff": true
         }
       ]
+    },
+    {
+      "carrierCode": "DUYLONG",
+      "code": "DLGHPHNSANG",
+      "nameVi": "Duy Long · Hải Phòng → Hà Nội · sáng",
+      "nameEn": "Duy Long · Hai Phong to Hanoi morning",
+      "vehicleCode": "DLG16",
+      "driverCode": "DLGLUONG",
+      "driverUsername": "driverduylong",
+      "intervalDays": 1,
+      "slot": 25,
+      "departureTime": "05:00",
+      "pastDays": 7,
+      "futureDays": 30,
+      "codePrefix": "DLG1",
+      "stops": [
+        {
+          "locationCode": "DLGHAIPHONG",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "DLGHANOI",
+          "stopOrder": 2,
+          "arrival": 240,
+          "departure": 240,
+          "fare": 180000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "DUYLONG",
+      "code": "DLGHNHPSANG",
+      "nameVi": "Duy Long · Hà Nội → Hải Phòng · sáng",
+      "nameEn": "Duy Long · Hanoi to Hai Phong morning",
+      "vehicleCode": "DLG16",
+      "driverCode": "DLGLUONG",
+      "driverUsername": "driverduylong",
+      "intervalDays": 1,
+      "slot": 26,
+      "departureTime": "09:30",
+      "pastDays": 7,
+      "futureDays": 30,
+      "codePrefix": "DLG1",
+      "stops": [
+        {
+          "locationCode": "DLGHANOI",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "DLGHAIPHONG",
+          "stopOrder": 2,
+          "arrival": 120,
+          "departure": 120,
+          "fare": 180000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "DUYLONG",
+      "code": "DLGHPHNCHIEU",
+      "nameVi": "Duy Long · Hải Phòng → Hà Nội · chiều",
+      "nameEn": "Duy Long · Hai Phong to Hanoi afternoon",
+      "vehicleCode": "DLG16",
+      "driverCode": "DLGLUONG",
+      "driverUsername": "driverduylong",
+      "intervalDays": 1,
+      "slot": 27,
+      "departureTime": "12:00",
+      "pastDays": 7,
+      "futureDays": 30,
+      "codePrefix": "DLG1",
+      "stops": [
+        {
+          "locationCode": "DLGHAIPHONG",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "DLGHANOI",
+          "stopOrder": 2,
+          "arrival": 180,
+          "departure": 180,
+          "fare": 180000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
+    },
+    {
+      "carrierCode": "DUYLONG",
+      "code": "DLGHNHPCHIEU",
+      "nameVi": "Duy Long · Hà Nội → Hải Phòng · chiều",
+      "nameEn": "Duy Long · Hanoi to Hai Phong afternoon",
+      "vehicleCode": "DLG16",
+      "driverCode": "DLGLUONG",
+      "driverUsername": "driverduylong",
+      "intervalDays": 1,
+      "slot": 28,
+      "departureTime": "15:30",
+      "pastDays": 7,
+      "futureDays": 30,
+      "codePrefix": "DLG1",
+      "stops": [
+        {
+          "locationCode": "DLGHANOI",
+          "stopOrder": 1,
+          "arrival": 0,
+          "departure": 0,
+          "fare": 0,
+          "pickup": true,
+          "dropoff": false
+        },
+        {
+          "locationCode": "DLGHAIPHONG",
+          "stopOrder": 2,
+          "arrival": 120,
+          "departure": 120,
+          "fare": 180000,
+          "pickup": false,
+          "dropoff": true
+        }
+      ]
     }
   ],
   "profile": {
@@ -1425,7 +1609,21 @@
   },
   "provenance": {
     "kind": "PROJECT_GENERATED",
-    "description": "Giả lập vận hành: tên, nhân sự, địa chỉ, liên hệ và lịch chạy do dự án tạo; không xác nhận đơn vị/giá/lịch ngoài thực tế. Không dùng để nhận khách thật."
+    "description": "Giả lập vận hành: tên, nhân sự, địa chỉ, liên hệ và lịch chạy do dự án tạo; không xác nhận đơn vị/giá/lịch ngoài thực tế. Không dùng để nhận khách thật.",
+    "duyLong": {
+      "providedByOwner": [
+        "Tên Nhà xe Duy Long, Hải Phòng",
+        "Xe 16 chỗ; tài xế Phạm Thành Lương",
+        "Bốn lượt/ngày và các khung giờ đi, chiều về 15:30–17:30"
+      ],
+      "projectAssumptions": [
+        "Lượt về sáng 09:30–11:30, có 30 phút quay đầu giữa các lượt",
+        "Giá cấu hình 180.000 VND/chỗ/một lượt",
+        "Biển số, điện thoại, điểm đón và tọa độ là giả lập, không xác nhận thông tin liên hệ hay điểm kinh doanh thực",
+        "Hai chiều có bốn mẫu lịch do thời lượng sáng/chiều khác nhau; một xe/tài xế không chồng chuyến",
+        "Ngày neo theo created_at của nhà xe, không dịch lịch hoặc phục hồi dữ liệu đã sửa khi restart"
+      ]
+    }
   },
   "contacts": [
     {
@@ -1489,6 +1687,7 @@
     "custom09",
     "custom10",
     "custom11",
-    "custom12"
+    "custom12",
+    "customduylong"
   ]
 }

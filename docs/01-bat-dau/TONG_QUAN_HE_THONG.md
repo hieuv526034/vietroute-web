@@ -1,35 +1,82 @@
-# Tổng quan VietRoute cho thành viên mới
+# Tổng quan VietRoute
 
-## Hệ thống hiện hành
+Đọc trong khoảng 10 phút trước khi vào [phần thành viên](../05-ke-hoach/PHAN_CONG.md) và [demo, hỏi–đáp](../05-ke-hoach/DEMO_VA_HOI_DAP.md). Mốc phát hành thật và phần đang chờ nằm tại [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
 
-Java 17+, Spring MVC 6/Security, Thymeleaf, PostgreSQL, JPA/Hibernate và JDBC; đóng WAR cho Tomcat 10.1, không Spring Boot. Auth quản lý tài khoản/role/function/endpoint và scope; business gồm danh mục, địa điểm, nhà xe/xe/tài xế, tuyến, chuyến, đặt chỗ, báo cáo và tiến độ chuyến theo mốc tài xế.
+## Bài toán và phạm vi
 
-Auth có 40 file Java/tám bảng; business 121 file/14 bảng; common 61 file/chỉ một bảng nhật ký, gồm cấu hình JDBC Oracle 26ai theo ORACLECFG01. Cộng history là 24 bảng. PostgreSQL chạy ứng dụng hiện hành; Oracle chưa có migration/query nghiệp vụ. Thống kê source không tự xác nhận đã merge main/đưa production.
+VietRoute là web quản lý nhà xe và đặt chỗ xe khách theo **chặng**. Điều hành chuẩn bị tuyến/chuyến, tiếp nhận yêu cầu đặt chỗ và ghi tiền thực thu/hoàn; tài xế xác nhận mốc đến/rời điểm; khách tìm chuyến và xem đơn của mình; quản trị cấp tài khoản/quyền. Chưa đánh số ghế cố định.
 
-## Tìm code ở đâu
+```mermaid
+flowchart LR
+    C[Danh mục và địa điểm] --> A[Nhà xe, xe, tài xế]
+    A --> R[Tuyến và điểm dừng]
+    R --> T[Chuyến và snapshot]
+    T --> S[Khách tìm chặng]
+    S --> P[Đơn PENDING]
+    P --> B[Điều hành xác nhận, giữ chỗ]
+    B --> M[Ghi thu hoặc hoàn]
+    B --> D[Tài xế xác nhận tiến độ]
+    M --> Q[Báo cáo theo phạm vi]
+    D --> Q
+```
 
-| Package | Trách nhiệm |
+Không có GPS/app mobile, email/reset mật khẩu qua thư, upload/avatar/logo, job/Redis/metrics hoặc cổng thanh toán. Địa điểm có tọa độ tĩnh và link Maps; đó không phải vị trí xe hoặc ETA trực tiếp. Dữ liệu nền do dự án giả lập, không phải lịch vận tải thương mại đã được xác minh.
+
+## Công nghệ và trách nhiệm
+
+| Thành phần | Dùng trong dự án |
 |---|---|
-| auth | Entity/repo/service/controller/API/DTO/security/bootstrap tài khoản và quyền |
-| business/catalog, carrier | Danh mục/tỉnh/địa điểm; nhà xe/xe/tài xế |
-| business/trip, booking | Tuyến/chuyến/tìm chuyến/tồn chỗ; đặt chỗ/thu-hoàn |
-| business/report | Báo cáo và dashboard; không có bảng riêng |
-| business/bootstrap | Khởi tạo nền opt-in, initializer riêng ngang service |
-| common/config, initializer, jdbc | Cấu hình MVC/JPA/DB, startup migration và transaction/schema |
-| common/base, validation, constant, exception | Hợp đồng và quy tắc dùng chung |
-| common/web | Layout/menu/locale, trace/HTTP guard, Swagger, response/lỗi |
-| common/api_journal | User/request/thời gian/snapshot đã lọc; cURL/Postman trên giao diện |
+| Java | Target17, phát triển bằng JDK21; Maven Wrapper, WAR/Tomcat10.1 |
+| Spring MVC6 và Thymeleaf | Controller/page và REST, render HTML tại server; không Spring Boot |
+| Spring Security, Nimbus JWT, BCrypt | Xác thực và bảo vệ request; grant endpoint lấy từ DB |
+| Spring Data JPA/Hibernate | CRUD và entity; không tự tạo schema hoặc OSIV |
+| JDBC | Batch, SQL phức tạp, khóa/CAS; cùng transaction với JPA |
+| PostgreSQL | DB đang chạy; baseline 8 SQL, array/JSONB/advisory lock/pg_trgm |
+| Oracle26ai | Có driver/profile chuẩn bị, runtime còn bị chặn; chưa chuyển SQL hoặc kiểm nghiệp vụ thật |
+| Bootstrap/CSS/JavaScript | UI tab/modal, validation và paging server; Node chỉ phục vụ phát triển/CI |
 
-Không còn common.job/mail/media/monitoring/traffic, provider gửi thư/upload, Redis hay collector metrics. Hồ sơ user chỉ sửa tên hiển thị; không avatar/logo/photo. GPS01 đã bỏ phần vị trí thiết bị; vẫn giữ scope/owner và tiến độ đến/rời điểm.
+Phiên bản chính xác đọc [pom.xml](../../pom.xml) và [package.json](../../package.json); không duy trì bảng version thứ hai dễ lỗi thời.
 
-## Khởi động và request
+## Bản đồ source và dữ liệu
 
-Theo [chạy local](CHAY_LOCAL.md); production nhận env, không tự đọc `.env`. Migration chỉ chạy startup theo cờ, không chạy lúc Maven đóng gói. Database mới dùng 8 SQL theo auth/catalog/carrier/trip/booking/common/foundation, chỉ tạo bảng hiện hành. Database khác baseline cần bảo trì history có kiểm cấu trúc trước khi dùng source mới. [Schema/quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md) mô tả phụ thuộc, backup và giới hạn nâng cấp.
+| Khối | File Java | Bảng | Trách nhiệm |
+|---|---:|---:|---|
+| auth | 40 | 8 | User/role/function/menu/API, scope, lifecycle và history |
+| business/catalog | 25 | 3 | Danh mục, tỉnh/thành, địa điểm |
+| business/carrier | 23 | 3 | Nhà xe, xe, hồ sơ tài xế |
+| business/trip | 42 | 6 | Tuyến/chuyến, snapshot, chặng, tiến độ và tìm chuyến |
+| business/booking | 15 | 2 | Đơn và sự kiện trạng thái/thu–hoàn |
+| business/report | 10 | 0 | Báo cáo và dashboard đọc dữ liệu nghiệp vụ |
+| business/bootstrap | 6 | 0 | Khởi tạo nền có cờ bật rõ ràng |
+| common | 61 | 1 | Nền MVC/DB, response/lỗi và api_request_journal |
+| History migration | — | 1 | vietroute_schema_history |
 
-Request qua encoding/trace, nhật ký, HTTP body guard, CSRF/JWT rồi EndpointAccess từ snapshot DB trước handler. Controller → service nghiệp vụ/transaction → repo JPA hoặc JDBC; scope/owner được bind trong SQL. ApiResponses/ApiExceptionMapper tạo cùng envelope và lỗi locale/traceId. Giữ root/servlet context riêng, method security ở cả hai; menu không thay guard backend.
+Tổng 222 file Java trong ba khối chính,24 bảng gồm history. Xem tên bảng và quan hệ tại [schema](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md). Số file là mốc source, không phải bằng chứng một thành viên đã viết toàn bộ khối được phân công.
 
-## Transaction, log và mở rộng
+## Một request đi qua đâu
 
-CRUD JPA và JDBC batch/khóa nguyên tử dùng cùng transaction; history lỗi rollback mutation. Journal ghi trực tiếp PostgreSQL bằng pool riêng một connection/node, bounded snapshot/backoff; có thể bỏ trace khi DB/slot lỗi. Không có lịch sử RAM queue hoặc worker nền. Xem [luồng base](../02-phat-trien/LUONG_XU_LY_BASE.md), [cấu trúc common](../02-phat-trien/CONSTANTS_VA_CAU_TRUC_WEB.md), [nhật ký](../04-van-hanh/NHAT_KY_API_VA_DEBUG.md).
+```mermaid
+flowchart LR
+    U[Browser] --> F[Trace, journal, body guard]
+    F --> J[CSRF và JWT]
+    J --> E[EndpointAccess đọc grant DB]
+    E --> C[Controller và Request validation]
+    C --> S[Service và transaction]
+    S --> R[Repo: scope, owner, khóa, SQL/JPA]
+    R --> DB[(PostgreSQL)]
+    DB --> O[DTO và envelope hoặc lỗi có traceId]
+    O --> U
+```
 
-Khi thêm nghiệp vụ, theo module hiện hành, dùng một Request/tài nguyên và DTO class, Search trong dto/search. Query trong Repo, service giữ nghiệp vụ/transaction, constant tách riêng, initializer ngang service. Mỗi class dưới 1000 dòng, không record/var. Chỉ thêm lớp khi có trách nhiệm thật; chạy formatter và regression phù hợp. Quy trình nhánh thành viên → dev, chỉ main/release khi chủ dự án có lệnh mới.
+Menu giúp điều hướng; backend kiểm lại endpoint và SQL kiểm dữ liệu được thấy. Mỗi request private không phải chỉ một SELECT: có các lần đọc account/grant và kiểm nghiệp vụ. Không quảng bá số query hoặc tải thực tế chưa đo.
+
+## Từ luồng chung đến phần mỗi người
+
+| Người học | Mở phần của mình |
+|---|---|
+| hieuv526034 | [Auth, common, DB và deploy](../05-ke-hoach/PHAN_CONG.md#hieuv526034) |
+| anhhoang104 | [Danh mục, địa điểm và nhà xe](../05-ke-hoach/PHAN_CONG.md#anhhoang104) |
+| BangPhamIT | [Tuyến, chuyến và đặt chỗ](../05-ke-hoach/PHAN_CONG.md#bangphamit) |
+| hiencoi250404-design | [Báo cáo và dashboard](../05-ke-hoach/PHAN_CONG.md#hiencoi250404-design) |
+
+Mỗi người chịu trọn page/API/DTO/service/repo/entity/UI/test trong khối mình bảo trì. Học cả luồng trước/sau phần mình để bàn giao được bằng ID và trạng thái. Đóng góp đã làm phải đối chiếu commit/PR, không suy từ bảng phân công.

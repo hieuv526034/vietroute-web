@@ -44,24 +44,31 @@ import vn.vietroute.common.jdbc.JdbcTable;
 @SuperBuilder
 public class Driver extends BaseEntity {
 
+    // ID nhà xe sở hữu dữ liệu.
     @Column(name = "carrier_id", nullable = false)
     private long carrierId;
 
+    // ID phạm vi nhà xe để kiểm quyền trên dữ liệu.
     @Column(name = "scope_id", nullable = false)
     private long scopeId;
 
+    // Mã nghiệp vụ dùng để tra cứu và đối chiếu.
     @Column(name = "code", nullable = false, length = 40)
     private String code;
 
+    // Tên hiển thị.
     @Column(name = "name", nullable = false, length = 120)
     private String name;
 
+    // Số điện thoại liên hệ.
     @Column(name = "phone", nullable = false, length = 30)
     private String phone;
 
+    // ID tài khoản đăng nhập của tài xế; có thể chưa liên kết.
     @Column(name = "user_id")
     private Long userId;
 
+    // Trạng thái cho phép sử dụng bản ghi.
     @Column(name = "active", nullable = false)
     private boolean active;
 
