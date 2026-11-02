@@ -139,7 +139,7 @@ Không có quyền offline: private request đọc account/grants DB hiện hàn
 
 Đọc [luồng base](LUONG_XU_LY_BASE.md) trước khi thêm API. JPA CRUD auth và JDBC batch/history cùng JpaTransactionManager; không commit riêng trong repo, không query/save theo từng phần tử. Auth DTO là whitelist riêng; không yêu cầu kế thừa BaseDTO khi model hiện hành dùng class trực tiếp. Các module business JDBC đang có giữ base/repository của chúng.
 
-Swagger mô tả path/query/header/body, inherited pagination và generic envelope. @Operation có trên API, @Schema có trên field; principal/servlet là server-injected. HTTP 201 do execute chọn; lỗi vẫn status thực. Auth source inventory dùng /targets hoặc /resources, không lấy từ OpenAPI như nguồn cấp quyền.
+Swagger mô tả path/query/header/body, inherited pagination và generic envelope. /docs và /v3/api-docs cần grant riêng trong bộ quyền quản trị; không cho truy cập công khai hoặc bỏ JWT. @Operation có trên API, @Schema có trên field; principal/servlet là server-injected. HTTP 201 do execute chọn; lỗi vẫn status thực. Auth source inventory dùng /targets hoặc /resources, không lấy từ OpenAPI như nguồn cấp quyền.
 
 Maven/test không tự đọc `.env`, không migration Neon. Init/sync theo cờ chỉ ở runtime; [chạy local](../01-bat-dau/CHAY_LOCAL.md) mô tả OS/IDE → file launcher → default properties. `.env` gốc được theo dõi Git theo yêu cầu, không đưa giá trị vào docs/log/WAR/image. H2 kiểm phần portable, PostgreSQL riêng kiểm dialect/migration/FK/batch và hai context. Bằng chứng kết quả/giới hạn nằm tại tiến độ; code local không đồng nghĩa đã lên dev/main/Render.
 
@@ -265,7 +265,7 @@ GET `/api/v1/carriers` công khai nhận query/page/size; count/trang trong SQL,
 
 Logo được lấy từ FK server sau kiểm công bố, dùng MediaService đọc URL READY theo lô tối đa 100 ID trên cùng connection, không gọi CDN/N+1 hoặc trả provider ID/metadata thư viện. Ảnh không READY không công bố URL. Trang `/carriers` có tìm/phân trang, modal liên hệ và link `/journeys?carrierId=...`; URL chỉ là bộ lọc, không là quyền/scope.
 
-GET `/api/v1/trips` thêm minPrice/maxPrice nullable: giá một chỗ VND trên đúng cặp điểm, gồm hai cận, không âm, tối đa 10 chữ số phần nguyên/2 thập phân và min≤max. Khoảng đảo trả 400/COM001 với field priceRangeValid, VAL015/validation.priceRange; OpenAPI gồm cả from/to, date/seats/carrierId/vehicleTypeId/minPrice/maxPrice/page/size kế thừa. Picker nhà xe dùng public projection trên; loại xe dùng catalog lookup active, đều có tìm/trang và giữ lựa chọn ngoài trang. Giá và count vẫn tính tại DB, không lọc sau phân trang ở JavaScript. Không migration hoặc ordinary role grant mới.
+GET `/api/v1/trips` thêm minPrice/maxPrice nullable: giá một chỗ VND trên đúng cặp điểm, gồm hai cận, không âm, tối đa 10 chữ số phần nguyên/2 thập phân và min≤max. Khoảng đảo trả 400/COM001 với field priceRangeValid, VAL015/validation.priceRange; OpenAPI gồm cả from/to, date/seats/carrierId/vehicleTypeId/minPrice/maxPrice/page/size kế thừa. Select nhà xe dùng public projection trên, loại xe dùng catalog lookup active. UI tải đủ các trang danh mục, chọn tỉnh mới gọi lookup địa điểm với provinceId; không đặt nút tìm/pager cạnh từng select. API vẫn giữ paging và validation hiện hành. Giá và count vẫn tính tại DB, không lọc sau phân trang ở JavaScript. Không migration hoặc ordinary role grant mới.
 
 ## Report: báo cáo vận hành
 

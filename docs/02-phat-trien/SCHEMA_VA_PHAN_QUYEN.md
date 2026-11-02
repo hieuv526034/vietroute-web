@@ -46,6 +46,8 @@ UserRole/RoleFunction/FunctionResource/AccountChallenge có id identity UNIQUE c
 
 ## Luồng xác thực và kiểm endpoint
 
+Tài liệu API là tài nguyên quản trị: `GET /docs` và `GET /v3/api-docs` không công khai, không bỏ qua JWT. Khi bật sync chủ động, bộ bootstrap ADMIN_CONSOLE nhận hai target qua inventory như endpoint private khác; CUSTOMER/DRIVER/OPERATOR mặc định không có grant. Không kiểm chuỗi ADMIN trong code. Menu Swagger lấy từ mapping DB; thu hồi grant chặn ngay cả URL trực tiếp. Swagger UI dùng cookie phiên đã đăng nhập; OpenAPI thiếu xác thực trả 401 JSON, trang /docs dẫn đến login.
+
 1. SecurityConfig tạo chain stateless. Cookie mutation cần CSRF; Bearer hợp lệ không phụ thuộc cookie. Public/self-service do WebRoutePolicy phân loại từ source, không nhận cờ DB hoặc header tự khai vai trò.
 2. UserService.login khóa dòng user, so BCrypt, lưu lần sai/khóa hoặc hoàn tất login trong transaction. Sai5 lần khóa 15 phút; lỗi được ném sau commit để bộ đếm không rollback. Login thành công trả JWT 30 phút, cookie HttpOnly/SameSite=Lax; Secure theo môi trường.
 3. JwtAuthenticationFilter kiểm HS256/issuer/audience/exp/iat/jti, rồi UserRepo.load đọc account/tokenVersion/targets từ DB. Role trong JWT chỉ mô tả, không là nguồn cấp quyền. Filter tạo principal danh tính chưa có target được duyệt.

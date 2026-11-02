@@ -1,5 +1,6 @@
 package vn.vietroute.auth.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import java.util.Locale;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -42,6 +43,7 @@ public class UserPageController {
     }
 
     @GetMapping(Routes.DOCS)
+    @Operation(summary = "Tài liệu API", description = "Swagger thuộc bộ quyền quản trị; cần grant GET /docs trong DB.")
     public String docs() {
         return "docs/swagger";
     }

@@ -163,7 +163,7 @@ class FoundationSecurityTest {
         var response = mvc.perform(get("/").param("lang", "vi").header("X-Locale", "en")).andReturn().getResponse();
         assertEquals("vi", response.getHeader("Content-Language"));
         assertTrue(response.getContentAsString(StandardCharsets.UTF_8).contains("Quản lý nhà xe"));
-        var invalid = mvc.perform(get("/v3/api-docs").param("lang", "fr")).andReturn().getResponse();
+        var invalid = mvc.perform(get("/").param("lang", "fr")).andReturn().getResponse();
         assertEquals(400, invalid.getStatus());
         assertEquals("COM003", json.readTree(invalid.getContentAsString()).get("code").asText());
     }

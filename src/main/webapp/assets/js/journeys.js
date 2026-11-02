@@ -19,21 +19,14 @@
         tabs = window.VietRouteUI.tabs(node('journey-tabs')),
         pager = tables.pager('journey', { busy: () => busy, onChange: (query) => perform(() => load(query)) });
     const pickers = Array.from(form.querySelectorAll('.journey-picker')).map((element) => ({
-        element,
         side: element.dataset.side,
-        kind: element.querySelector('[data-place-kind]'),
-        query: element.querySelector('[data-place-query]'),
+        province: element.querySelector('[data-place-province]'),
         select: element.querySelector('[data-place-select]'),
-        page: 0,
-        hasNext: false,
+        ready: false,
     }));
     const filters = Array.from(form.querySelectorAll('.journey-filter-picker')).map((element) => ({
-        element,
         kind: element.dataset.kind,
-        query: element.querySelector('[data-filter-query]'),
         select: element.querySelector('[data-filter-select]'),
-        page: 0,
-        hasNext: false,
     }));
     const text = (tag, value) => {
         const item = document.createElement(tag);
@@ -66,18 +59,7 @@
     };
     const sync = () => {
         node('journey-dialog-controls').disabled = busy;
-        for (const picker of pickers) {
-            picker.element.querySelector('[data-place-prev]').hidden = picker.page === 0 && !picker.hasNext;
-            picker.element.querySelector('[data-place-next]').hidden = picker.page === 0 && !picker.hasNext;
-            picker.element.querySelector('[data-place-prev]').disabled = busy || picker.page === 0;
-            picker.element.querySelector('[data-place-next]').disabled = busy || !picker.hasNext;
-        }
-        for (const filter of filters) {
-            filter.element.querySelector('[data-filter-prev]').hidden = filter.page === 0 && !filter.hasNext;
-            filter.element.querySelector('[data-filter-next]').hidden = filter.page === 0 && !filter.hasNext;
-            filter.element.querySelector('[data-filter-prev]').disabled = busy || filter.page === 0;
-            filter.element.querySelector('[data-filter-next]').disabled = busy || !filter.hasNext;
-        }
+        for (const picker of pickers) picker.select.disabled = busy || !picker.province.value || !picker.ready;
     };
     const perform = async (action) => {
         if (busy) return;
@@ -101,25 +83,18 @@
                 node('journey-dialog-title').focus();
         }
     };
-    const findPlaces = async (picker, page = 0) => {
-        const result = (
-                await api.get(picker.kind.value === 'LOCATION' ? '/api/v1/locations' : '/api/v1/provinces', {
-                    params: { query: picker.query.value.trim(), page, size: 10 },
-                    timeout: 10000,
-                })
-            ).data.data,
-            current = picker.select.selectedOptions[0],
-            options = result.content.map((item) =>
-                option(item.id, `${item.name}${item.provinceName ? ` · ${item.provinceName}` : ''}`),
-            );
-        if (current?.value && !result.content.some((item) => String(item.id) === current.value))
-            options.unshift(option(current.value, current.textContent));
-        picker.select.replaceChildren(option('', labels.choose), ...options);
-        if (current?.value) picker.select.value = current.value;
-        picker.page = result.page;
-        picker.hasNext = result.hasNext;
-        const count = picker.element.querySelector('[data-place-count]');
-        count.textContent = tables.lookupSummary(result, count.dataset.summary, count.dataset.empty);
+    // API vẫn phân trang ở DB; gom danh mục cho select, không đặt pager cạnh từng trường.
+    const choices = (path, params = {}) =>
+        tables.readOptions(
+            async (paging) => (await api.get(path, { params: { ...params, ...paging }, timeout: 10000 })).data.data,
+        );
+    const findPlaces = async (picker) => {
+        picker.ready = false;
+        picker.select.replaceChildren(option('', labels.all));
+        if (!picker.province.value) return;
+        const items = await choices('/api/v1/locations', { provinceId: picker.province.value });
+        picker.select.replaceChildren(option('', labels.all), ...items.map((item) => option(item.id, item.name)));
+        picker.ready = true;
     };
     const load = async (query = pager.query) => {
         if (!criteria) {
@@ -157,21 +132,10 @@
         if (!page.content.length) empty(labels.empty);
         pager.update(page);
     };
-    const findFilter = async (filter, page = 0) => {
+    const findFilter = async (filter) => {
         const path = filter.kind === 'CARRIER' ? '/api/v1/carriers' : '/api/v1/catalogs/VEHICLE_TYPE';
-        const result = (
-            await api.get(path, { params: { query: filter.query.value.trim(), page, size: 10 }, timeout: 10000 })
-        ).data.data;
-        const current = filter.select.selectedOptions[0],
-            options = result.content.map((item) => option(item.id, `${item.name} · ${item.code}`));
-        if (current?.value && !result.content.some((item) => String(item.id) === current.value))
-            options.unshift(option(current.value, current.textContent));
-        filter.select.replaceChildren(option('', labels.all), ...options);
-        if (current?.value) filter.select.value = current.value;
-        filter.page = result.page;
-        filter.hasNext = result.hasNext;
-        const count = filter.element.querySelector('[data-filter-count]');
-        count.textContent = tables.lookupSummary(result, count.dataset.summary, count.dataset.empty);
+        const items = await choices(path);
+        filter.select.replaceChildren(option('', labels.all), ...items.map((item) => option(item.id, item.name)));
     };
     const detail = () => {
         const item = selected,
@@ -241,50 +205,14 @@
         criteria = { date: form.elements.date.value, seats: form.elements.seats.value };
         for (const name of ['carrierId', 'vehicleTypeId', 'minPrice', 'maxPrice'])
             if (form.elements[name].value) criteria[name] = form.elements[name].value;
-        for (const picker of pickers)
-            criteria[picker.side + (picker.kind.value === 'LOCATION' ? 'LocationId' : 'ProvinceId')] =
-                picker.select.value;
+        for (const picker of pickers) {
+            criteria[picker.side + 'ProvinceId'] = picker.province.value;
+            if (picker.select.value) criteria[picker.side + 'LocationId'] = picker.select.value;
+        }
         void perform(() => load({ ...pager.query, page: 0 }));
     });
     for (const picker of pickers) {
-        picker.kind.addEventListener('change', () =>
-            perform(async () => {
-                picker.select.replaceChildren();
-                await findPlaces(picker);
-            }),
-        );
-        picker.element
-            .querySelector('[data-place-search]')
-            .addEventListener('click', () => perform(() => findPlaces(picker)));
-        picker.element
-            .querySelector('[data-place-prev]')
-            .addEventListener('click', () => perform(() => findPlaces(picker, picker.page - 1)));
-        picker.element
-            .querySelector('[data-place-next]')
-            .addEventListener('click', () => perform(() => findPlaces(picker, picker.page + 1)));
-        picker.query.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                void perform(() => findPlaces(picker));
-            }
-        });
-    }
-    for (const filter of filters) {
-        filter.element
-            .querySelector('[data-filter-search]')
-            .addEventListener('click', () => perform(() => findFilter(filter)));
-        filter.element
-            .querySelector('[data-filter-prev]')
-            .addEventListener('click', () => perform(() => findFilter(filter, filter.page - 1)));
-        filter.element
-            .querySelector('[data-filter-next]')
-            .addEventListener('click', () => perform(() => findFilter(filter, filter.page + 1)));
-        filter.query.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                void perform(() => findFilter(filter));
-            }
-        });
+        picker.province.addEventListener('change', () => perform(() => findPlaces(picker)));
     }
     node('journey-refresh').addEventListener('click', () =>
         perform(async () => {
@@ -304,10 +232,16 @@
                 .map((part) => [part.type, part.value]),
         );
         form.elements.date.value = `${parts.year}-${parts.month}-${parts.day}`;
-        await Promise.all([
-            ...pickers.map((picker) => findPlaces(picker)),
-            ...filters.map((filter) => findFilter(filter)),
-        ]);
+        const provinces = await choices('/api/v1/provinces');
+        for (const picker of pickers) {
+            picker.province.replaceChildren(
+                option('', labels.choose),
+                ...provinces.map((item) => option(item.id, item.name)),
+            );
+            picker.select.replaceChildren(option('', labels.all));
+            picker.ready = false;
+        }
+        await window.VietRouteRequests.allReads(filters.map(findFilter));
         const params = new URLSearchParams(location.search),
             carrierId = Number(params.get('carrierId'));
         if (Number.isSafeInteger(carrierId) && carrierId > 0) {
