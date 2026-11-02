@@ -57,7 +57,7 @@ done
 if sql 'UPDATE auth_users SET active=true WHERE id=0' >/dev/null 2>&1; then exit 1; fi
 if sql "INSERT INTO auth_user_roles(user_id,role_code) VALUES (0,'ADMIN')" >/dev/null 2>&1; then exit 1; fi
 if sql "UPDATE catalog_items SET created_by=NULL WHERE code='SEAT'" >/dev/null 2>&1; then exit 1; fi
-docker rm --force vietroute-auth-ci2 >/dev/null
+# Giữ cả hai node: kiểm sau restart và recovery phía dưới đều sử dụng node thứ hai.
 base=http://127.0.0.1:18080
 result="$work/response.json"
 csrf_token=''
@@ -107,9 +107,10 @@ source "$(dirname "${BASH_SOURCE[0]}")/verify-access-cost.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-business-load.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-admin-recovery.sh"
 sql "SELECT md5(password_hash) FROM auth_users WHERE username='admin'" > "$work/bootstrap-hash-before"
-docker restart vietroute-auth-ci >/dev/null
-curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors --retry-connrefused --max-time 5 http://127.0.0.1:18080/health >/dev/null
+docker restart vietroute-auth-ci vietroute-auth-ci2 >/dev/null
 for port in 18080 18081; do
+  curl --fail --silent --show-error --retry 40 --retry-delay 2 --retry-all-errors --retry-connrefused \
+    --max-time 5 "http://127.0.0.1:$port/health" >/dev/null
   CI_AUTH_PASSWORD="$admin_password" python3 src/test/resources/dev/auth-smoke.py "http://127.0.0.1:$port" --after-restart
 done
 sql "SELECT md5(password_hash) FROM auth_users WHERE username='admin'" > "$work/bootstrap-hash-after"
