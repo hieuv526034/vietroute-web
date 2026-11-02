@@ -59,9 +59,3 @@ Người hỗ trợ code trong repo cũng phải thực hiện quy trình này �
 Các check repository chỉ đọc file Git theo dõi; stage file mới sau khi review trước khi chạy. `check:rules` bổ sung kiểm tĩnh DTO/import/Date/FQN/Timestamp ở contract và điểm đọc AI; `check:docs` kiểm link nội bộ/ảnh/mục lục. Hai lệnh không thay thế formatter, kiểm nghiệp vụ hoặc review comment tiếng Việt. Xem [quy trình AI](../06-ai-va-ban-giao/AI_VA_BAN_GIAO.md) để thống nhất cách nạp quy tắc và bàn giao giữa các công cụ/máy.
 
 Tham khảo chính thức: [Project code style scheme](https://www.jetbrains.com/help/idea/configuring-code-style.html), [EditorConfig](https://www.jetbrains.com/help/idea/editorconfig.html), [Reformat và Actions on Save](https://www.jetbrains.com/help/idea/reformat-and-rearrange-code.html). Tên menu có thể khác giữa phiên bản IDE; project hiện giữ rule độc lập với phiên bản IDE cài trên máy.
-
-## Kiểm chứng đợt cấu hình
-
-`npm ci`, format/check và parse XML đạt; key Code Style và định dạng npm Run đã đối chiếu với class của IntelliJ cài trên máy. Thử formatter CLI trên fixture riêng dừng ở `No valid license found`, chưa xác nhận native reformat/Run trong IDE bằng thao tác UI. Không thay license/cài đặt IDE để vượt lỗi này. Chạy npm script trực tiếp vẫn hoạt động và cho kết quả format chuẩn của repository.
-
-Workflow **Development formatting** kiểm `npm run format:check` khi source/rule format thay đổi, chỉ đọc source và không tự commit. Job này tách khỏi Production Docker, không chạm DB và không khiến thay đổi docs/test/cấu hình IDE tự build/deploy Render; build filters production giữ nguyên.

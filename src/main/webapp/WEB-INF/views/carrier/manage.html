@@ -212,30 +212,6 @@
                                 class="form-select"
                                 required
                             ></select>
-
-                            <div
-                                id="fleet-carrier-picker"
-                                class="picker-search"
-                            >
-                                <input
-                                    id="fleet-carrier-query"
-                                    class="form-control"
-                                    maxlength="160"
-                                    th:attr="aria-label=#{ui.fleet.searchCarrier}"
-                                    th:placeholder="#{ui.fleet.searchCarrier}"
-                                />
-                                <button
-                                    id="fleet-carrier-search"
-                                    type="button"
-                                    class="button button-outline button-small"
-                                    th:text="#{ui.search}"
-                                ></button>
-                            </div>
-                            <p
-                                id="fleet-carrier-count"
-                                class="form-help"
-                                aria-live="polite"
-                            ></p>
                         </div>
                         <div th:if="${fleetKind != 'vehicles'}">
                             <label
@@ -306,26 +282,6 @@
                                 class="form-select"
                                 required
                             ></select>
-                            <div class="picker-search">
-                                <input
-                                    id="fleet-type-query"
-                                    class="form-control"
-                                    maxlength="160"
-                                    th:attr="aria-label=#{ui.fleet.searchType}"
-                                    th:placeholder="#{ui.fleet.searchType}"
-                                />
-                                <button
-                                    id="fleet-type-search"
-                                    type="button"
-                                    class="button button-outline button-small"
-                                    th:text="#{ui.search}"
-                                ></button>
-                            </div>
-                            <p
-                                id="fleet-type-count"
-                                class="form-help"
-                                aria-live="polite"
-                            ></p>
                         </div>
                         <div th:if="${fleetKind == 'vehicles'}">
                             <label

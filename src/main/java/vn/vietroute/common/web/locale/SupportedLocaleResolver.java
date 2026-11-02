@@ -2,13 +2,11 @@ package vn.vietroute.common.web.locale;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.List;
 import java.util.Locale;
-import org.springframework.http.HttpHeaders;
 import org.springframework.web.servlet.LocaleResolver;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 
-/** Locale cho API/UI: query → X-Locale → Accept-Language → tiếng Việt. */
+/** Locale cho API/UI: query → X-Locale → tiếng Việt; không tự đổi theo ngôn ngữ trình duyệt. */
 public class SupportedLocaleResolver implements LocaleResolver {
 
     public static final Locale DEFAULT = Locale.forLanguageTag("vi");
@@ -28,22 +26,11 @@ public class SupportedLocaleResolver implements LocaleResolver {
         if (explicit != null) {
             return supported(explicit) ? Locale.forLanguageTag(explicit) : DEFAULT;
         }
-        String accept = request.getHeader(HttpHeaders.ACCEPT_LANGUAGE);
-        if (accept != null) {
-            try {
-                Locale match = Locale.lookup(Locale.LanguageRange.parse(accept), List.of(DEFAULT, Locale.ENGLISH));
-                if (match != null) {
-                    return match;
-                }
-            } catch (IllegalArgumentException ignored) {
-                /* Header sai dùng mặc định, không lộ lỗi parser. */
-            }
-        }
         return DEFAULT;
     }
 
     @Override
     public void setLocale(HttpServletRequest request, HttpServletResponse response, Locale locale) {
-        throw new UnsupportedOperationException("Use lang, X-Locale or Accept-Language");
+        throw new UnsupportedOperationException("Use lang or X-Locale");
     }
 }

@@ -191,28 +191,6 @@
                                         ></th:block>
                                     </div>
                                 </section>
-                                <section
-                                    class="navigation-group"
-                                    th:classappend="${navigation.docs} ? 'is-current'"
-                                >
-                                    <h3>
-                                        <svg th:replace="~{fragments/layout :: icon('code')}"></svg>
-                                        <span th:text="#{ui.docs}"></span>
-                                    </h3>
-                                    <div class="navigation-group-links">
-                                        <a
-                                            th:href="@{/docs(lang=${currentLocale})}"
-                                            th:attr="aria-current=${navigation.docs} ? 'page' : null"
-                                        >
-                                            <svg th:replace="~{fragments/layout :: icon('code')}"></svg>
-                                            <span th:text="#{ui.nav.swagger}"></span>
-                                        </a>
-                                        <a th:href="@{/v3/api-docs}">
-                                            <svg th:replace="~{fragments/layout :: icon('code')}"></svg>
-                                            <span th:text="#{ui.nav.openapi}"></span>
-                                        </a>
-                                    </div>
-                                </section>
                             </div>
                             <div class="navigation-footer">
                                 <span class="language-switch">

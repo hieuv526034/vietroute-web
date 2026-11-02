@@ -61,64 +61,84 @@ import vn.vietroute.common.jdbc.JdbcTable;
 @SuperBuilder
 public class Trip extends BaseEntity {
 
+    // ID nhà xe sở hữu dữ liệu.
     @Column(name = "carrier_id", nullable = false)
     private long carrierId;
 
+    // ID phạm vi nhà xe để kiểm quyền trên dữ liệu.
     @Column(name = "scope_id", nullable = false)
     private long scopeId;
 
+    // ID tuyến mẫu trong carrier_routes.
     @Column(name = "route_id", nullable = false)
     private long routeId;
 
+    // ID xe được phân công cho chuyến.
     @Column(name = "vehicle_id", nullable = false)
     private long vehicleId;
 
+    // ID hồ sơ tài xế được phân công.
     @Column(name = "driver_id", nullable = false)
     private long driverId;
 
+    // Snapshot ID tài khoản tài xế, dùng kiểm quyền chuyến được giao.
     @Column(name = "driver_user_id", nullable = false)
     private long driverUserId;
 
+    // Mã nghiệp vụ dùng để tra cứu và đối chiếu.
     @Column(name = "code", nullable = false, length = 40)
     private String code;
 
+    // Snapshot tên tuyến tiếng Việt lúc tạo chuyến.
     @Column(name = "name_vi", nullable = false, length = 160)
     private String nameVi;
 
+    // Snapshot tên tuyến tiếng Anh lúc tạo chuyến.
     @Column(name = "name_en", nullable = false, length = 160)
     private String nameEn;
 
+    // Snapshot biển số xe của chuyến.
     @Column(name = "plate_number", nullable = false, length = 20)
     private String plateNumber;
 
+    // Snapshot ID loại xe.
     @Column(name = "vehicle_type_id", nullable = false)
     private long vehicleTypeId;
 
+    // Snapshot tên loại xe tiếng Việt.
     @Column(name = "vehicle_type_name_vi", nullable = false, length = 120)
     private String vehicleTypeNameVi;
 
+    // Snapshot tên loại xe tiếng Anh.
     @Column(name = "vehicle_type_name_en", nullable = false, length = 120)
     private String vehicleTypeNameEn;
 
+    // Snapshot tên tài xế của chuyến.
     @Column(name = "driver_name", nullable = false, length = 120)
     private String driverName;
 
+    // Snapshot số điện thoại tài xế.
     @Column(name = "driver_phone", nullable = false, length = 30)
     private String driverPhone;
 
+    // Giờ khởi hành dự kiến ở điểm đầu, lưu UTC.
     @Column(name = "departure_at", nullable = false)
     private Instant departureAt;
 
+    // Giờ kết thúc dự kiến ở điểm cuối, lưu UTC.
     @Column(name = "end_at", nullable = false)
     private Instant endAt;
 
+    // Snapshot số chỗ của chuyến; không đổi theo xe sau đó.
     @Column(name = "capacity", nullable = false)
     private int capacity;
 
+    // Vòng đời DRAFT, OPEN, IN_PROGRESS, COMPLETED hoặc CANCELLED.
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private TripStatus status;
 
+    // Ghi chú điều hành hoặc lý do thay đổi trạng thái chuyến.
     @Column(name = "operation_note", nullable = false, length = 2000)
     private String operationNote;
 }

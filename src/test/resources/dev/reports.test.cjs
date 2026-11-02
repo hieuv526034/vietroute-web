@@ -2,10 +2,10 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
-const { readPage } = require('../../../main/webapp/assets/js/table.js');
+const { readPage, readOptions } = require('../../../main/webapp/assets/js/table.js');
 
-// Chạy client thật với API chỉ đọc giả; chọn/phân trang nhà xe không được tự tính lại báo cáo.
-function fixture({ allowed = true } = {}) {
+// Chạy client thật với API chỉ đọc giả; select nhà xe không được tự tính lại báo cáo.
+function fixture({ allowed = true, failPage = null } = {}) {
     const nodes = new Map(),
         state = { requests: [], errors: [], modalOpen: false };
     const node = (id) => {
@@ -78,6 +78,7 @@ function fixture({ allowed = true } = {}) {
             }
             if (path.endsWith('/carriers')) {
                 const page = config.params.page;
+                if (page === failPage) throw { response: { status: 503 } };
                 return {
                     data: {
                         data: {
@@ -136,6 +137,7 @@ function fixture({ allowed = true } = {}) {
         },
         VietRouteTable: {
             readPage,
+            readOptions,
             pager: (prefix, options) => {
                 state.pager = {
                     query: { page: 0, size: 10 },
@@ -181,67 +183,41 @@ function fixture({ allowed = true } = {}) {
 const settle = async () => {
     for (let i = 0; i < 4; i++) await new Promise((resolve) => setImmediate(resolve));
 };
-test('Mở trang chỉ tải báo cáo, nhà xe chỉ tải khi mở modal', async () => {
+test('Select nhà xe đọc đủ trang 100 dòng, không cắt danh mục; báo cáo chỉ tải một lần', async () => {
     const ui = fixture();
     await settle();
-    assert.equal(ui.state.requests.length, 1);
-    assert.equal(ui.state.requests[0].path, '/api/v1/admin/reports');
-    ui.open();
-    await settle();
-    assert.equal(ui.state.modalOpen, true);
-    assert.equal(ui.state.requests.length, 2);
-    assert.equal(ui.state.requests[1].path, '/api/v1/admin/reports/carriers');
-});
-test('Tìm/phân trang chỉ đổi danh sách nhà xe và dùng bộ lọc đã xác nhận', async () => {
-    const ui = fixture();
-    await settle();
-    ui.open();
-    await settle();
-    ui.node('report-query').value = '  Carrier  ';
-    ui.submit('report-carrier-search');
-    await settle();
-    assert.equal(ui.state.requests.at(-1).params.query, 'Carrier');
-    assert.equal(ui.state.requests.at(-1).params.page, 0);
-    ui.node('report-query').value = 'Draft not submitted';
-    await ui.state.pager.change({ page: 1, size: 10 });
-    assert.equal(ui.state.requests.at(-1).params.query, 'Carrier');
-    assert.equal(ui.state.requests.at(-1).params.page, 1);
+    const choices = ui.state.requests.filter((x) => x.path.endsWith('/carriers'));
+    assert.deepEqual(choices.map((x) => x.params.page), [0, 1, 2]);
+    assert.ok(choices.every((x) => x.params.size === 100));
+    assert.equal(ui.node('report-carrier').children.length, 4);
     assert.equal(ui.state.requests.filter((x) => x.path === '/api/v1/admin/reports').length, 1);
 });
-test('Chọn nhà xe giữ lựa chọn khi tìm tiếp, chỉ Xem báo cáo mới lấy số liệu theo ID đã chọn', async () => {
+test('Đổi select chỉ ẩn snapshot cũ; submit mới gọi báo cáo với ID đã chọn', async () => {
     const ui = fixture();
     await settle();
-    ui.open();
-    await settle();
-    const row = ui.node('report-carriers-body').children[0];
-    row.children[3].children[0].handler();
-    assert.equal(ui.node('report-carrier').value, '1');
-    assert.equal(ui.state.modalOpen, false);
+    const count = ui.state.requests.length;
+    ui.node('report-carrier').value = '2';
+    ui.node('report-carrier').handlers.change();
     assert.equal(ui.node('report-results').hidden, true);
-    ui.open();
-    await settle();
-    await ui.state.pager.change({ page: 1, size: 10 });
-    assert.equal(ui.node('report-carrier').value, '1');
-    ui.node('report-carrier-all').handlers.click();
-    assert.equal(ui.node('report-carrier').value, '');
-    ui.node('report-carrier').value = '1';
+    assert.equal(ui.state.requests.length, count);
+    ui.submit('report-form');
     ui.submit('report-form');
     await settle();
-    assert.equal(ui.state.requests.at(-1).params.carrierId, '1');
+    assert.equal(ui.state.requests.at(-1).params.carrierId, '2');
+    assert.equal(ui.state.requests.length, count + 1);
 });
-test('Lỗi picker giữ modal/lựa chọn, báo ngay trong modal; thiếu quyền không gọi API', async () => {
-    const ui = fixture();
+test('Lỗi giữa các trang không công bố select thiếu dữ liệu hoặc gọi báo cáo', async () => {
+    const ui = fixture({ failPage: 1 });
     await settle();
-    ui.node('report-carrier').value = '7';
-    ui.state.failNext = true;
-    ui.open();
+    assert.equal(ui.node('report-carrier').children.length, 0);
+    assert.equal(ui.state.errors.length, 1);
+    assert.equal(ui.state.errors[0].id, 'report-feedback');
+    assert.equal(ui.state.requests.filter((x) => x.path === '/api/v1/admin/reports').length, 0);
+    assert.equal(ui.node('report-workspace').attrs['aria-busy'], 'false');
+});
+test('Thiếu quyền không tải danh mục hoặc báo cáo', async () => {
+    const ui = fixture({ allowed: false });
     await settle();
-    assert.equal(ui.state.modalOpen, true);
-    assert.equal(ui.node('report-carrier').value, '7');
-    assert.equal(ui.state.errors[0].id, 'report-picker-feedback');
-    assert.equal(ui.node('report-picker-controls').disabled, false);
-    const denied = fixture({ allowed: false });
-    await settle();
-    assert.equal(denied.state.requests.length, 0);
-    assert.equal(denied.node('report-controls').disabled, true);
+    assert.equal(ui.state.requests.length, 0);
+    assert.equal(ui.node('report-controls').disabled, true);
 });

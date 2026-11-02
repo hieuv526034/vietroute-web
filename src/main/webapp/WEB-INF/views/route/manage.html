@@ -204,32 +204,7 @@
                                         class="form-select"
                                     ></select>
                                 </label>
-                                <div
-                                    class="full-width"
-                                    id="route-carrier-picker"
-                                >
-                                    <label
-                                        for="route-carrier-query"
-                                        th:text="#{ui.fleet.searchCarrier}"
-                                    ></label>
-                                    <div class="record-search">
-                                        <input
-                                            id="route-carrier-query"
-                                            maxlength="160"
-                                            class="form-control"
-                                        />
-                                        <button
-                                            id="route-carrier-search"
-                                            type="button"
-                                            class="button button-outline"
-                                            th:text="#{ui.search}"
-                                        ></button>
-                                    </div>
-                                    <p
-                                        id="route-carrier-count"
-                                        class="form-help"
-                                    ></p>
-                                </div>
+
                                 <label>
                                     <span th:text="#{ui.nameVi}"></span>
                                     <input
@@ -270,29 +245,6 @@
                                 id="route-stops"
                                 hidden
                             >
-                                <div id="route-location-picker">
-                                    <label
-                                        for="route-location-query"
-                                        th:text="#{ui.route.findLocation}"
-                                    ></label>
-                                    <div class="record-search">
-                                        <input
-                                            id="route-location-query"
-                                            maxlength="160"
-                                            class="form-control"
-                                        />
-                                        <button
-                                            id="route-location-search"
-                                            type="button"
-                                            class="button button-outline"
-                                            th:text="#{ui.search}"
-                                        ></button>
-                                    </div>
-                                    <p
-                                        id="route-location-count"
-                                        class="form-help"
-                                    ></p>
-                                </div>
                                 <div
                                     id="route-stop-list"
                                     class="route-stop-list"

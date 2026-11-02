@@ -249,6 +249,8 @@ button:focus-visible {
     font: inherit;
 }
 .navigation-group {
+    display: grid;
+    gap: 6px;
     min-width: 0;
     padding: 10px;
     border: 1px solid #e0e9e2;
@@ -281,7 +283,7 @@ button:focus-visible {
 }
 .navigation-group-links {
     display: grid;
-    gap: 3px;
+    gap: 6px;
 }
 .navigation-panel .ui-icon {
     flex-shrink: 0;
@@ -2217,6 +2219,9 @@ body:has(dialog[open]) {
     border-top: 1px solid var(--line);
     font-size: 12px;
     color: var(--muted);
+}
+.table-pager[data-single-page='true'] .pager-navigation {
+    display: none;
 }
 .pager-summary,
 .pager-navigation,

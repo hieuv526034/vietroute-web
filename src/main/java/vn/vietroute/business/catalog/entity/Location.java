@@ -43,30 +43,39 @@ import vn.vietroute.common.jdbc.JdbcTable;
 @SuperBuilder
 public class Location extends BaseEntity {
 
+    // ID tỉnh/thành trong location_provinces.
     @Column(name = "province_id", nullable = false)
     private Long provinceId;
 
+    // Mã nghiệp vụ dùng để tra cứu và đối chiếu.
     @Column(name = "code", nullable = false, length = 40)
     private String code;
 
+    // Tên hiển thị tiếng Việt.
     @Column(name = "name_vi", nullable = false, length = 120)
     private String nameVi;
 
+    // Tên hiển thị tiếng Anh.
     @Column(name = "name_en", nullable = false, length = 120)
     private String nameEn;
 
+    // Địa chỉ điểm đón/trả.
     @Column(name = "address", nullable = false, length = 255)
     private String address;
 
+    // Vĩ độ địa điểm tĩnh; không phải GPS thời gian thực.
     @Column(name = "latitude", nullable = false, precision = 8, scale = 6)
     private BigDecimal latitude;
 
+    // Kinh độ địa điểm tĩnh; không phải GPS thời gian thực.
     @Column(name = "longitude", nullable = false, precision = 9, scale = 6)
     private BigDecimal longitude;
 
+    // Thứ tự hiển thị tăng dần.
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
 
+    // Trạng thái cho phép sử dụng bản ghi.
     @Column(name = "active", nullable = false)
     private boolean active;
 

@@ -41,5 +41,7 @@ for name in groups[sys.argv[1]]:
                     'baselineStartupIsIdempotentAndPreservesCredentialsAndBusiness'}
         required.update({'completeInitializationCreatesRunnableAccountsTripsAndBookingsWithCorrectScopes',
                          'completeInitializationIsIdempotentAndKeepsUserChangesAndRevokedScope'})
+        required.update({'duyLongTimetableKeepsFourDailyLegsSixteenSeatsAndStableAnchor',
+                         'duyLongAccountsCanSearchBookConfirmAndPayWithoutCrossCarrierAccess'})
         assert required <= cases, 'Thiếu regression endpoint/JPA/batch/scope bắt buộc'
 print('Regression ' + sys.argv[1] + ': đủ ca kiểm, không fail/error/skip')

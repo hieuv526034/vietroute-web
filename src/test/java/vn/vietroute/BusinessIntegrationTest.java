@@ -1276,15 +1276,15 @@ class BusinessIntegrationTest {
     @Test
     void completeInitializationCreatesRunnableAccountsTripsAndBookingsWithCorrectScopes() throws Exception {
         initializeOperationalData();
-        assertEquals("44", sql("SELECT count(*) FROM auth_users"));
-        assertEquals("6", sql("SELECT count(*) FROM carriers"));
-        assertEquals("24", sql("SELECT count(*) FROM carrier_vehicles"));
-        assertEquals("24", sql("SELECT count(*) FROM carrier_drivers WHERE user_id IS NOT NULL"));
+        assertEquals("47", sql("SELECT count(*) FROM auth_users"));
+        assertEquals("7", sql("SELECT count(*) FROM carriers"));
+        assertEquals("25", sql("SELECT count(*) FROM carrier_vehicles"));
+        assertEquals("25", sql("SELECT count(*) FROM carrier_drivers WHERE user_id IS NOT NULL"));
         assertEquals("12", sql("SELECT count(*) FROM location_provinces"));
-        assertEquals("12", sql("SELECT count(*) FROM location_places"));
-        assertEquals("24", sql("SELECT count(*) FROM carrier_routes"));
-        assertEquals("494", sql("SELECT count(*) FROM carrier_trips"));
-        assertEquals("2952", sql("SELECT count(*) FROM bookings"));
+        assertEquals("14", sql("SELECT count(*) FROM location_places"));
+        assertEquals("28", sql("SELECT count(*) FROM carrier_routes"));
+        assertEquals("646", sql("SELECT count(*) FROM carrier_trips"));
+        assertEquals("3866", sql("SELECT count(*) FROM bookings"));
         assertEquals("0", sql("SELECT count(*) FROM trip_events WHERE created_at>CURRENT_TIMESTAMP"));
         assertEquals("0", sql("SELECT count(*) FROM booking_events WHERE created_at>CURRENT_TIMESTAMP"));
         assertEquals(
@@ -1296,7 +1296,7 @@ class BusinessIntegrationTest {
             sql("SELECT count(*) FROM carrier_trips WHERE created_at>CURRENT_TIMESTAMP OR updated_at>CURRENT_TIMESTAMP")
         );
         assertEquals(
-            "12",
+            "13",
             sql("SELECT count(*) FROM bookings WHERE source_code='WEB' AND status IN ('PENDING','CONFIRMED')")
         );
         assertEquals(
@@ -1329,6 +1329,26 @@ class BusinessIntegrationTest {
         var customer = actor(customerId, "custom01", "CUSTOMER");
         var operator = actor(operatorId, "operator01", "OPERATOR");
         var driver = actor(driverId, "driver01", "DRIVER");
+        // Tài liệu thuộc bộ bootstrap admin qua mapping DB, ba role nghiệp vụ không được xem trực tiếp.
+        assertEquals(
+            "2",
+            sql(
+                "SELECT count(*) FROM auth_function_resources WHERE function_code='ADMIN_CONSOLE' AND target IN ('GET /docs','GET /v3/api-docs')"
+            )
+        );
+        for (Authentication ordinary : List.of(customer, operator, driver)) {
+            call(403, "GET", "/docs", null, ordinary);
+            call(403, "GET", "/v3/api-docs", null, ordinary);
+        }
+        call(200, "GET", "/docs", null, admin);
+        assertEquals(
+            200,
+            mvc
+                .perform(request(HttpMethod.GET, "/v3/api-docs").with(authentication(admin)))
+                .andReturn()
+                .getResponse()
+                .getStatus()
+        );
         assertEquals(2, call(200, "GET", "/api/v1/my-bookings", null, customer).path("totalElements").asInt());
         assertEquals(71, call(200, "GET", "/api/v1/admin/trips", null, operator).path("totalElements").asInt());
         assertEquals(5, call(200, "GET", "/api/v1/driver/trips", null, driver).path("totalElements").asInt());
@@ -1411,7 +1431,163 @@ class BusinessIntegrationTest {
         );
         assertEquals("Ghi chú đã sửa", sql("SELECT operation_note FROM carrier_trips WHERE code='VRINIT1R01D07'"));
         assertEquals(changedHash, sql("SELECT password_hash FROM auth_users WHERE username='custom01'"));
-        assertEquals("44", sql("SELECT count(*) FROM auth_users"));
+        assertEquals("47", sql("SELECT count(*) FROM auth_users"));
+    }
+
+    /** Lịch theo đồng hồ Việt Nam, đủ bốn lượt/ngày, đúng đầu quay lại và không chồng cùng xe/tài xế. */
+    @Test
+    void duyLongTimetableKeepsFourDailyLegsSixteenSeatsAndStableAnchor() throws Exception {
+        initializeOperationalData();
+        assertEquals("152", sql("SELECT count(*) FROM carrier_trips WHERE code LIKE 'DLG1%'"));
+        assertEquals(
+            "05:00-09:00|09:30-11:30|12:00-15:00|15:30-17:30",
+            sql(
+                """
+                SELECT string_agg(start_time||'-'||end_time,'|' ORDER BY start_time)
+                FROM (
+                    SELECT DISTINCT to_char(departure_at AT TIME ZONE 'Asia/Ho_Chi_Minh','HH24:MI') start_time,
+                        to_char(end_at AT TIME ZONE 'Asia/Ho_Chi_Minh','HH24:MI') end_time
+                    FROM carrier_trips WHERE code LIKE 'DLG1%'
+                ) times
+                """
+            )
+        );
+        assertEquals(
+            "0",
+            sql(
+                """
+                SELECT count(*) FROM (
+                    SELECT (departure_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date
+                    FROM carrier_trips WHERE code LIKE 'DLG1%'
+                    GROUP BY 1 HAVING count(*)<>4
+                ) invalid_day
+                """
+            )
+        );
+        assertEquals(
+            "0",
+            sql(
+                """
+                SELECT count(*) FROM (
+                    SELECT departure_at,lag(end_at) OVER (ORDER BY departure_at) previous_end
+                    FROM carrier_trips WHERE code LIKE 'DLG1%'
+                ) timetable_rows WHERE previous_end>departure_at
+                """
+            )
+        );
+        assertEquals(
+            "0",
+            sql(
+                """
+                SELECT count(*) FROM carrier_trips t JOIN carrier_drivers d ON d.id=t.driver_id
+                JOIN carrier_vehicles v ON v.id=t.vehicle_id
+                WHERE t.code LIKE 'DLG1%' AND (t.capacity<>16 OR v.capacity<>16
+                    OR d.name<>'Phạm Thành Lương' OR t.driver_name<>'Phạm Thành Lương')
+                """
+            )
+        );
+        assertEquals(
+            "22:00",
+            sql(
+                """
+                SELECT min(to_char(departure_at AT TIME ZONE 'UTC','HH24:MI'))
+                FROM carrier_trips WHERE code LIKE 'DLG1R25%'
+                """
+            )
+        );
+        String before = sql("SELECT md5(string_agg(code||departure_at::text,',' ORDER BY code)) FROM carrier_trips");
+        root.getBean(JdbcTransactions.class).execute(connection -> {
+            try (Statement query = connection.createStatement()) {
+                query.execute("SET LOCAL TIME ZONE 'Pacific/Auckland'");
+            }
+            root.getBean(BusinessDataRepo.class).seedOperations(connection);
+            return null;
+        });
+        assertEquals(
+            before,
+            sql("SELECT md5(string_agg(code||departure_at::text,',' ORDER BY code)) FROM carrier_trips")
+        );
+    }
+
+    /** Account Duy Long dùng đúng scope/assignment; nhận PHONE, giữ chỗ và ghi thu trên giá snapshot. */
+    @Test
+    void duyLongAccountsCanSearchBookConfirmAndPayWithoutCrossCarrierAccess() throws Exception {
+        initializeOperationalData();
+        long carrier = Long.parseLong(sql("SELECT id FROM carriers WHERE code='DUYLONG'"));
+        long driverId = Long.parseLong(sql("SELECT id FROM auth_users WHERE username='driverduylong'"));
+        long operatorId = Long.parseLong(sql("SELECT id FROM auth_users WHERE username='operatorduylong'"));
+        long customerId = Long.parseLong(sql("SELECT id FROM auth_users WHERE username='customduylong'"));
+        Authentication driver = actor(driverId, "driverduylong", "DRIVER");
+        Authentication operator = actor(operatorId, "operatorduylong", "OPERATOR");
+        Authentication customer = actor(customerId, "customduylong", "CUSTOMER");
+        JsonNode trips = call(200, "GET", "/api/v1/admin/trips?size=100", null, operator);
+        assertEquals(152, trips.path("totalElements").asInt());
+        for (JsonNode trip : trips.path("content")) assertEquals(carrier, trip.path("carrierId").asLong());
+        long id = Long.parseLong(
+            sql(
+                """
+                SELECT id FROM carrier_trips WHERE code LIKE 'DLG1R25%' AND status='OPEN'
+                    AND departure_at>CURRENT_TIMESTAMP+INTERVAL '12 hours'
+                ORDER BY departure_at LIMIT 1
+                """
+            )
+        );
+        String date = sql(
+            "SELECT (departure_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date FROM carrier_trips WHERE id=" + id
+        );
+        String from = sql("SELECT id FROM location_places WHERE code='DLGHAIPHONG'");
+        String to = sql("SELECT id FROM location_places WHERE code='DLGHANOI'");
+        JsonNode matches = call(
+            200,
+            "GET",
+            "/api/v1/trips?fromLocationId=" +
+                from +
+                "&toLocationId=" +
+                to +
+                "&date=" +
+                date +
+                "&carrierId=" +
+                carrier +
+                "&seats=2",
+            null,
+            customer
+        );
+        assertEquals(2, matches.path("totalElements").asInt());
+        call(200, "GET", "/api/v1/driver/trips/" + id, null, driver);
+        long foreign = Long.parseLong(sql("SELECT min(id) FROM carrier_trips WHERE carrier_id<>" + carrier));
+        call(404, "GET", "/api/v1/admin/trips/" + foreign, null, operator);
+        call(404, "GET", "/api/v1/driver/trips/" + foreign, null, driver);
+        call(403, "GET", "/api/v1/admin/trips", null, customer);
+        assertEquals(2, call(200, "GET", "/api/v1/my-bookings", null, customer).path("totalElements").asInt());
+        long booking = call(
+            201,
+            "POST",
+            "/api/v1/admin/bookings",
+            bookingBody(id, 1, 2, 2, UUID.randomUUID()),
+            operator
+        )
+            .path("id")
+            .asLong();
+        JsonNode confirmed = call(
+            200,
+            "PUT",
+            "/api/v1/admin/bookings/" + booking + "/state",
+            "{\"status\":\"CONFIRMED\",\"version\":0,\"note\":\"Xác nhận Duy Long\"}",
+            operator
+        );
+        assertEquals("360000.00", sql("SELECT total_price FROM bookings WHERE id=" + booking));
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/bookings/" + booking + "/payment",
+            "{\"kind\":\"PAYMENT\",\"amount\":360000,\"note\":\"Đã nhận tiền\",\"version\":" +
+                confirmed.path("version").asLong() +
+                ",\"requestKey\":\"" +
+                UUID.randomUUID() +
+                "\"}",
+            operator
+        );
+        assertEquals("360000.00", sql("SELECT paid_amount FROM bookings WHERE id=" + booking));
     }
 
     private void initializeOperationalData() {
@@ -3059,7 +3235,10 @@ class BusinessIntegrationTest {
         var result = json.readTree(response.getContentAsString()).path("data");
         assertEquals(1, result.path("totalElements").asInt());
         assertEquals(150000, result.at("/content/0/unitPrice").asInt());
-        var apiDocument = mvc.perform(request(HttpMethod.GET, "/v3/api-docs")).andReturn().getResponse();
+        var apiDocument = mvc
+            .perform(request(HttpMethod.GET, "/v3/api-docs").with(authentication(admin)))
+            .andReturn()
+            .getResponse();
         assertEquals(200, apiDocument.getStatus());
         var parameters = json.readTree(apiDocument.getContentAsString()).at("/paths/~1api~1v1~1trips/get/parameters");
         assertTrue(

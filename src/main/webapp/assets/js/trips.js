@@ -44,9 +44,7 @@
         element,
         select: form.elements[element.dataset.field],
         kind: element.dataset.kind,
-        query: element.querySelector('input'),
-        page: 0,
-        hasNext: false,
+        ready: false,
     }));
     const empty = (message) => {
         const row = text('tr', ''),
@@ -71,14 +69,17 @@
         });
         for (const picker of pickers) {
             const fixed = Boolean(selected && ['CARRIER', 'ROUTE'].includes(picker.kind));
-            picker.element.querySelector('[data-picker-prev]').hidden = picker.page === 0 && !picker.hasNext;
-            picker.element.querySelector('[data-picker-next]').hidden = picker.page === 0 && !picker.hasNext;
-            picker.element.querySelector('.trip-picker-search').hidden = fixed || !editable();
-            picker.element.querySelector('.trip-picker-paging').hidden = fixed || !editable();
-            picker.element.querySelector('[data-picker-prev]').disabled = busy || picker.page === 0;
-            picker.element.querySelector('[data-picker-next]').disabled = busy || !picker.hasNext;
+            picker.select.disabled =
+                busy ||
+                fixed ||
+                !editable() ||
+                !picker.ready ||
+                (picker.kind !== 'CARRIER' && !form.elements.carrierId.value);
         }
         node('trip-save').hidden = !editable();
+        node('trip-save').disabled =
+            busy ||
+            pickers.some((picker) => !picker.ready && !(selected && ['CARRIER', 'ROUTE'].includes(picker.kind)));
         form.elements.note.disabled = busy || (!editable() && !noticeAllowed());
         node('trip-notice').hidden = !noticeAllowed();
         node('trip-open').hidden = !editable() || selected?.status !== 'DRAFT' || !can('PUT', '/{id}/state');
@@ -163,34 +164,32 @@
         if (!page.content.length) empty(labels.empty);
         pager.update(page);
     };
-    const findChoices = async (picker, page = 0) => {
+    const findChoices = async (picker) => {
         const carrierId = form.elements.carrierId.value;
         if (picker.kind !== 'CARRIER' && !carrierId) return;
-        const result = (
-            await api.get(`${path}/choices`, {
-                params: {
-                    kind: picker.kind,
-                    query: picker.query.value.trim(),
-                    ...(carrierId ? { carrierId } : {}),
-                    tripId: selected?.id || 0,
-                    page,
-                    size: 10,
-                },
-                timeout: 10000,
-            })
-        ).data.data;
-        const current = picker.select.selectedOptions[0],
-            options = result.content.map((item) =>
-                option(item.id, `${item.code} · ${item.name}${item.capacity ? ` (${item.capacity})` : ''}`),
-            );
-        if (current?.value && !result.content.some((item) => String(item.id) === current.value))
+        const items = await tables.readOptions(
+            async (paging) =>
+                (
+                    await api.get(`${path}/choices`, {
+                        params: {
+                            kind: picker.kind,
+                            ...(carrierId ? { carrierId } : {}),
+                            tripId: selected?.id || 0,
+                            ...paging,
+                        },
+                        timeout: 10000,
+                    })
+                ).data.data,
+        );
+        const current = picker.select.selectedOptions[0];
+        const options = items.map((item) =>
+            option(item.id, `${item.code} · ${item.name}${item.capacity ? ` (${item.capacity})` : ''}`),
+        );
+        if (current?.value && !items.some((item) => String(item.id) === current.value))
             options.unshift(option(current.value, current.textContent));
         picker.select.replaceChildren(option('', labels.choose), ...options);
         if (current?.value) picker.select.value = current.value;
-        picker.page = result.page;
-        picker.hasNext = result.hasNext;
-        const count = picker.element.querySelector('[data-picker-count]');
-        count.textContent = tables.lookupSummary(result, count.dataset.summary, count.dataset.empty);
+        picker.ready = true;
     };
     const detail = () => {
         node('trip-stop-list').replaceChildren();
@@ -229,10 +228,7 @@
         window.VietRouteForms.clear(form);
         form.reset();
         for (const picker of pickers) {
-            picker.page = 0;
-            picker.hasNext = false;
-            picker.query.value = '';
-            picker.element.querySelector('[data-picker-count]').textContent = '';
+            picker.ready = false;
             picker.select.replaceChildren(option('', labels.choose));
         }
         if (selected) {
@@ -248,6 +244,7 @@
             form.elements.capacity.value = selected.capacity;
             form.elements.note.value = '';
             node('trip-current-state').textContent = `${state(selected.status)} · ${selected.operationNote}`;
+            if (!view) await window.VietRouteRequests.allReads(pickers.slice(2).map(findChoices));
         } else {
             node('trip-current-state').textContent = state('DRAFT');
             await findChoices(pickers[0]);
@@ -332,30 +329,14 @@
             ),
         );
     });
-    for (const picker of pickers) {
-        picker.element
-            .querySelector('[data-picker-search]')
-            .addEventListener('click', () => perform(() => findChoices(picker)));
-        picker.query.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                void perform(() => findChoices(picker));
-            }
-        });
-        picker.element
-            .querySelector('[data-picker-prev]')
-            .addEventListener('click', () => perform(() => findChoices(picker, picker.page - 1)));
-        picker.element
-            .querySelector('[data-picker-next]')
-            .addEventListener('click', () => perform(() => findChoices(picker, picker.page + 1)));
-    }
     form.elements.carrierId.addEventListener('change', () =>
         perform(async () => {
+            // Xóa mọi lựa chọn con trước khi gọi API; lỗi không để dùng xe/tài xế của nhà xe cũ.
             for (const picker of pickers.slice(1)) {
                 picker.select.replaceChildren(option('', labels.choose));
-                picker.query.value = '';
-                await findChoices(picker);
+                picker.ready = false;
             }
+            await window.VietRouteRequests.allReads(pickers.slice(1).map(findChoices));
         }),
     );
     node('trip-create').addEventListener('click', (event) => perform(() => open(null, false, event.currentTarget)));

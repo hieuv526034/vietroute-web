@@ -44,22 +44,28 @@ import vn.vietroute.common.jdbc.JdbcTable;
 @SuperBuilder
 public class CatalogItem extends BaseEntity {
 
+    // Nhóm danh mục, kết hợp với code để xác định một giá trị.
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false, length = 32)
     private CatalogType type;
 
+    // Mã nghiệp vụ dùng để tra cứu và đối chiếu.
     @Column(name = "code", nullable = false, length = 40)
     private String code;
 
+    // Tên hiển thị tiếng Việt.
     @Column(name = "name_vi", nullable = false, length = 120)
     private String nameVi;
 
+    // Tên hiển thị tiếng Anh.
     @Column(name = "name_en", nullable = false, length = 120)
     private String nameEn;
 
+    // Thứ tự hiển thị tăng dần.
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
 
+    // Trạng thái cho phép sử dụng bản ghi.
     @Column(name = "active", nullable = false)
     private boolean active;
 }

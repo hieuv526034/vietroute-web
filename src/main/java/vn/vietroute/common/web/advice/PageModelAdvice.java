@@ -2,6 +2,7 @@ package vn.vietroute.common.web.advice;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -55,8 +56,9 @@ public class PageModelAdvice {
         String current = request.getRequestURI().substring(request.getContextPath().length());
         Locale locale = new SupportedLocaleResolver().resolveLocale(request);
         List<FunctionDTO> menu = menus.navigation(user, current, locale);
-        model.addAttribute("functionNavigation", menu);
-        model.addAttribute("breadcrumbs", build(menu, current, locale, messages));
+        List<FunctionDTO> grouped = group(menu, locale, messages);
+        model.addAttribute("functionNavigation", grouped);
+        model.addAttribute("breadcrumbs", build(grouped, current, locale, messages));
         Set<String> paths = menu
             .stream()
             .map(item -> item.path())
@@ -64,6 +66,7 @@ public class PageModelAdvice {
         model.addAttribute("catalogAllowed", paths.contains(Routes.ADMIN));
         model.addAttribute("accessAllowed", paths.contains(Routes.ACCESS_PAGE));
         model.addAttribute("journalAllowed", paths.contains(Routes.API_JOURNAL_PAGE));
+        model.addAttribute("docsAllowed", paths.contains(Routes.DOCS));
         model.addAttribute("accountAllowed", user != null);
         model.addAttribute("adminUser", UserPrincipal.globalData());
         // Chỉ đánh dấu trang hiện hành; các cờ giao diện không thay thế kiểm quyền ở service.
@@ -82,6 +85,61 @@ public class PageModelAdvice {
         );
         model.addAttribute("navigation", navigation);
         model.addAttribute("operationsActive", navigation.get("journal"));
+    }
+
+    /** Gom các menu đã được DB cấp quyền theo khối; nhóm chỉ phục vụ trình bày, không sinh grant/link mới. */
+    public static List<FunctionDTO> group(List<FunctionDTO> menu, Locale locale, MessageSource messages) {
+        Map<String, List<FunctionDTO>> sections = new LinkedHashMap<>();
+        for (String key : List.of("catalog", "carrier", "transport", "booking", "report", "system", "other")) {
+            sections.put(key, new ArrayList<>());
+        }
+        for (FunctionDTO entry : menu) {
+            String key = switch (entry.path() == null ? "" : entry.path()) {
+                case
+                    Routes.ADMIN,
+                    Routes.CATALOG_VEHICLE_TYPES_PAGE,
+                    Routes.CATALOG_BOOKING_SOURCES_PAGE,
+                    Routes.CATALOG_PROVINCES_PAGE,
+                    Routes.CATALOG_LOCATIONS_PAGE,
+                    Routes.LOCATION_PAGE -> "catalog";
+                case Routes.CARRIERS_PAGE, Routes.VEHICLES_PAGE, Routes.DRIVERS_PAGE -> "carrier";
+                case Routes.ROUTES_PAGE, Routes.TRIPS_PAGE, Routes.DRIVER_TRIPS_PAGE -> "transport";
+                case Routes.BOOKINGS_PAGE, Routes.MY_BOOKINGS_PAGE -> "booking";
+                case Routes.REPORTS_PAGE -> "report";
+                case
+                    Routes.ACCOUNTS_PAGE,
+                    Routes.ACCESS_PAGE,
+                    Routes.ACCESS_RESOURCES_PAGE,
+                    Routes.API_JOURNAL_PAGE,
+                    Routes.DOCS,
+                    Routes.DEMO_PAGE -> "system";
+                default -> "other";
+            };
+            sections.get(key).add(entry);
+        }
+        List<FunctionDTO> result = new ArrayList<>();
+        sections.forEach((key, children) -> {
+            if (children.isEmpty()) return;
+            FunctionDTO section = item(
+                messages.getMessage("ui.nav.group." + key, null, locale),
+                null,
+                children.stream().anyMatch(FunctionDTO::isActive)
+            );
+            section.setIcon(
+                switch (key) {
+                    case "catalog" -> "catalog";
+                    case "carrier" -> "carrier";
+                    case "transport" -> "clock";
+                    case "booking" -> "catalog";
+                    case "report" -> "activity";
+                    case "system" -> "shield";
+                    default -> "menu";
+                }
+            );
+            section.setChildren(List.copyOf(children));
+            result.add(section);
+        });
+        return List.copyOf(result);
     }
 
     /** Mỗi mục có link trong ứng dụng; nhóm không có trang chọn trang con đầu tiên mà người dùng được mở. */

@@ -6,6 +6,7 @@
             th:fragment="pager(prefix, defaultSize)"
             class="table-pager"
             data-pager
+            hidden
             th:id="${prefix + '-pagination'}"
             th:attr="aria-label=#{ui.ops.pagination},data-page-label=#{ui.pager.pageLabel},data-summary=#{ui.pager.summary}"
         >

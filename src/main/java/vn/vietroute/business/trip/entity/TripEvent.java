@@ -38,32 +38,41 @@ import vn.vietroute.common.jdbc.JdbcTable;
 @NoArgsConstructor
 public class TripEvent {
 
+    // Khóa định danh bản ghi.
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
     private long id;
 
+    // ID chuyến trong carrier_trips.
     @Column(name = "trip_id", nullable = false)
     private long tripId;
 
+    // ID nhà xe sở hữu dữ liệu.
     @Column(name = "carrier_id", nullable = false)
     private long carrierId;
 
+    // ID phạm vi nhà xe để kiểm quyền trên dữ liệu.
     @Column(name = "scope_id", nullable = false)
     private long scopeId;
 
+    // Số thứ tự điểm dừng trên hành trình.
     @Column(name = "stop_order")
     private Integer stopOrder;
 
+    // Loại sự kiện nghiệp vụ.
     @Column(name = "event_type", nullable = false, length = 30)
     private String eventType;
 
+    // Ghi chú hoặc lý do thao tác.
     @Column(name = "note", nullable = false, length = 2000)
     private String note;
 
+    // Thời điểm tạo, lưu theo UTC.
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    // ID người tạo; tác vụ hệ thống dùng tài khoản system (0).
     @Column(name = "created_by", nullable = false)
     private long createdBy;
 }

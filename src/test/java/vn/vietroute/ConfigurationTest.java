@@ -76,8 +76,8 @@ class ConfigurationTest {
     void vendorProfilesHaveSeparateDefaultsAndPreserveUrlOnlyConfiguration() {
         DatabaseSettings postgresql = new DatabaseSettings(Map.<String, String>of()::get, false);
         assertEquals("postgresql", postgresql.getDialect().vendor());
-        assertEquals("jdbc:postgresql://localhost:5432/vietroute", postgresql.getUrl());
-        assertEquals("vietroute_app", postgresql.getUsername());
+        assertEquals("jdbc:postgresql://14.225.222.90:5432/hieuboy?sslmode=disable", postgresql.getUrl());
+        assertEquals("huanpham", postgresql.getUsername());
         assertEquals("vietroute", postgresql.getSchema());
         assertEquals("org.hibernate.dialect.PostgreSQLDialect", postgresql.getDialect().hibernateDialectClassName());
 
