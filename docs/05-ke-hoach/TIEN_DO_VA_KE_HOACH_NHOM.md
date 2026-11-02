@@ -70,10 +70,12 @@ DB mới kiểm được46 account,7 nhà xe,25 xe/tài xế,12 tỉnh/14 địa
 
 Trước thay đổi dữ liệu thật: đã backup nhất quán hieuboy.vietroute, mã hóa DPAPI CurrentUser, phục hồi vào PostgreSQL test loopback15461/vietroute_business_test. Đối chiếu đủ24 bảng, số dòng và digest đạt,0 ghi remote. Restore đầu thiếu pg_trgm trong namespace vietroute đã rollback; sau chuẩn bị đúng extension, restore đạt. Digest Linux/Windows ban đầu khác vì collation mặc định; cùng UTC/COLLATE C cho kết quả khớp, không sửa dữ liệu để vượt kiểm. Backup gắn tài khoản Windows, không coi là PITR/backup di động.
 
-Tiếp theo: review/commit nhánh, tích hợp các PR154/155 liên quan, PR vào dev; chỉ sau check và Production CI mới merge main và xác nhận Render/HTTP/DB. Link PR, commit thực và kết quả Live sẽ ghi trong bàn giao PR phát hành; không coi kế hoạch này là đã deploy. Các PR Dependabot/nhánh cũ không thuộc phạm vi.
+Đã commit cec5f41 và mở [PR156 vào dev](https://github.com/hieuv526034/vietroute-web/pull/156). PR154/155 đã qua check và merge dev lần lượt tại5fc418f/e7941e5; tích hợp lại vào nhánh riêng giữ nguyên source đã kiểm, không phục hồi tài liệu/ảnh cũ. Kiểm format/rules/docs/diff sau tích hợp đạt. Render đã lưu và đối chiếu các cờ init/sync cùng ba key seed theo role; chưa chạy bản mới tại mốc ghi nhận này. Không đổi DB password/JWT hoặc mật khẩu account cũ.
+
+Tiếp theo: PR156 qua check vào dev, PR dev → main qua Production CI, rồi kiểm Render/HTTP/DB. Bằng chứng phát hành và kết quả Live cập nhật tại PR156 cùng PR phát hành được liên kết từ đó; không coi mốc chuẩn bị này là đã deploy. Các PR Dependabot/nhánh cũ không thuộc phạm vi, chưa có review nghiệm thu của thành viên khác.
 
 ## Còn lại và bước tiếp
 
-Nghiệm thu DOCS03/cấu hình qua nhánh riêng; PR154/155 cần review/tích hợp dev trước quyết định phát hành mới. Chưa có Oracle runtime/regression, kiểm tải/SLA hoặc backup di động/PITR/RPO/RTO; DPAPI local phụ thuộc tài khoản Windows. AccountChallengeRepo còn SQL phụ cũ chưa được luồng hiện hành gọi, cần dọn riêng khi sửa auth, không trình bày như chức năng đang hoạt động. Kiểm thêm cách chạy Maven Wrapper trên máy trước khi dùng hướng dẫn local.
+Nghiệm thu toàn bộ qua PR156 và PR phát hành theo lệnh DUYLONG01. Chưa có Oracle runtime/regression, kiểm tải/SLA hoặc backup di động/PITR/RPO/RTO; DPAPI local phụ thuộc tài khoản Windows. AccountChallengeRepo còn SQL phụ cũ chưa được luồng hiện hành gọi, cần dọn riêng khi sửa auth, không trình bày như chức năng đang hoạt động. Kiểm thêm cách chạy Maven Wrapper trên máy trước khi dùng hướng dẫn local.
 
 Theo [quy trình Git](../../CONTRIBUTING.md): nhánh thành viên → PR/check/review → dev; main/deploy chỉ khi có lệnh mới. Routine test dùng DB cô lập, không root .env hoặc DB thật. Dữ liệu seed neo ngày lần đầu, muốn demo ngày mới thì tạo chuyến hợp lệ trên DB demo đã được phép, không reset DB thật.
