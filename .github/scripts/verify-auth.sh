@@ -43,11 +43,11 @@ done
 sql() { docker exec -e PGOPTIONS=-csearch_path=vietroute vietroute-db-ci psql -U vietroute_ci -d vietroute_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
 [[ "$(sql "SELECT count(*) FROM auth_users WHERE username='admin'")" == 1 ]]
 [[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 10 ]]
-[[ "$(sql "SELECT count(*) FROM category WHERE item_ref IN ('VEHICLE_TYPE','BOOKING_SOURCE')")" == 5 ]]
-[[ "$(sql "SELECT count(*) FROM category WHERE item_ref='PROVINCE'")" == 34 ]]
-[[ "$(sql "SELECT count(*) FROM category WHERE item_ref='WARD'")" == 3321 ]]
+[[ "$(sql "SELECT count(*) FROM category WHERE value_ref IN ('VEHICLE_TYPE','BOOKING_SOURCE')")" == 5 ]]
+[[ "$(sql "SELECT count(*) FROM category WHERE value_ref='PROVINCE'")" == 34 ]]
+[[ "$(sql "SELECT count(*) FROM category WHERE value_ref='WARD'")" == 3321 ]]
 [[ "$(sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','category','catalog_items','vietroute_schema_history')")" == 0 ]]
-[[ "$(sql "SELECT count(*) FROM pg_indexes WHERE schemaname='vietroute' AND indexname IN ('idx_auth_users_created_by','idx_auth_users_updated_by','idx_user_roles_role','idx_catalog_created_by','idx_catalog_updated_by')")" == 5 ]]
+[[ "$(sql "SELECT count(*) FROM pg_indexes WHERE schemaname='vietroute' AND indexname IN ('idx_auth_users_created_by','idx_auth_users_updated_by','idx_user_roles_role','idx_category_created_by','idx_category_updated_by')")" == 5 ]]
 printf 'Audit stage: reserved actor, non-null seed and database guards\n'
 [[ "$(sql "SELECT count(*) FROM auth_users WHERE id=0 AND username='system' AND NOT active AND NOT must_change_password AND created_by=0 AND updated_by=0")" == 1 ]]
 [[ "$(sql "SELECT id FROM auth_users WHERE username='admin'")" == 1 ]]

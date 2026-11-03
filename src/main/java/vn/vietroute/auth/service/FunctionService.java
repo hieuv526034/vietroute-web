@@ -44,7 +44,6 @@ public class FunctionService {
         return transactions.execute(connection -> {
             Page<Function> page = functions.search(search);
             Map<String, Set<String>> targets = resources.targetsFor(
-                connection,
                 page.getContent().stream().map(Function::getCode).toList()
             );
             return PageResponse.of(
@@ -64,7 +63,7 @@ public class FunctionService {
         return transactions.execute(connection -> {
             Function value = BusinessRules.requireFound(functions.findById(code).orElse(null));
             BusinessRules.require(!value.isDeleted(), ErrorCode.NOT_FOUND);
-            return FunctionDTO.from(value, resources.targets(connection, code));
+            return FunctionDTO.from(value, resources.targets(code));
         });
     }
 
@@ -109,9 +108,9 @@ public class FunctionService {
                     !value.isDeleted() && body.getVersion() != null && value.getVersion() == body.getVersion(),
                     ErrorCode.STALE_VERSION
                 );
-                before = resources.targets(connection, value.getCode());
+                before = resources.targets(value.getCode());
                 UserPrincipal.requireDelegable(before);
-                if (roles.hasAllScopesRole(connection, value.getCode())) {
+                if (roles.hasAllScopesRole(value.getCode())) {
                     BusinessRules.require(
                         UserPrincipal.current().getGlobalTargets().containsAll(body.getTargets()) &&
                             UserPrincipal.current().getGlobalTargets().containsAll(before),
@@ -154,9 +153,9 @@ public class FunctionService {
             mappings.lockRoleAssignments(connection);
             Function value = BusinessRules.requireFound(functions.lock(code));
             BusinessRules.require(!value.isDeleted() && value.getVersion() == version, ErrorCode.STALE_VERSION);
-            Set<String> before = resources.targets(connection, code);
+            Set<String> before = resources.targets(code);
             UserPrincipal.requireDelegable(before);
-            BusinessRules.require(!roles.usesFunction(connection, code), ErrorCode.CONFLICT);
+            BusinessRules.require(!roles.usesFunction(code), ErrorCode.CONFLICT);
             value.setActive(false);
             value.setDeleted(true);
             value.setUpdatedAt(Instant.now());

@@ -51,6 +51,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -72,6 +73,7 @@ import org.springframework.web.context.support.AnnotationConfigWebApplicationCon
 import vn.vietroute.auth.dto.FunctionDTO;
 import vn.vietroute.auth.dto.RoleDTO;
 import vn.vietroute.auth.dto.request.UserRequest;
+import vn.vietroute.auth.dto.search.FunctionSearch;
 import vn.vietroute.auth.entity.AccessChange;
 import vn.vietroute.auth.entity.AccountChallenge;
 import vn.vietroute.auth.entity.Function;
@@ -83,6 +85,7 @@ import vn.vietroute.auth.entity.UserRole;
 import vn.vietroute.auth.initializer.AuthInitializer;
 import vn.vietroute.auth.repo.AccessChangeRepo;
 import vn.vietroute.auth.repo.AccountChallengeRepo;
+import vn.vietroute.auth.repo.FunctionRepo;
 import vn.vietroute.auth.repo.FunctionResourceRepo;
 import vn.vietroute.auth.repo.RoleFunctionRepo;
 import vn.vietroute.auth.repo.RoleRepo;
@@ -508,13 +511,21 @@ class BusinessIntegrationTest {
     @Test
     void roleGrantSnapshotAndMembershipHistoryStayBoundedAndBatchFailureRollsBackAllEntries() throws Exception {
         var statements = new AtomicInteger();
-        root.getBean(JdbcTransactions.class).execute(connection -> {
-            var codes = List.of("VEHICLE_READ", "TRIP_READ", "ROUTE_READ");
-            var bindings = root.getBean(FunctionResourceRepo.class).targetsFor(counted(connection, statements), codes);
-            assertEquals(3, bindings.size());
-            return null;
-        });
-        assertEquals(1, statements.get());
+        var statistics = root.getBean(EntityManagerFactory.class).unwrap(SessionFactory.class).getStatistics();
+        boolean statisticsEnabled = statistics.isStatisticsEnabled();
+        statistics.setStatisticsEnabled(true);
+        long prepared = statistics.getPrepareStatementCount();
+        try {
+            root.getBean(JdbcTransactions.class).execute(connection -> {
+                var codes = List.of("VEHICLE_READ", "TRIP_READ", "ROUTE_READ");
+                var bindings = root.getBean(FunctionResourceRepo.class).targetsFor(codes);
+                assertEquals(3, bindings.size());
+                return null;
+            });
+            assertEquals(1, statistics.getPrepareStatementCount() - prepared);
+        } finally {
+            statistics.setStatisticsEnabled(statisticsEnabled);
+        }
         statements.set(0);
         var before = new ArrayList<RoleDTO>();
         for (long scope = 1; scope <= 5; scope++) {
@@ -837,6 +848,56 @@ class BusinessIntegrationTest {
             .getResponse();
         assertEquals(401, invalid.getStatus());
         assertEquals(null, invalid.getHeader("Server-Timing"));
+    }
+
+    @Test
+    void nativeQueryRepositoriesKeepConfiguredSchemaPagingAndTransactionRollback() throws Exception {
+        sql(
+            "INSERT INTO auth_functions(code,name_vi,name_en,active) VALUES('QUERYONE','Trạm %_!','Native marker',false)"
+        );
+        var repository = root.getBean(FunctionRepo.class);
+        var search = new FunctionSearch();
+        search.setQuery("%_!");
+        search.setActive(false);
+        search.setSize(1);
+        var transactions = root.getBean(JdbcTransactions.class);
+        transactions.execute(connection -> {
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("SET LOCAL search_path TO pg_catalog,pg_temp");
+            }
+            var page = repository.search(search);
+            assertEquals(1, page.getTotalElements());
+            assertEquals("QUERYONE", page.getContent().get(0).getCode());
+            assertEquals(1, root.getBean(FunctionResourceRepo.class).targetsFor(List.of("VEHICLE_READ")).size());
+            return null;
+        });
+        var resources = root.getBean(FunctionResourceRepo.class);
+        var mappings = root.getBean(RoleFunctionRepo.class);
+        Set<String> before = transactions.execute(connection -> mappings.functions("CUSTOMER"));
+        assertThrows(IllegalStateException.class, () ->
+            transactions.execute(connection -> {
+                var function = repository.lock("QUERYONE");
+                function.setDescription("Rollback marker");
+                repository.saveAndFlush(function);
+                var resource = new FunctionDTO();
+                resource.setKind("ENDPOINT");
+                resource.setTarget("GET /api/v1/admin/functions");
+                resource.setHttpMethod("GET");
+                resource.setPathTemplate("/api/v1/admin/functions");
+                resource.setHandler("Query fixture");
+                resource.setDescription("Query fixture");
+                resources.replace(connection, "QUERYONE", List.of(resource), 0);
+                assertEquals(Set.of(resource.getTarget()), resources.targets("QUERYONE"));
+                mappings.replace(connection, "CUSTOMER", Set.of("QUERYONE"), 0);
+                assertEquals(Set.of("QUERYONE"), mappings.functions("CUSTOMER"));
+                assertEquals(Set.of(), resources.targetsFor(List.of()).keySet());
+                assertEquals(Set.of(), mappings.functionTargets(Set.of()));
+                throw new IllegalStateException("Rollback fixture");
+            })
+        );
+        assertEquals("", sql("SELECT description FROM auth_functions WHERE code='QUERYONE'"));
+        assertEquals("0", sql("SELECT count(*) FROM auth_function_resources WHERE function_code='QUERYONE'"));
+        assertEquals(before, transactions.execute(connection -> mappings.functions("CUSTOMER")));
     }
 
     @Test
@@ -3037,7 +3098,7 @@ class BusinessIntegrationTest {
     private void grantDriverDelegation(String role, Authentication staff) throws Exception {
         var targets = root
             .getBean(JdbcTransactions.class)
-            .execute(connection -> root.getBean(RoleFunctionRepo.class).targets(connection, "DRIVER"));
+            .execute(connection -> root.getBean(RoleFunctionRepo.class).targets("DRIVER"));
         var combined = new LinkedHashSet<>(targets);
         combined.addAll(LegacyBusinessGrants.targets(Set.of("DRIVER_READ", "DRIVER_ASSIGN", "DRIVER_VIEW")));
         grantResources(role, 0, combined, admin, 200);

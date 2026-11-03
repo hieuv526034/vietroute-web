@@ -1,9 +1,5 @@
 package vn.vietroute.auth.repo;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.LockModeType;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -13,124 +9,136 @@ import java.util.Map;
 import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.dto.FunctionDTO;
 import vn.vietroute.auth.dto.search.FunctionSearch;
 import vn.vietroute.auth.entity.Function;
-import vn.vietroute.common.base.JpaRepositorySupport;
-import vn.vietroute.common.jdbc.JdbcTransactions;
 
-/** Repository bảng Function; CRUD JPA và SQL batch/query phức tạp cùng transaction server. */
-@Repository
-public class FunctionRepo extends JpaRepositorySupport<Function, String> {
-
-    public FunctionRepo(EntityManager manager, JdbcTransactions transactions) {
-        super(Function.class, manager, transactions);
-    }
-
-    /** Query lọc/count/page nằm ở Repo; LIKE escape giữ nguyên %, _ và ! của người dùng. */
-    public Page<Function> search(FunctionSearch search) {
+/** Repository Spring Data thật; SQL tra cứu khai báo đầy đủ, schema lấy từ cấu hình Hibernate. */
+public interface FunctionRepo extends JpaRepository<Function, String> {
+    /** LIKE escape giữ nguyên %, _ và !; count và trang dùng cùng điều kiện. */
+    default Page<Function> search(FunctionSearch search) {
         String keyword =
             "%" +
             search.getQuery().toLowerCase(Locale.ROOT).replace("!", "!!").replace("%", "!%").replace("_", "!_") +
             "%";
-        Specification<Function> spec = (item, query, cb) ->
-            cb.and(
-                cb.isFalse(item.get("deleted")),
-                search.getActive() == null ? cb.conjunction() : cb.equal(item.get("active"), search.getActive()),
-                cb.or(
-                    cb.like(cb.lower(item.get("code")), keyword, '!'),
-                    cb.like(cb.lower(item.get("nameVi")), keyword, '!'),
-                    cb.like(cb.lower(item.get("nameEn")), keyword, '!')
-                )
-            );
-        return findAll(spec, PageRequest.of(search.getPage(), search.getSize(), Sort.by("code")));
+        return searchByFilters(keyword, search.getActive(), PageRequest.of(search.getPage(), search.getSize()));
     }
 
-    public Function lock(String code) {
-        return entityManager.find(Function.class, code, LockModeType.PESSIMISTIC_WRITE);
-    }
+    @Transactional(readOnly = true)
+    @Query(
+        value = """
+        SELECT f.*
+        FROM {h-schema}auth_functions f
+        WHERE NOT f.deleted
+            AND (CAST(:active AS boolean) IS NULL OR f.active = :active)
+            AND (lower(f.code) LIKE :keyword ESCAPE '!'
+                OR lower(f.name_vi) LIKE :keyword ESCAPE '!'
+                OR lower(f.name_en) LIKE :keyword ESCAPE '!')
+        ORDER BY f.code
+        """,
+        countQuery = """
+        SELECT count(*)
+        FROM {h-schema}auth_functions f
+        WHERE NOT f.deleted
+            AND (CAST(:active AS boolean) IS NULL OR f.active = :active)
+            AND (lower(f.code) LIKE :keyword ESCAPE '!'
+                OR lower(f.name_vi) LIKE :keyword ESCAPE '!'
+                OR lower(f.name_en) LIKE :keyword ESCAPE '!')
+        """,
+        nativeQuery = true
+    )
+    Page<Function> searchByFilters(@Param("keyword") String keyword, @Param("active") Boolean active, Pageable page);
 
-    private static final String GRANTS = """
-    FROM auth_users u
-    JOIN auth_user_roles ur ON ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
-    JOIN auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
-    JOIN auth_role_functions rf ON rf.role_code = r.code
-    JOIN auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
-    JOIN auth_function_resources fr ON fr.function_code = f.code
-    WHERE u.id = ? AND u.active AND NOT u.deleted AND NOT u.activation_pending
-        AND NOT u.must_change_password
-        AND u.email_verified_at IS NOT NULL
-    """;
+    /** Khóa một function trên transaction của service; giữ bản ghi kể cả khi đã ngừng. */
+    @Transactional
+    @Query(
+        value = """
+        SELECT f.*
+        FROM {h-schema}auth_functions f
+        WHERE f.code = :code
+        FOR UPDATE
+        """,
+        nativeQuery = true
+    )
+    Function lock(@Param("code") String code);
 
-    public List<FunctionDTO> capabilities(long user) {
-        return read(connection -> {
-            Map<String, FunctionDTO> found = new LinkedHashMap<>();
-            Map<String, Set<String>> targets = new LinkedHashMap<>();
-            try (
-                PreparedStatement query = connection.prepareStatement(
-                    """
-                    SELECT DISTINCT f.code, f.name_vi, f.name_en, fr.kind, fr.target
-                    %s
-                    ORDER BY f.code, fr.target
-                    """.formatted(GRANTS)
-                )
-            ) {
-                query.setLong(1, user);
-                try (ResultSet rows = query.executeQuery()) {
-                    while (rows.next()) {
-                        String code = rows.getString(1);
-                        FunctionDTO dto = found.get(code);
-                        if (dto == null) {
-                            dto = new FunctionDTO();
-                            dto.setCode(code);
-                            dto.setFunction(code);
-                            dto.setNameVi(rows.getString(2));
-                            dto.setNameEn(rows.getString(3));
-                            found.put(code, dto);
-                            targets.put(code, new LinkedHashSet<>());
-                        }
-                        if ("MENU".equals(rows.getString(4))) dto.setView(true);
-                        targets.get(code).add(rows.getString(5));
-                    }
-                }
+    /** Đọc grant hiện hành theo user; không suy quyền từ role trong token hoặc cache. */
+    @Transactional(readOnly = true)
+    @Query(
+        value = """
+        SELECT DISTINCT f.code, f.name_vi, f.name_en, fr.kind, fr.target
+        FROM {h-schema}auth_users u
+        JOIN {h-schema}auth_user_roles ur ON ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
+        JOIN {h-schema}auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
+        JOIN {h-schema}auth_role_functions rf ON rf.role_code = r.code
+        JOIN {h-schema}auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
+        JOIN {h-schema}auth_function_resources fr ON fr.function_code = f.code
+        WHERE u.id = :userId AND u.active AND NOT u.deleted AND NOT u.activation_pending
+            AND NOT u.must_change_password AND u.email_verified_at IS NOT NULL
+        ORDER BY f.code, fr.target
+        """,
+        nativeQuery = true
+    )
+    List<Map<String, Object>> capabilityRows(@Param("userId") long userId);
+
+    default List<FunctionDTO> capabilities(long user) {
+        Map<String, FunctionDTO> found = new LinkedHashMap<>();
+        Map<String, Set<String>> targets = new LinkedHashMap<>();
+        for (Map<String, Object> row : capabilityRows(user)) {
+            String code = (String) row.get("code");
+            FunctionDTO dto = found.get(code);
+            if (dto == null) {
+                dto = new FunctionDTO();
+                dto.setCode(code);
+                dto.setFunction(code);
+                dto.setNameVi((String) row.get("name_vi"));
+                dto.setNameEn((String) row.get("name_en"));
+                found.put(code, dto);
+                targets.put(code, new LinkedHashSet<>());
             }
-            found.forEach((code, dto) -> dto.setTargets(Set.copyOf(targets.get(code))));
-            return List.copyOf(found.values());
-        });
+            if ("MENU".equals(row.get("kind"))) dto.setView(true);
+            targets.get(code).add((String) row.get("target"));
+        }
+        found.forEach((code, dto) -> dto.setTargets(Set.copyOf(targets.get(code))));
+        return List.copyOf(found.values());
     }
 
-    public List<FunctionDTO> navigation(long user, String current, Locale locale) {
-        return read(connection -> {
-            List<FunctionDTO> result = new ArrayList<>();
-            try (
-                PreparedStatement query = connection.prepareStatement(
-                    """
-                    SELECT DISTINCT ON(fr.target) fr.target, fr.name_vi, fr.name_en, fr.icon
-                    %s
-                        AND fr.kind = 'MENU'
-                        AND fr.http_method = 'GET'
-                    ORDER BY fr.target, f.sort_order, fr.sort_order, f.code
-                    """.formatted(GRANTS)
-                )
-            ) {
-                query.setLong(1, user);
-                try (ResultSet rows = query.executeQuery()) {
-                    while (rows.next()) {
-                        String path = rows.getString(1).substring(4);
-                        if (path.contains("{")) continue;
-                        FunctionDTO dto = new FunctionDTO();
-                        dto.setPath(path);
-                        dto.setName(rows.getString("en".equals(locale.getLanguage()) ? 3 : 2));
-                        dto.setIcon(rows.getString(4));
-                        dto.setActive(current.equals(path));
-                        result.add(dto);
-                    }
-                }
-            }
-            return List.copyOf(result);
-        });
+    @Transactional(readOnly = true)
+    @Query(
+        value = """
+        SELECT DISTINCT ON (fr.target) fr.target, fr.name_vi, fr.name_en, fr.icon
+        FROM {h-schema}auth_users u
+        JOIN {h-schema}auth_user_roles ur ON ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
+        JOIN {h-schema}auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
+        JOIN {h-schema}auth_role_functions rf ON rf.role_code = r.code
+        JOIN {h-schema}auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
+        JOIN {h-schema}auth_function_resources fr ON fr.function_code = f.code
+        WHERE u.id = :userId AND u.active AND NOT u.deleted AND NOT u.activation_pending
+            AND NOT u.must_change_password AND u.email_verified_at IS NOT NULL
+            AND fr.kind = 'MENU' AND fr.http_method = 'GET'
+        ORDER BY fr.target, f.sort_order, fr.sort_order, f.code
+        """,
+        nativeQuery = true
+    )
+    List<Map<String, Object>> navigationRows(@Param("userId") long userId);
+
+    default List<FunctionDTO> navigation(long user, String current, Locale locale) {
+        List<FunctionDTO> result = new ArrayList<>();
+        for (Map<String, Object> row : navigationRows(user)) {
+            String path = ((String) row.get("target")).substring(4);
+            if (path.contains("{")) continue;
+            FunctionDTO dto = new FunctionDTO();
+            dto.setPath(path);
+            dto.setName((String) row.get("en".equals(locale.getLanguage()) ? "name_en" : "name_vi"));
+            dto.setIcon((String) row.get("icon"));
+            dto.setActive(current.equals(path));
+            result.add(dto);
+        }
+        return List.copyOf(result);
     }
 }

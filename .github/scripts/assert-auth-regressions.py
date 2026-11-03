@@ -47,5 +47,6 @@ for name in groups[sys.argv[1]]:
                          'categoryUpgradeRetiresOnlyOldResourcesAndKeepsRevokedRolesInactive'})
         required.update({'migrationsCreateExpectedPrimaryKeysAndJpaIndexes',
                          'schemaRegressionDetectsMissingIndexesWrongColumnsAndPrimaryKeys'})
+        required.add('nativeQueryRepositoriesKeepConfiguredSchemaPagingAndTransactionRollback')
         assert required <= cases, 'Thiếu regression endpoint/JPA/batch/scope bắt buộc'
 print('Regression ' + sys.argv[1] + ': đủ ca kiểm, không fail/error/skip')

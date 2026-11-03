@@ -60,6 +60,22 @@ SQL dài dùng text block, format SELECT/FROM/JOIN/WHERE/CTE/CASE/khóa/paging r
 
 Connection bắt đầu transaction trước SET LOCAL search_path; schema validated, pg_temp cuối, không fallback public/$user hoặc session state qua pooler. Hibernate không tự DDL, không OSIV. Entity chỉ dùng annotation JPA chuẩn; regression PostgreSQL đối chiếu PK/index với migration và metadata JPA. Startup không quét PK/index bằng validator riêng; DatabaseInitializer vẫn giữ migration/checksum/advisory lock/transaction và seed. Checksum kiểm file SQL đã áp, không chứng minh DB chưa bị sửa tay.
 
+## Query khai báo và SQL để kiểm DB
+
+Theo lựa chọn giữ số file, FunctionRepo, FunctionResourceRepo, RoleFunctionRepo và TripStopRepo là interface Spring Data được đăng ký bởi @EnableJpaRepositories trong JpaConfig. Có13 khai báo @Query native và một countQuery; SQL viết đầy đủ bằng text block, named parameter có @Param. Không tạo Custom/Impl hoặc executor annotation riêng. Các Repo còn cần implementation/dependency riêng giữ JPA/JDBC hiện hành; không coi toàn bộ source đã chuyển sang @Query.
+
+Native query dùng `{h-schema}`; Hibernate thay bằng schema từ cấu hình, ví dụ `vietroute.auth_functions`. Entity không gắn schema cố định. Các query gán quyền vẫn giữ toàn bộ điều kiện user/role/function hiện hành, không cache hoặc suy grant từ tên role. Query trả Map chỉ là projection nội bộ repo, không trả thẳng ra API. Batch gán mapping, khóa trip/segments và history vẫn dùng JDBC trên cùng transaction JPA; cập nhật điểm chuyến bằng @Modifying giữ kiểm phân công/khóa trip tại service và CAS một dòng tại repo.
+
+Xuất SQL có schema cụ thể từ chính text block trong Repo bằng [exporter](../../scripts/development/export-repository-queries.py):
+
+```powershell
+python -X utf8 scripts/development/export-repository-queries.py --schema vietroute
+```
+
+Mở `target/repository-queries.sql`:14 câu gồm cả count, table đã có schema, giữ `:thamSo` để bind trong DB editor hoặc thay giá trị khi kiểm. Công cụ không đọc .env, kết nối DB hoặc thực thi SQL; không đưa password/token/PII vào file. Chạy lại sau khi sửa query, không duy trì bản SQL chép tay thứ hai. Query JDBC còn lại lấy từ Repo cùng transaction `SET LOCAL search_path` tới schema được chọn; không thêm tên schema từ input client.
+
+Đối chiếu cơ chế với [Spring Data JPA3.5](https://docs.spring.io/spring-data/jpa/reference/3.5/jpa/query-methods.html) và [schema placeholder của Hibernate6.6](https://docs.hibernate.org/orm/6.6/userguide/html_single/#sql-global-catalog-schema). Oracle vẫn chưa hỗ trợ runtime; native SQL PostgreSQL không tự tương thích Oracle nhờ annotation.
+
 ## Entity, audit và thời gian
 
 Entity đủ @Id/@Column/@Version/@Index theo migration, không schema cứng. Mỗi field có chú thích tiếng Việt: ngắn dùng //, giải thích dài dùng Javadoc. Generated column chỉ đọc, projection @Transient; DTO không phải entity. Thời gian nghiệp vụ/audit dùng Instant/TIMESTAMPTZ; Timestamp JDBC chỉ chuyển tại repo. Ngày tìm chuyến/báo cáo hiểu theo Asia/Ho_Chi_Minh, không mặc định timezone của browser.

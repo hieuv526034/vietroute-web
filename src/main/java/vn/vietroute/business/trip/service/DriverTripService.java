@@ -97,8 +97,8 @@ public class DriverTripService {
                         ErrorCode.TRIP_STATE_CONFLICT
                     );
                     trips.requireAvailable(connection, id, assets, trip.getDepartureAt(), trip.getEndAt(), true);
-                    progress.mark(connection, trip, 1, true, now, actor.id());
-                    progress.mark(connection, trip, 1, false, now, actor.id());
+                    progress.mark(trip, 1, true, now, actor.id());
+                    progress.mark(trip, 1, false, now, actor.id());
                     state = TripStatus.IN_PROGRESS;
                     event = "STARTED";
                 }
@@ -111,7 +111,7 @@ public class DriverTripService {
                             !now.isBefore(stops.get(body.getStopOrder() - 2).getActualDepartureAt()),
                         ErrorCode.TRIP_STATE_CONFLICT
                     );
-                    progress.mark(connection, trip, body.getStopOrder(), true, now, actor.id());
+                    progress.mark(trip, body.getStopOrder(), true, now, actor.id());
                     event = "ARRIVED";
                 }
                 case DEPART -> {
@@ -124,7 +124,7 @@ public class DriverTripService {
                             !now.isBefore(stop.getActualArrivalAt()),
                         ErrorCode.TRIP_STATE_CONFLICT
                     );
-                    progress.mark(connection, trip, body.getStopOrder(), false, now, actor.id());
+                    progress.mark(trip, body.getStopOrder(), false, now, actor.id());
                     event = "DEPARTED";
                 }
                 case COMPLETE -> {
@@ -136,7 +136,7 @@ public class DriverTripService {
                             !now.isBefore(stop.getActualArrivalAt()),
                         ErrorCode.TRIP_STATE_CONFLICT
                     );
-                    progress.mark(connection, trip, count, false, now, actor.id());
+                    progress.mark(trip, count, false, now, actor.id());
                     state = TripStatus.COMPLETED;
                     event = "COMPLETED";
                 }

@@ -1,59 +1,48 @@
 package vn.vietroute.auth.repo;
 
-import jakarta.persistence.EntityManager;
 import java.sql.Array;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.LinkedHashSet;
 import java.util.Set;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.entity.RoleFunction;
-import vn.vietroute.common.base.JpaRepositorySupport;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
-import vn.vietroute.common.jdbc.JdbcTransactions;
 
 /** Repository bảng RoleFunction; CRUD JPA và SQL batch/query phức tạp cùng transaction server. */
-@Repository
-public class RoleFunctionRepo extends JpaRepositorySupport<RoleFunction, Long> {
+public interface RoleFunctionRepo extends JpaRepository<RoleFunction, Long> {
+    @Transactional(readOnly = true)
+    @Query(
+        value = """
+        SELECT function_code
+        FROM {h-schema}auth_role_functions
+        WHERE role_code = :role
+        ORDER BY function_code
+        """,
+        nativeQuery = true
+    )
+    Set<String> functions(@Param("role") String role);
 
-    public RoleFunctionRepo(EntityManager manager, JdbcTransactions transactions) {
-        super(RoleFunction.class, manager, transactions);
-    }
-
-    public Set<String> functions(Connection connection, String role) throws SQLException {
-        return strings(connection, "SELECT function_code FROM auth_role_functions WHERE role_code=?", role);
-    }
-
-    public Set<String> targets(Connection connection, String role) throws SQLException {
-        return strings(
-            connection,
-            """
-            SELECT DISTINCT fr.target
-            FROM auth_role_functions rf
-            JOIN auth_functions f ON f.code = rf.function_code AND NOT f.deleted
-            JOIN auth_function_resources fr ON fr.function_code = f.code
-            WHERE rf.role_code = ?
-            """,
-            role
-        );
-    }
-
-    private Set<String> strings(Connection connection, String sql, String role) throws SQLException {
-        try (PreparedStatement query = connection.prepareStatement(sql)) {
-            query.setString(1, role);
-            try (ResultSet rows = query.executeQuery()) {
-                Set<String> result = new LinkedHashSet<>();
-                while (rows.next()) result.add(rows.getString(1));
-                return Set.copyOf(result);
-            }
-        }
-    }
+    @Transactional(readOnly = true)
+    @Query(
+        value = """
+        SELECT DISTINCT fr.target
+        FROM {h-schema}auth_role_functions rf
+        JOIN {h-schema}auth_functions f ON f.code = rf.function_code AND NOT f.deleted
+        JOIN {h-schema}auth_function_resources fr ON fr.function_code = f.code
+        WHERE rf.role_code = :role
+        """,
+        nativeQuery = true
+    )
+    Set<String> targets(@Param("role") String role);
 
     /** Hai statement theo tập; kiểm mã tồn tại kể cả khi tập rỗng, FK và transaction bảo vệ cạnh tranh. */
-    public void replace(Connection connection, String role, Set<String> functions, long actor) throws SQLException {
+    default void replace(Connection connection, String role, Set<String> functions, long actor) throws SQLException {
         Array codes = connection.createArrayOf("text", functions.toArray(String[]::new));
         try {
             try (
@@ -97,41 +86,36 @@ public class RoleFunctionRepo extends JpaRepositorySupport<RoleFunction, Long> {
         }
     }
 
-    public boolean usesFunction(Connection connection, String code) throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                "SELECT 1 FROM auth_role_functions WHERE function_code=? LIMIT 1"
-            )
-        ) {
-            query.setString(1, code);
-            try (ResultSet row = query.executeQuery()) {
-                return row.next();
-            }
-        }
-    }
+    @Transactional(readOnly = true)
+    @Query(
+        value = """
+        SELECT EXISTS (
+            SELECT 1
+            FROM {h-schema}auth_role_functions
+            WHERE function_code = :code
+        )
+        """,
+        nativeQuery = true
+    )
+    boolean usesFunction(@Param("code") String code);
 
-    /** Kể cả role đang tắt vẫn giữ trần dữ liệu, tránh nới quyền gián tiếp khi bật lại. */
-    public boolean hasAllScopesRole(Connection connection, String code) throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT 1
-                FROM auth_role_functions rf
-                JOIN auth_roles r ON r.code = rf.role_code
-                WHERE rf.function_code = ? AND r.all_scopes
-                LIMIT 1
-                """
-            )
-        ) {
-            query.setString(1, code);
-            try (ResultSet row = query.executeQuery()) {
-                return row.next();
-            }
-        }
-    }
+    /** Role inactive vẫn giữ trần ủy quyền; không thêm điều kiện active làm mất bảo vệ này. */
+    @Transactional(readOnly = true)
+    @Query(
+        value = """
+        SELECT EXISTS (
+            SELECT 1
+            FROM {h-schema}auth_role_functions rf
+            JOIN {h-schema}auth_roles r ON r.code = rf.role_code
+            WHERE rf.function_code = :code AND r.all_scopes
+        )
+        """,
+        nativeQuery = true
+    )
+    boolean hasAllScopesRole(@Param("code") String code);
 
     /** Endpoint function đổi thì snapshot gán role cũ cũng hết hạn; một UPDATE cho toàn bộ role liên quan. */
-    public void touchRoles(Connection connection, String function, long actor) throws SQLException {
+    default void touchRoles(Connection connection, String function, long actor) throws SQLException {
         try (
             PreparedStatement query = connection.prepareStatement(
                 """
@@ -151,21 +135,18 @@ public class RoleFunctionRepo extends JpaRepositorySupport<RoleFunction, Long> {
         }
     }
 
-    public Set<String> functionTargets(Connection connection, Set<String> functions) throws SQLException {
-        Array codes = connection.createArrayOf("text", functions.toArray(String[]::new));
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                "SELECT DISTINCT target FROM auth_function_resources WHERE function_code=ANY(?)"
-            )
-        ) {
-            query.setArray(1, codes);
-            try (ResultSet rows = query.executeQuery()) {
-                Set<String> result = new LinkedHashSet<>();
-                while (rows.next()) result.add(rows.getString(1));
-                return Set.copyOf(result);
-            }
-        } finally {
-            codes.free();
-        }
+    @Transactional(readOnly = true)
+    @Query(
+        value = """
+        SELECT DISTINCT target
+        FROM {h-schema}auth_function_resources
+        WHERE function_code IN (:codes)
+        """,
+        nativeQuery = true
+    )
+    Set<String> assignedTargets(@Param("codes") Set<String> codes);
+
+    default Set<String> functionTargets(Set<String> functions) {
+        return functions.isEmpty() ? Set.of() : assignedTargets(functions);
     }
 }

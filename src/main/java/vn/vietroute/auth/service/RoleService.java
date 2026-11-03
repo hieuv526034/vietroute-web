@@ -90,7 +90,7 @@ public class RoleService {
                 );
                 mappings.requireDelegableRoles(connection, Set.of(code));
             }
-            Set<String> targets = functions.targets(connection, code);
+            Set<String> targets = functions.targets(code);
             boolean wide = body.getAllScopes() == null ? value.isAllScopes() : body.getAllScopes();
             if (wide) BusinessRules.require(
                 UserPrincipal.current().getGlobalTargets().containsAll(targets),
@@ -125,7 +125,7 @@ public class RoleService {
             BusinessRules.require(value.getVersion() == version, ErrorCode.STALE_VERSION);
             mappings.requireDelegableRoles(connection, Set.of(code));
             BusinessRules.require(!mappings.usesRole(connection, code), ErrorCode.CONFLICT);
-            Set<String> before = functions.functions(connection, code);
+            Set<String> before = functions.functions(code);
             functions.replace(connection, code, Set.of(), actor.id());
             value.setDeleted(true);
             value.setActive(false);
@@ -150,7 +150,7 @@ public class RoleService {
         return transactions.execute(connection -> {
             Role value = BusinessRules.requireFound(roles.findById(code).orElse(null));
             RoleDTO dto = RoleDTO.from(value);
-            dto.setFunctionCodes(functions.functions(connection, code));
+            dto.setFunctionCodes(functions.functions(code));
             return dto;
         });
     }
@@ -166,9 +166,9 @@ public class RoleService {
                 body.getVersion() != null && value.getVersion() == body.getVersion(),
                 ErrorCode.STALE_VERSION
             );
-            Set<String> before = functions.functions(connection, code);
-            Set<String> targets = functions.functionTargets(connection, body.getFunctionCodes());
-            UserPrincipal.requireDelegable(functions.targets(connection, code));
+            Set<String> before = functions.functions(code);
+            Set<String> targets = functions.functionTargets(body.getFunctionCodes());
+            UserPrincipal.requireDelegable(functions.targets(code));
             UserPrincipal.requireDelegable(targets);
             if (value.isAllScopes()) BusinessRules.require(
                 UserPrincipal.current().getGlobalTargets().containsAll(targets),

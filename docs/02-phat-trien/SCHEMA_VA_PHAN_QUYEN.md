@@ -92,6 +92,8 @@ Manifest ở [db/migration](../../src/main/resources/db/migration/postgresql/mig
 
 DatabaseInitializer/MigrationCatalog giữ advisory lock/transaction/checksum và init. Entity dùng annotation JPA chuẩn; PK/index được đối chiếu trong regression PostgreSQL, không còn validator metadata riêng ở startup. Bốn bảng auth có ID kỹ thuật UNIQUE vẫn giữ PK nghiệp vụ ghép trong migration và test. Connection transaction trước LOCAL search_path, schema qua VIETROUTE_DB_SCHEMA/fallback profile, pg_temp cuối; không prefix schema cứng vào entity/query, không public/$user fallback. pg_trgm tra namespace extension thật. Không tự DDL bằng Hibernate, không migration lúc Maven packaging. Checksum không phát hiện mọi thay đổi cấu trúc DB do sửa tay.
 
+Các native @Query dùng `{h-schema}` từ cùng cấu hình schema Hibernate. Query JPA và batch JDBC tham gia transaction hiện hành; không tạo connection riêng cho phần @Query hoặc đổi schema từ request. Cách xuất SQL đã điền schema nằm ở [quy ước query](QUY_UOC_PHAT_TRIEN.md#query-khai-báo-và-sql-để-kiểm-db).
+
 Baseline mới hoặc history sai phải dừng runtime, không sửa checksum để xanh. Bảo trì/rebaseline theo [vận hành](../04-van-hanh/VAN_HANH.md#database-backup-và-rollback): backup kiểm phục hồi, dừng mọi node và kiểm cấu trúc trước đổi history; không đổi dữ liệu/hash/sequence/audit.
 
 ## Khởi tạo và bảo vệ bootstrap
