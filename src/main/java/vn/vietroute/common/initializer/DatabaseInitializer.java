@@ -15,8 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;
 import vn.vietroute.auth.initializer.AuthInitializer;
-import vn.vietroute.auth.repo.AccessChangeRepo;
-import vn.vietroute.business.catalog.repo.CategoryRepo;
+import vn.vietroute.auth.repo.AccessChangeCustomRepo;
+import vn.vietroute.business.catalog.repo.CategoryCustomRepo;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.constant.ApplicationConstants.Env;
 import vn.vietroute.common.jdbc.JdbcSchema;
@@ -39,7 +39,7 @@ public class DatabaseInitializer implements InitializingBean {
 
     private final JdbcSchema schema;
 
-    private final CategoryRepo catalogs;
+    private final CategoryCustomRepo catalogs;
 
     @Override
     public void afterPropertiesSet() {
@@ -73,7 +73,7 @@ public class DatabaseInitializer implements InitializingBean {
             migrate(connection, version);
         }
         auth.initialize(connection);
-        AccessChangeRepo.cleanup(connection);
+        AccessChangeCustomRepo.cleanup(connection);
         catalogs.seedCatalogs(connection);
         return null;
     }

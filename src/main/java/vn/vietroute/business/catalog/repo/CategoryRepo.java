@@ -1,16 +1,18 @@
 package vn.vietroute.business.catalog.repo;
 
+import static vn.vietroute.common.base.BaseRepository.booleanValue;
+import static vn.vietroute.common.base.BaseRepository.instantValue;
+import static vn.vietroute.common.base.BaseRepository.intValue;
+import static vn.vietroute.common.base.BaseRepository.longValue;
+import static vn.vietroute.common.base.BaseRepository.stringValue;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
+import jakarta.persistence.Query;
+import jakarta.persistence.Tuple;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,7 +23,7 @@ import vn.vietroute.business.catalog.entity.Category;
 import vn.vietroute.common.base.JpaRepositorySupport;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ErrorCode;
-import vn.vietroute.common.jdbc.JdbcTransactions;
+import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.validation.BusinessRules;
 
 /**
@@ -38,13 +40,13 @@ public class CategoryRepo extends JpaRepositorySupport<Category, Long> {
     """;
 
     private static final String FROM = """
-    FROM category c
-    LEFT JOIN category g ON g.group_code=c.ref_type
-    LEFT JOIN category p ON p.id=c.parent_id
+    FROM {h-schema}category c
+    LEFT JOIN {h-schema}category g ON g.group_code=c.ref_type
+    LEFT JOIN {h-schema}category p ON p.id=c.parent_id
     """;
 
-    public CategoryRepo(EntityManager manager, JdbcTransactions transactions, ObjectMapper json) {
-        super(Category.class, manager, transactions);
+    public CategoryRepo(EntityManager manager, ObjectMapper json) {
+        super(Category.class, manager);
         this.json = json;
     }
 
@@ -52,84 +54,74 @@ public class CategoryRepo extends JpaRepositorySupport<Category, Long> {
      * Danh sách có filter cố định, count/page cùng predicate và thứ tự; không query từng dòng.
      */
     public PageResponse<Category> search(CategorySearch page, String refType, String type, boolean publicOnly) {
-        return read(connection -> search(connection, page, refType, type, publicOnly));
-    }
-
-    public PageResponse<Category> search(
-        Connection connection,
-        CategorySearch page,
-        String refType,
-        String type,
-        boolean publicOnly
-    ) throws SQLException {
         String filter = """
-        WHERE c.type=? AND (?::TEXT IS NULL OR c.ref_type=?)
-            AND ((?::BIGINT IS NULL AND c.parent_id IS NULL) OR c.parent_id=?)
-            AND (?::BOOLEAN IS NULL OR c.active=?)
-                AND (NOT ? OR (c.active AND g.active AND NOT EXISTS (
+        WHERE c.type=:type AND (CAST(:refType AS TEXT) IS NULL OR c.ref_type=:refType)
+            AND ((CAST(:parentId AS BIGINT) IS NULL AND c.parent_id IS NULL) OR c.parent_id=:parentId)
+            AND (CAST(:active AS BOOLEAN) IS NULL OR c.active=:active)
+                AND (NOT :publicOnly OR (c.active AND g.active AND NOT EXISTS (
                     WITH RECURSIVE ancestors AS (
-                        SELECT a.id,a.parent_id,a.active,a.ref_type FROM category a WHERE a.id=c.parent_id
+                        SELECT a.id,a.parent_id,a.active,a.ref_type FROM {h-schema}category a WHERE a.id=c.parent_id
                         UNION ALL
-                        SELECT a.id,a.parent_id,a.active,a.ref_type FROM category a
+                        SELECT a.id,a.parent_id,a.active,a.ref_type FROM {h-schema}category a
                         JOIN ancestors previous ON a.id=previous.parent_id
                     )
-                    SELECT 1 FROM ancestors a JOIN category ag ON ag.group_code=a.ref_type
+                    SELECT 1 FROM ancestors a JOIN {h-schema}category ag ON ag.group_code=a.ref_type
                     WHERE NOT a.active OR NOT ag.active
                 )))
             AND LOWER(c.code || ' ' || c.name || ' ' || COALESCE(c.props->>'nameEn','') ||
-                ' ' || COALESCE(c.props->>'address','')) LIKE LOWER(?) ESCAPE '!'
+                ' ' || COALESCE(c.props->>'address','')) LIKE LOWER(:keyword) ESCAPE '!'
         """;
         long count;
-        try (PreparedStatement query = connection.prepareStatement("SELECT COUNT(*) " + FROM + filter)) {
+        {
+            Query query = entityManager.createNativeQuery("SELECT COUNT(*) " + FROM + filter, Tuple.class);
+
             bind(query, page, refType, type, publicOnly);
-            try (ResultSet row = query.executeQuery()) {
-                row.next();
-                count = row.getLong(1);
+            {
+                Tuple row = (Tuple) query.getSingleResult();
+                count = longValue(row.get(0));
             }
         }
         List<Category> content = new ArrayList<>();
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                "SELECT " + COLUMNS + FROM + filter + " ORDER BY c.sort_order,c.id LIMIT ? OFFSET ?"
-            )
-        ) {
+        {
+            Query query = entityManager.createNativeQuery(
+                "SELECT " + COLUMNS + FROM + filter + " ORDER BY c.sort_order,c.id LIMIT :size OFFSET :offset",
+                Tuple.class
+            );
+
             bind(query, page, refType, type, publicOnly);
-            query.setInt(10, page.getSize());
-            query.setLong(11, page.offset());
-            try (ResultSet rows = query.executeQuery()) {
-                while (rows.next()) content.add(map(rows));
+            query.setParameter("size", page.getSize());
+            query.setParameter("offset", page.offset());
+            {
+                for (Object rowsValue : query.getResultList()) {
+                    Tuple rows = (Tuple) rowsValue;
+                    content.add(map(rows));
+                }
             }
         }
         return PageResponse.of(content, page, count);
     }
 
-    private void bind(PreparedStatement query, CategorySearch page, String refType, String type, boolean publicOnly)
-        throws SQLException {
-        query.setString(1, type);
-        query.setString(2, refType);
-        query.setString(3, refType);
-        query.setObject(4, page.parent());
-        query.setObject(5, page.parent());
-        Boolean active = publicOnly ? Boolean.TRUE : page.getActive();
-        query.setObject(6, active);
-        query.setObject(7, active);
-        query.setBoolean(8, publicOnly);
+    private void bind(Query query, CategorySearch page, String refType, String type, boolean publicOnly) {
+        query.setParameter("type", type);
+        query.setParameter("refType", refType);
+        query.setParameter("parentId", page.parent());
+        query.setParameter("active", publicOnly ? Boolean.TRUE : page.getActive());
+        query.setParameter("publicOnly", publicOnly);
         String value = page.getQuery() == null ? "" : page.getQuery();
-        query.setString(9, "%" + value.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%");
+        query.setParameter("keyword", "%" + value.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%");
     }
 
+    /** Đọc mục và thông tin cha trong cùng truy vấn. */
     public Category item(long id) {
-        return read(connection -> item(connection, id));
-    }
+        {
+            Query query = entityManager.createNativeQuery("SELECT " + COLUMNS + FROM + " WHERE c.id=:id", Tuple.class);
 
-    /**
-     * Một SELECT đã JOIN cha; entity projection chỉ phục vụ DTO, không nhận quyền từ client.
-     */
-    public Category item(Connection connection, long id) throws SQLException {
-        try (PreparedStatement query = connection.prepareStatement("SELECT " + COLUMNS + FROM + " WHERE c.id=?")) {
-            query.setLong(1, id);
-            try (ResultSet rows = query.executeQuery()) {
-                return BusinessRules.requireFound(rows.next() ? map(rows) : null);
+            query.setParameter("id", id);
+            {
+                List<?> rowsValues = query.getResultList();
+                Tuple rows = rowsValues.isEmpty() ? null : (Tuple) rowsValues.get(0);
+
+                return BusinessRules.requireFound(rows != null ? map(rows) : null);
             }
         }
     }
@@ -139,10 +131,12 @@ public class CategoryRepo extends JpaRepositorySupport<Category, Long> {
      */
     public Category group(String code) {
         return BusinessRules.requireFound(
-            entityManager
-                .createQuery("SELECT c FROM Category c WHERE c.type='GROUP' AND c.code=:code", Category.class)
+            (Category) entityManager
+                .createNativeQuery(
+                    "SELECT * FROM {h-schema}category WHERE type = 'GROUP' AND code = :code FOR SHARE",
+                    Category.class
+                )
                 .setParameter("code", code)
-                .setLockMode(LockModeType.PESSIMISTIC_READ)
                 .getResultStream()
                 .findFirst()
                 .orElse(null)
@@ -161,134 +155,53 @@ public class CategoryRepo extends JpaRepositorySupport<Category, Long> {
      * Dùng cùng hợp đồng DB với trigger; dữ liệu bind JSON, không sinh SQL từ props.
      */
     public void requireProps(Map<String, Object> props, Map<String, Object> group) {
-        read(connection -> {
-            try (
-                PreparedStatement query = connection.prepareStatement("SELECT category_props_valid(?::JSONB,?::JSONB)")
-            ) {
-                query.setString(1, json.writeValueAsString(props));
-                query.setString(2, json.writeValueAsString(group.getOrDefault("fields", List.of())));
-                try (ResultSet row = query.executeQuery()) {
-                    row.next();
-                    BusinessRules.require(row.getBoolean(1), ErrorCode.INVALID_REQUEST);
-                }
-            } catch (IOException exception) {
-                throw new SQLException("Invalid category props", exception);
+        try {
+            Query query = entityManager.createNativeQuery(
+                "SELECT category_props_valid(CAST(:props AS JSONB),CAST(:fields AS JSONB))",
+                Tuple.class
+            );
+
+            query.setParameter("props", json.writeValueAsString(props));
+            query.setParameter("fields", json.writeValueAsString(group.getOrDefault("fields", List.of())));
+            {
+                Tuple row = (Tuple) query.getSingleResult();
+                BusinessRules.require(booleanValue(row.get(0)), ErrorCode.INVALID_REQUEST);
             }
-            return null;
-        });
+        } catch (IOException exception) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
     }
 
-    private Category map(ResultSet row) throws SQLException {
+    private Category map(Tuple row) {
         try {
             Map<String, Object> props = json.readValue(
-                row.getString("props"),
+                stringValue(row.get("props")),
                 new TypeReference<LinkedHashMap<String, Object>>() {}
             );
             return Category.builder()
-                .id(row.getLong("id"))
-                .code(row.getString("code"))
-                .type(row.getString("type"))
-                .name(row.getString("name"))
-                .description(row.getString("description"))
-                .refType(row.getString("ref_type"))
-                .parentId(row.getObject("parent_id", Long.class))
+                .id(longValue(row.get("id")))
+                .code(stringValue(row.get("code")))
+                .type(stringValue(row.get("type")))
+                .name(stringValue(row.get("name")))
+                .description(stringValue(row.get("description")))
+                .refType(stringValue(row.get("ref_type")))
+                .parentId(row.get("parent_id", Long.class))
                 .props(props)
-                .groupCode(row.getString("group_code"))
-                .valueRef(row.getString("value_ref"))
-                .active(row.getBoolean("active"))
-                .sortOrder(row.getInt("sort_order"))
-                .createdAt(row.getTimestamp("created_at").toInstant())
-                .updatedAt(row.getTimestamp("updated_at").toInstant())
-                .createdBy(row.getLong("created_by"))
-                .updatedBy(row.getLong("updated_by"))
-                .version(row.getLong("version"))
-                .parentName(row.getString("parent_name"))
-                .parentNameEn(row.getString("parent_name_en"))
-                .parentActive(row.getBoolean("parent_active"))
+                .groupCode(stringValue(row.get("group_code")))
+                .valueRef(stringValue(row.get("value_ref")))
+                .active(booleanValue(row.get("active")))
+                .sortOrder(intValue(row.get("sort_order")))
+                .createdAt(instantValue(row.get("created_at")))
+                .updatedAt(instantValue(row.get("updated_at")))
+                .createdBy(longValue(row.get("created_by")))
+                .updatedBy(longValue(row.get("updated_by")))
+                .version(longValue(row.get("version")))
+                .parentName(stringValue(row.get("parent_name")))
+                .parentNameEn(stringValue(row.get("parent_name_en")))
+                .parentActive(booleanValue(row.get("parent_active")))
                 .build();
         } catch (IOException exception) {
-            throw new SQLException("Invalid stored category JSON", exception);
-        }
-    }
-
-    /**
-     * Seed giá trị nền bằng batch; không phục hồi mục đã tắt hoặc ghi đè props đã sửa.
-     */
-    public void seedCatalogs(Connection connection) throws SQLException {
-        try (
-            PreparedStatement insert = connection.prepareStatement(
-                """
-                INSERT INTO category(type, ref_type, code, name, props, sort_order)
-                SELECT 'VALUE', seed.ref_type, seed.code, seed.name,
-                    JSONB_BUILD_OBJECT('nameEn', seed.name_en) ||
-                        CASE WHEN seed.seats IS NULL THEN '{}'::JSONB ELSE JSONB_BUILD_OBJECT('seatCount', seed.seats) END,
-                    seed.sort_order
-                FROM (VALUES
-                    ('VEHICLE_TYPE','SEAT','Ghế ngồi','Seated coach',45,0),
-                    ('VEHICLE_TYPE','SLEEPER','Giường nằm','Sleeper coach',40,1),
-                    ('VEHICLE_TYPE','LIMOUSINE','Limousine','Limousine',9,2),
-                    ('BOOKING_SOURCE','WEB','Đặt trên website','Website',NULL,3),
-                    ('BOOKING_SOURCE','PHONE','Đặt qua điện thoại','Phone',NULL,4)
-                ) seed(ref_type, code, name, name_en, seats, sort_order)
-                JOIN category g ON g.group_code = seed.ref_type AND g.active
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM category c WHERE c.ref_type = seed.ref_type AND c.code = seed.code
-                )
-                ON CONFLICT(ref_type, code) DO NOTHING
-                """
-            )
-        ) {
-            insert.executeUpdate();
-        }
-        seedAdministrative(connection);
-    }
-
-    /**
-     * Bộ nguồn đã đối chiếu nằm trong artifact; hai INSERT theo tập, không gọi HTTP lúc startup.
-     */
-    private void seedAdministrative(Connection connection) throws SQLException {
-        String source;
-        try (InputStream input = CategoryRepo.class.getResourceAsStream("/bootstrap/administrative-divisions.json")) {
-            if (input == null) throw new IOException("Administrative dataset missing");
-            source = new String(input.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException exception) {
-            throw new SQLException("Cannot load administrative dataset", exception);
-        }
-        // Giữ mã nghiệp vụ/ID cũ của 12 tỉnh đã có trong bộ tuyến; mã NSO lưu riêng dạng chuỗi.
-        String provinces = """
-        INSERT INTO category(type, ref_type, code, name, props, sort_order)
-        SELECT 'VALUE', 'PROVINCE', p."localCode", p.name,
-            JSONB_BUILD_OBJECT('nameEn', p."nameEn", 'administrativeCode', p.code, 'divisionType', p."divisionType"),
-            p.code::INTEGER
-        FROM JSONB_TO_RECORDSET((?::JSONB)->'provinces') p(
-            code TEXT, name TEXT, "nameEn" TEXT, "divisionType" TEXT, "localCode" TEXT
-        )
-        JOIN category g ON g.group_code = 'PROVINCE' AND g.active
-        WHERE NOT EXISTS (
-            SELECT 1 FROM category c WHERE c.ref_type = 'PROVINCE' AND c.code = p."localCode"
-        )
-        ON CONFLICT(ref_type, code) DO NOTHING
-        """;
-        try (PreparedStatement insert = connection.prepareStatement(provinces)) {
-            insert.setString(1, source);
-            insert.executeUpdate();
-        }
-        String wards = """
-        INSERT INTO category(type, ref_type, code, parent_id, name, props, sort_order)
-        SELECT 'VALUE', 'WARD', w.code, c.id, w.name,
-            JSONB_BUILD_OBJECT('nameEn', w.name, 'administrativeCode', w.code, 'divisionType', w."divisionType"), 0
-        FROM JSONB_TO_RECORDSET((?::JSONB)->'provinces') p("localCode" TEXT, wards JSONB)
-        JOIN category c ON c.type = 'VALUE' AND c.ref_type = 'PROVINCE' AND c.code = p."localCode" AND c.active
-        JOIN category g ON g.group_code = 'WARD' AND g.active
-        CROSS JOIN LATERAL JSONB_TO_RECORDSET(p.wards) w(code TEXT, name TEXT, "divisionType" TEXT)
-        WHERE NOT EXISTS (
-            SELECT 1 FROM category item WHERE item.ref_type = 'WARD' AND item.code = w.code
-        )
-        ON CONFLICT(ref_type, code) DO NOTHING
-        """;
-        try (PreparedStatement insert = connection.prepareStatement(wards)) {
-            insert.setString(1, source);
-            insert.executeUpdate();
+            throw new BusinessException(ErrorCode.DATABASE_UNAVAILABLE);
         }
     }
 }

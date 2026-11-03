@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;
 import vn.vietroute.auth.initializer.AuthInitializer;
-import vn.vietroute.auth.repo.UserRepo;
+import vn.vietroute.auth.repo.UserCustomRepo;
 import vn.vietroute.business.bootstrap.repo.BusinessDataRepo;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.application.ConfigValues;
@@ -23,7 +23,7 @@ public class BusinessDataInitializer implements InitializingBean {
     private final AppSettings settings;
     private final ConfigurationEnvironment environment;
     private final BusinessDataRepo seeds;
-    private final UserRepo accounts;
+    private final UserCustomRepo accounts;
     private final AuthInitializer auth;
     private final JdbcTransactions transactions;
 

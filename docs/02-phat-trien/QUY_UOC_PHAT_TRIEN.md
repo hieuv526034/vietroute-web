@@ -54,7 +54,7 @@ Mỗi API có @Operation; field Request/DTO/Search có @Schema và validation th
 
 ## JPA và JDBC chung transaction
 
-Quy ước bổ sung03/11/2026: query nghiệp vụ tra cứu, CRUD và khóa dùng Spring Data/JPA/Hibernate; JDBC nghiệp vụ chỉ dành cho ghi batch/bulk theo tập. Repo interface dùng @Query; Repo có implementation riêng dùng EntityManager/native SQL. Giữ SQL đầy đủ bằng text block, named parameter rõ nghĩa; không nối giá trị client hoặc giấu query trong executor tự viết. Hạ tầng migration/schema/transaction và journal pool riêng tiếp tục dùng JDBC. Đây là hướng chuyển đổi: ngoài bốn Repo ở QUERY01, source còn query JDBC cũ; trạng thái và phạm vi chuyển tiếp ghi trong tiến độ, không trình bày như đã chuyển hết.
+Quy ước bổ sung03/11/2026: query nghiệp vụ tra cứu, CRUD và khóa dùng Spring Data/JPA/Hibernate; JDBC nghiệp vụ chỉ dành cho ghi batch/bulk theo tập. Repo interface dùng @Query; Repo có implementation riêng dùng EntityManager/native SQL. Giữ SQL đầy đủ bằng text block, named parameter rõ nghĩa; không nối giá trị client hoặc giấu query trong executor tự viết. Hạ tầng migration/schema/transaction và journal pool riêng tiếp tục dùng JDBC. JDBC ghi theo tập nằm ở các lớp CustomRepo, nhận connection từ transaction của Service. Tình trạng kiểm thử của JPA02 ghi trong tiến độ.
 
 JpaConfig dùng JpaTransactionManager, SharedEntityManagerCreator và TransactionAwareDataSourceProxy. JdbcTransactions.execute tham gia transaction hiện tại hoặc tạo transaction qua manager; JPA saveAndFlush và JDBC mapping/history cùng rollback. Repo không bật autocommit hoặc commit connection riêng. Sau SQL atomic đổi version, refresh entity đang managed trước save tiếp.
 
@@ -66,9 +66,9 @@ Connection bắt đầu transaction trước SET LOCAL search_path; schema valid
 
 ## Query khai báo và SQL để kiểm DB
 
-Theo lựa chọn giữ số file, FunctionRepo, FunctionResourceRepo, RoleFunctionRepo và TripStopRepo là interface Spring Data được đăng ký bởi @EnableJpaRepositories trong JpaConfig. Có13 khai báo @Query native và một countQuery; SQL viết đầy đủ bằng text block, named parameter có @Param. Không tạo Custom/Impl hoặc executor annotation riêng. Các Repo còn cần implementation/dependency riêng giữ JPA/JDBC hiện hành; không coi toàn bộ source đã chuyển sang @Query.
+FunctionRepo, FunctionResourceRepo, RoleFunctionRepo và TripStopRepo là interface Spring Data đăng ký qua @EnableJpaRepositories trong JpaConfig. Dùng @Query native và @Param ở interface, EntityManager.createNativeQuery với named parameter ở Repo có implementation. CRUD theo entity dùng JPA; các câu truy vấn viết tay nằm trong Repo để đối chiếu trực tiếp.
 
-Native query dùng `{h-schema}`; Hibernate thay bằng schema từ cấu hình, ví dụ `vietroute.auth_functions`. Entity không gắn schema cố định. Các query gán quyền vẫn giữ toàn bộ điều kiện user/role/function hiện hành, không cache hoặc suy grant từ tên role. Query trả Map chỉ là projection nội bộ repo, không trả thẳng ra API. Batch gán mapping, khóa trip/segments và history vẫn dùng JDBC trên cùng transaction JPA; cập nhật điểm chuyến bằng @Modifying giữ kiểm phân công/khóa trip tại service và CAS một dòng tại repo.
+Native query dùng `{h-schema}`; Hibernate thay bằng schema từ cấu hình, ví dụ `vietroute.auth_functions`. Entity không gắn schema cố định. Các query gán quyền vẫn giữ toàn bộ điều kiện user/role/function hiện hành, không cache hoặc suy grant từ tên role. Query trả Map chỉ là projection nội bộ repo, không trả thẳng ra API. Gán mapping và ghi nhiều đoạn dùng JDBC trong CustomRepo, cùng transaction với khóa trip/booking/segments qua JPA; cập nhật điểm chuyến bằng @Modifying giữ kiểm phân công/khóa trip tại service và CAS một dòng tại repo.
 
 Xuất SQL có schema cụ thể từ chính text block trong Repo bằng [exporter](../../scripts/development/export-repository-queries.py):
 
@@ -76,7 +76,7 @@ Xuất SQL có schema cụ thể từ chính text block trong Repo bằng [expor
 python -X utf8 scripts/development/export-repository-queries.py --schema vietroute
 ```
 
-Mở `target/repository-queries.sql`:14 câu gồm cả count, table đã có schema, giữ `:thamSo` để bind trong DB editor hoặc thay giá trị khi kiểm. Query nhận Pageable có LIMIT/OFFSET tương ứng để không mất phần phân trang do Spring Data áp dụng. Giá trị `page` bắt đầu từ0, không là số trang hiển thị trên UI.
+Mở `target/repository-queries.sql`:15 câu gồm cả count, table đã có schema, giữ `:thamSo` để bind trong DB editor hoặc thay giá trị khi kiểm. Query nhận Pageable có LIMIT/OFFSET tương ứng để không mất phần phân trang do Spring Data áp dụng. Giá trị `page` bắt đầu từ0, không là số trang hiển thị trên UI.
 
 Người mới có thể tạo bản ví dụ đã điền tham số và chạy trực tiếp bằng:
 
@@ -84,9 +84,9 @@ Người mới có thể tạo bản ví dụ đã điền tham số và chạy 
 python -X utf8 scripts/development/export-repository-queries.py --schema vietroute --example --user-id 1 --page-size 20 --page 0
 ```
 
-Mở `target/repository-queries-example.sql`:11 SELECT, gồm BEGIN READ ONLY/ROLLBACK, có schema/giá trị mẫu và LIMIT/OFFSET. Mẫu dùng userId1, role CUSTOMER, code ADMIN_CONSOLE; đổi theo dữ liệu cần kiểm. `active=NULL` nghĩa là không lọc trạng thái, `keyword=%` nghĩa là không lọc từ khóa. Bản này bỏ mutation và SELECT giữ khóa; giữ lệnh khóa/cập nhật tại bản template14 câu. Không coi giá trị mẫu là thông tin đăng nhập.
+Mở `target/repository-queries-example.sql`:12 SELECT, gồm BEGIN READ ONLY/ROLLBACK, có schema/giá trị mẫu và LIMIT/OFFSET. Mẫu dùng userId1, role CUSTOMER, code ADMIN_CONSOLE; đổi theo dữ liệu cần kiểm. `active=NULL` nghĩa là không lọc trạng thái, `keyword=%` nghĩa là không lọc từ khóa. Bản này bỏ mutation và SELECT giữ khóa; giữ lệnh khóa/cập nhật tại bản template 15 câu. Không coi giá trị mẫu là thông tin đăng nhập.
 
-Công cụ không đọc .env, kết nối DB hoặc thực thi SQL; không đưa password/token/PII vào file. Chạy lại sau khi sửa query, không duy trì bản SQL chép tay thứ hai. Query JDBC cũ còn lại lấy từ Repo cùng transaction SET LOCAL search_path tới schema được chọn; không thêm tên schema từ input client.
+Công cụ không đọc .env, kết nối DB hoặc thực thi SQL; không đưa password/token/PII vào file. Chạy lại sau khi sửa query, không duy trì bản SQL chép tay thứ hai. Với EntityManager, lấy text block trong Repo, ghép fragment cố định theo nhánh đang kiểm rồi thay {h-schema} bằng schema môi trường kèm dấu chấm. Giá trị named parameter bind trong DB editor. Với batch, dùng SQL trong CustomRepo và SET LOCAL search_path tới schema môi trường.
 
 Đối chiếu cơ chế với [Spring Data JPA3.5](https://docs.spring.io/spring-data/jpa/reference/3.5/jpa/query-methods.html) và [schema placeholder của Hibernate6.6](https://docs.hibernate.org/orm/6.6/userguide/html_single/#sql-global-catalog-schema). Oracle vẫn chưa hỗ trợ runtime; native SQL PostgreSQL không tự tương thích Oracle nhờ annotation.
 

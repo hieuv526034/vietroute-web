@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
-import vn.vietroute.auth.repo.AccessChangeRepo;
+import vn.vietroute.auth.repo.AccessChangeCustomRepo;
 import vn.vietroute.common.api_journal.dto.response.ApiJournalDetail;
 import vn.vietroute.common.api_journal.dto.response.ApiJournalEntry;
 import vn.vietroute.common.api_journal.dto.search.ApiJournalSearch;
@@ -210,7 +210,7 @@ public class ApiJournalRepo {
                     query.setInt(1, capacity);
                     query.executeUpdate();
                 }
-                AccessChangeRepo.cleanup(connection);
+                AccessChangeCustomRepo.cleanup(connection);
                 connection.commit();
             } catch (SQLException | RuntimeException exception) {
                 try {

@@ -44,7 +44,7 @@ public class AccessTestConfig {
         public int failAt = Integer.MAX_VALUE;
 
         public AuthorizationFixture() {
-            super(TestJpa.MANAGER, null);
+            super(TestJpa.MANAGER);
         }
 
         @Override

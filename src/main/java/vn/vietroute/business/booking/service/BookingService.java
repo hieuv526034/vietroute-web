@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.repo.UserRoleRepo;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.booking.constant.BookingPaymentKind;
@@ -40,8 +41,7 @@ public class BookingService {
     private final UserRoleRepo scopes;
 
     /** Một connection trip → customer (WEB) → booking/segment; PENDING chỉ kiểm chỗ, không giữ chỗ. */
-    private BookingResponse create(Connection connection, BookingRequest body, UserPrincipal actor, boolean staff)
-        throws SQLException {
+    private BookingResponse create(BookingRequest body, UserPrincipal actor, boolean staff) {
         BusinessRules.require(
             body.getRequestKey() != null &&
                 body.getSeats() > 0 &&
@@ -53,14 +53,14 @@ public class BookingService {
                 body.getContactPhone().matches(Regex.PHONE_NUMBER),
             ErrorCode.BOOKING_INVALID
         );
-        Trip trip = bookings.trip(connection, body.getTripId(), true);
+        Trip trip = bookings.trip(body.getTripId(), true);
         Long owner = staff ? null : actor.id();
         String source = staff ? "PHONE" : "WEB";
-        if (staff) scopes.require(connection, trip.getScopeId());
-        else bookings.requireCustomer(connection, actor.id(), actor.tokenVersion(), true);
-        Long previous = bookings.requestId(connection, body.getRequestKey());
+        if (staff) scopes.require(trip.getScopeId());
+        else bookings.requireCustomer(actor.id(), actor.tokenVersion(), true);
+        Long previous = bookings.requestId(body.getRequestKey());
         if (previous != null) {
-            Row row = bookings.find(connection, previous, owner, true, true);
+            Row row = bookings.find(previous, owner, true, true);
             BookingResponse existing = row.getResponse();
             BusinessRules.require(
                 row.getCreatedBy() == actor.id() &&
@@ -75,8 +75,8 @@ public class BookingService {
             );
             return existing;
         }
-        Stop pickup = bookings.stop(connection, trip.getId(), body.getPickupStopId());
-        Stop dropoff = bookings.stop(connection, trip.getId(), body.getDropoffStopId());
+        Stop pickup = bookings.stop(trip.getId(), body.getPickupStopId());
+        Stop dropoff = bookings.stop(trip.getId(), body.getDropoffStopId());
         requireBookable(trip, pickup);
         BusinessRules.require(
             pickup.isPickup() &&
@@ -86,24 +86,14 @@ public class BookingService {
             ErrorCode.BOOKING_INVALID
         );
         BusinessRules.require(
-            capacity.available(connection, trip.getId(), pickup.getOrder(), dropoff.getOrder()) >= body.getSeats(),
+            capacity.available(trip.getId(), pickup.getOrder(), dropoff.getOrder()) >= body.getSeats(),
             ErrorCode.BOOKING_CAPACITY
         );
-        if (!staff) bookings.requireNoActive(connection, actor.id());
-        long id = bookings.insert(
-            connection,
-            trip,
-            pickup,
-            dropoff,
-            body,
-            owner,
-            source,
-            bookings.source(connection, source),
-            actor.id()
-        );
-        BookingResponse row = bookings.find(connection, id, owner, false, false).getResponse();
-        bookings.event(connection, row, BookingStatus.PENDING, "CREATED", "", BigDecimal.ZERO, null, actor.id());
-        return bookings.find(connection, id, owner, false, true).getResponse();
+        if (!staff) bookings.requireNoActive(actor.id());
+        long id = bookings.insert(trip, pickup, dropoff, body, owner, source, bookings.source(source), actor.id());
+        BookingResponse row = bookings.find(id, owner, false, false).getResponse();
+        bookings.event(row, BookingStatus.PENDING, "CREATED", "", BigDecimal.ZERO, null, actor.id());
+        return bookings.find(id, owner, false, true).getResponse();
     }
 
     /** Xác nhận/hủy dùng cùng mutex trip, CAS booking và segment tăng dần, history lỗi rollback. */
@@ -116,17 +106,17 @@ public class BookingService {
     ) throws SQLException {
         BusinessRules.require(body.getNote() != null && body.getNote().length() <= 2000, ErrorCode.BOOKING_INVALID);
         Long owner = staff ? null : actor.id();
-        if (!staff) bookings.requireCustomer(connection, actor.id(), actor.tokenVersion(), false);
-        long parent = bookings.parent(connection, id, owner);
-        Trip trip = bookings.trip(connection, parent, true);
-        BookingResponse row = bookings.find(connection, id, owner, true, false).getResponse();
+        if (!staff) bookings.requireCustomer(actor.id(), actor.tokenVersion(), false);
+        long parent = bookings.parent(id, owner);
+        Trip trip = bookings.trip(parent, true);
+        BookingResponse row = bookings.find(id, owner, true, false).getResponse();
         BusinessRules.require(
             body.getVersion() != null && body.getVersion() == row.getVersion(),
             ErrorCode.STALE_VERSION
         );
         BookingStatus current = row.getStatus();
         BookingStatus target = body.getStatus();
-        Stop pickup = bookings.stop(connection, parent, row.getPickupStopId());
+        Stop pickup = bookings.stop(parent, row.getPickupStopId());
         BusinessRules.require(
             target != null && (staff || target == BookingStatus.CANCELLED),
             ErrorCode.BOOKING_STATE_CONFLICT
@@ -169,26 +159,16 @@ public class BookingService {
             }
             default -> throw new BusinessException(ErrorCode.BOOKING_STATE_CONFLICT);
         }
-        bookings.state(connection, row, target, actor.id());
-        bookings.event(
-            connection,
-            row,
-            target,
-            target.name(),
-            body.getNote().strip(),
-            BigDecimal.ZERO,
-            null,
-            actor.id()
-        );
-        return bookings.find(connection, id, owner, false, true).getResponse();
+        bookings.state(row, target, actor.id());
+        bookings.event(row, target, target.name(), body.getNote().strip(), BigDecimal.ZERO, null, actor.id());
+        return bookings.find(id, owner, false, true).getResponse();
     }
 
     /** Tiền thủ công có request UUID riêng; replay cùng actor/nội dung không tăng số tiền lần nữa. */
-    private BookingResponse payment(Connection connection, long id, BookingRequest body, UserPrincipal actor)
-        throws SQLException {
-        long parent = bookings.parent(connection, id, null);
-        bookings.trip(connection, parent, true);
-        BookingResponse row = bookings.find(connection, id, null, true, false).getResponse();
+    private BookingResponse recordPayment(long id, BookingRequest body, UserPrincipal actor) {
+        long parent = bookings.parent(id, null);
+        bookings.trip(parent, true);
+        BookingResponse row = bookings.find(id, null, true, false).getResponse();
         BusinessRules.require(
             body.getKind() != null &&
                 body.getRequestKey() != null &&
@@ -199,7 +179,7 @@ public class BookingService {
                 !body.getNote().isBlank(),
             ErrorCode.BOOKING_INVALID
         );
-        PaymentEvent old = bookings.paymentEvent(connection, body.getRequestKey());
+        PaymentEvent old = bookings.paymentEvent(body.getRequestKey());
         if (old != null) {
             BusinessRules.require(
                 old.getBookingId() == id &&
@@ -209,7 +189,7 @@ public class BookingService {
                     old.getNote().equals(body.getNote().strip()),
                 ErrorCode.BOOKING_REQUEST_CONFLICT
             );
-            return bookings.find(connection, id, null, false, true).getResponse();
+            return bookings.find(id, null, false, true).getResponse();
         }
         BusinessRules.require(
             body.getVersion() != null && body.getVersion() == row.getVersion(),
@@ -229,9 +209,8 @@ public class BookingService {
             refunded = refunded.add(body.getAmount());
             BusinessRules.require(refunded.compareTo(paid) <= 0, ErrorCode.BOOKING_MONEY_INVALID);
         }
-        bookings.money(connection, row, paid, refunded, actor.id());
+        bookings.money(row, paid, refunded, actor.id());
         bookings.event(
-            connection,
             row,
             row.getStatus(),
             body.getKind().name(),
@@ -240,7 +219,7 @@ public class BookingService {
             body.getRequestKey(),
             actor.id()
         );
-        return bookings.find(connection, id, null, false, true).getResponse();
+        return bookings.find(id, null, false, true).getResponse();
     }
 
     private void requireBookable(Trip trip, Stop pickup) {
@@ -257,24 +236,28 @@ public class BookingService {
     }
 
     /** Picker PHONE dùng quyền CREATE trong scope hiện hành, không cần grant GET danh sách chuyến riêng. */
+    @Transactional(readOnly = true)
     public PageResponse<BookingTripChoiceResponse> choices(BookingTripSearch query) {
-        return transactions.execute(connection -> bookings.choices(connection, query));
+        return bookings.choices(query);
     }
 
     /** SQL lọc scope trước count/page để không lộ đơn và tổng số nhà xe khác. */
+    @Transactional(readOnly = true)
     public PageResponse<BookingResponse> page(BookingSearch query) {
-        return transactions.execute(connection -> bookings.page(connection, query, null));
+        return bookings.page(query, null);
     }
 
     /** Chi tiết và lịch sử chỉ được projection sau khi đã kiểm ID cùng scope. */
+    @Transactional(readOnly = true)
     public BookingResponse find(long id) {
-        return transactions.execute(connection -> bookings.find(connection, id, null, false, true).getResponse());
+        return bookings.find(id, null, false, true).getResponse();
     }
 
     /** PHONE không cần CUSTOMER giả, vẫn PENDING và dùng cùng cơ chế chặng khi xác nhận. */
+    @Transactional
     public BookingResponse create(BookingRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
-        return transactions.execute(connection -> create(connection, body, actor, true));
+        return create(body, actor, true);
     }
 
     /** Facade có guard; workflow khóa trip/booking/chặng và ghi lịch sử cùng transaction. */
@@ -284,33 +267,33 @@ public class BookingService {
     }
 
     /** Chỉ ghi nhận thu/hoàn thực tế ngoài hệ thống; history/amount/version là một giao dịch. */
+    @Transactional
     public BookingResponse payment(long id, BookingRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
-        return transactions.execute(connection -> payment(connection, id, body, actor));
+        return recordPayment(id, body, actor);
     }
 
     /** Quyền và owner lọc trước count/page, chỉ tài khoản CUSTOMER hiện hành. */
+    @Transactional(readOnly = true)
     public PageResponse<BookingResponse> customerPage(BookingSearch query, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
-        return transactions.execute(connection -> {
-            bookings.requireCustomer(connection, actor.id(), actor.tokenVersion(), false);
-            return bookings.page(connection, query, actor.id());
-        });
+        bookings.requireCustomer(actor.id(), actor.tokenVersion(), false);
+        return bookings.page(query, actor.id());
     }
 
     /** Đọc chi tiết theo owner; ID đơn người khác bị che trước khi trả contact và lịch sử. */
+    @Transactional(readOnly = true)
     public BookingResponse customerFind(long id, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
-        return transactions.execute(connection -> {
-            bookings.requireCustomer(connection, actor.id(), actor.tokenVersion(), false);
-            return bookings.find(connection, id, actor.id(), false, true).getResponse();
-        });
+        bookings.requireCustomer(actor.id(), actor.tokenVersion(), false);
+        return bookings.find(id, actor.id(), false, true).getResponse();
     }
 
     /** WEB là giá trị server, chụp giá từ stop của trip và ghi PENDING/history cùng transaction. */
+    @Transactional
     public BookingResponse customerCreate(BookingRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
-        return transactions.execute(connection -> create(connection, body, actor, false));
+        return create(body, actor, false);
     }
 
     /** Khách chỉ hủy đơn của chính mình trước rời điểm đón, không tự xác nhận hoặc ghi tiền. */

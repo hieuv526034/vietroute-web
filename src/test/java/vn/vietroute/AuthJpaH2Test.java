@@ -15,7 +15,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
-import org.springframework.data.jpa.repository.support.JpaRepositoryFactory;
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
@@ -51,7 +50,14 @@ class AuthJpaH2Test {
         factory.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
         factory.setPackagesToScan("vn.vietroute.auth.entity");
         factory.setJpaPropertyMap(
-            Map.of("hibernate.hbm2ddl.auto", "create-drop", "hibernate.dialect", "org.hibernate.dialect.H2Dialect")
+            Map.of(
+                "hibernate.default_schema",
+                "public",
+                "hibernate.hbm2ddl.auto",
+                "create-drop",
+                "hibernate.dialect",
+                "org.hibernate.dialect.H2Dialect"
+            )
         );
         factory.afterPropertiesSet();
         emf = factory.getObject();
@@ -65,7 +71,7 @@ class AuthJpaH2Test {
             new JdbcConnectionFactory(new TransactionAwareDataSourceProxy(source), new JdbcSchema("h2_auth")),
             beans.getBeanProvider(PlatformTransactionManager.class)
         );
-        users = new UserRepo(shared, transactions);
+        users = new UserRepo(shared);
     }
 
     @AfterEach

@@ -2,7 +2,6 @@ package vn.vietroute;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -15,7 +14,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
@@ -28,7 +26,6 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.FileSystemResourceLoader;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockServletContext;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -39,7 +36,6 @@ import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.catalog.dto.search.CategorySearch;
 import vn.vietroute.business.catalog.entity.Category;
 import vn.vietroute.business.catalog.repo.CategoryRepo;
-import vn.vietroute.business.catalog.service.CategoryService;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.web.WebConfig;
@@ -239,7 +235,7 @@ class CategorySecurityTest {
         @Bean
         @Primary
         CategoryRepo isolatedLocations() {
-            return new CategoryRepo(TestJpa.MANAGER, null, new ObjectMapper()) {
+            return new CategoryRepo(TestJpa.MANAGER, new ObjectMapper()) {
                 @Override
                 public PageResponse<Category> search(
                     CategorySearch page,

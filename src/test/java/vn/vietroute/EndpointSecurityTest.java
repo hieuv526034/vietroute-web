@@ -157,7 +157,7 @@ class EndpointSecurityTest {
         private boolean failure;
 
         StateRepo() {
-            super(TestJpa.MANAGER, null);
+            super(TestJpa.MANAGER);
         }
 
         @Override

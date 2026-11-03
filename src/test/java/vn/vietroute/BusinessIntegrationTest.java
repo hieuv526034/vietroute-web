@@ -30,8 +30,8 @@ import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -51,6 +51,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.AfterEach;
@@ -61,9 +62,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.FileSystemResourceLoader;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockServletContext;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -86,20 +87,25 @@ import vn.vietroute.auth.entity.RoleFunction;
 import vn.vietroute.auth.entity.User;
 import vn.vietroute.auth.entity.UserRole;
 import vn.vietroute.auth.initializer.AuthInitializer;
+import vn.vietroute.auth.repo.AccessChangeCustomRepo;
 import vn.vietroute.auth.repo.AccessChangeRepo;
-import vn.vietroute.auth.repo.AccountChallengeRepo;
 import vn.vietroute.auth.repo.FunctionRepo;
+import vn.vietroute.auth.repo.FunctionResourceCustomRepo;
 import vn.vietroute.auth.repo.FunctionResourceRepo;
+import vn.vietroute.auth.repo.RoleCustomRepo;
+import vn.vietroute.auth.repo.RoleFunctionCustomRepo;
 import vn.vietroute.auth.repo.RoleFunctionRepo;
 import vn.vietroute.auth.repo.RoleRepo;
+import vn.vietroute.auth.repo.UserCustomRepo;
 import vn.vietroute.auth.repo.UserRepo;
+import vn.vietroute.auth.repo.UserRoleCustomRepo;
 import vn.vietroute.auth.repo.UserRoleRepo;
 import vn.vietroute.auth.security.EndpointAccess;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.auth.service.UserService;
 import vn.vietroute.business.booking.repo.BookingRepo;
 import vn.vietroute.business.bootstrap.initializer.BusinessDataInitializer;
+import vn.vietroute.business.bootstrap.repo.BusinessDataCustomRepo;
 import vn.vietroute.business.bootstrap.repo.BusinessDataRepo;
 import vn.vietroute.business.carrier.dto.search.CarrierSearch;
 import vn.vietroute.business.carrier.dto.search.PublicCarrierSearch;
@@ -108,7 +114,6 @@ import vn.vietroute.business.carrier.service.DriverService;
 import vn.vietroute.business.carrier.service.VehicleService;
 import vn.vietroute.business.catalog.dto.search.CategorySearch;
 import vn.vietroute.business.catalog.repo.CategoryRepo;
-import vn.vietroute.business.catalog.service.CategoryService;
 import vn.vietroute.business.report.dto.search.ReportCarrierSearch;
 import vn.vietroute.business.report.dto.search.ReportSearch;
 import vn.vietroute.business.report.repo.ReportRepo;
@@ -119,10 +124,10 @@ import vn.vietroute.common.api_journal.dto.response.ApiJournalDetail;
 import vn.vietroute.common.api_journal.dto.response.ApiJournalEntry;
 import vn.vietroute.common.api_journal.dto.search.ApiJournalSearch;
 import vn.vietroute.common.api_journal.repo.ApiJournalRepo;
-import vn.vietroute.common.base.BaseRepository.SqlWork;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.application.ConfigurationEnvironment;
+import vn.vietroute.common.config.database.SchemaDataSource;
 import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ApplicationConstants.Business;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
@@ -207,7 +212,7 @@ class BusinessIntegrationTest {
                 1,
                 root
                     .getBean(JdbcTransactions.class)
-                    .execute(connection -> root.getBean(CarrierRepo.class).page(connection, search))
+                    .execute(connection -> root.getBean(CarrierRepo.class).page(search))
                     .getTotalElements()
             );
             var report = new ReportCarrierSearch();
@@ -217,7 +222,7 @@ class BusinessIntegrationTest {
                 1,
                 root
                     .getBean(JdbcTransactions.class)
-                    .execute(connection -> root.getBean(ReportRepo.class).carriers(connection, report))
+                    .execute(connection -> root.getBean(ReportRepo.class).carriers(report))
                     .getTotalElements()
             );
         }
@@ -230,7 +235,7 @@ class BusinessIntegrationTest {
             0,
             root
                 .getBean(JdbcTransactions.class)
-                .execute(connection -> root.getBean(CarrierRepo.class).page(connection, search))
+                .execute(connection -> root.getBean(CarrierRepo.class).page(search))
                 .getTotalElements()
         );
     }
@@ -271,28 +276,21 @@ class BusinessIntegrationTest {
             report.setFromDate(LocalDate.of(2027, 2, 10));
             report.setToDate(report.getFromDate());
             Map<String, List<SqlPlanProbe.Select>> queries = new LinkedHashMap<>();
-            queries.put("report.all", SqlPlanProbe.capture(connection, observed -> reports.summary(observed, report)));
+            queries.put("report.all", SqlPlanProbe.capture(connection, observed -> reports.summary(report)));
             report.setCarrierId(first.carrier());
-            queries.put(
-                "report.carrier",
-                SqlPlanProbe.capture(connection, observed -> reports.summary(observed, report))
-            );
+            queries.put("report.carrier", SqlPlanProbe.capture(connection, observed -> reports.summary(report)));
             queries.put(
                 "search.public",
-                SqlPlanProbe.capture(connection, observed ->
-                    root.getBean(CarrierRepo.class).page(observed, publicSearch)
-                )
+                SqlPlanProbe.capture(connection, observed -> root.getBean(CarrierRepo.class).page(publicSearch))
             );
-            queries.put(
-                "search.reportPicker",
-                SqlPlanProbe.capture(connection, observed -> reports.carriers(observed, picker))
-            );
+            queries.put("search.reportPicker", SqlPlanProbe.capture(connection, observed -> reports.carriers(picker)));
             queries.put(
                 "search.catalog",
                 SqlPlanProbe.capture(connection, observed ->
-                    root.getBean(CategoryRepo.class).search(observed, catalog, "VEHICLE_TYPE", "VALUE", false)
+                    root.getBean(CategoryRepo.class).search(catalog, "VEHICLE_TYPE", "VALUE", false)
                 )
             );
+            queries.forEach((name, statements) -> assertFalse(statements.isEmpty(), name + " phải đo SQL thật"));
             Map<String, List<JsonNode>> baseline = new LinkedHashMap<>();
             var point = connection.setSavepoint();
             try (var query = connection.createStatement()) {
@@ -357,10 +355,19 @@ class BusinessIntegrationTest {
             System.getProperty("business.test.user", "ciadmin"),
             schema,
             admin,
-            connection -> {
-                assertTrue(root.getBean(ReportRepo.class).summary(connection, report).getTripCount() > 0);
-                assertEquals(20, root.getBean(CarrierRepo.class).page(connection, search).getTotalElements());
-                return null;
+            (nodeManager, nodeTransactions) -> {
+                var nodeReports = new ReportRepo(nodeManager);
+                var nodeScopes = new UserRoleRepo(
+                    nodeManager,
+                    root.getBean(AppSettings.class),
+                    root.getBean(UserRoleCustomRepo.class)
+                );
+                var nodeCarriers = new CarrierRepo(nodeManager, nodeScopes);
+                return connection -> {
+                    assertTrue(nodeReports.summary(report).getTripCount() > 0);
+                    assertEquals(20, nodeCarriers.page(search).getTotalElements());
+                    return null;
+                };
             }
         );
     }
@@ -408,45 +415,34 @@ class BusinessIntegrationTest {
                 }
             }
             var cancellation = executor.submit(() -> {
-                try (var connection = factory.open()) {
-                    try {
-                        long waiting = System.nanoTime();
+                long waiting = System.nanoTime();
+                long[] acquired = new long[1];
+                measuredSql(4, () ->
+                    root.getBean(JdbcTransactions.class).execute(connection -> {
                         attempted.countDown();
-                        try (
-                            var query = connection.prepareStatement(
-                                "SELECT id FROM carrier_trips WHERE id=? FOR UPDATE"
-                            )
-                        ) {
-                            query.setLong(1, trip);
-                            try (var row = query.executeQuery()) {
-                                assertTrue(row.next());
-                            }
-                        }
-                        long acquired = System.nanoTime();
+                        lockTrip(connection, trip);
+                        acquired[0] = System.nanoTime();
                         root.getBean(BookingRepo.class).cancelTrip(
                             counted(connection, statements),
                             trip,
                             "Load cancellation",
                             1
                         );
-                        connection.commit();
-                        return Map.of(
-                            "controlledWaitMs",
-                            (acquired - waiting) / 1_000_000d,
-                            "lockHeldThroughCommitMs",
-                            (System.nanoTime() - acquired) / 1_000_000d,
-                            "bookings",
-                            5001,
-                            "confirmed",
-                            24,
-                            "jdbcExecutes",
-                            statements.get()
-                        );
-                    } catch (Exception | Error failure) {
-                        connection.rollback();
-                        throw failure;
-                    }
-                }
+                        return null;
+                    })
+                );
+                return Map.of(
+                    "controlledWaitMs",
+                    (acquired[0] - waiting) / 1_000_000d,
+                    "lockHeldThroughCommitMs",
+                    (System.nanoTime() - acquired[0]) / 1_000_000d,
+                    "bookings",
+                    5001,
+                    "confirmed",
+                    24,
+                    "jdbcExecutes",
+                    statements.get()
+                );
             });
             assertTrue(attempted.await(5, TimeUnit.SECONDS));
             // Tạo tranh khóa có kiểm soát; không lấy 100ms chặn chủ động làm latency xử lý nghiệp vụ.
@@ -457,7 +453,7 @@ class BusinessIntegrationTest {
         } finally {
             executor.shutdownNow();
         }
-        assertEquals(5, statements.get());
+        assertEquals(1, statements.get());
         assertEquals(
             "5001",
             sql(
@@ -540,7 +536,7 @@ class BusinessIntegrationTest {
             before.add(value);
         }
         root.getBean(JdbcTransactions.class).execute(connection -> {
-            root.getBean(AccessChangeRepo.class).appendMemberships(
+            root.getBean(AccessChangeCustomRepo.class).appendMemberships(
                 counted(connection, statements),
                 7,
                 before,
@@ -553,23 +549,39 @@ class BusinessIntegrationTest {
         assertEquals("5", sql("SELECT count(*) FROM auth_access_changes WHERE event_type='SCOPE_MEMBERSHIP'"));
         sql("DELETE FROM auth_access_changes");
         sql(
-            "CREATE FUNCTION fail_batch_history() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN RAISE EXCEPTION ''batch history failure''; END'; CREATE TRIGGER fail_batch_history BEFORE INSERT ON auth_access_changes FOR EACH ROW EXECUTE FUNCTION fail_batch_history()"
+            "CREATE FUNCTION fail_batch_history() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN IF NEW.event_type=''SCOPE_MEMBERSHIP'' THEN RAISE EXCEPTION ''batch history failure''; END IF; RETURN NEW; END'; CREATE TRIGGER fail_batch_history BEFORE INSERT ON auth_access_changes FOR EACH ROW EXECUTE FUNCTION fail_batch_history()"
         );
         assertThrows(BusinessException.class, () ->
             root.getBean(JdbcTransactions.class).execute(connection -> {
-                root.getBean(AccessChangeRepo.class).append(
-                    connection,
-                    "USER_ROLES",
-                    "USER",
-                    "7",
-                    0,
-                    Map.of(),
-                    Map.of()
-                );
+                root.getBean(AccessChangeRepo.class).append("USER_ROLES", "USER", "7", 0, Map.of(), Map.of());
+                root.getBean(AccessChangeCustomRepo.class).appendMemberships(connection, 7, before, List.of(), 0);
                 return null;
             })
         );
         assertEquals("0", sql("SELECT count(*) FROM auth_access_changes"));
+    }
+
+    private <T> T measuredSql(long expected, Supplier<T> work) {
+        var statistics = root.getBean(EntityManagerFactory.class).unwrap(SessionFactory.class).getStatistics();
+        boolean enabled = statistics.isStatisticsEnabled();
+        statistics.setStatisticsEnabled(true);
+        long before = statistics.getPrepareStatementCount();
+        try {
+            T result = work.get();
+            assertEquals(expected, statistics.getPrepareStatementCount() - before);
+            return result;
+        } finally {
+            statistics.setStatisticsEnabled(enabled);
+        }
+    }
+
+    private void lockTrip(Connection connection, long trip) throws SQLException {
+        try (var query = connection.prepareStatement("SELECT id FROM carrier_trips WHERE id=? FOR UPDATE")) {
+            query.setLong(1, trip);
+            try (var rows = query.executeQuery()) {
+                assertTrue(rows.next());
+            }
+        }
     }
 
     /** Đếm execute thực tế (batch là một lượt JDBC), không chỉ prepareStatement để bỏ sót execute trong for. */
@@ -605,21 +617,17 @@ class BusinessIntegrationTest {
     @Test
     void roleValidationUsesOneQueryForWholeSetAndRejectsMissingInactiveOrDeletedCodes() throws Exception {
         var repository = root.getBean(UserRoleRepo.class);
-        var statements = new AtomicInteger();
-        root.getBean(JdbcTransactions.class).execute(connection -> {
-            repository.validateMappings(
-                counted(connection, statements),
-                Set.of("ADMIN", "DRIVER", "CUSTOMER"),
-                Set.of()
-            );
-            return null;
-        });
-        assertEquals(1, statements.get());
+        measuredSql(1, () ->
+            root.getBean(JdbcTransactions.class).execute(connection -> {
+                repository.validateMappings(Set.of("ADMIN", "DRIVER", "CUSTOMER"), Set.of());
+                return null;
+            })
+        );
         for (String code : List.of("DRIVER", "MISSINGROLE")) {
             sql("UPDATE auth_roles SET active=false WHERE code='DRIVER'");
             assertThrows(BusinessException.class, () ->
                 root.getBean(JdbcTransactions.class).execute(connection -> {
-                    repository.validateMappings(connection, Set.of(code), Set.of());
+                    repository.validateMappings(Set.of(code), Set.of());
                     return null;
                 })
             );
@@ -688,17 +696,14 @@ class BusinessIntegrationTest {
                 sql("DROP TRIGGER suppress_bulk_event ON booking_events; DROP FUNCTION suppress_bulk_event()");
             }
             var statements = new AtomicInteger();
-            root.getBean(JdbcTransactions.class).execute(connection -> {
-                try (var query = connection.prepareStatement("SELECT id FROM carrier_trips WHERE id=? FOR UPDATE")) {
-                    query.setLong(1, trip);
-                    try (var rows = query.executeQuery()) {
-                        rows.next();
-                    }
-                }
-                bookings.cancelTrip(counted(connection, statements), trip, "Bulk cancel", 1);
-                return null;
-            });
-            assertEquals(5, statements.get(), "Số lượt SQL không tăng theo số đơn");
+            measuredSql(4, () ->
+                root.getBean(JdbcTransactions.class).execute(connection -> {
+                    lockTrip(connection, trip);
+                    bookings.cancelTrip(counted(connection, statements), trip, "Bulk cancel", 1);
+                    return null;
+                })
+            );
+            assertEquals(1, statements.get(), "Một ghi batch, không tăng theo số đơn");
             assertEquals(
                 Integer.toString(size + 1),
                 sql(
@@ -741,46 +746,11 @@ class BusinessIntegrationTest {
         );
         long before = Long.parseLong(sql("SELECT version FROM auth_users WHERE id=1"));
         String tokenVersion = sql("SELECT token_version FROM auth_users WHERE id=1");
-        var statements = new AtomicInteger();
-        var transactions = new JdbcTransactions(root.getBean(JdbcConnectionFactory.class)) {
-            @Override
-            public <T> T execute(SqlWork<T> work) {
-                return super.execute(connection ->
-                    work.apply(
-                        (Connection) Proxy.newProxyInstance(
-                            getClass().getClassLoader(),
-                            new Class<?>[] { Connection.class },
-                            (proxy, method, args) -> {
-                                if (method.getName().equals("prepareStatement")) statements.incrementAndGet();
-                                try {
-                                    return method.invoke(connection, args);
-                                } catch (InvocationTargetException exception) {
-                                    throw exception.getCause();
-                                }
-                            }
-                        )
-                    )
-                );
-            }
-        };
-        var auth = new UserService(
-            root.getBean(UserRepo.class),
-            root.getBean(UserRoleRepo.class),
-            root.getBean(AccountChallengeRepo.class),
-            root.getBean(AccessChangeRepo.class),
-            root.getBean(PasswordEncoder.class),
-            root.getBean(JwtService.class),
-            transactions,
-            root.getBean(AppSettings.class),
-            root.getBean(AuthInitializer.class),
-            Clock.systemUTC()
-        );
-        auth.initializePasswordTiming();
+        var auth = root.getBean(UserService.class);
         var login = new UserRequest();
         login.setUsername("TESTADMIN");
         login.setPassword("TestOnly!2026Aa");
-        var response = auth.login(login);
-        assertEquals(2, statements.get(), "Chỉ SELECT FOR UPDATE và UPDATE RETURNING; schema/commit vẫn giữ nguyên");
+        var response = measuredSql(2, () -> auth.login(login));
         assertEquals(before + 1, response.getUser().getVersion());
         assertTrue(response.getUser().getRoles().contains("ADMIN"));
         assertEquals(
@@ -818,7 +788,7 @@ class BusinessIntegrationTest {
         sql(
             "CREATE FUNCTION reject_login_reset() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN IF NEW.failed_login_attempts=0 THEN RAISE EXCEPTION ''test reset failure''; END IF; RETURN NEW; END'; CREATE TRIGGER reject_login_reset BEFORE UPDATE ON auth_users FOR EACH ROW EXECUTE FUNCTION reject_login_reset()"
         );
-        assertThrows(BusinessException.class, () -> auth.login(login));
+        assertThrows(DataAccessException.class, () -> auth.login(login));
         assertEquals("5:" + before, sql("SELECT failed_login_attempts || ':' || version FROM auth_users WHERE id=1"));
     }
 
@@ -889,7 +859,7 @@ class BusinessIntegrationTest {
                         resource.setPathTemplate("/transaction-fixture");
                         resource.setHandler("Transaction fixture");
                         resource.setDescription("Kiểm rollback chung");
-                        root.getBean(FunctionResourceRepo.class).replace(joined, "TXJOIN", List.of(resource), 0);
+                        root.getBean(FunctionResourceCustomRepo.class).replace(joined, "TXJOIN", List.of(resource), 0);
                         throw new IllegalStateException("Caller bắt lỗi con");
                     })
                 );
@@ -950,9 +920,9 @@ class BusinessIntegrationTest {
                 resource.setPathTemplate("/api/v1/admin/functions");
                 resource.setHandler("Query fixture");
                 resource.setDescription("Query fixture");
-                resources.replace(connection, "QUERYONE", List.of(resource), 0);
+                root.getBean(FunctionResourceCustomRepo.class).replace(connection, "QUERYONE", List.of(resource), 0);
                 assertEquals(Set.of(resource.getTarget()), resources.targets("QUERYONE"));
-                mappings.replace(connection, "CUSTOMER", Set.of("QUERYONE"), 0);
+                root.getBean(RoleFunctionCustomRepo.class).replace(connection, "CUSTOMER", Set.of("QUERYONE"), 0);
                 assertEquals(Set.of("QUERYONE"), mappings.functions("CUSTOMER"));
                 assertEquals(Set.of(), resources.targetsFor(List.of()).keySet());
                 assertEquals(Set.of(), mappings.functionTargets(Set.of()));
@@ -1148,14 +1118,16 @@ class BusinessIntegrationTest {
             new ConfigurationEnvironment(envValues::get, null),
             root.getBean(PasswordEncoder.class),
             root.getBean(JdbcTransactions.class),
-            json
+            json,
+            root.getBean(UserCustomRepo.class),
+            root.getBean(RoleCustomRepo.class)
         );
         var tx = root.getBean(JdbcTransactions.class);
         tx.execute(connection -> {
             defaults.initialize(connection);
             root.getBean(BusinessDataRepo.class).seed(connection, 0);
             root.getBean(BusinessDataRepo.class).seedRoutes(connection);
-            root.getBean(UserRepo.class).assignInitialScopes(
+            root.getBean(UserCustomRepo.class).assignInitialScopes(
                 connection,
                 root.getBean(AuthInitializer.class).getData().path("accounts")
             );
@@ -1197,7 +1169,7 @@ class BusinessIntegrationTest {
             defaults.initialize(connection);
             root.getBean(BusinessDataRepo.class).seed(connection, 0);
             root.getBean(BusinessDataRepo.class).seedRoutes(connection);
-            root.getBean(UserRepo.class).assignInitialScopes(
+            root.getBean(UserCustomRepo.class).assignInitialScopes(
                 connection,
                 root.getBean(AuthInitializer.class).getData().path("accounts")
             );
@@ -1767,9 +1739,16 @@ class BusinessIntegrationTest {
             environment,
             root.getBean(PasswordEncoder.class),
             transactions,
-            json
+            json,
+            root.getBean(UserCustomRepo.class),
+            root.getBean(RoleCustomRepo.class)
         );
-        BusinessDataRepo repo = new BusinessDataRepo(json, settings);
+        BusinessDataRepo repo = new BusinessDataRepo(
+            root.getBean(EntityManager.class),
+            json,
+            settings,
+            root.getBean(BusinessDataCustomRepo.class)
+        );
         transactions.execute(connection -> {
             auth.initialize(connection);
             new BusinessDataInitializer(
@@ -1777,7 +1756,7 @@ class BusinessIntegrationTest {
                 settings,
                 environment,
                 repo,
-                root.getBean(UserRepo.class),
+                root.getBean(UserCustomRepo.class),
                 auth,
                 transactions
             ).afterPropertiesSet();
@@ -1825,6 +1804,7 @@ class BusinessIntegrationTest {
         root.setServletContext(web);
         root.register(RootConfig.class, Environment.class);
         root.refresh();
+        SqlPlanProbe.install(root.getBean(SchemaDataSource.class));
         child = new AnnotationConfigWebApplicationContext();
         child.setParent(root);
         child.setServletContext(web);
@@ -3193,7 +3173,7 @@ class BusinessIntegrationTest {
             }
             var catalog = root.getBean(EndpointAccess.class);
             var endpoints = targets.stream().map(catalog::find).toList();
-            if (endpoints.stream().noneMatch(Objects::isNull)) root.getBean(FunctionResourceRepo.class).replace(
+            if (endpoints.stream().noneMatch(Objects::isNull)) root.getBean(FunctionResourceCustomRepo.class).replace(
                 connection,
                 function,
                 endpoints,

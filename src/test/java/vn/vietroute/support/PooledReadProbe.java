@@ -3,6 +3,7 @@ package vn.vietroute.support;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import jakarta.persistence.EntityManager;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
@@ -14,35 +15,49 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiFunction;
 import javax.sql.DataSource;
+import org.springframework.beans.factory.support.StaticListableBeanFactory;
+import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.orm.jpa.SharedEntityManagerCreator;
+import org.springframework.orm.jpa.vendor.HibernateJpaDialect;
+import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.PlatformTransactionManager;
 import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.auth.security.EndpointAccess;
 import vn.vietroute.common.base.BaseRepository.SqlWork;
+import vn.vietroute.common.config.database.SchemaDataSource;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.jdbc.JdbcTransactions;
-import vn.vietroute.support.TestJpa;
 
 /** Hai node pool logic trong JVM test: dữ liệu/DAO/guard thật, chỉ DB loopback test, không phải tải HTTP/Render. */
 public final class PooledReadProbe {
 
     private PooledReadProbe() {}
 
-    public static void run(String url, String user, String schema, Authentication actor, SqlWork<?> read)
-        throws Exception {
+    public static void run(
+        String url,
+        String user,
+        String schema,
+        Authentication actor,
+        BiFunction<EntityManager, JdbcTransactions, SqlWork<?>> readFactory
+    ) throws Exception {
         if (
             !url.matches("jdbc:postgresql://127[.]0[.]0[.]1:[0-9]+/vietroute_business_test")
         ) throw new IllegalArgumentException("Chỉ DB test loopback");
         try (
-            var first = new Node(url, user, schema, "perf03-node-1");
-            var second = new Node(url, user, schema, "perf03-node-2")
+            var first = new Node(url, user, schema, "perf03-node-1", readFactory);
+            var second = new Node(url, user, schema, "perf03-node-2", readFactory)
         ) {
             var nodes = List.of(first, second);
             for (var node : nodes) {
                 approve(node.guard, actor);
-                node.transactions.execute(read);
+                node.transactions.execute(node.read);
             }
             for (int concurrency : new int[] { 2, 4, 8 }) {
                 var executor = Executors.newFixedThreadPool(concurrency);
@@ -64,7 +79,7 @@ public final class PooledReadProbe {
                                         if (approve(node.guard, actor) == null) throw new IllegalStateException(
                                             "Guard DB phải cho fixture ADMIN đọc"
                                         );
-                                        node.transactions.execute(read);
+                                        node.transactions.execute(node.read);
                                         durations.add(System.nanoTime() - at);
                                     }
                                     return durations;
@@ -101,7 +116,7 @@ public final class PooledReadProbe {
                                 "errors",
                                 0,
                                 "scope",
-                                "two logical JDBC nodes, not HTTP/production"
+                                "two logical JPA/JDBC nodes, not HTTP/production"
                             )
                         )
                 );
@@ -147,13 +162,21 @@ public final class PooledReadProbe {
         private final HikariDataSource pool;
         private final JdbcTransactions transactions;
         private final EndpointAccess guard;
+        private final LocalContainerEntityManagerFactoryBean factory;
+        private final SqlWork<?> read;
         private final AtomicLong borrowNanos = new AtomicLong();
         private final AtomicLong maxBorrow = new AtomicLong();
         private final AtomicLong borrows = new AtomicLong();
         private final AtomicInteger peakActive = new AtomicInteger();
         private final AtomicInteger peakWaiting = new AtomicInteger();
 
-        Node(String url, String user, String schema, String name) {
+        Node(
+            String url,
+            String user,
+            String schema,
+            String name,
+            BiFunction<EntityManager, JdbcTransactions, SqlWork<?>> readFactory
+        ) {
             var config = new HikariConfig();
             config.setJdbcUrl(url);
             config.setUsername(user);
@@ -188,13 +211,53 @@ public final class PooledReadProbe {
                     }
                 }
             );
-            var connections = new JdbcConnectionFactory(source, new JdbcSchema(schema));
-            transactions = new JdbcTransactions(connections);
-            guard = new EndpointAccess(null, new UserRepo(TestJpa.MANAGER, transactions), null);
+            var selectedSchema = new JdbcSchema(schema);
+            var transactionalSource = new SchemaDataSource(source, selectedSchema);
+            factory = new LocalContainerEntityManagerFactoryBean();
+            factory.setDataSource(transactionalSource);
+            factory.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
+            factory.setPackagesToScan("vn.vietroute.auth.entity", "vn.vietroute.business");
+            factory.setJpaPropertyMap(
+                Map.of(
+                    "hibernate.hbm2ddl.auto",
+                    "none",
+                    "hibernate.default_schema",
+                    schema,
+                    "hibernate.dialect",
+                    "org.hibernate.dialect.PostgreSQLDialect",
+                    "hibernate.boot.allow_jdbc_metadata_access",
+                    "false",
+                    "hibernate.jdbc.time_zone",
+                    "UTC",
+                    "hibernate.connection.provider_disables_autocommit",
+                    "true",
+                    "hibernate.cache.use_second_level_cache",
+                    "false",
+                    "hibernate.cache.use_query_cache",
+                    "false"
+                )
+            );
+            factory.afterPropertiesSet();
+            var shared = SharedEntityManagerCreator.createSharedEntityManager(factory.getObject());
+            var manager = new JpaTransactionManager(factory.getObject());
+            manager.setDataSource(transactionalSource);
+            var dialect = new HibernateJpaDialect();
+            dialect.setPrepareConnection(false);
+            manager.setJpaDialect(dialect);
+            var beans = new StaticListableBeanFactory();
+            beans.addBean("transactionManager", manager);
+            var connections = new JdbcConnectionFactory(
+                new TransactionAwareDataSourceProxy(transactionalSource),
+                selectedSchema
+            );
+            transactions = new JdbcTransactions(connections, beans.getBeanProvider(PlatformTransactionManager.class));
+            guard = new EndpointAccess(null, new UserRepo(shared), null);
+            read = readFactory.apply(shared, transactions);
         }
 
         @Override
         public void close() {
+            factory.destroy();
             pool.close();
         }
     }

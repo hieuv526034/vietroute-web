@@ -253,8 +253,16 @@ JdbcTransactions dùng TransactionTemplate REQUIRED qua manager cả khi đang c
 
 Nhóm tập trung13/13 đạt; clean verify214/214 Java, gồm77 PostgreSQL và4 H2 JPA,0 fail/error/skip, WAR thành công. Ca mới kiểm nested callback thành công không commit sớm; lỗi con đã bắt vẫn rollback JPA/JDBC, cùng transaction ID thực ở PostgreSQL; khóa/tiến độ ngoài transaction bị chặn và default method đọc gọi qua proxy vẫn chạy. Node74/74 đạt; cả11 SELECT ví dụ viết hoa chạy trên preview PostgreSQL loopback15462 bằng READ ONLY/ROLLBACK, exit0. Cập nhật quy ước backend/AGENTS và Word; không đổi DDL/API/UI/quyền/mật khẩu hoặc ghi DB thật. Oracle và chuyển nốt Repo JDBC cũ vẫn là phần chưa nghiệm thu; không merge dev/main hoặc deploy.
 
+## JPA02 — native SQL và tách ghi batch
+
+Hieuv526034 tiếp tục trên nhánh `hieuv526034/category01-danh-muc-chung`, nền `1a57120` và PR 166. Tra cứu, khóa và SQL cập nhật nghiệp vụ dùng native query qua Spring Data hoặc EntityManager. Dùng managed entity cho CRUD JPA; kết quả SQL ánh xạ vào DTO hiện có. Bỏ SQL cũ của challenge chưa được dùng. Mười một CustomRepo chứa thao tác ghi batch/theo tập, gồm 6 auth và 5 business. Source có 46 file auth, 111 business, 58 common và 22 bảng. Migration và journal pool riêng vẫn dùng JDBC.
+
+Bỏ callback JDBC khỏi Repo tra cứu, đăng nhập, đổi mật khẩu và các Service thuần JPA đã chuyển. Đăng nhập dùng TransactionTemplate JPA để commit bộ đếm rồi mới trả lỗi. Ghi batch dùng cùng connection/transaction với khóa, CAS, ghi lịch sử. Bộ đếm kiểm thử tách câu lệnh Hibernate và JDBC batch; ca tranh khóa chạy trong transaction của ứng dụng.
+
+Maven clean verify đạt 214/214 Java, gồm 77 PostgreSQL local, không fail/error/skip, đóng gói WAR thành công. Ca hủy chuyến 5.001 đơn dùng 4 câu JPA và 1 lượt ghi batch JDBC. Node đạt 74/74. Exporter sinh 15 câu SQL và 12 SELECT mẫu đã chạy trên preview PostgreSQL local trong READ ONLY/ROLLBACK. Format, rules trên 271 Java, docs 189 liên kết và diff-check đạt. Báo cáo Word đã cập nhật sơ đồ, render 81 trang và rà các trang sửa. Mười file migration giữ nguyên. Chưa áp dụng lên môi trường thật.
+
 ## Còn lại và bước tiếp
 
-Source DUYLONG01 đã có trên dev/main và Live theo bằng chứng trên; DUYLONG02 chốt tài liệu nghiệm thu. Chưa có Oracle runtime/regression, kiểm tải/SLA hoặc backup di động/PITR/RPO/RTO; DPAPI local phụ thuộc tài khoản Windows. AccountChallengeRepo còn SQL phụ cũ chưa được luồng hiện hành gọi, cần dọn riêng khi sửa auth, không trình bày như chức năng đang hoạt động. Kiểm thêm cách chạy Maven Wrapper trên máy trước khi dùng hướng dẫn local.
+Source DUYLONG01 đã có trên dev/main và Live theo bằng chứng trên; DUYLONG02 chốt tài liệu nghiệm thu. Chưa có Oracle runtime/regression, kiểm tải/SLA hoặc backup di động/PITR/RPO/RTO; DPAPI local phụ thuộc tài khoản Windows. Kiểm thêm cách chạy Maven Wrapper trên máy trước khi dùng hướng dẫn local.
 
 Theo [quy trình Git](../../CONTRIBUTING.md): nhánh thành viên → PR/check/review → dev; main/deploy chỉ khi có lệnh mới. Routine test dùng DB cô lập, không root .env hoặc DB thật. Dữ liệu seed neo ngày lần đầu, muốn demo ngày mới thì tạo chuyến hợp lệ trên DB demo đã được phép, không reset DB thật.

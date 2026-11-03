@@ -16,7 +16,7 @@ public class NativeSecurityFixture extends UserRepo {
     public final EndpointAccess service = new EndpointAccess(null, this, null);
 
     public NativeSecurityFixture() {
-        super(TestJpa.MANAGER, null);
+        super(TestJpa.MANAGER);
     }
 
     public Authentication actor(long id, String role, long version) {

@@ -16,7 +16,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import vn.vietroute.auth.dto.FunctionDTO;
 import vn.vietroute.auth.entity.User;
+import vn.vietroute.auth.repo.RoleCustomRepo;
 import vn.vietroute.auth.repo.RoleRepo;
+import vn.vietroute.auth.repo.UserCustomRepo;
 import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.application.ConfigValues;
@@ -30,6 +32,8 @@ import vn.vietroute.common.validation.BusinessRules;
 public class AuthInitializer {
 
     private final UserRepo users;
+    private final UserCustomRepo userBatch;
+    private final RoleCustomRepo roleBatch;
     private final RoleRepo roles;
     private final AppSettings settings;
     private final ConfigurationEnvironment environment;
@@ -46,9 +50,13 @@ public class AuthInitializer {
         ConfigurationEnvironment environment,
         PasswordEncoder passwords,
         JdbcTransactions transactions,
-        ObjectMapper mapper
+        ObjectMapper mapper,
+        UserCustomRepo userBatch,
+        RoleCustomRepo roleBatch
     ) {
         this.users = users;
+        this.userBatch = userBatch;
+        this.roleBatch = roleBatch;
         this.roles = roles;
         this.settings = settings;
         this.environment = environment;
@@ -64,7 +72,7 @@ public class AuthInitializer {
 
     /** Caller giữ transaction migration; mật khẩu chỉ encode khi account thật sự chưa tồn tại. */
     public void initialize(Connection connection) throws SQLException {
-        roles.initialize(connection, data);
+        roleBatch.initialize(connection, data);
         users.initializeBootstrap(
             connection,
             settings.getBootstrapUsername().toLowerCase(Locale.ROOT),
@@ -99,7 +107,7 @@ public class AuthInitializer {
             account.setRoles(Set.of(item.path("role").asText()));
             missing.add(account);
         }
-        users.insertDefaults(connection, missing);
+        userBatch.insertDefaults(connection, missing);
     }
 
     /** Danh bạ sẵn sàng sau servlet refresh; chỉ chạy khi ACCESS_SYNC_ENABLED được bật. */

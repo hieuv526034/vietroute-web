@@ -30,7 +30,7 @@ Không có GPS/app mobile, email/reset mật khẩu qua thư, upload/avatar/logo
 | Spring MVC6 và Thymeleaf | Controller/page và REST, render HTML tại server; không Spring Boot |
 | Spring Security, Nimbus JWT, BCrypt | Xác thực và bảo vệ request; grant endpoint lấy từ DB |
 | Spring Data JPA/Hibernate | CRUD/entity và query native; quy ước chuyển tra cứu/khóa sang JPA, không tự tạo schema hoặc OSIV |
-| JDBC | Ghi batch và hạ tầng DB; các query JDBC cũ chưa chuyển hết, trạng thái ở tiến độ; cùng transaction với JPA |
+| JDBC | CustomRepo ghi batch cùng transaction JPA; migration, schema và nhật ký API là hạ tầng JDBC |
 | PostgreSQL | DB đang chạy; 8 SQL nền và bước Category, array/JSONB/advisory lock/pg_trgm |
 | Oracle26ai | Có driver/profile chuẩn bị, runtime còn bị chặn; chưa chuyển SQL hoặc kiểm nghiệp vụ thật |
 | Bootstrap/CSS/JavaScript | UI tab/modal, validation và paging server; Node chỉ phục vụ phát triển/CI |
@@ -41,17 +41,17 @@ Phiên bản chính xác đọc [pom.xml](../../pom.xml) và [package.json](../.
 
 | Khối | File Java | Bảng | Trách nhiệm |
 |---|---:|---:|---|
-| auth | 40 | 8 | User/role/function/menu/API, scope, lifecycle và history |
-| business/catalog | 10 | 1 | Danh mục chung, cây tỉnh/xã và điểm đón trả |
+| auth | 46 | 8 | User/role/function/menu/API, scope, lifecycle và history |
+| business/catalog | 11 | 1 | Danh mục chung, cây tỉnh/xã và điểm đón trả |
 | business/carrier | 23 | 3 | Nhà xe, xe, hồ sơ tài xế |
-| business/trip | 42 | 6 | Tuyến/chuyến, snapshot, chặng, tiến độ và tìm chuyến |
+| business/trip | 45 | 6 | Tuyến/chuyến, snapshot, chặng, tiến độ và tìm chuyến |
 | business/booking | 15 | 2 | Đơn và sự kiện trạng thái/thu–hoàn |
 | business/report | 10 | 0 | Báo cáo và dashboard đọc dữ liệu nghiệp vụ |
-| business/bootstrap | 6 | 0 | Khởi tạo nền có cờ bật rõ ràng |
+| business/bootstrap | 7 | 0 | Khởi tạo nền có cờ bật rõ ràng |
 | common | 58 | 1 | Nền MVC/DB, response/lỗi và api_request_journal |
 | History migration | — | 1 | vietroute_schema_history |
 
-Source có 204 file Java trong ba khối chính và 22 bảng sau migration Category, gồm history. Xem tên bảng và quan hệ tại [schema](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md). Số file là mốc source, không phải bằng chứng một thành viên đã viết toàn bộ khối được phân công.
+Source có 215 file Java trong ba khối chính và 22 bảng sau migration Category, gồm history. Xem tên bảng và quan hệ tại [schema](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md). Số file là mốc source, không phải bằng chứng một thành viên đã viết toàn bộ khối được phân công.
 
 ## Một request đi qua đâu
 

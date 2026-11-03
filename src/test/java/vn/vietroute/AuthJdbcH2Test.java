@@ -5,49 +5,85 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import jakarta.persistence.EntityManager;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.h2.jdbcx.JdbcDataSource;
 import org.h2.tools.RunScript;
+import org.hibernate.Session;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import vn.vietroute.auth.entity.User;
 import vn.vietroute.auth.repo.AccountChallengeRepo;
+import vn.vietroute.auth.repo.UserCustomRepo;
 import vn.vietroute.auth.repo.UserRepo;
-import vn.vietroute.support.TestJpa;
 
 /** H2 in-memory kiểm JDBC thật/rollback cho SQL portable, không giả lập PostgreSQL migration hoặc scope guard. */
 class AuthJdbcH2Test {
 
     private Connection connection;
+    private EntityManager manager;
+    private LocalContainerEntityManagerFactoryBean factory;
 
     @BeforeEach
     void start() throws Exception {
-        connection = DriverManager.getConnection(
-            "jdbc:h2:mem:auth_" + UUID.randomUUID() + ";MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE",
-            "sa",
-            ""
+        var source = new JdbcDataSource();
+        source.setURL(
+            "jdbc:h2:mem:auth_" + UUID.randomUUID() + ";MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1"
         );
+        source.setUser("sa");
+        factory = new LocalContainerEntityManagerFactoryBean();
+        factory.setDataSource(source);
+        factory.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
+        factory.setPackagesToScan("vn.vietroute.auth.entity");
+        factory.setJpaPropertyMap(Map.of("hibernate.hbm2ddl.auto", "none", "hibernate.default_schema", "public"));
+        factory.afterPropertiesSet();
+        manager = factory.getObject().createEntityManager();
+        begin();
         try (
             var input = getClass().getResourceAsStream("/auth/h2-jdbc.sql");
             var reader = new InputStreamReader(input, StandardCharsets.UTF_8)
         ) {
             RunScript.execute(connection, reader);
         }
-        connection.setAutoCommit(false);
+        commit();
     }
 
     @AfterEach
     void close() throws Exception {
-        if (connection != null) connection.close();
+        if (manager != null) {
+            if (manager.getTransaction().isActive()) manager.getTransaction().rollback();
+            manager.close();
+        }
+        if (factory != null) factory.destroy();
+    }
+
+    private void begin() {
+        manager.getTransaction().begin();
+        connection = manager.unwrap(Session.class).doReturningWork(value -> value);
+    }
+
+    private void commit() {
+        manager.getTransaction().commit();
+        manager.clear();
+        begin();
+    }
+
+    private void rollback() {
+        manager.getTransaction().rollback();
+        manager.clear();
+        begin();
     }
 
     @Test
@@ -55,15 +91,15 @@ class AuthJdbcH2Test {
         execute(
             "INSERT INTO auth_users(id,username,display_name,password_hash,previous_password_hash_1,previous_password_hash_2,failed_login_attempts) VALUES(1,'passwordtest','Test','current','previous1','previous2',4)"
         );
-        connection.commit();
-        new UserRepo(TestJpa.MANAGER, null).changePassword(connection, 1, "next", 1);
+        commit();
+        new UserRepo(manager).changePassword(1, "next", 1);
         assertEquals("next,current,previous1,1,1,false,0", state());
-        connection.rollback();
+        rollback();
         assertEquals("current,previous1,previous2,0,0,true,4", state());
-        new UserRepo(TestJpa.MANAGER, null).changePassword(connection, 1, "next", 1);
-        connection.commit();
-        new UserRepo(TestJpa.MANAGER, null).changePassword(connection, 1, "next2", 1);
-        connection.commit();
+        new UserRepo(manager).changePassword(1, "next", 1);
+        commit();
+        new UserRepo(manager).changePassword(1, "next2", 1);
+        commit();
         assertEquals("next2,next,current,2,2,false,0", state());
     }
 
@@ -78,16 +114,16 @@ class AuthJdbcH2Test {
             query.setObject(1, Instant.now().plusSeconds(300).atOffset(ZoneOffset.UTC));
             query.executeUpdate();
         }
-        connection.commit();
-        var accounts = new AccountChallengeRepo(TestJpa.MANAGER, null);
+        commit();
+        var accounts = new AccountChallengeRepo(manager);
         assertFalse(accounts.consume(connection, 1, "ACTIVATE", "hashed-code", 7));
         assertFalse(accounts.consume(connection, 1, "RESET", "wrong-code", 7));
         assertFalse(accounts.consume(connection, 1, "RESET", "hashed-code", 6));
         assertTrue(accounts.consume(connection, 1, "RESET", "hashed-code", 7));
         assertFalse(accounts.consume(connection, 1, "RESET", "hashed-code", 7));
-        connection.rollback();
+        rollback();
         assertTrue(accounts.consume(connection, 1, "RESET", "hashed-code", 7));
-        connection.commit();
+        commit();
         assertFalse(accounts.consume(connection, 1, "RESET", "hashed-code", 7));
     }
 
@@ -97,15 +133,15 @@ class AuthJdbcH2Test {
         execute(
             "INSERT INTO auth_account_challenges VALUES(1,'RESET','expired',0,TIMESTAMP WITH TIME ZONE '2000-01-01 00:00:00+00'),(1,'ACTIVATE','activation',0,TIMESTAMP WITH TIME ZONE '2099-01-01 00:00:00+00')"
         );
-        var accounts = new AccountChallengeRepo(TestJpa.MANAGER, null);
+        var accounts = new AccountChallengeRepo(manager);
         assertFalse(accounts.consume(connection, 1, "RESET", "expired", 0));
-        accounts.invalidate(connection, 1);
+        accounts.invalidate(1);
         assertEquals(0, count("auth_account_challenges"));
     }
 
     @Test
     void configuredAccountsAreVerifiedReadyAndRoleMappedUsingBatch() throws Exception {
-        new UserRepo(TestJpa.MANAGER, null).insertDefaults(
+        new UserCustomRepo().insertDefaults(
             connection,
             List.of(
                 account("custom01", "Customer", "CUSTOMER", "customer@example.invalid", "test-hash-a"),
@@ -113,7 +149,7 @@ class AuthJdbcH2Test {
                 account("operator01", "Operator", "OPERATOR", "operator@example.invalid", "test-hash-c")
             )
         );
-        connection.commit();
+        commit();
         assertEquals(3, count("auth_users"));
         assertEquals(3, count("auth_user_roles"));
         try (
@@ -132,9 +168,9 @@ class AuthJdbcH2Test {
         execute(
             "INSERT INTO auth_users(id,username,display_name,password_hash) VALUES(50,'existing','Existing','keep-this-hash')"
         );
-        connection.commit();
+        commit();
         assertThrows(SQLException.class, () ->
-            new UserRepo(TestJpa.MANAGER, null).insertDefaults(
+            new UserCustomRepo().insertDefaults(
                 connection,
                 List.of(
                     account("first", "First", "DRIVER", "first@example.invalid", "a"),
@@ -142,7 +178,7 @@ class AuthJdbcH2Test {
                 )
             )
         );
-        connection.rollback();
+        rollback();
         assertEquals(1, count("auth_users"));
         assertEquals(0, count("auth_user_roles"));
         try (

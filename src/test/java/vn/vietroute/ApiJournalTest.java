@@ -98,7 +98,7 @@ class ApiJournalTest {
         try (var context = context()) {
             var jwt = context.getBean(JwtService.class);
             var user = User.builder().id(1L).username("private-user").roles(Set.of("ADMIN")).build();
-            var users = new UserRepo(TestJpa.MANAGER, null) {
+            var users = new UserRepo(TestJpa.MANAGER) {
                 @Override
                 public User load(Long id) {
                     throw BaseRepository.translate(new SQLException("private JDBC credential", "08001"));

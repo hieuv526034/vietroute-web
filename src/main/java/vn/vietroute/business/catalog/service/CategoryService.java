@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.catalog.constant.CategoryRefType;
 import vn.vietroute.business.catalog.dto.request.CategoryRequest;
@@ -21,11 +22,11 @@ import vn.vietroute.business.catalog.entity.Category;
 import vn.vietroute.business.catalog.repo.CategoryRepo;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ErrorCode;
-import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.validation.BusinessRules;
 
 /** Một luồng CRUD cho Category, kiểm metadata/cha và giữ transaction dùng chung. */
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class CategoryService {
 
@@ -39,9 +40,8 @@ public class CategoryService {
 
     private final CategoryRepo categories;
 
-    private final JdbcTransactions transactions;
-
     /** Lookup chỉ trả whitelist công khai; con chỉ đọc khi có ID cha, không tải toàn bộ cây. */
+    @Transactional(readOnly = true)
     public PageResponse<CategoryLookupResponse> lookup(String refType, CategorySearch search, Locale locale) {
         BusinessRules.require(refType != null && PUBLIC_GROUPS.contains(refType), ErrorCode.NOT_FOUND);
         if (
@@ -56,11 +56,13 @@ public class CategoryService {
     }
 
     /** Quản trị cây nhận đúng một nhóm và một cha; GROUP có API đọc riêng. */
+    @Transactional(readOnly = true)
     public PageResponse<CategoryResponse> search(CategorySearch search, Locale locale) {
         BusinessRules.require(search.getRefType() != null || search.parent() != null, ErrorCode.INVALID_REQUEST);
         return list(search.getRefType(), search, locale);
     }
 
+    @Transactional(readOnly = true)
     public PageResponse<CategoryResponse> groups(CategorySearch search, Locale locale) {
         return map(categories.search(search, null, "GROUP", false), item -> CategoryResponse.from(item, locale));
     }
@@ -70,6 +72,7 @@ public class CategoryService {
     }
 
     /** Handler đã duyệt endpoint trước khi đọc dữ liệu quản trị. */
+    @Transactional(readOnly = true)
     public CategoryResponse findCategory(long id, Locale locale) {
         return CategoryResponse.from(categories.item(id), locale);
     }
@@ -77,85 +80,79 @@ public class CategoryService {
     /** Khóa nhóm → cha → mục; JPA và JDBC cùng transaction, version/audit do server quản lý. */
     public CategoryResponse createCategory(CategoryRequest body, UserPrincipal actor, Locale locale) {
         UserPrincipal.requireCurrent(actor);
-        return transactions.execute(connection -> {
-            String kind = body.getType();
-            BusinessRules.require("GROUP".equals(kind) || "VALUE".equals(kind), ErrorCode.INVALID_REQUEST);
-            String code = body.getCode() == null ? BusinessRules.generateCode("CAT") : body.getCode();
-            requireCode(code);
-            requireCode(body.getRefType());
-            Map<String, Object> props = new LinkedHashMap<>(body.getProps());
-            props.putIfAbsent("nameEn", body.getName());
-            Category value = Category.builder()
-                .code(code)
-                .type(kind)
-                .name(body.getName())
-                .description(body.getDescription())
-                .refType(body.getRefType())
-                .parentId(body.getParentId())
-                .props(props)
-                .active(body.isActive())
-                .sortOrder(body.getSortOrder())
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
-                .createdBy(actor.id())
-                .updatedBy(actor.id())
-                .build();
-            validate(value);
-            categories.saveAndFlush(value);
-            return CategoryResponse.from(categories.item(connection, value.getId()), locale);
-        });
+        String kind = body.getType();
+        BusinessRules.require("GROUP".equals(kind) || "VALUE".equals(kind), ErrorCode.INVALID_REQUEST);
+        String code = body.getCode() == null ? BusinessRules.generateCode("CAT") : body.getCode();
+        requireCode(code);
+        requireCode(body.getRefType());
+        Map<String, Object> props = new LinkedHashMap<>(body.getProps());
+        props.putIfAbsent("nameEn", body.getName());
+        Category value = Category.builder()
+            .code(code)
+            .type(kind)
+            .name(body.getName())
+            .description(body.getDescription())
+            .refType(body.getRefType())
+            .parentId(body.getParentId())
+            .props(props)
+            .active(body.isActive())
+            .sortOrder(body.getSortOrder())
+            .createdAt(Instant.now())
+            .updatedAt(Instant.now())
+            .createdBy(actor.id())
+            .updatedBy(actor.id())
+            .build();
+        validate(value);
+        categories.saveAndFlush(value);
+        return CategoryResponse.from(categories.item(value.getId()), locale);
     }
 
     /** Identity bất biến; mọi cập nhật nội dung/metadata đều kiểm hợp đồng và version đã đọc. */
     public CategoryResponse updateCategory(long id, CategoryRequest body, UserPrincipal actor, Locale locale) {
         UserPrincipal.requireCurrent(actor);
-        return transactions.execute(connection -> {
-            Category snapshot = categories.item(connection, id);
-            if ("VALUE".equals(snapshot.getType())) categories.group(snapshot.getRefType());
-            if (snapshot.getParentId() != null) categories.parent(snapshot.getParentId());
-            Category value = categories.locked(id);
-            BusinessRules.requireVersion(BusinessRules.requireFound(body.getVersion()), value.getVersion());
-            BusinessRules.require(
-                body.getCode() == null || body.getCode().equals(value.getCode()),
-                ErrorCode.INVALID_REQUEST
-            );
-            BusinessRules.require(
-                body.getRefType() == null || body.getRefType().equals(value.getRefType()),
-                ErrorCode.INVALID_REQUEST
-            );
-            BusinessRules.require(
-                body.getParentId() == null || body.getParentId().equals(value.getParentId()),
-                ErrorCode.INVALID_REQUEST
-            );
-            BusinessRules.require(Objects.equals(body.getType(), value.getType()), ErrorCode.INVALID_REQUEST);
-            value.setName(body.getName());
-            value.setDescription(body.getDescription());
-            value.setProps(new LinkedHashMap<>(body.getProps()));
-            value.getProps().putIfAbsent("nameEn", body.getName());
-            value.setActive(body.isActive());
-            value.setSortOrder(body.getSortOrder());
-            validate(value);
-            value.setUpdatedAt(Instant.now());
-            value.setUpdatedBy(actor.id());
-            categories.saveAndFlush(value);
-            return CategoryResponse.from(categories.item(connection, id), locale);
-        });
+        Category snapshot = categories.item(id);
+        if ("VALUE".equals(snapshot.getType())) categories.group(snapshot.getRefType());
+        if (snapshot.getParentId() != null) categories.parent(snapshot.getParentId());
+        Category value = categories.locked(id);
+        BusinessRules.requireVersion(BusinessRules.requireFound(body.getVersion()), value.getVersion());
+        BusinessRules.require(
+            body.getCode() == null || body.getCode().equals(value.getCode()),
+            ErrorCode.INVALID_REQUEST
+        );
+        BusinessRules.require(
+            body.getRefType() == null || body.getRefType().equals(value.getRefType()),
+            ErrorCode.INVALID_REQUEST
+        );
+        BusinessRules.require(
+            body.getParentId() == null || body.getParentId().equals(value.getParentId()),
+            ErrorCode.INVALID_REQUEST
+        );
+        BusinessRules.require(Objects.equals(body.getType(), value.getType()), ErrorCode.INVALID_REQUEST);
+        value.setName(body.getName());
+        value.setDescription(body.getDescription());
+        value.setProps(new LinkedHashMap<>(body.getProps()));
+        value.getProps().putIfAbsent("nameEn", body.getName());
+        value.setActive(body.isActive());
+        value.setSortOrder(body.getSortOrder());
+        validate(value);
+        value.setUpdatedAt(Instant.now());
+        value.setUpdatedBy(actor.id());
+        categories.saveAndFlush(value);
+        return CategoryResponse.from(categories.item(id), locale);
     }
 
     /** Ngừng sử dụng giữ FK/lịch sử; dữ liệu công khai còn xét trạng thái của cha và nhóm. */
     public CategoryResponse deleteCategory(long id, long version, UserPrincipal actor, Locale locale) {
         UserPrincipal.requireCurrent(actor);
-        return transactions.execute(connection -> {
-            Category snapshot = categories.item(connection, id);
-            if ("VALUE".equals(snapshot.getType())) categories.group(snapshot.getRefType());
-            Category value = categories.locked(id);
-            BusinessRules.requireVersion(version, value.getVersion());
-            value.setActive(false);
-            value.setUpdatedAt(Instant.now());
-            value.setUpdatedBy(actor.id());
-            categories.saveAndFlush(value);
-            return CategoryResponse.from(categories.item(connection, id), locale);
-        });
+        Category snapshot = categories.item(id);
+        if ("VALUE".equals(snapshot.getType())) categories.group(snapshot.getRefType());
+        Category value = categories.locked(id);
+        BusinessRules.requireVersion(version, value.getVersion());
+        value.setActive(false);
+        value.setUpdatedAt(Instant.now());
+        value.setUpdatedBy(actor.id());
+        categories.saveAndFlush(value);
+        return CategoryResponse.from(categories.item(id), locale);
     }
 
     /** Metadata chỉ diễn giải kiểu/range/enum, không nhận SQL hoặc mã thực thi từ JSON. */

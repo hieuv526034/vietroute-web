@@ -1,13 +1,19 @@
 package vn.vietroute.business.trip.repo;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
+import static vn.vietroute.common.base.BaseRepository.decimalValue;
+import static vn.vietroute.common.base.BaseRepository.instantValue;
+import static vn.vietroute.common.base.BaseRepository.intValue;
+import static vn.vietroute.common.base.BaseRepository.longValue;
+import static vn.vietroute.common.base.BaseRepository.stringValue;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
+import jakarta.persistence.Tuple;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.List;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.business.trip.dto.response.JourneyMatchResponse;
 import vn.vietroute.business.trip.dto.response.JourneyResponse;
 import vn.vietroute.business.trip.dto.response.JourneySegmentResponse;
@@ -18,7 +24,6 @@ import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.Business;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
-import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 
 /** Chỉ công bố chuyến đã từng OPEN; projection public bỏ account/driver PII và dữ liệu đặt chỗ. */
 @Repository
@@ -28,194 +33,199 @@ public class JourneyRepo extends BaseRepository {
     private static final String PUBLISHED = """
     EXISTS (
         SELECT 1
-        FROM trip_events published
+        FROM {h-schema}trip_events published
         WHERE published.trip_id = t.id
             AND published.event_type = 'OPENED'
     )
     """;
 
-    public JourneyRepo(JdbcConnectionFactory connections, TripRepo trips) {
-        super(connections);
+    public JourneyRepo(EntityManager manager, TripRepo trips) {
+        super(manager);
         this.trips = trips;
     }
 
     /** Ngày tại pickup, hướng tăng, pickup chưa rời và MIN chỗ của đúng range chặng trong SQL. */
+    @Transactional(readOnly = true)
     public PageResponse<JourneyMatchResponse> search(JourneySearch body) {
-        return read(connection -> {
-            String filter = """
-            FROM carrier_trips t
-            JOIN carriers c ON c.id = t.carrier_id AND c.scope_id = t.scope_id
-            JOIN (
-                SELECT scope_id AS id, scope_code AS code, scope_name_vi AS name_vi, scope_name_en AS name_en,
-                    scope_active AS active, scope_version AS version, updated_at, updated_by
-                FROM carriers
-            ) ds ON ds.id = t.scope_id
-            JOIN trip_stops pick ON pick.trip_id = t.id AND pick.pickup_allowed
-                AND pick.actual_departure_at IS NULL
-            JOIN trip_stops dropoff ON dropoff.trip_id = t.id AND dropoff.dropoff_allowed
-                AND dropoff.stop_order > pick.stop_order
-            JOIN LATERAL (
-                SELECT MIN(capacity - reserved_seats) AS remaining, COUNT(*) AS segments
-                FROM trip_segments seg
-                WHERE seg.trip_id = t.id AND seg.segment_order >= pick.stop_order
-                    AND seg.segment_order < dropoff.stop_order
-            ) avail ON avail.segments = dropoff.stop_order - pick.stop_order
-            WHERE c.active AND ds.active
-                AND %s
-                AND (t.status = 'IN_PROGRESS' OR (t.status = 'OPEN' AND t.departure_at > CURRENT_TIMESTAMP))
-                AND pick.scheduled_departure_at >= ?
-                AND pick.scheduled_departure_at < ?
-                AND ((?::BIGINT IS NOT NULL AND pick.location_id = ?) OR (?::BIGINT IS NULL AND pick.province_id = ?))
-                AND ((?::BIGINT IS NOT NULL AND dropoff.location_id = ?) OR (?::BIGINT IS NULL AND
-                    dropoff.province_id = ?))
-                AND (?::BIGINT IS NULL OR c.id = ?)
-                AND (?::BIGINT IS NULL OR t.vehicle_type_id = ?)
-                AND avail.remaining >= ?
-                AND (?::NUMERIC IS NULL OR dropoff.cumulative_fare - pick.cumulative_fare >= ?)
-                AND (?::NUMERIC IS NULL OR dropoff.cumulative_fare - pick.cumulative_fare <= ?)
-                AND (?::BIGINT IS NULL OR EXISTS (
-                    SELECT 1 FROM category location WHERE location.id=pick.location_id AND location.parent_id=?
-                ))
-                AND (?::BIGINT IS NULL OR EXISTS (
-                    SELECT 1 FROM category location WHERE location.id=dropoff.location_id AND location.parent_id=?
-                ))
-            """.formatted(PUBLISHED);
-            long total;
-            try (PreparedStatement query = connection.prepareStatement("SELECT COUNT(*)" + filter)) {
-                bind(query, body);
-                try (ResultSet row = query.executeQuery()) {
-                    row.next();
-                    total = row.getLong(1);
+        String filter = """
+        FROM {h-schema}carrier_trips t
+        JOIN {h-schema}carriers c ON c.id = t.carrier_id AND c.scope_id = t.scope_id
+        JOIN (
+            SELECT scope_id AS id, scope_code AS code, scope_name_vi AS name_vi, scope_name_en AS name_en,
+                scope_active AS active, scope_version AS version, updated_at, updated_by
+            FROM {h-schema}carriers
+        ) ds ON ds.id = t.scope_id
+        JOIN {h-schema}trip_stops pick ON pick.trip_id = t.id AND pick.pickup_allowed
+            AND pick.actual_departure_at IS NULL
+        JOIN {h-schema}trip_stops dropoff ON dropoff.trip_id = t.id AND dropoff.dropoff_allowed
+            AND dropoff.stop_order > pick.stop_order
+        JOIN LATERAL (
+            SELECT MIN(capacity - reserved_seats) AS remaining, COUNT(*) AS segments
+            FROM {h-schema}trip_segments seg
+            WHERE seg.trip_id = t.id AND seg.segment_order >= pick.stop_order
+                AND seg.segment_order < dropoff.stop_order
+        ) avail ON avail.segments = dropoff.stop_order - pick.stop_order
+        WHERE c.active AND ds.active
+            AND %s
+            AND (t.status = 'IN_PROGRESS' OR (t.status = 'OPEN' AND t.departure_at > CURRENT_TIMESTAMP))
+            AND pick.scheduled_departure_at >= :fromAt
+            AND pick.scheduled_departure_at < :toAt
+            AND ((CAST(:fromLocationId AS BIGINT) IS NOT NULL AND pick.location_id = :fromLocationId) OR (CAST(:fromLocationId AS BIGINT) IS NULL AND pick.province_id = :fromProvinceId))
+            AND ((CAST(:toLocationId AS BIGINT) IS NOT NULL AND dropoff.location_id = :toLocationId) OR (CAST(:toLocationId AS BIGINT) IS NULL AND
+                dropoff.province_id = :toProvinceId))
+            AND (CAST(:carrierId AS BIGINT) IS NULL OR c.id = :carrierId)
+            AND (CAST(:vehicleTypeId AS BIGINT) IS NULL OR t.vehicle_type_id = :vehicleTypeId)
+            AND avail.remaining >= :seats
+            AND (CAST(:minPrice AS NUMERIC) IS NULL OR dropoff.cumulative_fare - pick.cumulative_fare >= :minPrice)
+            AND (CAST(:maxPrice AS NUMERIC) IS NULL OR dropoff.cumulative_fare - pick.cumulative_fare <= :maxPrice)
+            AND (CAST(:fromWardId AS BIGINT) IS NULL OR EXISTS (
+                SELECT 1 FROM {h-schema}category location WHERE location.id=pick.location_id AND location.parent_id=:fromWardId
+            ))
+            AND (CAST(:toWardId AS BIGINT) IS NULL OR EXISTS (
+                SELECT 1 FROM {h-schema}category location WHERE location.id=dropoff.location_id AND location.parent_id=:toWardId
+            ))
+        """.formatted(PUBLISHED);
+        long total;
+        {
+            Query query = entityManager.createNativeQuery("SELECT COUNT(*)" + filter, Tuple.class);
+
+            bind(query, body);
+            {
+                Tuple row = (Tuple) query.getSingleResult();
+                total = longValue(row.get(0));
+            }
+        }
+        ArrayList<JourneyMatchResponse> result = new ArrayList<JourneyMatchResponse>();
+        {
+            Query query = entityManager.createNativeQuery(
+                """
+                SELECT t.id, t.code, c.id, c.name, t.vehicle_type_name_vi, t.vehicle_type_name_en, pick.id,
+                    dropoff.id, pick.name_vi, pick.name_en, dropoff.name_vi, dropoff.name_en,
+                        pick.scheduled_departure_at,
+                    dropoff.scheduled_arrival_at, dropoff.cumulative_fare - pick.cumulative_fare, avail.remaining,
+                    t.status
+                %s
+                ORDER BY pick.scheduled_departure_at, t.id, pick.stop_order, dropoff.stop_order
+                LIMIT :pageSize OFFSET :offset
+                """.formatted(filter),
+                Tuple.class
+            );
+
+            bind(query, body);
+            query.setParameter("pageSize", body.getSize());
+            query.setParameter("offset", body.offset());
+            {
+                for (Object rowValue : query.getResultList()) {
+                    Tuple row = (Tuple) rowValue;
+                    result.add(
+                        new JourneyMatchResponse(
+                            longValue(row.get(0)),
+                            stringValue(row.get(1)),
+                            longValue(row.get(2)),
+                            stringValue(row.get(3)),
+                            stringValue(row.get(4)),
+                            stringValue(row.get(5)),
+                            longValue(row.get(6)),
+                            longValue(row.get(7)),
+                            stringValue(row.get(8)),
+                            stringValue(row.get(9)),
+                            stringValue(row.get(10)),
+                            stringValue(row.get(11)),
+                            instantValue(row.get(12)),
+                            instantValue(row.get(13)),
+                            decimalValue(row.get(14)),
+                            intValue(row.get(15)),
+                            stringValue(row.get(16))
+                        )
+                    );
                 }
             }
-            ArrayList<JourneyMatchResponse> result = new ArrayList<JourneyMatchResponse>();
-            try (
-                PreparedStatement query = connection.prepareStatement(
-                    """
-                    SELECT t.id, t.code, c.id, c.name, t.vehicle_type_name_vi, t.vehicle_type_name_en, pick.id,
-                        dropoff.id, pick.name_vi, pick.name_en, dropoff.name_vi, dropoff.name_en,
-                            pick.scheduled_departure_at,
-                        dropoff.scheduled_arrival_at, dropoff.cumulative_fare - pick.cumulative_fare, avail.remaining,
-                        t.status
-                    %s
-                    ORDER BY pick.scheduled_departure_at, t.id, pick.stop_order, dropoff.stop_order
-                    LIMIT ? OFFSET ?
-                    """.formatted(filter)
-                )
-            ) {
-                int at = bind(query, body);
-                query.setInt(at++, body.getSize());
-                query.setLong(at, body.offset());
-                try (ResultSet row = query.executeQuery()) {
-                    while (row.next())
-                        result.add(
-                            new JourneyMatchResponse(
-                                row.getLong(1),
-                                row.getString(2),
-                                row.getLong(3),
-                                row.getString(4),
-                                row.getString(5),
-                                row.getString(6),
-                                row.getLong(7),
-                                row.getLong(8),
-                                row.getString(9),
-                                row.getString(10),
-                                row.getString(11),
-                                row.getString(12),
-                                row.getTimestamp(13).toInstant(),
-                                row.getTimestamp(14).toInstant(),
-                                row.getBigDecimal(15),
-                                row.getInt(16),
-                                row.getString(17)
-                            )
-                        );
-                }
-            }
-            return PageResponse.of(result, body, total);
-        });
+        }
+        return PageResponse.of(result, body, total);
     }
 
-    private int bind(PreparedStatement query, JourneySearch body) throws SQLException {
-        int at = 1;
+    private void bind(Query query, JourneySearch body) {
         ZoneId zone = ZoneId.of(Business.TIME_ZONE);
-        query.setTimestamp(at++, Timestamp.from(body.getDate().atStartOfDay(zone).toInstant()));
-        query.setTimestamp(at++, Timestamp.from(body.getDate().plusDays(1).atStartOfDay(zone).toInstant()));
-        for (int i = 0; i < 3; i++) query.setObject(at++, body.getFromLocationId());
-        query.setObject(at++, body.getFromProvinceId());
-        for (int i = 0; i < 3; i++) query.setObject(at++, body.getToLocationId());
-        query.setObject(at++, body.getToProvinceId());
-        query.setObject(at++, body.getCarrierId());
-        query.setObject(at++, body.getCarrierId());
-        query.setObject(at++, body.getVehicleTypeId());
-        query.setObject(at++, body.getVehicleTypeId());
-        query.setInt(at++, body.getSeats());
-        query.setBigDecimal(at++, body.getMinPrice());
-        query.setBigDecimal(at++, body.getMinPrice());
-        query.setBigDecimal(at++, body.getMaxPrice());
-        query.setBigDecimal(at++, body.getMaxPrice());
-        query.setObject(at++, body.getFromWardId());
-        query.setObject(at++, body.getFromWardId());
-        query.setObject(at++, body.getToWardId());
-        query.setObject(at++, body.getToWardId());
-        return at;
+        query.setParameter("fromAt", body.getDate().atStartOfDay(zone).toInstant());
+        query.setParameter("toAt", body.getDate().plusDays(1).atStartOfDay(zone).toInstant());
+        query.setParameter("fromLocationId", body.getFromLocationId());
+        query.setParameter("fromProvinceId", body.getFromProvinceId());
+        query.setParameter("toLocationId", body.getToLocationId());
+        query.setParameter("toProvinceId", body.getToProvinceId());
+        query.setParameter("carrierId", body.getCarrierId());
+        query.setParameter("vehicleTypeId", body.getVehicleTypeId());
+        query.setParameter("seats", body.getSeats());
+        query.setParameter("minPrice", body.getMinPrice());
+        query.setParameter("maxPrice", body.getMaxPrice());
+        query.setParameter("fromWardId", body.getFromWardId());
+        query.setParameter("toWardId", body.getToWardId());
     }
 
     /** Sau công bố vẫn xem được thông báo hủy/hoàn thành; DRAFT hoặc chưa từng mở không xuất hiện. */
-    public JourneyResponse find(Connection connection, long id) throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
+    public JourneyResponse find(long id) {
+        {
+            Query query = entityManager.createNativeQuery(
                 """
                 SELECT t.id, t.code, t.carrier_id, c.name, c.phone, t.name_vi, t.name_en, t.vehicle_type_name_vi,
                     t.vehicle_type_name_en, t.plate_number, t.departure_at, t.end_at, t.status, t.operation_note
-                FROM carrier_trips t
-                JOIN carriers c ON c.id = t.carrier_id AND c.scope_id = t.scope_id
+                FROM {h-schema}carrier_trips t
+                JOIN {h-schema}carriers c ON c.id = t.carrier_id AND c.scope_id = t.scope_id
                 JOIN (
                     SELECT scope_id AS id, scope_code AS code, scope_name_vi AS name_vi, scope_name_en AS name_en,
                         scope_active AS active, scope_version AS version, updated_at, updated_by
-                    FROM carriers
+                    FROM {h-schema}carriers
                 ) ds ON ds.id = t.scope_id
                     AND ds.active
-                WHERE t.id = ?
+                WHERE t.id = :tripId
                     AND t.status <> 'DRAFT'
                     AND %s
-                """.formatted(PUBLISHED)
-            )
-        ) {
-            query.setLong(1, id);
-            try (ResultSet row = query.executeQuery()) {
-                if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
+                """.formatted(PUBLISHED),
+                Tuple.class
+            );
+
+            query.setParameter("tripId", id);
+            {
+                List<?> rowValues = query.getResultList();
+
+                if (rowValues.isEmpty()) throw new BusinessException(ErrorCode.NOT_FOUND);
+                Tuple row = (Tuple) rowValues.get(0);
+
                 ArrayList<JourneySegmentResponse> segments = new ArrayList<JourneySegmentResponse>();
-                try (
-                    PreparedStatement sub = connection.prepareStatement(
+                {
+                    Query sub = entityManager.createNativeQuery(
                         """
                         SELECT segment_order, capacity - reserved_seats
-                        FROM trip_segments
-                        WHERE trip_id = ?
+                        FROM {h-schema}trip_segments
+                        WHERE trip_id = :tripId
                         ORDER BY segment_order
-                        """
-                    )
-                ) {
-                    sub.setLong(1, id);
-                    try (ResultSet part = sub.executeQuery()) {
-                        while (part.next()) segments.add(new JourneySegmentResponse(part.getInt(1), part.getInt(2)));
+                        """,
+                        Tuple.class
+                    );
+
+                    sub.setParameter("tripId", id);
+                    {
+                        for (Object partValue : sub.getResultList()) {
+                            Tuple part = (Tuple) partValue;
+                            segments.add(new JourneySegmentResponse(intValue(part.get(0)), intValue(part.get(1))));
+                        }
                     }
                 }
                 return new JourneyResponse(
-                    row.getLong(1),
-                    row.getString(2),
-                    row.getLong(3),
-                    row.getString(4),
-                    row.getString(5),
-                    row.getString(6),
-                    row.getString(7),
-                    row.getString(8),
-                    row.getString(9),
-                    row.getString(10),
-                    row.getTimestamp(11).toInstant(),
-                    row.getTimestamp(12).toInstant(),
-                    row.getString(13),
-                    row.getString(14),
-                    trips.stops(connection, id),
+                    longValue(row.get(0)),
+                    stringValue(row.get(1)),
+                    longValue(row.get(2)),
+                    stringValue(row.get(3)),
+                    stringValue(row.get(4)),
+                    stringValue(row.get(5)),
+                    stringValue(row.get(6)),
+                    stringValue(row.get(7)),
+                    stringValue(row.get(8)),
+                    stringValue(row.get(9)),
+                    instantValue(row.get(10)),
+                    instantValue(row.get(11)),
+                    stringValue(row.get(12)),
+                    stringValue(row.get(13)),
+                    trips.stops(id),
                     segments
                 );
             }

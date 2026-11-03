@@ -18,7 +18,7 @@ class DataScopeSecurityTest {
 
     @Test
     void missingAuthenticationAndMismatchedServerParentScopesFailClosed() {
-        assertThrows(BusinessException.class, () -> UserRoleRepo.bindVisible(null, 1));
+        assertThrows(BusinessException.class, () -> UserRoleRepo.bindVisible(null));
         assertThrows(BusinessException.class, () -> UserRoleRepo.requireSameScope(1, 2));
         assertThrows(BusinessException.class, () -> UserRoleRepo.requireSameScope(0, 0));
         UserRoleRepo.requireSameScope(7, 7);

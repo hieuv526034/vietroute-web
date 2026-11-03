@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.HashSet;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.carrier.dto.response.CarrierChoiceResponse;
 import vn.vietroute.business.carrier.dto.search.CarrierSearch;
@@ -12,6 +13,7 @@ import vn.vietroute.business.carrier.repo.CarrierRepo;
 import vn.vietroute.business.trip.dto.request.RouteRequest;
 import vn.vietroute.business.trip.dto.request.RouteStopRequest;
 import vn.vietroute.business.trip.dto.response.RouteResponse;
+import vn.vietroute.business.trip.repo.RouteCustomRepo;
 import vn.vietroute.business.trip.repo.RouteRepo;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ErrorCode;
@@ -28,12 +30,15 @@ public class RouteService {
     private final JdbcTransactions transactions;
 
     /** Tổng và trang được lọc trực tiếp ở PostgreSQL. */
+    private final RouteCustomRepo routeBatch;
+
     public PageResponse<RouteResponse> page(CarrierSearch query) {
         return routes.page(query);
     }
 
+    @Transactional(readOnly = true)
     public RouteResponse find(long id) {
-        return transactions.execute(connection -> routes.find(connection, id, false, true));
+        return routes.find(id, false, true);
     }
 
     /** Picker CREATE không bắt thêm quyền đọc hồ sơ nhà xe hoặc quyền khác scope. */
@@ -56,12 +61,12 @@ public class RouteService {
         UserPrincipal.requireCurrent(actor);
         validate(body);
         return transactions.execute(connection -> {
-            Carrier carrier = carriers.carrier(connection, body.getCarrierId(), true);
+            Carrier carrier = carriers.carrier(body.getCarrierId(), true);
             BusinessRules.require(carrier.isActive(), ErrorCode.CONFLICT);
-            routes.validateLocations(connection, body);
-            long id = routes.insert(connection, carrier.getScopeId(), body, actor.id());
-            routes.replaceStops(connection, id, carrier.getScopeId(), body, actor.id());
-            return routes.find(connection, id, false, true);
+            routes.validateLocations(body);
+            long id = routes.insert(carrier.getScopeId(), body, actor.id());
+            routeBatch.replaceStops(connection, id, carrier.getScopeId(), body, actor.id());
+            return routes.find(id, false, true);
         });
     }
 
@@ -71,19 +76,19 @@ public class RouteService {
         validate(body);
         BusinessRules.require(body.getVersion() != null, ErrorCode.INVALID_REQUEST);
         return transactions.execute(connection -> {
-            RouteResponse existing = routes.find(connection, id, false, false);
+            RouteResponse existing = routes.find(id, false, false);
             BusinessRules.require(
                 existing.getCarrierId() == body.getCarrierId() && existing.getCode().equals(body.getCode()),
                 ErrorCode.INVALID_REQUEST
             );
-            Carrier carrier = carriers.carrier(connection, existing.getCarrierId(), true);
-            RouteResponse locked = routes.find(connection, id, true, false);
+            Carrier carrier = carriers.carrier(existing.getCarrierId(), true);
+            RouteResponse locked = routes.find(id, true, false);
             BusinessRules.require(locked.getVersion() == body.getVersion(), ErrorCode.STALE_VERSION);
             BusinessRules.require(!body.isActive() || carrier.isActive(), ErrorCode.CONFLICT);
-            routes.validateLocations(connection, body);
-            routes.update(connection, id, body, actor.id());
-            routes.replaceStops(connection, id, existing.getScopeId(), body, actor.id());
-            return routes.find(connection, id, false, true);
+            routes.validateLocations(body);
+            routes.update(id, body, actor.id());
+            routeBatch.replaceStops(connection, id, existing.getScopeId(), body, actor.id());
+            return routes.find(id, false, true);
         });
     }
 

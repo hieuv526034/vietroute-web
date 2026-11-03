@@ -1,18 +1,29 @@
 package vn.vietroute.business.trip.repo;
 
-import java.sql.Array;
+import static vn.vietroute.common.base.BaseRepository.intValue;
+import static vn.vietroute.common.base.BaseRepository.longValue;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
+import jakarta.persistence.Tuple;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.validation.BusinessRules;
 
 /** Một thuật toán tồn chỗ dùng cho WEB/PHONE/xác nhận/hủy; caller bắt buộc khóa trip trước. */
 @Repository
+@Transactional(propagation = Propagation.MANDATORY)
+@RequiredArgsConstructor
 public class TripSegmentRepo {
+
+    private final EntityManager entityManager;
+    private final TripSegmentCustomRepo batch;
 
     /** Khóa đủ đoạn tăng dần; không tăng khi PENDING. Lỗi đoạn bất kỳ rollback toàn bộ giao dịch caller. */
     public void change(
@@ -25,28 +36,31 @@ public class TripSegmentRepo {
         long actor
     ) throws SQLException {
         ArrayList<Integer> orders = new ArrayList<Integer>();
-        try (
-            PreparedStatement query = connection.prepareStatement(
+        {
+            Query query = entityManager.createNativeQuery(
                 """
                 SELECT segment_order, capacity, reserved_seats
-                FROM trip_segments
-                WHERE trip_id = ? AND segment_order >= ? AND segment_order < ?
+                FROM {h-schema}trip_segments
+                WHERE trip_id = :tripId AND segment_order >= :pickup AND segment_order < :dropoff
                 ORDER BY segment_order
                 FOR UPDATE
-                """
-            )
-        ) {
-            query.setLong(1, tripId);
-            query.setInt(2, pickup);
-            query.setInt(3, dropoff);
-            try (ResultSet row = query.executeQuery()) {
-                while (row.next()) {
-                    BusinessRules.require(row.getInt(1) == pickup + orders.size(), ErrorCode.BOOKING_INVALID);
+                """,
+                Tuple.class
+            );
+
+            query.setParameter("tripId", tripId);
+            query.setParameter("pickup", pickup);
+            query.setParameter("dropoff", dropoff);
+            {
+                for (Object rowValue : query.getResultList()) {
+                    Tuple row = (Tuple) rowValue;
+
+                    BusinessRules.require(intValue(row.get(0)) == pickup + orders.size(), ErrorCode.BOOKING_INVALID);
                     BusinessRules.require(
-                        reserve ? row.getInt(2) - row.getInt(3) >= seats : row.getInt(3) >= seats,
+                        reserve ? intValue(row.get(1)) - intValue(row.get(2)) >= seats : intValue(row.get(2)) >= seats,
                         ErrorCode.BOOKING_CAPACITY
                     );
-                    orders.add(row.getInt(1));
+                    orders.add(intValue(row.get(0)));
                 }
             }
         }
@@ -54,23 +68,7 @@ public class TripSegmentRepo {
             seats > 0 && orders.size() == dropoff - pickup && !orders.isEmpty(),
             ErrorCode.BOOKING_INVALID
         );
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                UPDATE trip_segments
-                SET reserved_seats = reserved_seats + ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP,
-                    version = version + 1
-                WHERE trip_id = ? AND segment_order >= ? AND segment_order < ?
-                """
-            )
-        ) {
-            query.setInt(1, reserve ? seats : -seats);
-            query.setLong(2, actor);
-            query.setLong(3, tripId);
-            query.setInt(4, pickup);
-            query.setInt(5, dropoff);
-            BusinessRules.require(query.executeUpdate() == orders.size(), ErrorCode.BOOKING_INVALID);
-        }
+        batch.change(connection, tripId, pickup, dropoff, reserve ? seats : -seats, actor, orders.size());
     }
 
     /** Hủy trip đã khóa booking: cộng chỗ cần trả theo đoạn trước, khóa đoạn tăng dần và cập nhật một lần. */
@@ -78,109 +76,117 @@ public class TripSegmentRepo {
         ArrayList<Integer> orders = new ArrayList<Integer>();
         ArrayList<Long> seats = new ArrayList<Long>();
         ArrayList<Long> changes = new ArrayList<Long>();
-        try (
-            PreparedStatement query = connection.prepareStatement(
+        {
+            Query query = entityManager.createNativeQuery(
                 """
                 SELECT part.segment_order, SUM(b.seats), COUNT(*)
-                FROM bookings b
+                FROM {h-schema}bookings b
                 CROSS JOIN LATERAL GENERATE_SERIES(b.pickup_order, b.dropoff_order - 1) part(segment_order)
-                WHERE b.trip_id = ?
+                WHERE b.trip_id = :tripId
                     AND b.status = 'CONFIRMED'
                 GROUP BY part.segment_order
                 ORDER BY part.segment_order
-                """
-            )
-        ) {
-            query.setLong(1, tripId);
-            try (ResultSet rows = query.executeQuery()) {
-                while (rows.next()) {
-                    orders.add(rows.getInt(1));
-                    seats.add(rows.getLong(2));
-                    changes.add(rows.getLong(3));
+                """,
+                Tuple.class
+            );
+
+            query.setParameter("tripId", tripId);
+            {
+                for (Object rowsValue : query.getResultList()) {
+                    Tuple rows = (Tuple) rowsValue;
+
+                    orders.add(intValue(rows.get(0)));
+                    seats.add(longValue(rows.get(1)));
+                    changes.add(longValue(rows.get(2)));
                 }
             }
         }
         if (orders.isEmpty()) return;
-        Array orderArray = connection.createArrayOf("integer", orders.toArray(Integer[]::new));
-        Array seatArray = connection.createArrayOf("bigint", seats.toArray(Long[]::new));
-        Array changeArray = connection.createArrayOf("bigint", changes.toArray(Long[]::new));
-        try {
-            try (
-                PreparedStatement query = connection.prepareStatement(
-                    """
-                    SELECT segment_order, reserved_seats
-                    FROM trip_segments
-                    WHERE trip_id = ?
-                        AND segment_order = ANY(?)
-                    ORDER BY segment_order
-                    FOR UPDATE
-                    """
-                )
-            ) {
-                query.setLong(1, tripId);
-                query.setArray(2, orderArray);
-                int count = 0;
-                try (ResultSet rows = query.executeQuery()) {
-                    while (rows.next()) {
-                        BusinessRules.require(rows.getInt(1) == orders.get(count), ErrorCode.BOOKING_INVALID);
-                        BusinessRules.require(rows.getLong(2) >= seats.get(count), ErrorCode.BOOKING_CAPACITY);
-                        count++;
-                    }
+        {
+            Query query = entityManager.createNativeQuery(
+                """
+                SELECT segment_order, reserved_seats
+                FROM {h-schema}trip_segments
+                WHERE trip_id = :tripId
+                    AND segment_order = ANY(:orderArray)
+                ORDER BY segment_order
+                FOR UPDATE
+                """,
+                Tuple.class
+            );
+
+            query.setParameter("tripId", tripId);
+            query.setParameter("orderArray", orders.toArray(Integer[]::new));
+            int count = 0;
+            {
+                for (Object rowsValue : query.getResultList()) {
+                    Tuple rows = (Tuple) rowsValue;
+
+                    BusinessRules.require(intValue(rows.get(0)) == orders.get(count), ErrorCode.BOOKING_INVALID);
+                    BusinessRules.require(longValue(rows.get(1)) >= seats.get(count), ErrorCode.BOOKING_CAPACITY);
+                    count++;
                 }
-                BusinessRules.require(count == orders.size(), ErrorCode.BOOKING_INVALID);
             }
-            // Version vẫn tăng bằng số đơn chạm đoạn như vòng lặp cũ; chỉ giảm lượt JDBC, không đổi audit lịch sử.
-            try (
-                PreparedStatement query = connection.prepareStatement(
-                    """
-                    UPDATE trip_segments s
-                    SET reserved_seats = s.reserved_seats - needed.seats, version = s.version + needed.changes,
-                        updated_by = ?, updated_at = CURRENT_TIMESTAMP
-                    FROM UNNEST(?::INTEGER [], ?::BIGINT [], ?::BIGINT []) needed(segment_order, seats, changes)
-                    WHERE s.trip_id = ? AND s.segment_order = needed.segment_order
-                    """
-                )
-            ) {
-                query.setLong(1, actor);
-                query.setArray(2, orderArray);
-                query.setArray(3, seatArray);
-                query.setArray(4, changeArray);
-                query.setLong(5, tripId);
-                BusinessRules.require(query.executeUpdate() == orders.size(), ErrorCode.BOOKING_INVALID);
-            }
-        } finally {
-            orderArray.free();
-            seatArray.free();
-            changeArray.free();
+            BusinessRules.require(count == orders.size(), ErrorCode.BOOKING_INVALID);
         }
+        batch.releaseTrip(connection, tripId, actor, orders, seats, changes);
     }
 
     /** Caller đã khóa trip; kiểm mỗi đoạn và trả chỗ nhỏ nhất cho cặp điểm, không tính toàn chuyến. */
-    public int available(Connection connection, long tripId, int pickup, int dropoff) throws SQLException {
+    public int available(long tripId, int pickup, int dropoff) {
         int result = 200,
             count = 0;
-        try (
-            PreparedStatement query = connection.prepareStatement(
+        {
+            Query query = entityManager.createNativeQuery(
                 """
                 SELECT segment_order, capacity - reserved_seats
-                FROM trip_segments
-                WHERE trip_id = ? AND segment_order >= ? AND segment_order < ?
+                FROM {h-schema}trip_segments
+                WHERE trip_id = :tripId AND segment_order >= :pickup AND segment_order < :dropoff
                 ORDER BY segment_order
-                """
-            )
-        ) {
-            query.setLong(1, tripId);
-            query.setInt(2, pickup);
-            query.setInt(3, dropoff);
-            try (ResultSet rows = query.executeQuery()) {
-                while (rows.next()) {
-                    BusinessRules.require(rows.getInt(1) == pickup + count, ErrorCode.BOOKING_INVALID);
-                    result = Math.min(result, rows.getInt(2));
+                """,
+                Tuple.class
+            );
+
+            query.setParameter("tripId", tripId);
+            query.setParameter("pickup", pickup);
+            query.setParameter("dropoff", dropoff);
+            {
+                for (Object rowsValue : query.getResultList()) {
+                    Tuple rows = (Tuple) rowsValue;
+
+                    BusinessRules.require(intValue(rows.get(0)) == pickup + count, ErrorCode.BOOKING_INVALID);
+                    result = Math.min(result, intValue(rows.get(1)));
                     count++;
                 }
             }
         }
         BusinessRules.require(count == dropoff - pickup && count > 0, ErrorCode.BOOKING_INVALID);
         return result;
+    }
+
+    /** Trip đã khóa; khóa segment theo thứ tự tăng và lấy mức đặt cao nhất trước khi đổi capacity. */
+    public int peakReserved(Connection connection, long id) throws SQLException {
+        int peak = 0;
+        {
+            Query query = entityManager.createNativeQuery(
+                """
+                SELECT reserved_seats
+                FROM {h-schema}trip_segments
+                WHERE trip_id = :id
+                ORDER BY segment_order
+                FOR UPDATE
+                """,
+                Tuple.class
+            );
+
+            query.setParameter("id", id);
+            {
+                for (Object rowValue : query.getResultList()) {
+                    Tuple row = (Tuple) rowValue;
+                    peak = Math.max(peak, intValue(row.get(0)));
+                }
+            }
+        }
+        return peak;
     }
 }

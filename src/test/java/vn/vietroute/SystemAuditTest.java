@@ -8,15 +8,11 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.FileSystemResourceLoader;
 import org.springframework.mock.web.MockServletContext;
@@ -24,6 +20,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.AbstractPlatformTransactionManager;
+import org.springframework.transaction.support.DefaultTransactionStatus;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import vn.vietroute.auth.dto.request.UserRequest;
 import vn.vietroute.auth.entity.User;
@@ -31,7 +30,6 @@ import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.auth.service.UserService;
-import vn.vietroute.common.base.BaseRepository.SqlWork;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.web.WebConfig;
@@ -39,7 +37,6 @@ import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ApplicationConstants.SystemActor;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
-import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.support.AccessTestConfig;
 import vn.vietroute.support.JournalTestConfig;
 import vn.vietroute.support.TestJpa;
@@ -63,27 +60,32 @@ class SystemAuditTest {
 
     @Test
     void loginRejectsSystemWithoutChangingItsAuditOrFailureCounter() {
-        var repository = new UserRepo(TestJpa.MANAGER, null) {
+        var repository = new UserRepo(TestJpa.MANAGER) {
             @Override
-            public User findByUsername(Connection connection, String username, boolean lock) {
+            public User findByUsername(String username, boolean lock) {
                 assertEquals(SystemActor.USERNAME, username);
                 return system();
             }
 
             @Override
-            public void recordFailure(Connection connection, long id, int attempts, Instant until) {
+            public void recordFailure(long id, int attempts, Instant until) {
                 throw new AssertionError("Không cập nhật actor kỹ thuật từ request đăng nhập");
             }
         };
-        var transactions = new JdbcTransactions(null) {
+        var transactionManager = new AbstractPlatformTransactionManager() {
             @Override
-            public <T> T execute(SqlWork<T> work) {
-                try {
-                    return work.apply(null);
-                } catch (SQLException exception) {
-                    throw new AssertionError(exception);
-                }
+            protected Object doGetTransaction() {
+                return new Object();
             }
+
+            @Override
+            protected void doBegin(Object transaction, TransactionDefinition definition) {}
+
+            @Override
+            protected void doCommit(DefaultTransactionStatus status) {}
+
+            @Override
+            protected void doRollback(DefaultTransactionStatus status) {}
         };
         var auth = new UserService(
             repository,
@@ -92,10 +94,12 @@ class SystemAuditTest {
             null,
             new BCryptPasswordEncoder(),
             null,
-            transactions,
             null,
             null,
-            Clock.systemUTC()
+            null,
+            Clock.systemUTC(),
+            null,
+            transactionManager
         );
         auth.initializePasswordTiming();
         var request = new UserRequest();

@@ -2,6 +2,7 @@ package vn.vietroute.business.carrier.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.carrier.dto.request.VehicleRequest;
 import vn.vietroute.business.carrier.dto.response.CarrierChoiceResponse;
@@ -12,11 +13,11 @@ import vn.vietroute.business.carrier.entity.Vehicle;
 import vn.vietroute.business.carrier.repo.CarrierRepo;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ErrorCode;
-import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.validation.BusinessRules;
 
 /** Xe thuộc một nhà xe cố định; plate chuẩn hóa UNIQUE, số chỗ và loại xe được kiểm ở cả DB/service. */
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class VehicleService {
 
@@ -36,7 +37,6 @@ public class VehicleService {
     }
 
     private final CarrierRepo carriers;
-    private final JdbcTransactions transactions;
 
     public PageResponse<VehicleResponse> page(CarrierSearch page) {
         PageResponse<Vehicle> result = carriers.vehicles(page);
@@ -52,35 +52,30 @@ public class VehicleService {
     }
 
     public VehicleResponse find(long id) {
-        return transactions.execute(connection -> VehicleResponse.from(carriers.vehicle(connection, id, false)));
+        return VehicleResponse.from(carriers.vehicle(id, false));
     }
 
     /** Khóa cha active và loại xe trước insert; scope suy ra từ carrier đã được guard trên cùng connection. */
     public VehicleResponse create(VehicleRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
-        return transactions.execute(connection -> {
-            Carrier parent = carriers.carrier(connection, body.getCarrierId(), true);
-            BusinessRules.require(parent.isActive(), ErrorCode.RESOURCE_IN_USE);
-            carriers.requireVehicleType(connection, body.getVehicleTypeId());
-            long id = carriers.insertVehicle(connection, parent, body, actor.id());
-            return VehicleResponse.from(carriers.vehicle(connection, id, false));
-        });
+        Carrier parent = carriers.carrier(body.getCarrierId(), true);
+        BusinessRules.require(parent.isActive(), ErrorCode.RESOURCE_IN_USE);
+        carriers.requireVehicleType(body.getVehicleTypeId());
+        long id = carriers.insertVehicle(parent, body, actor.id());
+        return VehicleResponse.from(carriers.vehicle(id, false));
     }
 
     /** Giữ carrier/scope/code; cho ngừng sử dụng cả khi nhà xe đã khóa, không xóa lịch sử. */
     public VehicleResponse update(long id, VehicleRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
-        return transactions.execute(connection -> {
-            Vehicle snapshot = carriers.vehicle(connection, id, false);
-            Carrier parent = carriers.carrier(connection, snapshot.getCarrierId(), true);
-            Vehicle current = carriers.vehicle(connection, id, true);
-            BusinessRules.require(!body.isActive() || parent.isActive(), ErrorCode.RESOURCE_IN_USE);
-            if (body.isActive() || body.getVehicleTypeId() != current.getVehicleTypeId()) carriers.requireVehicleType(
-                connection,
-                body.getVehicleTypeId()
-            );
-            carriers.updateVehicle(connection, current, body, actor.id());
-            return VehicleResponse.from(carriers.vehicle(connection, id, false));
-        });
+        Vehicle snapshot = carriers.vehicle(id, false);
+        Carrier parent = carriers.carrier(snapshot.getCarrierId(), true);
+        Vehicle current = carriers.vehicle(id, true);
+        BusinessRules.require(!body.isActive() || parent.isActive(), ErrorCode.RESOURCE_IN_USE);
+        if (body.isActive() || body.getVehicleTypeId() != current.getVehicleTypeId()) carriers.requireVehicleType(
+            body.getVehicleTypeId()
+        );
+        carriers.updateVehicle(current, body, actor.id());
+        return VehicleResponse.from(carriers.vehicle(id, false));
     }
 }

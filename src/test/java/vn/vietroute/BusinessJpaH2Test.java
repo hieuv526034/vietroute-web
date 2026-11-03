@@ -53,7 +53,9 @@ class BusinessJpaH2Test {
         factory.setDataSource(source);
         factory.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
         factory.setPackagesToScan("vn.vietroute.business.catalog.entity");
-        factory.setJpaPropertyMap(Map.of("hibernate.hbm2ddl.auto", "create-drop"));
+        factory.setJpaPropertyMap(
+            Map.of("hibernate.default_schema", "public", "hibernate.hbm2ddl.auto", "create-drop")
+        );
         factory.afterPropertiesSet();
         EntityManagerFactory emf = factory.getObject();
         EntityManager shared = SharedEntityManagerCreator.createSharedEntityManager(emf);
@@ -65,7 +67,7 @@ class BusinessJpaH2Test {
             new JdbcConnectionFactory(new TransactionAwareDataSourceProxy(source), new JdbcSchema("h2_business")),
             beans.getBeanProvider(PlatformTransactionManager.class)
         );
-        catalogs = new CategoryRepo(shared, transactions, new ObjectMapper());
+        catalogs = new CategoryRepo(shared, new ObjectMapper());
     }
 
     @AfterEach

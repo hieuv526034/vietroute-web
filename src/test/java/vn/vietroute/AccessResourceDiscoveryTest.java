@@ -15,11 +15,8 @@ import vn.vietroute.auth.security.EndpointAccess;
 import vn.vietroute.common.base.BaseRepository.SqlWork;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.application.AppSettings;
-import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.jdbc.JdbcTransactions;
-import vn.vietroute.common.web.locale.SupportedLocaleResolver;
 import vn.vietroute.support.NativeEndpointWebFixture;
-import vn.vietroute.support.NativeSecurityFixture;
 
 /** Thu thập endpoint thật và tôn trọng cờ sync/context sở hữu, thay đồng bộ action registry cũ. */
 class AccessResourceDiscoveryTest {
@@ -60,7 +57,9 @@ class AccessResourceDiscoveryTest {
                 null,
                 null,
                 transactions,
-                new RootConfig().objectMapper()
+                new RootConfig().objectMapper(),
+                null,
+                null
             );
             var listener = new EndpointAccess(null, null, disabled);
             listener.onApplicationEvent(new ContextRefreshedEvent(other));
@@ -76,7 +75,9 @@ class AccessResourceDiscoveryTest {
                     null,
                     null,
                     transactions,
-                    new RootConfig().objectMapper()
+                    new RootConfig().objectMapper(),
+                    null,
+                    null
                 )
             );
             enabled.onApplicationEvent(new ContextRefreshedEvent(other));

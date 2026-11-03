@@ -16,11 +16,13 @@ public class BusinessDataService {
     private final BusinessDataRepo seeds;
     private final JdbcTransactions transactions;
 
+    private final UserRoleRepo mappings;
+
     /** Một giao dịch all-or-nothing, đúng endpoint init và phạm vi global hiện hành, actor không nhận từ client. */
     public BusinessDataResponse seed(UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         return transactions.execute(connection -> {
-            UserRoleRepo.requireGlobal(connection, actor);
+            mappings.requireGlobal(actor);
             return seeds.seed(connection, actor.id());
         });
     }
