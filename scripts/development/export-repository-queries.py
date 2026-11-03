@@ -56,32 +56,92 @@ def queries(source_root):
                 sql = textwrap.dedent(block[2]).strip()
                 if not sql:
                     raise ValueError(str(path) + ': SQL rỗng')
-                yield path, method[1], block[1], sql
+                declaration = source[end + 1:].split(';', 1)[0]
+                yield path, method[1], block[1], sql, bool(re.search(r'\bPageable\b', declaration))
 
 
-def export(source_root, schema):
+def parameters(sql, transform):
+    """Chỉ thay tham số SQL thật, giữ chuỗi/comment để ví dụ không làm sai nội dung query."""
+    protected = re.compile(r"'(?:''|[^'])*'|--[^\n]*|/\*[\s\S]*?\*/")
+    result = []
+    at = 0
+    for token in protected.finditer(sql):
+        result.append(re.sub(r'(?<!:):([A-Za-z_]\w*)', transform, sql[at:token.start()]))
+        result.append(token[0])
+        at = token.end()
+    result.append(re.sub(r'(?<!:):([A-Za-z_]\w*)', transform, sql[at:]))
+    return ''.join(result)
+
+
+def literal(value):
+    if value is None:
+        return 'NULL'
+    if isinstance(value, bool):
+        return 'TRUE' if value else 'FALSE'
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, str):
+        return "'" + value.replace("'", "''") + "'"
+    if isinstance(value, tuple):
+        return ', '.join(literal(part) for part in value) or 'NULL'
+    raise ValueError('Kiểu giá trị mẫu không hỗ trợ')
+
+
+def export(source_root, schema, example=False, user_id=1, page_size=20, page=0):
     if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]{0,62}', schema):
         raise ValueError('Schema chỉ nhận identifier tối đa63 ký tự, không nhận SQL')
+    if user_id < 0 or not 1 <= page_size <= 100 or page < 0:
+        raise ValueError('user-id/page không âm; page-size từ1 đến100')
     result = [
         '-- Sinh từ native @Query; chạy lại exporter khi query trong Repo thay đổi.',
-        '-- Giữ :thamSo để DB editor bind giá trị; không có credential hoặc dữ liệu người dùng.',
-        '-- Các UPDATE chỉ kiểm trên DB test. File này không tự chạy SQL.',
+        '-- Giá trị minh họa đã điền; đổi ID/mã/bộ lọc theo dữ liệu cần kiểm.' if example
+        else '-- Giữ :thamSo để DB editor bind giá trị; không có credential hoặc dữ liệu người dùng.',
+        '-- File này không tự kết nối hoặc chạy SQL.' if example
+        else '-- Các UPDATE chỉ kiểm trên DB test. File này không tự chạy SQL.',
         '',
     ]
+    values = {
+        'active': None, 'keyword': '%', 'code': 'ADMIN_CONSOLE', 'codes': ('ADMIN_CONSOLE',),
+        'role': 'CUSTOMER', 'userId': user_id, 'pageSize': page_size, 'offset': page * page_size,
+    }
+    if example:
+        result.extend([
+            '-- Ví dụ chạy trực tiếp, chỉ SELECT; bỏ UPDATE/DELETE/INSERT và SELECT giữ khóa.',
+            '-- Giá trị mẫu: userId=' + str(user_id) + ', role=CUSTOMER, code=ADMIN_CONSOLE, keyword=%.',
+            '-- active=NULL: không lọc trạng thái; keyword=%: không lọc từ khóa; page bắt đầu từ0.',
+            '-- Đổi ID/mã/bộ lọc theo dữ liệu cần đối chiếu. File không có password/token.',
+            'BEGIN READ ONLY;', 'SET LOCAL search_path TO "' + schema + '", pg_temp;', '',
+        ])
     count = 0
-    for path, method, kind, sql in queries(source_root):
+    for path, method, kind, sql, pageable in queries(source_root):
+        if example and (not re.match(r'^SELECT\b', sql, re.I) or re.search(
+                r'\bFOR\s+(?:NO\s+KEY\s+UPDATE|KEY\s+SHARE|UPDATE|SHARE)\b', sql, re.I)):
+            continue
         count += 1
         rendered = sql.replace('{h-schema}', '"' + schema + '".')
         if '{h-' in rendered:
             raise ValueError(str(path) + ': placeholder Hibernate chưa hỗ trợ')
-        parameters = sorted(set(re.findall(r'(?<!:):([A-Za-z_]\w*)', rendered)))
+        if pageable and kind != 'countQuery':
+            rendered += '\nLIMIT :pageSize OFFSET :offset'
+        names = set()
+        parameters(rendered, lambda match: names.add(match[1]) or match[0])
+        if example:
+            def bind(match):
+                if match[1] not in values:
+                    raise ValueError(str(path) + ': chưa có giá trị mẫu cho :' + match[1])
+                return literal(values[match[1]])
+            rendered = parameters(rendered, bind)
         result.extend([
             '-- ' + path.stem + '.' + method + (' [count]' if kind == 'countQuery' else ''),
-            '-- Params: ' + (', '.join(parameters) if parameters else '(không có)'),
-            rendered.rstrip(';') + ';', '',
+            '-- Params: ' + (', '.join(sorted(names)) if names else '(không có)'),
         ])
+        if pageable and kind != 'countQuery':
+            result.append('-- LIMIT/OFFSET tương ứng Pageable do Spring Data áp dụng khi chạy source.')
+        result.extend([rendered.rstrip(';') + ';', ''])
     if count == 0:
         raise ValueError('Không tìm thấy native @Query để xuất')
+    if example:
+        result.append('ROLLBACK;')
     return '\n'.join(result), count
 
 
@@ -90,16 +150,22 @@ def main():
     sys.stderr.reconfigure(encoding='utf-8')
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--schema', required=True, help='Schema thực tế, ví dụ vietroute')
-    parser.add_argument('--output', type=Path, default=Path('target/repository-queries.sql'))
+    parser.add_argument('--output', type=Path)
     parser.add_argument('--source-root', type=Path, default=Path('src/main/java'))
+    parser.add_argument('--example', action='store_true', help='SQL chỉ đọc đã điền giá trị mẫu, chạy trực tiếp')
+    parser.add_argument('--user-id', type=int, default=1, help='ID đối chiếu quyền trong ví dụ, mặc định1')
+    parser.add_argument('--page-size', type=int, default=20)
+    parser.add_argument('--page', type=int, default=0)
     arguments = parser.parse_args()
     try:
-        sql, count = export(arguments.source_root, arguments.schema)
+        sql, count = export(arguments.source_root, arguments.schema, arguments.example,
+                            arguments.user_id, arguments.page_size, arguments.page)
     except (ValueError, OSError) as error:
         parser.error(str(error))
-    arguments.output.parent.mkdir(parents=True, exist_ok=True)
-    arguments.output.write_text(sql, encoding='utf-8', newline='\n')
-    print(str(count) + ' SQL → ' + str(arguments.output))
+    output = arguments.output or Path('target/repository-queries' + ('-example' if arguments.example else '') + '.sql')
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(sql, encoding='utf-8', newline='\n')
+    print(str(count) + ' SQL → ' + str(output))
 
 
 if __name__ == '__main__':

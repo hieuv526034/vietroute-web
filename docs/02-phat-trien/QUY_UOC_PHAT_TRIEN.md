@@ -48,11 +48,13 @@ Envelope có success/code/messageKey/message/data/errors/timestamp/path/traceId/
 | 409 | Stale version, xung đột trạng thái, mã hoặc requestKey |
 | 413/429/503 | Body quá lớn, giới hạn đồng thời hoặc tài nguyên tạm không sẵn sàng |
 
-Mỗi API có @Operation; field Request/DTO/Search có @Schema và validation theo operation. Principal/HttpServletRequest là server-injected, không là query/body. Paging page từ 0, size tối đa 100; count/page phải lọc cùng scope, sort/identifier whitelist phía server. Dữ liệu bind PreparedStatement, không nối giá trị client vào SQL. Swagger/OpenAPI lấy từ MVC; inventory quyền cũng lấy MVC nhưng không dùng JSON Swagger làm nguồn cấp grant.
+Mỗi API có @Operation; field Request/DTO/Search có @Schema và validation theo operation. Principal/HttpServletRequest là server-injected, không là query/body. Paging page từ 0, size tối đa 100; count/page phải lọc cùng scope, sort/identifier whitelist phía server. Giá trị bind parameter qua JPA; PreparedStatement dành cho batch/hạ tầng, không nối giá trị client vào SQL. Swagger/OpenAPI lấy từ MVC; inventory quyền cũng lấy MVC nhưng không dùng JSON Swagger làm nguồn cấp grant.
 
 Đọc payload chi tiết tại API source của khối mình hoặc Swagger đúng bản đang chạy. Trạng thái yêu cầu Swagger chỉ quản trị nằm tại [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md); không hứa bản chưa merge đã được triển khai.
 
 ## JPA và JDBC chung transaction
+
+Quy ước bổ sung03/11/2026: query nghiệp vụ tra cứu, CRUD và khóa dùng Spring Data/JPA/Hibernate; JDBC nghiệp vụ chỉ dành cho ghi batch/bulk theo tập. Repo interface dùng @Query; Repo có implementation riêng dùng EntityManager/native SQL. Giữ SQL đầy đủ bằng text block, named parameter rõ nghĩa; không nối giá trị client hoặc giấu query trong executor tự viết. Hạ tầng migration/schema/transaction và journal pool riêng tiếp tục dùng JDBC. Đây là hướng chuyển đổi: ngoài bốn Repo ở QUERY01, source còn query JDBC cũ; trạng thái và phạm vi chuyển tiếp ghi trong tiến độ, không trình bày như đã chuyển hết.
 
 JpaConfig dùng JpaTransactionManager, SharedEntityManagerCreator và TransactionAwareDataSourceProxy. JdbcTransactions.execute tham gia transaction hiện tại hoặc tạo transaction qua manager; JPA saveAndFlush và JDBC mapping/history cùng rollback. Repo không bật autocommit hoặc commit connection riêng. Sau SQL atomic đổi version, refresh entity đang managed trước save tiếp.
 
@@ -72,7 +74,17 @@ Xuất SQL có schema cụ thể từ chính text block trong Repo bằng [expor
 python -X utf8 scripts/development/export-repository-queries.py --schema vietroute
 ```
 
-Mở `target/repository-queries.sql`:14 câu gồm cả count, table đã có schema, giữ `:thamSo` để bind trong DB editor hoặc thay giá trị khi kiểm. Công cụ không đọc .env, kết nối DB hoặc thực thi SQL; không đưa password/token/PII vào file. Chạy lại sau khi sửa query, không duy trì bản SQL chép tay thứ hai. Query JDBC còn lại lấy từ Repo cùng transaction `SET LOCAL search_path` tới schema được chọn; không thêm tên schema từ input client.
+Mở `target/repository-queries.sql`:14 câu gồm cả count, table đã có schema, giữ `:thamSo` để bind trong DB editor hoặc thay giá trị khi kiểm. Query nhận Pageable có LIMIT/OFFSET tương ứng để không mất phần phân trang do Spring Data áp dụng. Giá trị `page` bắt đầu từ0, không là số trang hiển thị trên UI.
+
+Người mới có thể tạo bản ví dụ đã điền tham số và chạy trực tiếp bằng:
+
+```powershell
+python -X utf8 scripts/development/export-repository-queries.py --schema vietroute --example --user-id 1 --page-size 20 --page 0
+```
+
+Mở `target/repository-queries-example.sql`:11 SELECT, gồm BEGIN READ ONLY/ROLLBACK, có schema/giá trị mẫu và LIMIT/OFFSET. Mẫu dùng userId1, role CUSTOMER, code ADMIN_CONSOLE; đổi theo dữ liệu cần kiểm. `active=NULL` nghĩa là không lọc trạng thái, `keyword=%` nghĩa là không lọc từ khóa. Bản này bỏ mutation và SELECT giữ khóa; giữ lệnh khóa/cập nhật tại bản template14 câu. Không coi giá trị mẫu là thông tin đăng nhập.
+
+Công cụ không đọc .env, kết nối DB hoặc thực thi SQL; không đưa password/token/PII vào file. Chạy lại sau khi sửa query, không duy trì bản SQL chép tay thứ hai. Query JDBC cũ còn lại lấy từ Repo cùng transaction SET LOCAL search_path tới schema được chọn; không thêm tên schema từ input client.
 
 Đối chiếu cơ chế với [Spring Data JPA3.5](https://docs.spring.io/spring-data/jpa/reference/3.5/jpa/query-methods.html) và [schema placeholder của Hibernate6.6](https://docs.hibernate.org/orm/6.6/userguide/html_single/#sql-global-catalog-schema). Oracle vẫn chưa hỗ trợ runtime; native SQL PostgreSQL không tự tương thích Oracle nhờ annotation.
 

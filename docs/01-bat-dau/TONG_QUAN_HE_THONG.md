@@ -29,8 +29,8 @@ Không có GPS/app mobile, email/reset mật khẩu qua thư, upload/avatar/logo
 | Java | Target17, phát triển bằng JDK21; Maven Wrapper, WAR/Tomcat10.1 |
 | Spring MVC6 và Thymeleaf | Controller/page và REST, render HTML tại server; không Spring Boot |
 | Spring Security, Nimbus JWT, BCrypt | Xác thực và bảo vệ request; grant endpoint lấy từ DB |
-| Spring Data JPA/Hibernate | CRUD và entity; không tự tạo schema hoặc OSIV |
-| JDBC | Batch, SQL phức tạp, khóa/CAS; cùng transaction với JPA |
+| Spring Data JPA/Hibernate | CRUD/entity và query native; quy ước chuyển tra cứu/khóa sang JPA, không tự tạo schema hoặc OSIV |
+| JDBC | Ghi batch và hạ tầng DB; các query JDBC cũ chưa chuyển hết, trạng thái ở tiến độ; cùng transaction với JPA |
 | PostgreSQL | DB đang chạy; 8 SQL nền và bước Category, array/JSONB/advisory lock/pg_trgm |
 | Oracle26ai | Có driver/profile chuẩn bị, runtime còn bị chặn; chưa chuyển SQL hoặc kiểm nghiệp vụ thật |
 | Bootstrap/CSS/JavaScript | UI tab/modal, validation và paging server; Node chỉ phục vụ phát triển/CI |

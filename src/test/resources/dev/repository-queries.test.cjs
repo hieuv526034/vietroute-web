@@ -17,7 +17,11 @@ const fixture = (body, run) => {
         mkdirSync(source);
         writeFileSync(path.join(source, 'SampleRepo.java'), body);
         const output = path.join(root, 'output.sql');
-        const invoke = (schema) => spawnSync(python, [script, '--schema', schema, '--source-root', source, '--output', output], { encoding: 'utf8' });
+        const invoke = (schema, extra = []) => spawnSync(
+            python,
+            [script, '--schema', schema, '--source-root', source, '--output', output, ...extra],
+            { encoding: 'utf8' },
+        );
         run(invoke, output);
     } finally {
         assert.equal(path.dirname(path.resolve(root)), path.resolve(os.tmpdir()));
@@ -42,8 +46,42 @@ test('SQL export dùng schema đã chọn, giữ named params và xuất count r
         assert.match(sql, /FROM "schema_test"\.auth_functions/);
         assert.match(sql, /SampleRepo\.search \[count\]/);
         assert.match(sql, /:name/);
+        assert.match(sql, /LIMIT :pageSize OFFSET :offset/);
         assert.doesNotMatch(sql, /\{h-schema\}/);
         assert.match(result.stdout, /^2 SQL/);
+    });
+});
+
+test('SQL ví dụ điền giá trị và phân trang, giữ literal, bỏ mutation/khóa trong transaction chỉ đọc', () => {
+    fixture(`interface SampleRepo {
+        @Query(value = """
+            SELECT code, ':literal' AS sample FROM {h-schema}auth_functions
+            WHERE code LIKE :keyword AND (CAST(:active AS boolean) IS NULL OR active = :active)
+            """, countQuery = """
+            SELECT count(*) FROM {h-schema}auth_functions
+            """, nativeQuery = true)
+        Page<String> search(Pageable page);
+        @Query(value = """UPDATE {h-schema}auth_functions SET active = false""", nativeQuery = true)
+        int disable();
+        @Query(value = """SELECT * FROM {h-schema}auth_functions FOR UPDATE""", nativeQuery = true)
+        Function lock();
+        @Query(value = """SELECT * FROM {h-schema}auth_functions FOR NO KEY UPDATE""", nativeQuery = true)
+        Function lockKey();
+        @Query(value = """SELECT * FROM {h-schema}auth_functions FOR KEY SHARE""", nativeQuery = true)
+        Function lockSharedKey();
+    }`, (invoke, output) => {
+        const result = invoke('schema_test', ['--example', '--page-size', '5', '--page', '2']);
+        assert.equal(result.status, 0, result.stderr);
+        const sql = readFileSync(output, 'utf8');
+        assert.match(result.stdout, /^2 SQL/);
+        assert.match(sql, /BEGIN READ ONLY;/);
+        assert.match(sql, /SET LOCAL search_path TO "schema_test", pg_temp;/);
+        assert.match(sql, /LIKE '%'/);
+        assert.match(sql, /CAST\(NULL AS boolean\)/);
+        assert.match(sql, /':literal'/);
+        assert.match(sql, /LIMIT 5 OFFSET 10/);
+        assert.doesNotMatch(sql, /SET active|FOR UPDATE;|FOR NO KEY UPDATE;|FOR KEY SHARE;/);
+        assert.match(sql, /ROLLBACK;$/);
     });
 });
 

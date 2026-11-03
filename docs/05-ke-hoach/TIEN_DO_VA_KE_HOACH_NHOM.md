@@ -237,6 +237,14 @@ JDK21/Maven3.9.11 cache clean verify đạt210 test, gồm75 PostgreSQL,0 fail/e
 
 Rà SQL kiểm release phát hiện tên cột/index Category cũ: đồng bộ item_ref thành value_ref và idx_catalog_* thành idx_category_*, giữ nguyên số assertion. Đối chiếu bốn count trên preview PostgreSQL test:5 giá trị nền/34 tỉnh/3321 xã/5 index audit. Chưa chạy production Docker hoặc dispatch release. Mười SQL migration/checksum giữ nguyên byte, không đổi schema/quyền/mật khẩu/dữ liệu thật. Đồng bộ AGENTS, quy ước backend/schema và Word; ảnh/ERD giữ vì UI/DDL không đổi. npm ci/format/format:check/check:rules/check:docs/diff đạt; checker260 Java/189 liên kết trong22 tài liệu. Chưa merge dev/main hoặc deploy; formatter IDE có sẵn giữ ngoài commit.
 
+## SQLSTYLE01 — query dễ copy và quy ước JDBC chỉ ghi batch
+
+Theo yêu cầu03/11/2026, người thực hiện hieuv526034 tiếp tục nhánh `hieuv526034/category01-danh-muc-chung`, nền078bb4b/PR166. Chốt quy ước query nghiệp vụ tra cứu/CRUD/khóa dùng JPA/Hibernate/Spring Data; JDBC nghiệp vụ chỉ ghi batch/bulk. Các class Repo có implementation riêng có thể dùng EntityManager/native SQL mà không thêm Custom/Impl. DDL/schema/transaction và journal pool riêng là hạ tầng JDBC. Ngoài bốn Repo QUERY01, source còn query JDBC cũ; phạm vi chuyển toàn bộ ngay hay theo từng nghiệp vụ đang chờ chủ dự án chốt, chưa ghi nhận đã chuyển hết.
+
+Bổ sung exporter để người mới dùng: bản template14 SQL có schema/named params và phân trang Pageable rõ ràng; --example tạo11 SELECT đã điền giá trị mẫu, BEGIN READ ONLY/ROLLBACK, bỏ mutation và SELECT giữ khóa. Có --user-id/--page-size/--page; giữ literal/comment khi bind, giải thích NULL/% và page từ0. Không đọc .env, kết nối DB hoặc tự thực thi SQL. Không đổi Java production/API/DDL/dữ liệu thật trong lượt này.
+
+Node74/74 đạt, gồm ca xuất SQL mẫu/phân trang/literal và loại mutation/khóa; đã chạy cả11 SQL ví dụ trên preview PostgreSQL loopback15462/vietroute_category_preview_v4, schema vietroute_category01, bằng transaction chỉ đọc và rollback: exit0. Cụm test đã dừng sau kiểm. Bộ Java210/75 PostgreSQL của QUERY01 vẫn là bằng chứng gần nhất, không chạy lại vì không sửa Java. Đồng bộ quy ước/tài liệu và kết quả Node trong Word, render81 trang và rà trang thay đổi. npm ci/format/format:check/rules/docs/diff đạt; checker260 Java/189 liên kết trong22 tài liệu. Không merge dev/main hoặc deploy.
+
 ## Còn lại và bước tiếp
 
 Source DUYLONG01 đã có trên dev/main và Live theo bằng chứng trên; DUYLONG02 chốt tài liệu nghiệm thu. Chưa có Oracle runtime/regression, kiểm tải/SLA hoặc backup di động/PITR/RPO/RTO; DPAPI local phụ thuộc tài khoản Windows. AccountChallengeRepo còn SQL phụ cũ chưa được luồng hiện hành gọi, cần dọn riêng khi sửa auth, không trình bày như chức năng đang hoạt động. Kiểm thêm cách chạy Maven Wrapper trên máy trước khi dùng hướng dẫn local.
