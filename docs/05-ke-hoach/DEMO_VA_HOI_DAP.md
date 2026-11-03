@@ -233,9 +233,9 @@ CRUD đơn giản dùng entity/JPA. Batch, SQL tổng hợp, giữ chỗ/khóa/C
 
 Entity mô tả dữ liệu/ràng buộc, Request/DTO là hợp đồng riêng; Service đóng gói quy tắc trạng thái/transaction; Repo che cách truy cập DB, controller điều phối HTTP. Kế thừa có mục đích ở BaseController/BaseDTO/JpaRepositorySupport; constructor injection giúp thay dependency trong test. Không tạo lớp rỗng để minh họa OOP; một Request/tài nguyên vẫn validation theo operation.
 
-### Q06. Vì sao có 24 bảng, không giảm hết về vài bảng?
+### Q06. Vì sao source có 22 bảng sau khi gộp danh mục?
 
-Auth 8, business 14, journal 1 và history 1. Các bảng tách quan hệ nhiều–nhiều, snapshot stop/segment, sự kiện tiền/trạng thái và dữ liệu nguồn có vòng đời khác nhau. Report/bootstrap không thêm bảng. Nêu một ví dụ: gộp trip_segments vào bookings sẽ khó giữ tồn theo đoạn và dùng lại chỗ trên đoạn không giao nhau.
+Auth có 8 bảng, nghiệp vụ có 12 bảng, journal và migration history mỗi phần có một bảng. `category` gom các nhóm danh mục và nối tỉnh với xã qua `parent_id`. `trip_segments` vẫn giữ tồn chỗ của từng đoạn để hai khách có thể dùng lại cùng chỗ trên hai đoạn không giao nhau. Báo cáo đọc từ các bảng nghiệp vụ.
 
 Nguồn: [tổng quan](../01-bat-dau/TONG_QUAN_HE_THONG.md), [quy ước backend](../02-phat-trien/QUY_UOC_PHAT_TRIEN.md), [pom.xml](../../pom.xml).
 

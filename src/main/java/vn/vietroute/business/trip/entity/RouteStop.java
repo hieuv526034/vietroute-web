@@ -40,6 +40,10 @@ import vn.vietroute.common.jdbc.JdbcTable;
 @SuperBuilder
 public class RouteStop extends BaseEntity {
 
+    // Nhóm danh mục cố định do DB sinh, bảo vệ FK không trỏ nhầm loại.
+    @Column(name = "category_location_ref", insertable = false, updatable = false, length = 64)
+    private String categoryLocationRef;
+
     // ID tuyến mẫu trong carrier_routes.
     @Column(name = "route_id", nullable = false)
     private long routeId;

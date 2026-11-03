@@ -1,0 +1,249 @@
+<!doctype html>
+<html
+    th:lang="${currentLocale}"
+    xmlns:th="http://www.thymeleaf.org"
+>
+    <head th:replace="~{fragments/layout :: head(#{ui.category.title})}"></head>
+    <body>
+        <link
+            rel="stylesheet"
+            th:href="@{/webjars/leaflet/1.9.4/leaflet.css}"
+        />
+        <header th:replace="~{fragments/layout :: header}"></header>
+        <nav th:replace="~{fragments/layout :: breadcrumbs}"></nav>
+        <main
+            id="category-workspace"
+            class="container-xl workspace-page"
+            th:attr="data-loading=#{ui.loading},data-empty=#{ui.empty},data-create=#{ui.location.create},data-edit=#{ui.location.edit},data-stop=#{ui.location.inactive},data-active=#{ui.location.active},data-no-read=#{ui.accessTree.noRead},data-group=#{ui.category.group},data-invalid=#{validation.invalid},data-seat-count=#{ui.category.seatCount},data-more=#{ui.category.more},data-search=#{ui.location.search},data-filter=#{ui.location.searchButton},data-parent-label=#{ui.category.parentLabel},data-map-open=#{ui.category.mapOpen},data-map-help=#{ui.category.mapHelp},data-map-center=#{ui.category.mapCenter},data-map-error=#{ui.category.mapError},data-map-required=#{ui.category.mapRequired},data-address=#{ui.location.address},data-latitude=#{ui.category.latitude},data-longitude=#{ui.category.longitude}"
+        >
+            <div class="page-heading">
+                <h1 th:text="#{ui.category.title}"></h1>
+                <p th:text="#{ui.category.description}"></p>
+            </div>
+            <p
+                id="category-status"
+                class="catalog-status"
+                role="status"
+                aria-live="polite"
+            ></p>
+            <div
+                id="category-feedback"
+                class="feedback"
+                role="alert"
+                hidden
+            ></div>
+            <fieldset
+                id="category-controls"
+                class="border-0 p-0 m-0 w-100"
+            >
+                <section
+                    class="panel"
+                    aria-labelledby="category-tree-title"
+                >
+                    <div class="panel-heading">
+                        <h2
+                            id="category-tree-title"
+                            th:text="#{ui.category.group}"
+                        ></h2>
+                        <button
+                            id="category-add-group"
+                            class="button button-outline"
+                            type="button"
+                            hidden
+                            th:text="#{ui.category.addGroup}"
+                        ></button>
+                    </div>
+                    <div
+                        class="table-responsive"
+                        tabindex="0"
+                        role="region"
+                        th:attr="aria-label=#{ui.table.scroll}"
+                    >
+                        <table class="table catalog-table">
+                            <thead>
+                                <tr>
+                                    <th
+                                        scope="col"
+                                        th:text="#{ui.code}"
+                                    ></th>
+                                    <th
+                                        scope="col"
+                                        th:text="#{ui.name}"
+                                    ></th>
+                                    <th
+                                        scope="col"
+                                        th:text="#{ui.category.details}"
+                                    ></th>
+                                    <th
+                                        scope="col"
+                                        th:text="#{ui.location.state}"
+                                    ></th>
+                                    <th
+                                        scope="col"
+                                        th:text="#{ui.category.actions}"
+                                    ></th>
+                                </tr>
+                            </thead>
+                            <tbody id="category-rows"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </fieldset>
+            <dialog
+                id="category-dialog"
+                class="workspace-dialog"
+                aria-labelledby="category-editor-title"
+            >
+                <fieldset
+                    id="category-dialog-controls"
+                    class="dialog-controls"
+                >
+                    <div class="dialog-heading">
+                        <h2
+                            id="category-editor-title"
+                            th:text="#{ui.category.title}"
+                        ></h2>
+                        <button
+                            type="button"
+                            class="dialog-close"
+                            data-dialog-close
+                            th:attr="aria-label=#{ui.ops.close}"
+                        >
+                            ×
+                        </button>
+                    </div>
+                    <p
+                        id="category-editor-context"
+                        class="form-help"
+                    ></p>
+                    <div
+                        id="category-form-feedback"
+                        class="feedback"
+                        role="alert"
+                        hidden
+                    ></div>
+                    <form
+                        id="category-form"
+                        class="dialog-form-grid"
+                        novalidate
+                    >
+                        <div>
+                            <label
+                                for="category-code"
+                                th:text="#{ui.code}"
+                            ></label>
+                            <input
+                                id="category-code"
+                                name="code"
+                                class="form-control"
+                                pattern="[A-Z0-9][A-Z0-9_]{1,63}"
+                                maxlength="64"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label
+                                for="category-name"
+                                th:text="#{ui.nameVi}"
+                            ></label>
+                            <input
+                                id="category-name"
+                                name="name"
+                                class="form-control"
+                                maxlength="120"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label
+                                for="category-name-en"
+                                th:text="#{ui.nameEn}"
+                            ></label>
+                            <input
+                                id="category-name-en"
+                                name="nameEn"
+                                class="form-control"
+                                maxlength="120"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                for="category-description"
+                                th:text="#{ui.category.note}"
+                            ></label>
+                            <textarea
+                                id="category-description"
+                                name="description"
+                                class="form-control"
+                                maxlength="1000"
+                                rows="3"
+                            ></textarea>
+                        </div>
+                        <div>
+                            <label
+                                for="category-order"
+                                th:text="#{ui.order}"
+                            ></label>
+                            <input
+                                id="category-order"
+                                name="sortOrder"
+                                class="form-control"
+                                type="number"
+                                min="0"
+                                max="10000"
+                                value="0"
+                                required
+                            />
+                        </div>
+                        <label class="checkbox-label">
+                            <input
+                                name="active"
+                                type="checkbox"
+                                checked
+                            />
+                            <span th:text="#{ui.location.active}"></span>
+                        </label>
+                        <div
+                            id="category-props"
+                            class="dialog-form-grid"
+                            hidden
+                        ></div>
+                        <div
+                            id="category-metadata"
+                            hidden
+                        >
+                            <label
+                                for="category-group-props"
+                                th:text="#{ui.category.rules}"
+                            ></label>
+                            <textarea
+                                id="category-group-props"
+                                name="metadata"
+                                class="form-control"
+                                rows="6"
+                                maxlength="8192"
+                            ></textarea>
+                        </div>
+                        <div class="dialog-actions">
+                            <button
+                                type="button"
+                                class="button button-outline"
+                                data-dialog-close
+                                th:text="#{ui.catalog.cancel}"
+                            ></button>
+                            <button
+                                type="submit"
+                                class="button"
+                                th:text="#{ui.location.save}"
+                            ></button>
+                        </div>
+                    </form>
+                </fieldset>
+            </dialog>
+        </main>
+        <footer th:replace="~{fragments/layout :: footer}"></footer>
+        <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+        <script th:src="@{/webjars/leaflet/1.9.4/leaflet.js}"></script>
+        <script th:src="@{/assets/js/category.js}"></script>
+    </body>
+</html>

@@ -73,6 +73,12 @@ public class JourneyRepo extends BaseRepository {
                 AND avail.remaining >= ?
                 AND (?::numeric IS NULL OR dropoff.cumulative_fare - pick.cumulative_fare >= ?)
                 AND (?::numeric IS NULL OR dropoff.cumulative_fare - pick.cumulative_fare <= ?)
+                AND (?::bigint IS NULL OR EXISTS (
+                    SELECT 1 FROM category location WHERE location.id=pick.location_id AND location.parent_id=?
+                ))
+                AND (?::bigint IS NULL OR EXISTS (
+                    SELECT 1 FROM category location WHERE location.id=dropoff.location_id AND location.parent_id=?
+                ))
             """.formatted(PUBLISHED);
             long total;
             try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + filter)) {
@@ -147,6 +153,10 @@ public class JourneyRepo extends BaseRepository {
         query.setBigDecimal(at++, body.getMinPrice());
         query.setBigDecimal(at++, body.getMaxPrice());
         query.setBigDecimal(at++, body.getMaxPrice());
+        query.setObject(at++, body.getFromWardId());
+        query.setObject(at++, body.getFromWardId());
+        query.setObject(at++, body.getToWardId());
+        query.setObject(at++, body.getToWardId());
         return at;
     }
 

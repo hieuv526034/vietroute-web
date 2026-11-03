@@ -75,7 +75,8 @@
       "latitude": 16.455,
       "longitude": 107.58,
       "sortOrder": 130,
-      "active": true
+      "active": true,
+      "wardCode": "19789"
     },
     {
       "code": "VRCANTHO",
@@ -86,7 +87,8 @@
       "latitude": 10.045,
       "longitude": 105.746,
       "sortOrder": 140,
-      "active": true
+      "active": true,
+      "wardCode": "31135"
     },
     {
       "code": "VRDALAT",
@@ -97,7 +99,8 @@
       "latitude": 11.94,
       "longitude": 108.44,
       "sortOrder": 150,
-      "active": true
+      "active": true,
+      "wardCode": "24781"
     },
     {
       "code": "VRNHATRANG",
@@ -108,7 +111,8 @@
       "latitude": 12.245,
       "longitude": 109.19,
       "sortOrder": 160,
-      "active": true
+      "active": true,
+      "wardCode": "22366"
     },
     {
       "code": "VRQUYNHON",
@@ -119,7 +123,8 @@
       "latitude": 13.77,
       "longitude": 109.22,
       "sortOrder": 170,
-      "active": true
+      "active": true,
+      "wardCode": "21583"
     },
     {
       "code": "VRBUONMATHUOT",
@@ -130,7 +135,8 @@
       "latitude": 12.67,
       "longitude": 108.04,
       "sortOrder": 180,
-      "active": true
+      "active": true,
+      "wardCode": "24133"
     },
     {
       "code": "VRVINH",
@@ -141,7 +147,8 @@
       "latitude": 18.68,
       "longitude": 105.68,
       "sortOrder": 190,
-      "active": true
+      "active": true,
+      "wardCode": "16681"
     },
     {
       "code": "VRHAIPHONG",
@@ -152,7 +159,8 @@
       "latitude": 20.84,
       "longitude": 106.68,
       "sortOrder": 200,
-      "active": true
+      "active": true,
+      "wardCode": "11383"
     },
     {
       "code": "VRHALONG",
@@ -163,7 +171,8 @@
       "latitude": 20.95,
       "longitude": 107.08,
       "sortOrder": 210,
-      "active": true
+      "active": true,
+      "wardCode": "06688"
     },
     {
       "code": "DLGHAIPHONG",
@@ -174,7 +183,8 @@
       "latitude": 20.861,
       "longitude": 106.684,
       "sortOrder": 220,
-      "active": true
+      "active": true,
+      "wardCode": "11383"
     },
     {
       "code": "DLGHANOI",
@@ -185,7 +195,8 @@
       "latitude": 21.028,
       "longitude": 105.834,
       "sortOrder": 230,
-      "active": true
+      "active": true,
+      "wardCode": "00070"
     }
   ],
   "carriers": [

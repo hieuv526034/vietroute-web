@@ -42,21 +42,23 @@ for port in 18080 18081; do
 done
 sql() { docker exec -e PGOPTIONS=-csearch_path=vietroute vietroute-db-ci psql -U vietroute_ci -d vietroute_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
 [[ "$(sql "SELECT count(*) FROM auth_users WHERE username='admin'")" == 1 ]]
-[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 8 ]]
-[[ "$(sql 'SELECT count(*) FROM catalog_items')" == 5 ]]
-[[ "$(sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','catalog_items','vietroute_schema_history')")" == 0 ]]
+[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 10 ]]
+[[ "$(sql "SELECT count(*) FROM category WHERE item_ref IN ('VEHICLE_TYPE','BOOKING_SOURCE')")" == 5 ]]
+[[ "$(sql "SELECT count(*) FROM category WHERE item_ref='PROVINCE'")" == 34 ]]
+[[ "$(sql "SELECT count(*) FROM category WHERE item_ref='WARD'")" == 3321 ]]
+[[ "$(sql "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('auth_roles','auth_users','auth_user_roles','category','catalog_items','vietroute_schema_history')")" == 0 ]]
 [[ "$(sql "SELECT count(*) FROM pg_indexes WHERE schemaname='vietroute' AND indexname IN ('idx_auth_users_created_by','idx_auth_users_updated_by','idx_user_roles_role','idx_catalog_created_by','idx_catalog_updated_by')")" == 5 ]]
 printf 'Audit stage: reserved actor, non-null seed and database guards\n'
 [[ "$(sql "SELECT count(*) FROM auth_users WHERE id=0 AND username='system' AND NOT active AND NOT must_change_password AND created_by=0 AND updated_by=0")" == 1 ]]
 [[ "$(sql "SELECT id FROM auth_users WHERE username='admin'")" == 1 ]]
-for audit_table in auth_users auth_roles auth_user_roles auth_functions auth_role_functions auth_function_resources auth_account_challenges auth_access_changes catalog_items api_request_journal; do
+for audit_table in auth_users auth_roles auth_user_roles auth_functions auth_role_functions auth_function_resources auth_account_challenges auth_access_changes category api_request_journal; do
   [[ "$(sql "SELECT count(*) FROM $audit_table WHERE created_by IS NULL OR updated_by IS NULL")" == 0 ]]
   [[ "$(sql "SELECT count(*) FROM information_schema.columns WHERE table_schema='vietroute' AND table_name='$audit_table' AND column_name IN ('created_by','updated_by') AND is_nullable='NO'")" == 2 ]]
 done
-[[ "$(sql 'SELECT count(*) FROM catalog_items WHERE created_by=0 AND updated_by=0')" == 5 ]]
+[[ "$(sql 'SELECT count(*) FROM category WHERE created_by<>0 OR updated_by<>0')" == 0 ]]
 if sql 'UPDATE auth_users SET active=true WHERE id=0' >/dev/null 2>&1; then exit 1; fi
 if sql "INSERT INTO auth_user_roles(user_id,role_code) VALUES (0,'ADMIN')" >/dev/null 2>&1; then exit 1; fi
-if sql "UPDATE catalog_items SET created_by=NULL WHERE code='SEAT'" >/dev/null 2>&1; then exit 1; fi
+if sql "UPDATE category SET created_by=NULL WHERE code='SEAT'" >/dev/null 2>&1; then exit 1; fi
 # Giữ cả hai node: kiểm sau restart và recovery phía dưới đều sử dụng node thứ hai.
 base=http://127.0.0.1:18080
 result="$work/response.json"
@@ -101,7 +103,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/verify-database-guard.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-data-scope.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-access-history.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-access-definitions.sh"
-source "$(dirname "${BASH_SOURCE[0]}")/verify-locations.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/verify-categories.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-access-registry.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-access-cost.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/verify-business-load.sh"

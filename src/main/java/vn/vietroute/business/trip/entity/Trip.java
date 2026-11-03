@@ -61,6 +61,10 @@ import vn.vietroute.common.jdbc.JdbcTable;
 @SuperBuilder
 public class Trip extends BaseEntity {
 
+    // Nhóm danh mục cố định do DB sinh, bảo vệ FK không trỏ nhầm loại.
+    @Column(name = "category_vehicle_ref", insertable = false, updatable = false, length = 64)
+    private String categoryVehicleRef;
+
     // ID nhà xe sở hữu dữ liệu.
     @Column(name = "carrier_id", nullable = false)
     private long carrierId;

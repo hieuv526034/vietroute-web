@@ -46,6 +46,14 @@ import vn.vietroute.common.jdbc.JdbcTable;
 @SuperBuilder
 public class TripStop extends BaseEntity {
 
+    // Nhóm danh mục cố định do DB sinh, bảo vệ FK không trỏ nhầm loại.
+    @Column(name = "category_location_ref", insertable = false, updatable = false, length = 64)
+    private String categoryLocationRef;
+
+    // Nhóm danh mục cố định do DB sinh, bảo vệ FK không trỏ nhầm loại.
+    @Column(name = "category_province_ref", insertable = false, updatable = false, length = 64)
+    private String categoryProvinceRef;
+
     // ID chuyến trong carrier_trips.
     @Column(name = "trip_id", nullable = false)
     private long tripId;

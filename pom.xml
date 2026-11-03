@@ -131,6 +131,11 @@
             <version>5.3.8</version>
         </dependency>
         <dependency>
+            <groupId>org.webjars</groupId>
+            <artifactId>leaflet</artifactId>
+            <version>1.9.4</version>
+        </dependency>
+        <dependency>
             <groupId>org.webjars.npm</groupId>
             <artifactId>axios</artifactId>
             <version>1.20.0</version>

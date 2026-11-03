@@ -414,13 +414,14 @@ public class TripRepo extends BaseRepository {
             PreparedStatement query = connection.prepareStatement(
                 """
                 SELECT l.active
-                    AND p.active
+                    AND w.active AND p.active
                 FROM trip_stops s
-                JOIN location_places l ON l.id = s.location_id
-                JOIN location_provinces p ON p.id = s.province_id
+                JOIN category l ON l.type='VALUE' AND l.ref_type='LOCATION' AND l.id = s.location_id
+                JOIN category w ON w.type='VALUE' AND w.ref_type='WARD' AND w.id=l.parent_id
+                JOIN category p ON p.type='VALUE' AND p.ref_type='PROVINCE' AND p.id = s.province_id
                 WHERE s.trip_id = ?
                 ORDER BY s.stop_order
-                FOR SHARE OF l, p
+                FOR SHARE OF p, w, l
                 """
             )
         ) {
@@ -721,17 +722,18 @@ public class TripRepo extends BaseRepository {
         try (
             PreparedStatement query = connection.prepareStatement(
                 """
-                SELECT l.id, l.province_id, s.stop_order, l.name_vi, l.name_en, l.address, l.latitude, l.longitude,
+                SELECT l.id, p.id AS province_id, s.stop_order, l.name AS name_vi, l.props->>'nameEn' AS name_en, l.props->>'address' AS address, (l.props->>'latitude')::numeric AS latitude, (l.props->>'longitude')::numeric AS longitude,
                     s.arrival_offset_minutes, s.departure_offset_minutes, s.cumulative_fare,
                     s.pickup_allowed, s.dropoff_allowed,
                     l.active
-                    AND p.active AS usable
+                    AND w.active AND p.active AS usable
                 FROM carrier_route_stops s
-                JOIN location_places l ON l.id = s.location_id
-                JOIN location_provinces p ON p.id = l.province_id
+                JOIN category l ON l.type='VALUE' AND l.ref_type='LOCATION' AND l.id = s.location_id
+                JOIN category w ON w.type='VALUE' AND w.ref_type='WARD' AND w.id=l.parent_id
+                JOIN category p ON p.type='VALUE' AND p.ref_type='PROVINCE' AND p.id=w.parent_id
                 WHERE s.route_id = ?
                 ORDER BY s.stop_order
-                FOR SHARE OF l, p
+                FOR SHARE OF p, w, l
                 """
             )
         ) {
@@ -773,10 +775,10 @@ public class TripRepo extends BaseRepository {
         try (
             PreparedStatement query = connection.prepareStatement(
                 """
-                SELECT v.plate_number, v.vehicle_type_id, t.name_vi, t.name_en, v.capacity
+                SELECT v.plate_number, v.vehicle_type_id, t.name AS name_vi, t.props->>'nameEn' AS name_en, v.capacity
                 FROM carrier_vehicles v
-                JOIN catalog_items t ON t.id = v.vehicle_type_id
-                    AND t.type = 'VEHICLE_TYPE'
+                JOIN category t ON t.id = v.vehicle_type_id
+                    AND t.ref_type = 'VEHICLE_TYPE' AND t.type='VALUE'
                     AND t.active
                 WHERE v.id = ? AND v.carrier_id = ? AND v.scope_id = ? AND v.active
                 FOR UPDATE OF v
@@ -892,13 +894,13 @@ public class TripRepo extends BaseRepository {
                 from = """
                 carrier_vehicles item
                 JOIN carriers owner ON owner.id = item.carrier_id AND owner.scope_id = item.scope_id
-                JOIN catalog_items vt ON vt.id = item.vehicle_type_id
+                JOIN category vt ON vt.id = item.vehicle_type_id AND vt.ref_type='VEHICLE_TYPE' AND vt.type='VALUE'
                 """;
                 id = "item.id";
                 code = "item.code";
                 name = "item.plate_number";
                 capacity = "item.capacity";
-                usable = "owner.active AND item.active AND vt.active AND vt.type='VEHICLE_TYPE'";
+                usable = "owner.active AND item.active AND vt.active";
             }
             case DRIVER -> {
                 from = """

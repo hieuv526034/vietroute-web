@@ -68,3 +68,11 @@ Rollback cần source khớp baseline. Không tùy ý chạy WAR trước đợt
 Render Free có cold start; đã có lượt mất hơn3 phút. Không quy mọi chậm cho DB hoặc áp mô tả scale-to-zero Neon cũ vào máy chủ mới. Pool nghiệp vụ4 + journal 1/node; đo p50/p95, lỗi, query và CPU trên workload staging trước kết luận capacity. Không giữ dịch vụ thức bằng polling, load test/seed DB thật hoặc tăng gói khi chưa được yêu cầu.
 
 Sau deploy kiểm đúng commit Live, login/me/API có DB, thiếu quyền/scope, dữ liệu, locale và journal. Routine test dùng PostgreSQL/H2 riêng, không .env/DB production. Ghi kết quả thật, lỗi đã giải quyết và giới hạn vào [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
+
+## Chuyển Category
+
+Source giữ tám baseline đã áp dụng, thêm catalog/002_category.sql và catalog/003_location_wards.sql. Không chạy code cũ cùng schema mới. Trước cutover cần backup/kiểm phục hồi, kiểm map xã cho mọi địa điểm, dừng tất cả node, áp dụng hai bước trong transaction và đối chiếu dữ liệu/khóa ngoại. Bản sao đã diễn tập có 22 bảng, history 10; trạng thái DB thật theo tiến độ. Tài khoản, hash, ID giao dịch và snapshot được giữ; ID danh mục cũ được remap theo mã.
+
+Bước003 xóa các target danh mục cũ theo whitelist và bổ sung bảy grant menu/API Category vào function ADMIN_CONSOLE nếu function này đã tồn tại. Không tạo role/user mapping hoặc bật lại function/role/mapping đã ngừng; không chuyển quyền đọc riêng loại xe thành quyền đọc toàn bộ danh mục. Function có tập tài nguyên thay đổi được tăng version/audit system0 và ghi CATEGORY_RESOURCES_MIGRATED trong cùng transaction. Quyền riêng ngoài bộ quản trị cần chủ động gán sau khi review.
+
+Leaflet dùng WebJar cục bộ; tile từ [OpenStreetMap](https://operations.osmfoundation.org/policies/tiles/) theo thao tác mở bản đồ, attribution luôn hiển thị. Giữ cache/Referer mặc định của browser, không prefetch/bulk download. Tile là dịch vụ ngoài; lỗi tile không được thay tọa độ đã lưu hoặc gửi lại mutation.

@@ -65,9 +65,9 @@ class ApplicationConstantsTest {
 
     @Test
     void catalogPublicPolicyNeverMakesWritesOrAdminRoutesAnonymous() {
-        assertTrue(WebRoutePolicy.publicApi("/api/v1/catalogs/VEHICLE_TYPE", "GET"));
-        assertFalse(WebRoutePolicy.publicApi("/api/v1/catalogs/VEHICLE_TYPE", "POST"));
-        assertFalse(WebRoutePolicy.publicApi("/api/v1/admin/catalogs", "GET"));
+        assertTrue(WebRoutePolicy.publicApi("/api/v1/categories", "GET"));
+        assertFalse(WebRoutePolicy.publicApi("/api/v1/categories", "POST"));
+        assertFalse(WebRoutePolicy.publicApi("/api/v1/admin/categories", "GET"));
         assertFalse(WebRoutePolicy.publicApi("/api/v1/media", "GET"));
         assertFalse(WebRoutePolicy.skipsJwt("/api/v1/admin/jobs"));
         assertFalse(WebRoutePolicy.skipsTrafficGuard("/api/v1/media"));

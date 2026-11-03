@@ -461,7 +461,7 @@ public class BookingRepo extends BaseRepository {
     public long source(Connection connection, String code) throws SQLException {
         try (
             PreparedStatement query = connection.prepareStatement(
-                "SELECT id FROM catalog_items WHERE type='BOOKING_SOURCE' AND code=? AND active FOR SHARE"
+                "SELECT id FROM category WHERE ref_type='BOOKING_SOURCE' AND type='VALUE' AND code=? AND active FOR SHARE"
             )
         ) {
             query.setString(1, code);

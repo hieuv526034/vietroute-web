@@ -42,7 +42,7 @@ import vn.vietroute.auth.security.JwtAuthenticationFilter;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.JwtService;
 import vn.vietroute.business.booking.dto.request.BookingRequest;
-import vn.vietroute.business.catalog.dto.request.CatalogItemRequest;
+import vn.vietroute.business.catalog.dto.request.CategoryRequest;
 import vn.vietroute.common.api_journal.dto.response.ApiJournalDetail;
 import vn.vietroute.common.api_journal.dto.response.ApiJournalEntry;
 import vn.vietroute.common.api_journal.dto.response.ApiJournalResponse;
@@ -84,7 +84,7 @@ class ApiJournalTest {
             var search = new ApiJournalSearch();
             search.setTraceId("verified-actor-trace");
             assertEquals(12L, page(store, search).getRecords().getContent().get(0).getUserId());
-            var anonymous = new MockHttpServletRequest("GET", Routes.CATALOG_PREFIX + "VEHICLE_TYPE");
+            var anonymous = new MockHttpServletRequest("GET", Routes.CATEGORIES);
             anonymous.addHeader("X-User-ID", "999");
             anonymous.addHeader("X-Request-ID", "untrusted-actor-trace");
             filter.doFilter(anonymous, new MockHttpServletResponse(), (incoming, response) -> {});
@@ -247,12 +247,14 @@ class ApiJournalTest {
             assertFalse(json.writeValueAsString(find(store, item.getId())).contains(secret));
             var invalid = mvc
                 .perform(
-                    post(Routes.ADMIN_CATALOGS)
+                    post(Routes.ADMIN_CATEGORIES)
                         .with(csrf())
-                        .with(authentication(actor("ROLE_ADMIN", "CATALOG_CREATE")))
+                        .with(authentication(actor("ROLE_ADMIN", "POST " + Routes.ADMIN_CATEGORIES)))
                         .contentType("application/json")
                         .content(
-                            "{\"type\":\"VEHICLE_TYPE\",\"nameVi\":\"\",\"nameEn\":\"" + secret + "\",\"sortOrder\":1}"
+                            "{\"type\":\"VALUE\",\"refType\":\"VEHICLE_TYPE\",\"name\":\"\",\"props\":{\"nameEn\":\"" +
+                                secret +
+                                "\"},\"sortOrder\":1}"
                         )
                         .header("X-Request-ID", "journal-validation-trace")
                 )
@@ -262,10 +264,11 @@ class ApiJournalTest {
             search.setTraceId("journal-validation-trace");
             item = page(store, search).getRecords().getContent().get(0);
             var detail = find(store, item.getId());
-            assertEquals(Routes.ADMIN_CATALOGS, item.getEndpoint());
-            assertTrue(item.getController().contains("CatalogItemAPI#create"));
+            assertEquals(Routes.ADMIN_CATEGORIES, item.getEndpoint());
+            assertTrue(item.getController().contains("CategoryAPI#create"));
             assertTrue(detail.getRequestBody().contains("REDACTED"));
-            assertTrue(detail.getRequestBody().contains("VEHICLE_TYPE"));
+            assertTrue(detail.getRequestBody().contains("VALUE"));
+            assertFalse(detail.getRequestBody().contains("props"));
             assertFalse(json.writeValueAsString(detail).contains(secret));
             assertEquals("COM001", item.getCode());
             long count = page(store, new ApiJournalSearch()).getRecords().getTotalElements();
@@ -336,7 +339,7 @@ class ApiJournalTest {
             assertEquals("UNMAPPED", item.getEndpoint());
             assertFalse(json.writeValueAsString(find(store, item.getId())).contains(secret));
             mvc.perform(
-                get(Routes.CATALOGS + "/WRONG" + "?page=0&username=" + secret + "&lang=vi").header(
+                get(Routes.CATEGORIES + "/WRONG" + "?page=0&username=" + secret + "&lang=vi").header(
                     "X-Request-ID",
                     "query-safety-trace"
                 )
@@ -346,7 +349,7 @@ class ApiJournalTest {
             assertEquals(Map.of("page", "0", "lang", "vi"), detail.getQuery());
             assertFalse(json.writeValueAsString(detail).contains(secret));
             mvc.perform(
-                post(Routes.ADMIN_CATALOGS)
+                post(Routes.ADMIN_CATEGORIES)
                     .with(csrf())
                     .with(authentication(actor("CATALOG_CREATE")))
                     .contentType("application/json")
@@ -369,9 +372,9 @@ class ApiJournalTest {
         login.setPassword("secretpassword");
         assertFalse(projection.request(login).contains("secret"));
         assertFalse(projection.request(Map.of("future", "secret")).contains("secret"));
-        var catalog = new CatalogItemRequest();
-        catalog.setNameVi("secretperson");
-        catalog.setNameEn("secretpassword");
+        var catalog = new CategoryRequest();
+        catalog.setName("secretperson");
+        catalog.setProps(Map.of("nameEn", "secretpassword"));
         catalog.setCode("SECRETCODE");
         assertFalse(projection.request(catalog).contains("secret"));
         assertFalse(projection.request(catalog).contains("SECRETCODE"));

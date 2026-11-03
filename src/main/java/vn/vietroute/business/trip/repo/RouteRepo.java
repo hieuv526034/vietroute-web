@@ -124,11 +124,14 @@ public class RouteRepo extends BaseRepository {
         try (
             PreparedStatement query = connection.prepareStatement(
                 """
-                SELECT s.stop_order, s.location_id, l.name_vi, l.name_en, l.address, l.latitude, l.longitude,
+                SELECT s.stop_order, s.location_id, l.name AS name_vi, l.props->>'nameEn' AS name_en, l.props->>'address' AS address, (l.props->>'latitude')::numeric AS latitude, (l.props->>'longitude')::numeric AS longitude,
                     s.arrival_offset_minutes,
-                    s.departure_offset_minutes, s.cumulative_fare, s.pickup_allowed, s.dropoff_allowed
+                    s.departure_offset_minutes, s.cumulative_fare, s.pickup_allowed, s.dropoff_allowed,
+                    p.id, p.name, w.id, w.name
                 FROM carrier_route_stops s
-                JOIN location_places l ON l.id = s.location_id
+                JOIN category l ON l.type='VALUE' AND l.ref_type='LOCATION' AND l.id = s.location_id
+                JOIN category w ON w.id=l.parent_id AND w.ref_type='WARD'
+                JOIN category p ON p.id=w.parent_id AND p.ref_type='PROVINCE'
                 WHERE s.route_id = ?
                 ORDER BY s.stop_order
                 """
@@ -150,7 +153,11 @@ public class RouteRepo extends BaseRepository {
                             rows.getInt(9),
                             rows.getBigDecimal(10),
                             rows.getBoolean(11),
-                            rows.getBoolean(12)
+                            rows.getBoolean(12),
+                            rows.getLong(13),
+                            rows.getString(14),
+                            rows.getLong(15),
+                            rows.getString(16)
                         )
                     );
             }
@@ -171,12 +178,13 @@ public class RouteRepo extends BaseRepository {
             PreparedStatement query = connection.prepareStatement(
                 """
                 SELECT l.id, l.active
-                    AND p.active AS usable
-                FROM location_places l
-                JOIN location_provinces p ON p.id = l.province_id
+                    AND w.active AND p.active AS usable
+                FROM category l
+                JOIN category w ON w.type='VALUE' AND w.ref_type='WARD' AND w.id=l.parent_id
+                JOIN category p ON p.type='VALUE' AND p.ref_type='PROVINCE' AND p.id=w.parent_id
                 WHERE l.id = ANY(?)
                 ORDER BY l.id
-                FOR SHARE OF p, l
+                FOR SHARE OF p, w, l
                 """
             )
         ) {

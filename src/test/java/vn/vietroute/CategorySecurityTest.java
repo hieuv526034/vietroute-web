@@ -12,11 +12,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -36,13 +36,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.business.catalog.dto.search.LocationLookupSearch;
-import vn.vietroute.business.catalog.dto.search.LocationSearch;
-import vn.vietroute.business.catalog.dto.search.ProvinceLookupSearch;
-import vn.vietroute.business.catalog.entity.Location;
-import vn.vietroute.business.catalog.entity.Province;
-import vn.vietroute.business.catalog.repo.LocationRepo;
-import vn.vietroute.business.catalog.service.LocationService;
+import vn.vietroute.business.catalog.dto.search.CategorySearch;
+import vn.vietroute.business.catalog.entity.Category;
+import vn.vietroute.business.catalog.repo.CategoryRepo;
+import vn.vietroute.business.catalog.service.CategoryService;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.config.RootConfig;
 import vn.vietroute.common.config.web.WebConfig;
@@ -52,7 +49,7 @@ import vn.vietroute.support.JournalTestConfig;
 import vn.vietroute.support.TestJpa;
 
 /** Hai context WAR và guard production; SQL/filter/cạnh tranh/version kiểm thêm trên PostgreSQL Docker CI. */
-class LocationSecurityTest {
+class CategorySecurityTest {
 
     private static AnnotationConfigWebApplicationContext root;
     private static AnnotationConfigWebApplicationContext child;
@@ -88,8 +85,11 @@ class LocationSecurityTest {
 
     @Test
     void publicLookupUsesMinimalProjectionAndEnglishNamesWithoutLogin() throws Exception {
-        for (String route : List.of(Routes.PROVINCES, Routes.LOCATIONS)) {
-            var response = mvc.perform(get(route).param("lang", "en")).andReturn().getResponse();
+        for (String refType : List.of("PROVINCE", "LOCATION")) {
+            var response = mvc
+                .perform(get(Routes.CATEGORIES).param("refType", refType).param("lang", "en").param("parentId", "1"))
+                .andReturn()
+                .getResponse();
             assertEquals(200, response.getStatus());
             var first = json.readTree(response.getContentAsString()).at("/data/content/0");
             assertTrue(first.path("name").asText().startsWith("Demo"));
@@ -98,23 +98,23 @@ class LocationSecurityTest {
         }
         assertEquals(
             400,
-            mvc.perform(get(Routes.LOCATIONS).param("provinceId", "0")).andReturn().getResponse().getStatus()
+            mvc.perform(get(Routes.CATEGORIES).param("parentId", "0")).andReturn().getResponse().getStatus()
         );
         assertEquals(
             400,
-            mvc.perform(get(Routes.PROVINCES).param("size", "101")).andReturn().getResponse().getStatus()
+            mvc.perform(get(Routes.CATEGORIES).param("size", "101")).andReturn().getResponse().getStatus()
         );
         assertEquals(
             400,
-            mvc.perform(get(Routes.LOCATIONS).param("query", "bad\nquery")).andReturn().getResponse().getStatus()
+            mvc.perform(get(Routes.CATEGORIES).param("query", "bad\nquery")).andReturn().getResponse().getStatus()
         );
     }
 
     @Test
     void exactEndpointsWorkForCustomRolesAndRoleAloneNeverGrantsUrls() throws Exception {
-        for (String route : List.of(Routes.LOCATION_PAGE, Routes.ADMIN_PROVINCES, Routes.ADMIN_LOCATIONS)) {
+        for (String route : List.of(Routes.CATEGORY_PAGE, Routes.ADMIN_CATEGORY_GROUPS, Routes.ADMIN_CATEGORIES)) {
             assertEquals(
-                route.equals(Routes.LOCATION_PAGE) ? 302 : 401,
+                route.equals(Routes.CATEGORY_PAGE) ? 302 : 401,
                 mvc.perform(get(route)).andReturn().getResponse().getStatus()
             );
             assertEquals(
@@ -128,7 +128,20 @@ class LocationSecurityTest {
             assertEquals(
                 200,
                 mvc
-                    .perform(get(route).with(authentication(actor(false, "LOCATION_VIEW", "LOCATION_READ"))))
+                    .perform(
+                        get(route)
+                            .param("refType", "PROVINCE")
+                            .with(
+                                authentication(
+                                    actor(
+                                        false,
+                                        "GET " + Routes.CATEGORY_PAGE,
+                                        "GET " + Routes.ADMIN_CATEGORY_GROUPS,
+                                        "GET " + Routes.ADMIN_CATEGORIES
+                                    )
+                                )
+                            )
+                    )
                     .andReturn()
                     .getResponse()
                     .getStatus()
@@ -137,22 +150,19 @@ class LocationSecurityTest {
     }
 
     @Test
-    void invalidCoordinatesReferencesAndServerFieldsFailBeforeTransaction() throws Exception {
+    void invalidReferencesAndServerFieldsFailBeforeTransaction() throws Exception {
         String valid =
-            "{\"code\":\"PLACE01\",\"provinceId\":1,\"nameVi\":\"Địa điểm\",\"nameEn\":\"Place\",\"address\":\"Địa chỉ\",\"latitude\":10,\"longitude\":106}";
+            "{\"code\":\"PLACE01\",\"parentId\":1,\"name\":\"Địa điểm\",\"refType\":\"LOCATION\",\"props\":{\"address\":\"Địa chỉ\",\"latitude\":10,\"longitude\":106}}";
         for (String body : List.of(
-            valid.replace("\"latitude\":10", "\"latitude\":91"),
-            valid.replace("\"longitude\":106", "\"longitude\":181"),
-            valid.replace("\"latitude\":10", "\"latitude\":10.1234567"),
-            valid.replace("\"provinceId\":1", "\"provinceId\":0"),
-            valid.replace("\"nameVi\":\"Địa điểm\"", "\"nameVi\":\" \"")
+            valid.replace("\"parentId\":1", "\"parentId\":0"),
+            valid.replace("\"name\":\"Địa điểm\"", "\"name\":\" \"")
         )) {
             assertEquals(
                 400,
                 mvc
                     .perform(
-                        post(Routes.ADMIN_LOCATIONS)
-                            .with(authentication(actor(true, "LOCATION_CREATE")))
+                        post(Routes.ADMIN_CATEGORIES)
+                            .with(authentication(actor(true, "POST " + Routes.ADMIN_CATEGORIES)))
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body)
@@ -166,7 +176,7 @@ class LocationSecurityTest {
             403,
             mvc
                 .perform(
-                    post(Routes.ADMIN_LOCATIONS)
+                    post(Routes.ADMIN_CATEGORIES)
                         .with(authentication(actor(false)))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -178,13 +188,13 @@ class LocationSecurityTest {
         );
         String update = valid
             .replace("\"code\":\"PLACE01\",", "")
-            .replace("\"provinceId\":1,", "\"scopeId\":2,\"version\":0,");
+            .replace("\"parentId\":1,", "\"scopeId\":2,\"version\":0,");
         assertEquals(
             400,
             mvc
                 .perform(
-                    put(Routes.ADMIN_LOCATIONS + "/1")
-                        .with(authentication(actor(true, "LOCATION_UPDATE")))
+                    put(Routes.ADMIN_CATEGORIES + "/1")
+                        .with(authentication(actor(true, "PUT " + Routes.ADMIN_CATEGORIES + "/{id}")))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(update)
@@ -203,24 +213,14 @@ class LocationSecurityTest {
             .getResponse();
         assertEquals(200, document.getStatus());
         var spec = json.readTree(document.getContentAsString());
-        var operation = spec.path("paths").path(Routes.ADMIN_LOCATIONS).path("get");
+        var operation = spec.path("paths").path(Routes.ADMIN_CATEGORIES).path("get");
         String parameters = operation.path("parameters").toString();
-        for (String name : List.of("page", "size", "query", "active", "provinceId"))
+        for (String name : List.of("page", "size", "query", "active", "parentId"))
             assertTrue(parameters.contains("\"name\":\"" + name + "\""), name);
-        var publicRead = spec.path("paths").path(Routes.LOCATIONS).path("get");
+        var publicRead = spec.path("paths").path(Routes.CATEGORIES).path("get");
         assertTrue(publicRead.path("security").isEmpty());
-        var body = spec.path("components").path("schemas").path("LocationRequest").path("properties");
-        for (String name : List.of(
-            "nameVi",
-            "nameEn",
-            "sortOrder",
-            "active",
-            "code",
-            "provinceId",
-            "latitude",
-            "longitude",
-            "address"
-        ))
+        var body = spec.path("components").path("schemas").path("CategoryRequest").path("properties");
+        for (String name : List.of("name", "props", "sortOrder", "active", "code", "refType", "parentId", "type"))
             assertTrue(body.has(name), name);
         assertFalse(body.has("actor"));
     }
@@ -238,45 +238,26 @@ class LocationSecurityTest {
 
         @Bean
         @Primary
-        LocationRepo isolatedLocations() {
-            return new LocationRepo(TestJpa.MANAGER, null) {
+        CategoryRepo isolatedLocations() {
+            return new CategoryRepo(TestJpa.MANAGER, null, new ObjectMapper()) {
                 @Override
-                public PageResponse<Province> provinces(ProvinceLookupSearch page, Boolean active) {
+                public PageResponse<Category> search(
+                    CategorySearch page,
+                    String refType,
+                    String type,
+                    boolean publicOnly
+                ) {
+                    boolean location = "LOCATION".equals(refType);
                     return PageResponse.of(
                         List.of(
-                            Province.builder()
-                                .id(1L)
+                            Category.builder()
+                                .id(location ? 2L : 1L)
                                 .code("DEMO01")
-                                .nameVi("Tỉnh demo")
-                                .nameEn("Demo province")
-                                .active(true)
-                                .createdAt(Instant.EPOCH)
-                                .updatedAt(Instant.EPOCH)
-                                .createdBy(9L)
-                                .updatedBy(9L)
-                                .build()
-                        ),
-                        page,
-                        1
-                    );
-                }
-
-                @Override
-                public PageResponse<Location> locations(LocationLookupSearch page, Boolean active, boolean publicOnly) {
-                    return PageResponse.of(
-                        List.of(
-                            Location.builder()
-                                .id(2L)
-                                .code("DEMO02")
-                                .provinceId(1L)
-                                .provinceNameVi("Tỉnh demo")
-                                .provinceNameEn("Demo province")
-                                .provinceActive(true)
-                                .nameVi("Điểm demo")
-                                .nameEn("Demo place")
-                                .address("Địa chỉ demo")
-                                .latitude(BigDecimal.TEN)
-                                .longitude(BigDecimal.TEN)
+                                .type("VALUE")
+                                .refType(refType)
+                                .name(location ? "Điểm demo" : "Tỉnh demo")
+                                .parentId(location ? 1L : null)
+                                .props(Map.of("nameEn", location ? "Demo place" : "Demo province"))
                                 .active(true)
                                 .createdAt(Instant.EPOCH)
                                 .updatedAt(Instant.EPOCH)

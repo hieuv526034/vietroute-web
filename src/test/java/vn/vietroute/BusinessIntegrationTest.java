@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -95,9 +96,9 @@ import vn.vietroute.business.carrier.dto.search.PublicCarrierSearch;
 import vn.vietroute.business.carrier.repo.CarrierRepo;
 import vn.vietroute.business.carrier.service.DriverService;
 import vn.vietroute.business.carrier.service.VehicleService;
-import vn.vietroute.business.catalog.dto.search.CatalogItemSearch;
-import vn.vietroute.business.catalog.repo.CatalogItemRepo;
-import vn.vietroute.business.catalog.service.CatalogItemService;
+import vn.vietroute.business.catalog.dto.search.CategorySearch;
+import vn.vietroute.business.catalog.repo.CategoryRepo;
+import vn.vietroute.business.catalog.service.CategoryService;
 import vn.vietroute.business.report.dto.search.ReportCarrierSearch;
 import vn.vietroute.business.report.dto.search.ReportSearch;
 import vn.vietroute.business.report.repo.ReportRepo;
@@ -112,7 +113,7 @@ import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.application.ConfigurationEnvironment;
 import vn.vietroute.common.config.web.WebConfig;
 import vn.vietroute.common.constant.ApplicationConstants.Business;
-import vn.vietroute.common.constant.ApplicationConstants.CatalogType;
+import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.initializer.DatabaseInitializer;
@@ -146,17 +147,7 @@ class BusinessIntegrationTest {
         );
         sql("CREATE SCHEMA " + extensionSchema + "; ALTER EXTENSION pg_trgm SET SCHEMA " + extensionSchema);
         try {
-            // Dựng lại trạng thái trước bước 005: bước 004 lịch sử còn index của hai bảng GPS.
-            // Không chạy ngược một migration cũ trên schema đã bị bước mới thu gọn.
-            root.getBean(JdbcTransactions.class).execute(connection -> {
-                try (Statement statement = connection.createStatement()) {
-                    statement.execute(new String(MigrationCatalog.read("trip/001_schema.sql"), StandardCharsets.UTF_8));
-                }
-                return null;
-            });
-            sql(
-                "DROP INDEX idx_trips_report_departure,idx_trips_report_carrier_date,idx_carriers_search_contact,idx_carriers_search_name,idx_catalog_search_text; DELETE FROM vietroute_schema_history WHERE version IN ('trip/001_schema.sql','catalog/001_schema.sql','carrier/001_schema.sql')"
-            );
+            // Index hiện hành giữ đúng OID opclass khi extension được chuyển namespace.
             root.getBean(DatabaseInitializer.class).afterPropertiesSet();
             assertEquals(
                 extensionSchema,
@@ -167,7 +158,7 @@ class BusinessIntegrationTest {
             assertEquals(
                 "3",
                 sql(
-                    "SELECT count(*) FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid JOIN pg_namespace cn ON cn.oid=c.relnamespace JOIN pg_opclass o ON o.oid=ANY(i.indclass) JOIN pg_namespace ns ON ns.oid=o.opcnamespace WHERE cn.nspname=current_schema() AND c.relname IN('idx_carriers_search_contact','idx_carriers_search_name','idx_catalog_search_text') AND ns.nspname='" +
+                    "SELECT count(*) FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid JOIN pg_namespace cn ON cn.oid=c.relnamespace JOIN pg_opclass o ON o.oid=ANY(i.indclass) JOIN pg_namespace ns ON ns.oid=o.opcnamespace WHERE cn.nspname=current_schema() AND c.relname IN('idx_carriers_search_contact','idx_carriers_search_name','idx_category_search_text') AND ns.nspname='" +
                         extensionSchema +
                         "'"
                 )
@@ -178,7 +169,7 @@ class BusinessIntegrationTest {
                     "SELECT count(*) FROM (SELECT DISTINCT rf.role_code,op AS permission_code FROM auth_role_functions rf CROSS JOIN LATERAL unnest(rf.operation_codes) op)"
                 )
             );
-            assertEquals("8", sql("SELECT count(*) FROM vietroute_schema_history"));
+            assertEquals("10", sql("SELECT count(*) FROM vietroute_schema_history"));
             try (
                 var connection = root.getBean(JdbcConnectionFactory.class).open();
                 var query = connection.prepareStatement("SHOW search_path");
@@ -262,7 +253,7 @@ class BusinessIntegrationTest {
             publicSearch.setQuery("needlexyz");
             var picker = new ReportCarrierSearch();
             picker.setQuery("needlexyz");
-            var catalog = new CatalogItemSearch();
+            var catalog = new CategorySearch();
             catalog.setQuery("needlexyz");
             var report = new ReportSearch();
             report.setFromDate(LocalDate.of(2027, 2, 10));
@@ -287,14 +278,14 @@ class BusinessIntegrationTest {
             queries.put(
                 "search.catalog",
                 SqlPlanProbe.capture(connection, observed ->
-                    root.getBean(CatalogItemRepo.class).search(observed, CatalogType.VEHICLE_TYPE, catalog)
+                    root.getBean(CategoryRepo.class).search(observed, catalog, "VEHICLE_TYPE", "VALUE", false)
                 )
             );
             Map<String, List<JsonNode>> baseline = new LinkedHashMap<>();
             var point = connection.setSavepoint();
             try (var query = connection.createStatement()) {
                 query.execute(
-                    "DROP INDEX idx_trips_report_departure,idx_trips_report_carrier_date,idx_carriers_search_contact,idx_carriers_search_name,idx_catalog_search_text"
+                    "DROP INDEX idx_trips_report_departure,idx_trips_report_carrier_date,idx_carriers_search_contact,idx_carriers_search_name,idx_category_search_text"
                 );
             }
             for (var entry : queries.entrySet()) {
@@ -304,7 +295,7 @@ class BusinessIntegrationTest {
             }
             connection.rollback(point);
             try (var query = connection.createStatement()) {
-                query.execute("ANALYZE carriers; ANALYZE catalog_items; ANALYZE carrier_trips");
+                query.execute("ANALYZE carriers; ANALYZE category; ANALYZE carrier_trips");
             }
             var used = new LinkedHashSet<String>();
             for (var entry : queries.entrySet()) {
@@ -340,7 +331,7 @@ class BusinessIntegrationTest {
             }
             assertTrue(
                 used.containsAll(
-                    Set.of("idx_carriers_search_contact", "idx_carriers_search_name", "idx_catalog_search_text")
+                    Set.of("idx_carriers_search_contact", "idx_carriers_search_name", "idx_category_search_text")
                 )
             );
         }
@@ -1180,7 +1171,7 @@ class BusinessIntegrationTest {
         assertThrows(IllegalStateException.class, () -> root.getBean(DatabaseInitializer.class).afterPropertiesSet());
         assertEquals(password, sql("SELECT password_hash FROM auth_users WHERE id=1"));
         assertEquals(carriers, sql("SELECT count(*) FROM carriers"));
-        assertEquals("8", sql("SELECT count(*) FROM vietroute_schema_history"));
+        assertEquals("10", sql("SELECT count(*) FROM vietroute_schema_history"));
     }
 
     /** Runtime không tự nhận baseline lạ; bảo trì history chỉ chạy bằng công cụ ngoài ứng dụng. */
@@ -1192,8 +1183,8 @@ class BusinessIntegrationTest {
         );
         assertThrows(IllegalStateException.class, () -> root.getBean(DatabaseInitializer.class).afterPropertiesSet());
         assertEquals(password, sql("SELECT password_hash FROM auth_users WHERE id=1"));
-        assertEquals("9", sql("SELECT count(*) FROM vietroute_schema_history"));
-        assertEquals("24", sql("SELECT count(*) FROM pg_tables WHERE schemaname=current_schema()"));
+        assertEquals("11", sql("SELECT count(*) FROM vietroute_schema_history"));
+        assertEquals("22", sql("SELECT count(*) FROM pg_tables WHERE schemaname=current_schema()"));
     }
 
     /** Repo thật phải commit để một instance khác đọc được; không thay bằng journal test double. */
@@ -1264,8 +1255,8 @@ class BusinessIntegrationTest {
                 "SELECT md5(string_agg(version||checksum||installed_at::text,',' ORDER BY version)) FROM vietroute_schema_history"
             )
         );
-        assertEquals("8", sql("SELECT count(*) FROM vietroute_schema_history"));
-        assertEquals("24", sql("SELECT count(*) FROM pg_tables WHERE schemaname=current_schema()"));
+        assertEquals("10", sql("SELECT count(*) FROM vietroute_schema_history"));
+        assertEquals("22", sql("SELECT count(*) FROM pg_tables WHERE schemaname=current_schema()"));
         assertEquals(
             "8",
             sql("SELECT count(*) FROM pg_tables WHERE schemaname=current_schema() AND tablename LIKE 'auth_%'")
@@ -1280,8 +1271,9 @@ class BusinessIntegrationTest {
         assertEquals("7", sql("SELECT count(*) FROM carriers"));
         assertEquals("25", sql("SELECT count(*) FROM carrier_vehicles"));
         assertEquals("25", sql("SELECT count(*) FROM carrier_drivers WHERE user_id IS NOT NULL"));
-        assertEquals("12", sql("SELECT count(*) FROM location_provinces"));
-        assertEquals("14", sql("SELECT count(*) FROM location_places"));
+        assertEquals("34", sql("SELECT count(*) FROM category WHERE type='VALUE' AND ref_type='PROVINCE'"));
+        assertEquals("3321", sql("SELECT count(*) FROM category WHERE type='VALUE' AND ref_type='WARD'"));
+        assertEquals("14", sql("SELECT count(*) FROM category WHERE type='VALUE' AND ref_type='LOCATION'"));
         assertEquals("28", sql("SELECT count(*) FROM carrier_routes"));
         assertEquals("646", sql("SELECT count(*) FROM carrier_trips"));
         assertEquals("3866", sql("SELECT count(*) FROM bookings"));
@@ -1535,8 +1527,8 @@ class BusinessIntegrationTest {
         String date = sql(
             "SELECT (departure_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date FROM carrier_trips WHERE id=" + id
         );
-        String from = sql("SELECT id FROM location_places WHERE code='DLGHAIPHONG'");
-        String to = sql("SELECT id FROM location_places WHERE code='DLGHANOI'");
+        String from = sql("SELECT id FROM category WHERE ref_type='LOCATION' AND code='DLGHAIPHONG'");
+        String to = sql("SELECT id FROM category WHERE ref_type='LOCATION' AND code='DLGHANOI'");
         JsonNode matches = call(
             200,
             "GET",
@@ -1553,6 +1545,36 @@ class BusinessIntegrationTest {
             customer
         );
         assertEquals(2, matches.path("totalElements").asInt());
+        String wardSearch =
+            "/api/v1/trips?fromProvinceId=" +
+            categoryId("PROVINCE", "HAIPHONG") +
+            "&toProvinceId=" +
+            categoryId("PROVINCE", "HANOI") +
+            "&date=" +
+            date +
+            "&carrierId=" +
+            carrier +
+            "&fromWardId=" +
+            categoryId("WARD", "11383") +
+            "&toWardId=" +
+            categoryId("WARD", "00070");
+        assertEquals(2, call(200, "GET", wardSearch, null, customer).path("totalElements").asInt());
+        assertEquals(
+            0,
+            call(
+                200,
+                "GET",
+                wardSearch.replace(
+                    "fromWardId=" + categoryId("WARD", "11383"),
+                    "fromWardId=" + categoryId("WARD", "20200")
+                ),
+                null,
+                customer
+            )
+                .path("totalElements")
+                .asInt()
+        );
+
         call(200, "GET", "/api/v1/driver/trips/" + id, null, driver);
         long foreign = Long.parseLong(sql("SELECT min(id) FROM carrier_trips WHERE carrier_id<>" + carrier));
         call(404, "GET", "/api/v1/admin/trips/" + foreign, null, operator);
@@ -1757,6 +1779,161 @@ class BusinessIntegrationTest {
 
     private long id(String table, String code) throws Exception {
         return Long.parseLong(sql("SELECT id FROM " + table + " WHERE code='" + code + "'"));
+    }
+
+    private long categoryId(String refType, String code) throws Exception {
+        return Long.parseLong(
+            sql("SELECT id FROM category WHERE type='VALUE' AND ref_type='" + refType + "' AND code='" + code + "'")
+        );
+    }
+
+    @Test
+    void categoryUpgradeRetiresOnlyOldResourcesAndKeepsRevokedRolesInactive() throws Exception {
+        String offlineSchema = "category_upgrade_" + UUID.randomUUID().toString().replace("-", "");
+        String password = sql("SELECT password_hash FROM auth_users WHERE id=1");
+        try (var connection = root.getBean(JdbcConnectionFactory.class).open()) {
+            assertFalse(connection.getAutoCommit());
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("CREATE SCHEMA " + offlineSchema);
+                statement.execute("SET LOCAL search_path=" + offlineSchema + ",pg_temp");
+                for (String version : MigrationCatalog.versions().subList(0, 8)) {
+                    statement.execute(new String(MigrationCatalog.read(version), StandardCharsets.UTF_8));
+                }
+                try (
+                    var insert = connection.prepareStatement(
+                        "INSERT INTO auth_users(id,username,password_hash,display_name,token_version) VALUES(1,'legacymember',?,'Người kiểm thử',9)"
+                    )
+                ) {
+                    insert.setString(1, password);
+                    insert.executeUpdate();
+                }
+                statement.execute(
+                    """
+                    INSERT INTO auth_functions(code,name_vi,name_en,active)
+                    VALUES('ADMIN_CONSOLE','Quản trị','Admin',false),('ONLY_OLD','Chỉ đọc loại xe','Old reader',false);
+                    INSERT INTO auth_roles(code,name_vi,name_en,active) VALUES('LEGACY','Đã thu hồi','Revoked',false);
+                    INSERT INTO auth_user_roles(user_id,role_code,active) VALUES(1,'LEGACY',false);
+                    INSERT INTO auth_role_functions(role_code,function_code) VALUES('LEGACY','ONLY_OLD');
+                    INSERT INTO auth_function_resources(function_code,kind,target,http_method,path_template,handler,description)
+                    VALUES('ADMIN_CONSOLE','MENU','GET /catalogs/vehicle-types','GET','/catalogs/vehicle-types','Fixture','Old menu'),
+                        ('ONLY_OLD','ENDPOINT','GET /api/v1/admin/vehicle-types','GET','/api/v1/admin/vehicle-types','Fixture','Old read');
+                    """
+                );
+                for (String version : MigrationCatalog.versions().subList(8, 10)) {
+                    statement.execute(new String(MigrationCatalog.read(version), StandardCharsets.UTF_8));
+                }
+                try (
+                    var row = statement.executeQuery(
+                        """
+                        SELECT (SELECT count(*) FROM auth_function_resources WHERE function_code='ADMIN_CONSOLE'),
+                            (SELECT count(*) FROM auth_function_resources WHERE function_code='ONLY_OLD'),
+                            (SELECT active FROM auth_roles WHERE code='LEGACY'),
+                            (SELECT active FROM auth_user_roles WHERE user_id=1),
+                            (SELECT active FROM auth_functions WHERE code='ONLY_OLD'),
+                            (SELECT active FROM auth_functions WHERE code='ADMIN_CONSOLE'),
+                            (SELECT token_version FROM auth_users WHERE id=1),
+                            (SELECT password_hash FROM auth_users WHERE id=1),
+                            (SELECT count(*) FROM auth_access_changes WHERE event_type='CATEGORY_RESOURCES_MIGRATED'),
+                            (SELECT version FROM auth_functions WHERE code='ONLY_OLD')
+                        """
+                    )
+                ) {
+                    assertTrue(row.next());
+                    assertEquals(7, row.getInt(1));
+                    assertEquals(0, row.getInt(2));
+                    for (int index = 3; index <= 6; index++) assertFalse(row.getBoolean(index));
+                    assertEquals(9, row.getLong(7));
+                    assertEquals(password, row.getString(8));
+                    assertEquals(2, row.getInt(9));
+                    assertEquals(1, row.getLong(10));
+                }
+            } finally {
+                connection.rollback();
+            }
+        }
+    }
+
+    @Test
+    void categoryTreeLoadsDirectChildrenAndDeniesRemovedEndpoints() throws Exception {
+        long haiPhong = categoryId("PROVINCE", "HAIPHONG");
+        long haNoi = categoryId("PROVINCE", "HANOI");
+        assertEquals("34", sql("SELECT count(*) FROM category WHERE value_ref='PROVINCE'"));
+        assertEquals("3321", sql("SELECT count(*) FROM category WHERE value_ref='WARD'"));
+        assertEquals("31", sql("SELECT props->>'administrativeCode' FROM category WHERE id=" + haiPhong));
+        assertEquals("01", sql("SELECT props->>'administrativeCode' FROM category WHERE id=" + haNoi));
+        var empty = mvc.perform(get(Routes.CATEGORIES).param("refType", "WARD")).andReturn().getResponse();
+        assertEquals(200, empty.getStatus());
+        assertEquals(0, json.readTree(empty.getContentAsString()).at("/data/totalElements").asInt());
+        var child = mvc
+            .perform(
+                get(Routes.CATEGORIES)
+                    .param("refType", "WARD")
+                    .param("parentId", Long.toString(haiPhong))
+                    .param("size", "3")
+            )
+            .andReturn()
+            .getResponse();
+        assertEquals(200, child.getStatus());
+        var page = json.readTree(child.getContentAsString()).path("data");
+        assertEquals(3, page.path("content").size());
+        assertTrue(page.path("hasNext").asBoolean());
+        for (JsonNode value : page.path("content")) {
+            assertEquals(haiPhong, value.path("parentId").asLong());
+            assertEquals("WARD", value.path("refType").asText());
+            assertTrue(value.path("code").asText().matches("[0-9]{5}"));
+            assertFalse(value.has("createdBy"));
+        }
+        var roots = mvc
+            .perform(get(Routes.ADMIN_CATEGORIES).param("refType", "PROVINCE").with(authentication(admin)))
+            .andReturn()
+            .getResponse();
+        assertEquals(200, roots.getStatus());
+        assertEquals(34, json.readTree(roots.getContentAsString()).at("/data/totalElements").asInt());
+        var direct = mvc
+            .perform(
+                get(Routes.ADMIN_CATEGORIES).param("parentId", Long.toString(haiPhong)).with(authentication(admin))
+            )
+            .andReturn()
+            .getResponse();
+        assertEquals(200, direct.getStatus());
+        for (JsonNode value : json.readTree(direct.getContentAsString()).at("/data/content")) {
+            assertEquals(haiPhong, value.path("parentId").asLong());
+        }
+        call(400, "GET", Routes.ADMIN_CATEGORIES, null, admin);
+        long group = Long.parseLong(sql("SELECT id FROM category WHERE group_code='VEHICLE_TYPE'"));
+        call(404, "GET", "/api/v1/admin/catalogs" + "/" + group, null, admin);
+        call(404, "DELETE", "/api/v1/admin/catalogs" + "/" + group, "{\"version\":0}", admin);
+        call(400, "POST", Routes.ADMIN_CATEGORIES, "{\"code\":\"CATTEST\",\"name\":\"Thiếu nhóm\"}", admin);
+        call(
+            400,
+            "POST",
+            Routes.ADMIN_CATEGORIES,
+            "{\"code\":\"CATTEST\",\"refType\":\"VEHICLE_TYPE\",\"name\":\"Xe thử\",\"props\":{\"seatCount\":0}}",
+            admin
+        );
+        var seat = call(
+            201,
+            "POST",
+            Routes.ADMIN_CATEGORIES,
+            "{\"code\":\"CATTEST\",\"refType\":\"VEHICLE_TYPE\",\"name\":\"Xe thử\",\"props\":{\"seatCount\":16}}",
+            admin
+        );
+        assertEquals(16, seat.at("/props/seatCount").asInt());
+        assertEquals("VALUE", seat.path("type").asText());
+        var updated = call(
+            200,
+            "PUT",
+            Routes.ADMIN_CATEGORIES + "/" + seat.path("id").asLong(),
+            "{\"name\":\"Xe thử\",\"description\":\"Xe phục vụ liên tỉnh\",\"version\":0,\"props\":{\"seatCount\":16}}",
+            admin
+        );
+        assertEquals("Xe phục vụ liên tỉnh", updated.path("description").asText());
+        seed();
+        long ward = categoryId("WARD", "26824");
+        String url = Routes.CATEGORIES + "?refType=LOCATION&parentId=" + ward;
+        assertTrue(call(200, "GET", url, null, admin).path("totalElements").asInt() > 0);
+        sql("UPDATE category SET active=false WHERE id=" + categoryId("PROVINCE", "HCM"));
+        assertEquals(0, call(200, "GET", url, null, admin).path("totalElements").asInt());
     }
 
     private Authentication member(long scope, String role, String permissions, String username) throws Exception {
@@ -2229,29 +2406,26 @@ class BusinessIntegrationTest {
 
     @Test
     void demoIsAtomicIdempotentAndCatalogTypesCannotCrossIds() throws Exception {
-        assertEquals(16, seed().path("created").asInt());
+        // Ba tỉnh nền đã được nhập cùng dữ liệu hành chính khi DB_INIT chạy.
+        assertEquals(13, seed().path("created").asInt());
         var repeat = seed();
         assertEquals(0, repeat.path("created").asInt());
         assertEquals(21, repeat.path("reused").asInt());
         assertEquals("2", sql("SELECT count(*) FROM carriers"));
         assertEquals("2", sql("SELECT count(*) FROM auth_users"));
-        long source = id("catalog_items", "WEB");
-        call(404, "GET", "/api/v1/admin/vehicle-types/" + source, null, admin);
-        call(
-            404,
-            "PUT",
-            "/api/v1/admin/vehicle-types/" + source,
-            "{\"nameVi\":\"Sai\",\"nameEn\":\"Wrong\",\"sortOrder\":0,\"version\":0,\"active\":true}",
-            admin
-        );
-        call(404, "DELETE", "/api/v1/admin/vehicle-types/" + source, "{\"version\":0}", admin);
+        // API cũ không còn được đăng ký; FK có kiểu được kiểm trong ca Category tree.
+        call(404, "GET", "/api/v1/admin/vehicle-types/1", null, admin);
         assertEquals(
             3,
-            call(200, "GET", "/api/v1/catalogs/VEHICLE_TYPE?size=2", null, admin).path("totalElements").asInt()
+            call(200, "GET", "/api/v1/categories?refType=VEHICLE_TYPE&size=2", null, admin)
+                .path("totalElements")
+                .asInt()
         );
         assertEquals(
             0,
-            call(200, "GET", "/api/v1/catalogs/VEHICLE_TYPE?query=%25_%27", null, admin).path("totalElements").asInt()
+            call(200, "GET", "/api/v1/categories?refType=VEHICLE_TYPE&query=%25_%27", null, admin)
+                .path("totalElements")
+                .asInt()
         );
     }
 
@@ -2316,14 +2490,14 @@ class BusinessIntegrationTest {
         assertFalse(picker.toString().contains("phone"));
         long other = id("carrier_vehicles", "VRNORTH01");
         call(404, "GET", "/api/v1/admin/vehicles/" + other, null, operator);
-        long type = id("catalog_items", "SEAT");
+        long type = categoryId("VEHICLE_TYPE", "SEAT");
         String body =
             "{\"plateNumber\":\"DEMO-999\",\"vehicleTypeId\":" +
             type +
             ",\"capacity\":20,\"active\":true,\"version\":0}";
         call(404, "PUT", "/api/v1/admin/vehicles/" + other, body, operator);
         call(403, "GET", "/api/v1/admin/carriers", null, operator);
-        call(403, "GET", "/catalogs/booking-sources", null, operator);
+        call(403, "GET", "/operations/categories", null, operator);
         call(403, "POST", "/api/v1/admin/demo", "{}", operator);
         // UPDATE toàn cục từ role khác không được union sang role scoped chỉ còn READ.
         long operatorId = ((UserPrincipal) operator.getPrincipal()).id();
@@ -2344,21 +2518,17 @@ class BusinessIntegrationTest {
     void viewReadAndTypePermissionsStayIndependentInBothContexts() throws Exception {
         seed();
         long scope = Long.parseLong(sql("SELECT min(scope_id) FROM carriers"));
-        var view = member(scope, "VIEWONLY", "'VEHICLE_VIEW','VEHICLE_TYPE_VIEW'", "testviewer");
+        var view = member(scope, "VIEWONLY", "'VEHICLE_VIEW','CATEGORY_VIEW'", "testviewer");
         call(200, "GET", "/operations/vehicles", null, view);
-        call(200, "GET", "/catalogs/vehicle-types", null, view);
+        call(200, "GET", "/operations/categories", null, view);
         call(403, "GET", "/api/v1/admin/vehicles", null, view);
-        call(403, "GET", "/catalogs/booking-sources", null, view);
+        call(403, "GET", "/api/v1/admin/categories?refType=PROVINCE", null, view);
         SecurityContextHolder.getContext().setAuthentication(view);
         assertThrows(BusinessException.class, () -> root.getBean(VehicleService.class).page(new CarrierSearch()));
-        assertThrows(BusinessException.class, () ->
-            root.getBean(CatalogItemService.class).find(CatalogType.BOOKING_SOURCE, 1, Locale.ROOT)
-        );
-        var read = member(scope, "TYPEONLY", "'VEHICLE_TYPE_READ'", "testtypereader");
-        call(200, "GET", "/api/v1/admin/vehicle-types", null, read);
-        call(403, "GET", "/catalogs/vehicle-types", null, read);
-        call(403, "GET", "/api/v1/admin/booking-sources", null, read);
-        call(403, "POST", "/api/v1/admin/catalogs", "{}", read);
+        var read = member(scope, "TYPEONLY", "'CATEGORY_READ'", "testtypereader");
+        call(200, "GET", "/api/v1/admin/categories?refType=VEHICLE_TYPE", null, read);
+        call(403, "GET", "/operations/categories", null, read);
+        call(403, "POST", "/api/v1/admin/categories", "{}", read);
     }
 
     @Test
@@ -2366,7 +2536,7 @@ class BusinessIntegrationTest {
         seed();
         long carrier = id("carriers", "VRMIENNAM");
         long vehicle = id("carrier_vehicles", "VRSOUTH01");
-        long type = id("catalog_items", "SEAT");
+        long type = categoryId("VEHICLE_TYPE", "SEAT");
         String update =
             "{\"plateNumber\":\"DEMO-001\",\"vehicleTypeId\":" +
             type +
@@ -2420,8 +2590,8 @@ class BusinessIntegrationTest {
             .path("id")
             .asLong();
         call(409, "POST", "/api/v1/admin/demo", "{}", admin);
-        assertEquals("0", sql("SELECT count(*) FROM catalog_items WHERE code LIKE 'DEMO%'"));
-        assertEquals("0", sql("SELECT count(*) FROM location_provinces"));
+        assertEquals("0", sql("SELECT count(*) FROM category WHERE code LIKE 'DEMO%'"));
+        assertEquals("0", sql("SELECT count(*) FROM category WHERE type='VALUE' AND ref_type='LOCATION'"));
         assertEquals("1", sql("SELECT count(*) FROM carriers"));
         assertEquals("Giữ nguyên", sql("SELECT description FROM carriers WHERE id=" + carrier));
     }
@@ -2430,7 +2600,7 @@ class BusinessIntegrationTest {
     void concurrentUpdatesHaveOneWinner() throws Exception {
         seed();
         long vehicle = id("carrier_vehicles", "VRSOUTH01");
-        long type = id("catalog_items", "SEAT");
+        long type = categoryId("VEHICLE_TYPE", "SEAT");
         String body =
             "{\"plateNumber\":\"DEMO-001\",\"vehicleTypeId\":" +
             type +
@@ -2595,7 +2765,7 @@ class BusinessIntegrationTest {
             .path("id")
             .asLong();
         long vehicleType = Long.parseLong(
-            sql("SELECT min(id) FROM catalog_items WHERE type='VEHICLE_TYPE' AND active")
+            sql("SELECT min(id) FROM category WHERE type='VALUE' AND ref_type='VEHICLE_TYPE' AND active")
         );
         String vehicleBody =
             "{\"carrierId\":" +
@@ -2615,32 +2785,28 @@ class BusinessIntegrationTest {
         );
         assertEquals(Long.toString(carrier), sql("SELECT carrier_id FROM carrier_vehicles WHERE id=" + vehicle));
 
-        String provinceBody = "{\"code\":\"SHAREDPROVINCE\",\"nameVi\":\"Tỉnh kiểm thử\",\"nameEn\":\"Test province\"}";
-        long province = call(201, "POST", "/api/v1/admin/provinces", provinceBody, admin).path("id").asLong();
-        long otherProvince = call(
-            201,
-            "POST",
-            "/api/v1/admin/provinces",
-            provinceBody.replace("SHAREDPROVINCE", "OTHERPROVINCE"),
-            admin
-        )
-            .path("id")
-            .asLong();
+        long province = categoryId("WARD", "26824");
+        long otherProvince = categoryId("WARD", "20200");
         String locationBody =
-            "{\"code\":\"SHAREDLOCATION\",\"provinceId\":" +
+            "{\"code\":\"SHAREDLOCATION\",\"refType\":\"LOCATION\",\"parentId\":" +
             province +
-            ",\"nameVi\":\"Điểm kiểm thử\",\"nameEn\":\"Test place\",\"address\":\"Địa chỉ kiểm thử\",\"latitude\":10.1,\"longitude\":106.2}";
-        long location = call(201, "POST", "/api/v1/admin/locations", locationBody, admin).path("id").asLong();
+            ",\"name\":\"Điểm kiểm thử\",\"props\":{\"nameEn\":\"Test place\",\"address\":\"Địa chỉ kiểm thử\",\"latitude\":10.1,\"longitude\":106.2}}";
+        var createdLocation = call(201, "POST", "/api/v1/admin/categories", locationBody, admin);
+        assertEquals(0, createdLocation.path("version").asLong());
+        long location = createdLocation.path("id").asLong();
         call(
             400,
             "PUT",
-            "/api/v1/admin/locations/" + location,
+            "/api/v1/admin/categories/" + location,
             locationBody
-                .replace("\"provinceId\":" + province, "\"provinceId\":" + otherProvince)
-                .replace("}", ",\"version\":0}"),
+                .replace("\"parentId\":" + province, "\"parentId\":" + otherProvince)
+                .replaceFirst("}$", ",\"version\":0}"),
             admin
         );
-        assertEquals(Long.toString(province), sql("SELECT province_id FROM location_places WHERE id=" + location));
+        assertEquals(
+            Long.toString(province),
+            sql("SELECT parent_id FROM category WHERE ref_type='LOCATION' AND id=" + location)
+        );
     }
 
     @Test
@@ -2691,7 +2857,7 @@ class BusinessIntegrationTest {
             .filter(model -> model.getJavaType().getName().startsWith("vn.vietroute.business."))
             .<Class<?>>map(EntityType::getJavaType)
             .toList();
-        assertEquals(14, models.size());
+        assertEquals(12, models.size());
         try (Connection connection = root.getBean(JdbcConnectionFactory.class).open()) {
             for (Class<?> model : models) {
                 String table = model.getAnnotation(Table.class).name();
@@ -3066,9 +3232,9 @@ class BusinessIntegrationTest {
             routeBody(
                 carrier,
                 "TRIPROUTE" + suffix,
-                id("location_places", "VRTHUDUC"),
-                id("location_places", "VRDANANG"),
-                id("location_places", "VRHANOI")
+                categoryId("LOCATION", "VRTHUDUC"),
+                categoryId("LOCATION", "VRDANANG"),
+                categoryId("LOCATION", "VRHANOI")
             ),
             admin
         )
@@ -3223,8 +3389,8 @@ class BusinessIntegrationTest {
             .truncatedTo(ChronoUnit.DAYS)
             .plusSeconds(16 * 3600);
         long trip = openBookingTrip(fixture, "SEARCHOVERNIGHT", start);
-        long middle = id("location_places", "VRDANANG"),
-            last = id("location_places", "VRHANOI");
+        long middle = categoryId("LOCATION", "VRDANANG"),
+            last = categoryId("LOCATION", "VRHANOI");
         var pickupDate = start
             .plusSeconds(1510 * 60L)
             .atZone(ZoneId.of(Business.TIME_ZONE))
@@ -3293,7 +3459,7 @@ class BusinessIntegrationTest {
                 .asInt()
         );
         long otherType = Long.parseLong(
-            sql("SELECT min(id) FROM catalog_items WHERE type='VEHICLE_TYPE' AND id<>" + type)
+            sql("SELECT min(id) FROM category WHERE type='VALUE' AND ref_type='VEHICLE_TYPE' AND id<>" + type)
         );
         assertEquals(
             0,
@@ -4007,7 +4173,7 @@ class BusinessIntegrationTest {
         assertEquals("2", sql("SELECT count(*) FROM trip_segments WHERE trip_id=" + id));
         String snapshot = trip.at("/stops/1/nameVi").asText();
         sql(
-            "UPDATE location_places SET name_vi='Tên mới' WHERE code='VRDANANG'; UPDATE carrier_route_stops SET cumulative_fare=200000 WHERE route_id=" +
+            "UPDATE category SET name='Tên mới' WHERE code='VRDANANG'; UPDATE carrier_route_stops SET cumulative_fare=200000 WHERE route_id=" +
                 fixture.route() +
                 " AND stop_order=2"
         );
@@ -4266,9 +4432,9 @@ class BusinessIntegrationTest {
     void routesValidateStopOrderFareParentsAndAtomicVersion() throws Exception {
         seed();
         long carrier = id("carriers", "VRMIENNAM"),
-            first = id("location_places", "VRTHUDUC"),
-            middle = id("location_places", "VRDANANG"),
-            last = id("location_places", "VRHANOI");
+            first = categoryId("LOCATION", "VRTHUDUC"),
+            middle = categoryId("LOCATION", "VRDANANG"),
+            last = categoryId("LOCATION", "VRHANOI");
         String body = routeBody(carrier, "TESTROUTE", first, middle, last);
         var route = call(201, "POST", "/api/v1/admin/routes", body, admin);
         long routeId = route.path("id").asLong();
@@ -4291,7 +4457,7 @@ class BusinessIntegrationTest {
         call(400, "PUT", "/api/v1/admin/routes/" + routeId, changed.replace("TESTROUTE", "DIFFERENT"), admin);
         assertEquals("3", sql("SELECT count(*) FROM carrier_route_stops WHERE route_id=" + routeId));
         sql(
-            "UPDATE location_provinces SET active=false WHERE id=(SELECT province_id FROM location_places WHERE id=" +
+            "UPDATE category SET active=false WHERE id=(SELECT parent_id FROM category WHERE ref_type='LOCATION' AND id=" +
                 first +
                 ")"
         );
@@ -4304,9 +4470,9 @@ class BusinessIntegrationTest {
         seed();
         long carrier = id("carriers", "VRMIENNAM"),
             other = id("carriers", "VRBACNAM"),
-            first = id("location_places", "VRTHUDUC"),
-            middle = id("location_places", "VRDANANG"),
-            last = id("location_places", "VRHANOI");
+            first = categoryId("LOCATION", "VRTHUDUC"),
+            middle = categoryId("LOCATION", "VRDANANG"),
+            last = categoryId("LOCATION", "VRHANOI");
         long owned = call(
             201,
             "POST",
@@ -4357,9 +4523,9 @@ class BusinessIntegrationTest {
     void routeStopFailureRollsBackParentAndExistingStopSet() throws Exception {
         seed();
         long carrier = id("carriers", "VRMIENNAM"),
-            first = id("location_places", "VRTHUDUC"),
-            middle = id("location_places", "VRDANANG"),
-            last = id("location_places", "VRHANOI");
+            first = categoryId("LOCATION", "VRTHUDUC"),
+            middle = categoryId("LOCATION", "VRDANANG"),
+            last = categoryId("LOCATION", "VRHANOI");
         String body = routeBody(carrier, "ROLLBACKROUTE", first, middle, last);
         long route = call(201, "POST", "/api/v1/admin/routes", body, admin).path("id").asLong();
         sql(

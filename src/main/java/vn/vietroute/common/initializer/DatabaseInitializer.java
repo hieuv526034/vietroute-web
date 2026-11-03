@@ -29,10 +29,8 @@ import vn.vietroute.business.booking.entity.BookingEvent;
 import vn.vietroute.business.carrier.entity.Carrier;
 import vn.vietroute.business.carrier.entity.Driver;
 import vn.vietroute.business.carrier.entity.Vehicle;
-import vn.vietroute.business.catalog.entity.CatalogItem;
-import vn.vietroute.business.catalog.entity.Location;
-import vn.vietroute.business.catalog.entity.Province;
-import vn.vietroute.business.catalog.repo.CatalogItemRepo;
+import vn.vietroute.business.catalog.entity.Category;
+import vn.vietroute.business.catalog.repo.CategoryRepo;
 import vn.vietroute.business.trip.entity.Route;
 import vn.vietroute.business.trip.entity.RouteStop;
 import vn.vietroute.business.trip.entity.Trip;
@@ -63,7 +61,7 @@ public class DatabaseInitializer implements InitializingBean {
 
     private final JdbcSchema schema;
 
-    private final CatalogItemRepo catalogs;
+    private final CategoryRepo catalogs;
 
     @Override
     public void afterPropertiesSet() {
@@ -100,12 +98,10 @@ public class DatabaseInitializer implements InitializingBean {
             connection,
             User.class,
             AccountChallenge.class,
-            CatalogItem.class,
+            Category.class,
             Carrier.class,
             Vehicle.class,
             Driver.class,
-            Province.class,
-            Location.class,
             Route.class,
             RouteStop.class,
             Trip.class,

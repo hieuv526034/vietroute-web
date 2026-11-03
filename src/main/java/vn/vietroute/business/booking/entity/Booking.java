@@ -80,7 +80,7 @@ public class Booking extends BaseEntity {
     @Column(name = "source_code", nullable = false, length = 20)
     private String sourceCode;
 
-    // ID giá trị nguồn đặt trong catalog_items.
+    // ID giá trị nguồn đặt trong category.
     @Column(name = "source_id", nullable = false)
     private long sourceId;
 

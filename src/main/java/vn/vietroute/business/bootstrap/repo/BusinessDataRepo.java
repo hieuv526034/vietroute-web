@@ -91,11 +91,14 @@ public class BusinessDataRepo {
         created += insert(
             connection,
             """
-            INSERT INTO catalog_items(type, code, name_vi, name_en, sort_order, created_by, updated_by)
-            SELECT type, code, "nameVi", "nameEn", "sortOrder", ?, ?
+            INSERT INTO category(type, ref_type, code, name, props, sort_order, created_by, updated_by)
+            SELECT 'VALUE', type, code, "nameVi", jsonb_build_object('nameEn', "nameEn") ||
+                CASE WHEN type='VEHICLE_TYPE' THEN jsonb_build_object('seatCount',
+                    CASE code WHEN 'SEAT' THEN 45 WHEN 'SLEEPER' THEN 40 ELSE 9 END) ELSE '{}'::jsonb END,
+                "sortOrder", ?, ?
             FROM jsonb_to_recordset(?::jsonb) x(type text, code text, "nameVi" text, "nameEn" text,
                 "sortOrder" integer)
-            ON CONFLICT (type, code) DO NOTHING
+            ON CONFLICT (ref_type, code) DO NOTHING
             """,
             data.path("catalogs"),
             actor
@@ -103,12 +106,11 @@ public class BusinessDataRepo {
         created += insert(
             connection,
             """
-            INSERT INTO location_provinces(code, name_vi, name_en, sort_order, active, created_by,
-                updated_by)
-            SELECT code, "nameVi", "nameEn", "sortOrder", active, ?, ?
+            INSERT INTO category(type, ref_type, code, name, props, sort_order, active, created_by, updated_by)
+            SELECT 'VALUE', 'PROVINCE', code, "nameVi", jsonb_build_object('nameEn', "nameEn"), "sortOrder", active, ?, ?
             FROM jsonb_to_recordset(?::jsonb) x(code text, "nameVi" text, "nameEn" text, "sortOrder" integer,
                 active boolean)
-            ON CONFLICT (code) DO NOTHING
+            ON CONFLICT (ref_type, code) DO NOTHING
             """,
             data.path("provinces"),
             actor
@@ -116,14 +118,14 @@ public class BusinessDataRepo {
         created += insert(
             connection,
             """
-            INSERT INTO location_places(code, province_id, name_vi, name_en, address, latitude, longitude,
-                sort_order, active, created_by, updated_by)
-            SELECT x.code, p.id, x."nameVi", x."nameEn", x.address, x.latitude, x.longitude, x."sortOrder",
-                x.active, ?, ?
-            FROM jsonb_to_recordset(?::jsonb) x(code text, "provinceCode" text, "nameVi" text, "nameEn" text,
+            INSERT INTO category(type, ref_type, code, parent_id, name, props, sort_order, active, created_by, updated_by)
+            SELECT 'VALUE', 'LOCATION', x.code, w.id, x."nameVi", jsonb_build_object('nameEn', x."nameEn",
+                'address', x.address, 'latitude', x.latitude, 'longitude', x.longitude), x."sortOrder", x.active, ?, ?
+            FROM jsonb_to_recordset(?::jsonb) x(code text, "provinceCode" text, "wardCode" text, "nameVi" text, "nameEn" text,
                 address text, latitude numeric, longitude numeric, "sortOrder" integer, active boolean)
-            JOIN location_provinces p ON p.code = x."provinceCode"
-            ON CONFLICT (code) DO NOTHING
+            JOIN category p ON p.type='VALUE' AND p.ref_type='PROVINCE' AND p.code = x."provinceCode"
+            JOIN category w ON w.type='VALUE' AND w.ref_type='WARD' AND w.code=x."wardCode" AND w.parent_id=p.id
+            ON CONFLICT (ref_type, code) DO NOTHING
             """,
             data.path("locations"),
             actor
@@ -170,7 +172,7 @@ public class BusinessDataRepo {
             FROM jsonb_to_recordset(?::jsonb) x(code text, "carrierCode" text, "typeCode" text,
                 "plateNumber" text, capacity integer, active boolean)
             JOIN carriers c ON c.code = x."carrierCode"
-            JOIN catalog_items t ON t.type = 'VEHICLE_TYPE'
+            JOIN category t ON t.ref_type = 'VEHICLE_TYPE' AND t.type='VALUE'
                 AND t.code = x."typeCode"
             ON CONFLICT (carrier_id, code) DO NOTHING
             """,
@@ -259,7 +261,7 @@ public class BusinessDataRepo {
                 JOIN carrier_routes r ON r.code = x.route_code
                 JOIN carriers c ON c.id = r.carrier_id
                     AND c.code IN ('VRMIENNAM', 'VRBACNAM')
-                JOIN location_places l ON l.code = x.location_code
+                JOIN category l ON l.type='VALUE' AND l.ref_type='LOCATION' AND l.code = x.location_code
                 WHERE r.created_by = 0
                 ON CONFLICT (route_id, stop_order) DO NOTHING
                 """
@@ -297,7 +299,7 @@ public class BusinessDataRepo {
             JOIN input x ON x.code=r.code AND x."carrierCode"=c.code
             CROSS JOIN LATERAL jsonb_to_recordset(x.stops) s("locationCode" text,"stopOrder" integer,
                 arrival integer,departure integer,fare numeric,pickup boolean,dropoff boolean)
-            JOIN location_places l ON l.code=s."locationCode"
+            JOIN category l ON l.type='VALUE' AND l.ref_type='LOCATION' AND l.code=s."locationCode"
             """,
             routes
         );
@@ -328,7 +330,7 @@ public class BusinessDataRepo {
                         CASE WHEN x."departureTime" IS NOT NULL
                             THEN to_char(t.departure AT TIME ZONE 'Asia/Ho_Chi_Minh','YYYYMMDD')
                             ELSE lpad((x.day+7)::text,2,'0') END,
-                    r.name_vi,r.name_en,v.plate_number,v.vehicle_type_id,kind.name_vi,kind.name_en,
+                    r.name_vi,r.name_en,v.plate_number,v.vehicle_type_id,kind.name,kind.props->>'nameEn',
                     drv.name,drv.phone,t.departure,t.departure+duration.minutes*INTERVAL '1 minute',
                     v.capacity,
                     CASE WHEN x."departureTime" IS NOT NULL THEN CASE
@@ -351,7 +353,7 @@ public class BusinessDataRepo {
                 JOIN carrier_drivers drv ON drv.carrier_id=c.id AND drv.code=x."driverCode" AND drv.active
                 JOIN auth_users u ON u.id=drv.user_id AND u.username=x."driverUsername" AND u.active
                     AND NOT u.deleted AND NOT u.must_change_password AND u.email_verified_at IS NOT NULL
-                JOIN catalog_items kind ON kind.id=v.vehicle_type_id AND kind.active
+                JOIN category kind ON kind.id=v.vehicle_type_id AND kind.ref_type='VEHICLE_TYPE' AND kind.type='VALUE' AND kind.active
                 CROSS JOIN LATERAL (SELECT max(departure_offset_minutes) minutes,
                     count(*) count FROM carrier_route_stops WHERE route_id=r.id) duration
                 CROSS JOIN LATERAL (SELECT CASE WHEN x."departureTime" IS NOT NULL THEN
@@ -377,8 +379,8 @@ public class BusinessDataRepo {
             INSERT INTO trip_stops(trip_id,carrier_id,scope_id,location_id,province_id,stop_order,
                 name_vi,name_en,address,latitude,longitude,scheduled_arrival_at,scheduled_departure_at,
                 actual_arrival_at,actual_departure_at,cumulative_fare,pickup_allowed,dropoff_allowed)
-            SELECT t.id,t.carrier_id,t.scope_id,l.id,l.province_id,s.stop_order,l.name_vi,l.name_en,
-                l.address,l.latitude,l.longitude,t.departure_at+s.arrival_offset_minutes*INTERVAL '1 minute',
+            SELECT t.id,t.carrier_id,t.scope_id,l.id,w.parent_id,s.stop_order,l.name AS name_vi,l.props->>'nameEn' AS name_en,
+                l.props->>'address' AS address,(l.props->>'latitude')::numeric AS latitude,(l.props->>'longitude')::numeric AS longitude,t.departure_at+s.arrival_offset_minutes*INTERVAL '1 minute',
                 t.departure_at+s.departure_offset_minutes*INTERVAL '1 minute',
                 CASE WHEN t.status='COMPLETED' OR t.status='IN_PROGRESS' AND s.stop_order=1
                     THEN t.departure_at+s.arrival_offset_minutes*INTERVAL '1 minute' END,
@@ -387,7 +389,8 @@ public class BusinessDataRepo {
                     THEN t.departure_at+s.departure_offset_minutes*INTERVAL '1 minute' END,
                 s.cumulative_fare,s.pickup_allowed,s.dropoff_allowed
             FROM vr_init_trips t JOIN carrier_route_stops s ON s.route_id=t.route_id
-            JOIN location_places l ON l.id=s.location_id
+            JOIN category l ON l.type='VALUE' AND l.ref_type='LOCATION' AND l.id=s.location_id
+            JOIN category w ON w.type='VALUE' AND w.ref_type='WARD' AND w.id=l.parent_id
             """,
             null
         );
@@ -489,7 +492,7 @@ public class BusinessDataRepo {
                     least(p.departure_at-INTERVAL '36 hours',CURRENT_TIMESTAMP-INTERVAL '6 hours'),
                     CASE WHEN p.booking_status='COMPLETED' THEN p.end_at
                         ELSE least(p.departure_at-INTERVAL '30 hours',CURRENT_TIMESTAMP-INTERVAL '5 hours') END
-                FROM priced p JOIN catalog_items source ON source.type='BOOKING_SOURCE' AND source.code=p.source
+                FROM priced p JOIN category source ON source.ref_type='BOOKING_SOURCE' AND source.type='VALUE' AND source.code=p.source
                 WHERE p.source='PHONE' OR p.booking_status='COMPLETED' OR NOT EXISTS (
                     SELECT 1 FROM bookings b WHERE b.customer_id=p.customer AND b.source_code='WEB'
                         AND b.status IN ('PENDING','CONFIRMED'))

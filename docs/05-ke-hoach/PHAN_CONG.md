@@ -51,7 +51,7 @@ flowchart LR
 
 | Khối | Source, bảng và công việc |
 |---|---|
-| catalog | [catalog](../../src/main/java/vn/vietroute/business/catalog): catalog_items/location_provinces/location_places; CRUD, lookup và select phụ thuộc |
+| catalog | [catalog](../../src/main/java/vn/vietroute/business/catalog): một bảng category, CRUD, lookup theo nhóm và bảng cây tải theo cha |
 | carrier | [carrier](../../src/main/java/vn/vietroute/business/carrier): carriers/carrier_vehicles/carrier_drivers; scope, xe/sức chứa, tài xế/account và tra cứu công khai |
 | trip | [trip](../../src/main/java/vn/vietroute/business/trip):6 bảng tuyến/điểm/chuyến/snapshot/segment/event; tìm chặng, phân công, lịch và tiến độ tài xế |
 | booking | [booking](../../src/main/java/vn/vietroute/business/booking): bookings/booking_events; WEB/PHONE, xác nhận/hủy, thu–hoàn thủ công và owner |

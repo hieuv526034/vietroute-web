@@ -25,6 +25,7 @@ import vn.vietroute.business.carrier.dto.search.PublicCarrierSearch;
 import vn.vietroute.business.carrier.entity.Carrier;
 import vn.vietroute.business.carrier.entity.Driver;
 import vn.vietroute.business.carrier.entity.Vehicle;
+import vn.vietroute.business.catalog.constant.CategoryRefType;
 import vn.vietroute.common.base.BaseEntity;
 import vn.vietroute.common.base.JpaRepositorySupport;
 import vn.vietroute.common.base.PageResponse;
@@ -53,12 +54,12 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
             """
             carrier_vehicles item
             JOIN carriers owner ON owner.id = item.carrier_id AND owner.scope_id = item.scope_id
-            JOIN catalog_items vt ON vt.id = item.vehicle_type_id
+            JOIN category vt ON vt.id = item.vehicle_type_id AND vt.ref_type='VEHICLE_TYPE' AND vt.type='VALUE'
             """,
             "item",
             """
             item.id, item.scope_id, item.carrier_id, owner.name AS carrier_name, item.code, item.plate_number,
-                item.vehicle_type_id, vt.name_vi AS vehicle_type_name, item.capacity, item.active,
+                item.vehicle_type_id, vt.name AS vehicle_type_name, item.capacity, item.active,
                 item.created_at, item.updated_at, item.created_by, item.updated_by, item.version
             """,
             "item.code,item.plate_number,owner.name"
@@ -275,7 +276,7 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
     public void requireVehicleType(Connection connection, long id) throws SQLException {
         try (
             PreparedStatement query = connection.prepareStatement(
-                "SELECT id FROM catalog_items WHERE id=? AND type='VEHICLE_TYPE' AND active FOR SHARE"
+                "SELECT id FROM category WHERE id=? AND ref_type='VEHICLE_TYPE' AND type='VALUE' AND active FOR SHARE"
             )
         ) {
             query.setLong(1, id);
@@ -372,7 +373,7 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
             .code(body.getCode())
             .plateNumber(body.getPlateNumber().strip().toUpperCase(Locale.ROOT))
             .vehicleTypeId(body.getVehicleTypeId())
-            .vehicleType("VEHICLE_TYPE")
+            .vehicleType(CategoryRefType.VEHICLE_TYPE)
             .capacity(body.getCapacity())
             .active(body.isActive())
             .build();

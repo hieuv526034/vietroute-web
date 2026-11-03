@@ -18,6 +18,7 @@
     const tabs = window.VietRouteUI.tabs(node('route-tabs'));
     const pager = tables.pager('route', { busy: () => busy, onChange: (query) => perform(() => load(query)) });
     const locations = new Map();
+    let provinces = [];
     const english = document.documentElement.lang.startsWith('en');
     const can = (method, suffix = '') => capability.targets.includes(`${method} ${path}${suffix}`);
     const text = (tag, value) => {
@@ -48,6 +49,12 @@
             (input) =>
                 (input.disabled = busy || readOnly || Boolean(selected && ['code', 'carrierId'].includes(input.name))),
         );
+        for (const select of form.querySelectorAll('[data-dependent-parent]')) {
+            select.disabled =
+                busy ||
+                readOnly ||
+                !select.closest('.route-stop-row').querySelector(`[name="${select.dataset.dependentParent}"]`).value;
+        }
         node('route-save').hidden = readOnly;
         node('route-add-stop').hidden = readOnly;
     };
@@ -127,26 +134,21 @@
         if (!page.content.length) empty(labels.empty);
         pager.update(page);
     };
-    const updateLocations = () => {
-        for (const select of node('route-stop-list').querySelectorAll('select')) {
-            const value = select.value;
-            select.replaceChildren(
-                option('', labels.choose),
-                ...Array.from(locations.values()).map((item) => option(item.id, placeLabel(item))),
-            );
-            select.value = value;
-        }
-    };
-    const choices = (url) =>
-        tables.readOptions(async (paging) => (await api.get(url, { params: paging, timeout: 10000 })).data.data);
-    const findLocations = async () => {
-        const items = await choices('/api/v1/locations');
-        const keep = new Set(
-            Array.from(node('route-stop-list').querySelectorAll('select')).map((select) => Number(select.value)),
+    const choices = (url, params = {}) =>
+        tables.readOptions(
+            async (paging) => (await api.get(url, { params: { ...params, ...paging }, timeout: 10000 })).data.data,
         );
-        for (const id of locations.keys()) if (!keep.has(id)) locations.delete(id);
+    const findProvinces = async () => {
+        provinces = await choices('/api/v1/categories', { refType: 'PROVINCE' });
+    };
+    const findLocations = async (row) => {
+        const province = row.querySelector('[name="stopWardId"]'),
+            select = row.querySelector('[name="locationId"]');
+        select.replaceChildren(option('', labels.choose));
+        if (!province.value) return;
+        const items = await choices('/api/v1/categories', { refType: 'LOCATION', parentId: province.value });
         for (const item of items) locations.set(item.id, item);
-        updateLocations();
+        select.replaceChildren(option('', labels.choose), ...items.map((item) => option(item.id, placeLabel(item))));
     };
     const findCarriers = async () => {
         const items = await choices(`${path}/carriers`);
@@ -192,7 +194,47 @@
             wrap.append(input);
             grid.append(wrap);
         };
+        const provinceLabel = text('label', ''),
+            province = document.createElement('select');
+        provinceLabel.append(text('span', labels.province));
+        province.name = 'stopProvinceId';
+        province.className = 'form-select';
+        province.replaceChildren(option('', labels.choose), ...provinces.map((value) => option(value.id, value.name)));
+        provinceLabel.append(province);
+        grid.append(provinceLabel);
         field('locationId', labels.location, 'select', item.locationId);
+        const location = row.querySelector('[name="locationId"]') || grid.querySelector('[name="locationId"]');
+        location.replaceChildren(option('', labels.choose));
+        if (item.locationId) location.append(option(item.locationId, placeLabel(item)));
+        location.value = String(item.locationId ?? '');
+        const wardLabel = text('label', ''),
+            ward = document.createElement('select');
+        wardLabel.append(text('span', labels.ward));
+        ward.name = 'stopWardId';
+        ward.className = 'form-select';
+        ward.dataset.dependentParent = 'stopProvinceId';
+        ward.replaceChildren(option('', labels.choose));
+        if (item.wardId) ward.append(option(item.wardId, item.wardName));
+        ward.value = String(item.wardId ?? '');
+        if (item.provinceId) {
+            if (!provinces.some((value) => value.id === item.provinceId)) {
+                province.append(option(item.provinceId, item.provinceName));
+            }
+            province.value = String(item.provinceId);
+        }
+        wardLabel.append(ward);
+        provinceLabel.after(wardLabel);
+        location.dataset.dependentParent = 'stopWardId';
+        province.addEventListener('change', () =>
+            perform(async () => {
+                ward.replaceChildren(option('', labels.choose));
+                location.replaceChildren(option('', labels.choose));
+                if (!province.value) return;
+                const items = await choices('/api/v1/categories', { refType: 'WARD', parentId: province.value });
+                ward.replaceChildren(option('', labels.choose), ...items.map((value) => option(value.id, value.name)));
+            }),
+        );
+        ward.addEventListener('change', () => perform(() => findLocations(row)));
         field('arrivalOffsetMinutes', labels.arrival, 'number', item.arrivalOffsetMinutes ?? 0);
         field('departureOffsetMinutes', labels.departure, 'number', item.departureOffsetMinutes ?? 0);
         field('cumulativeFare', labels.fare, 'number', item.cumulativeFare ?? 0);
@@ -246,11 +288,11 @@
             form.elements.active.checked = selected.active;
             for (const stop of selected.stops)
                 locations.set(stop.locationId, { id: stop.locationId, nameVi: stop.nameVi, nameEn: stop.nameEn });
+            if (!view) await findProvinces();
             for (const stop of selected.stops) addStop(stop);
-            if (!view) await findLocations();
         } else {
             await findCarriers();
-            await findLocations();
+            await findProvinces();
             addStop();
             addStop();
         }
