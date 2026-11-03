@@ -30,7 +30,6 @@ public interface FunctionResourceRepo extends JpaRepository<FunctionResource, Lo
     )
     Set<String> targets(@Param("code") String code);
 
-    @Transactional(readOnly = true)
     @Query(
         value = """
         SELECT function_code, target
@@ -43,6 +42,7 @@ public interface FunctionResourceRepo extends JpaRepository<FunctionResource, Lo
     List<Map<String, Object>> targetsRows(@Param("codes") List<String> codes);
 
     /** Đọc tập cho toàn trang; vòng lặp chỉ map dữ liệu đã tải, không query từng function. */
+    @Transactional(readOnly = true)
     default Map<String, Set<String>> targetsFor(List<String> functions) {
         Map<String, Set<String>> result = new LinkedHashMap<>();
         if (functions.isEmpty()) return result;

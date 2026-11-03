@@ -27,7 +27,7 @@ public class AccessChangeRepo extends JpaRepositorySupport<AccessChange, Long> {
     private static final String INSERT = """
     INSERT INTO auth_access_changes(event_type, target_kind, target_key, actor_id, trace_id,
         before_state, after_state, created_by, updated_by)
-    VALUES (?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?::JSONB, ?::JSONB, ?, ?)
     """;
 
     private static final ObjectMapper JSON = new ObjectMapper();
@@ -122,7 +122,7 @@ public class AccessChangeRepo extends JpaRepositorySupport<AccessChange, Long> {
 
     /** Dọn một lô trong transaction startup/nhật ký, không thêm query vào từng mutation. */
     public static int cleanup(Connection connection) throws SQLException {
-        try (PreparedStatement lock = connection.prepareStatement("SELECT pg_try_advisory_xact_lock(781205618)")) {
+        try (PreparedStatement lock = connection.prepareStatement("SELECT PG_TRY_ADVISORY_XACT_LOCK(781205618)")) {
             try (ResultSet row = lock.executeQuery()) {
                 row.next();
                 if (!row.getBoolean(1)) return 0;
@@ -138,7 +138,7 @@ public class AccessChangeRepo extends JpaRepositorySupport<AccessChange, Long> {
                     FROM auth_access_changes
                     WHERE created_at < CURRENT_TIMESTAMP - INTERVAL '7 days'
                         OR id < (
-                            SELECT COALESCE(max(id), 0) - 1000
+                            SELECT COALESCE(MAX(id), 0) - 1000
                             FROM auth_access_changes
                         )
                     ORDER BY id

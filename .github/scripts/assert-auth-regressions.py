@@ -48,5 +48,7 @@ for name in groups[sys.argv[1]]:
         required.update({'migrationsCreateExpectedPrimaryKeysAndJpaIndexes',
                          'schemaRegressionDetectsMissingIndexesWrongColumnsAndPrimaryKeys'})
         required.add('nativeQueryRepositoriesKeepConfiguredSchemaPagingAndTransactionRollback')
+        required.update({'nestedTransactionFailureCannotCommitJpaOrJdbcEvenWhenCallerCatchesIt',
+                         'repositoryLockAndTripProgressRequireServiceTransactionBeforeExecutingQuery'})
         assert required <= cases, 'Thiếu regression endpoint/JPA/batch/scope bắt buộc'
 print('Regression ' + sys.argv[1] + ': đủ ca kiểm, không fail/error/skip')

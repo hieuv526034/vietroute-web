@@ -259,7 +259,7 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
                 """
                 UPDATE auth_users
                 SET previous_password_hash_2 = previous_password_hash_1, previous_password_hash_1 = password_hash,
-                    password_hash = ?, must_change_password = false, token_version = token_version + 1,
+                    password_hash = ?, must_change_password = FALSE, token_version = token_version + 1,
                     failed_login_attempts = 0, locked_until = NULL, updated_by = ?, updated_at = CURRENT_TIMESTAMP,
                     version = version + 1
                 WHERE id = ?
@@ -283,7 +283,7 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
                 """
                 SELECT hash
                 FROM auth_users
-                CROSS JOIN LATERAL unnest(ARRAY [previous_password_hash_1, previous_password_hash_2]) hash
+                CROSS JOIN LATERAL UNNEST(ARRAY [previous_password_hash_1, previous_password_hash_2]) hash
                 WHERE id = ? AND hash IS NOT NULL
                 """
             )
@@ -322,7 +322,7 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
     /** COUNT và trang dữ liệu cùng bộ lọc bind; không dùng N+1 để lấy role. */
     public PageResponse<UserDTO> search(UserSearch page) {
         return read(connection -> {
-            String where = " FROM auth_users u WHERE NOT u.deleted AND u.id<>? AND lower(u.username) LIKE ? ESCAPE '!'";
+            String where = " FROM auth_users u WHERE NOT u.deleted AND u.id<>? AND LOWER(u.username) LIKE ? ESCAPE '!'";
             if (page.getRole() != null && !page.getRole().isBlank()) where += """
                 AND EXISTS (
                     SELECT 1
@@ -332,7 +332,7 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
             """;
             if (page.getActive() != null) where += " AND u.active=?";
             long total;
-            try (PreparedStatement count = connection.prepareStatement("SELECT count(*)" + where)) {
+            try (PreparedStatement count = connection.prepareStatement("SELECT COUNT(*)" + where)) {
                 bind(count, page);
                 try (ResultSet row = count.executeQuery()) {
                     row.next();
@@ -348,7 +348,7 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
                         u.must_change_password, (u.email_verified_at IS NULL) AS email_verification_required,
                             u.locked_until,
                         u.version, u.created_at, u.updated_at, COALESCE((
-                            SELECT string_agg(role_code, ','
+                            SELECT STRING_AGG(role_code, ','
                             ORDER BY role_code)
                             FROM auth_user_roles
                             WHERE user_id = u.id AND scope_id = 0
@@ -413,7 +413,7 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
     public boolean existsUsername(String username) {
         return (
             entityManager
-                .createQuery("select count(u) from User u where u.username=:name", Long.class)
+                .createQuery("SELECT COUNT(u) FROM User u WHERE u.username=:name", Long.class)
                 .setParameter("name", username)
                 .getSingleResult() > 0
         );
@@ -423,7 +423,7 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
         return (
             email != null &&
             entityManager
-                .createQuery("select count(u) from User u where u.email=:email and u.deleted=false", Long.class)
+                .createQuery("SELECT COUNT(u) FROM User u WHERE u.email=:email AND u.deleted=FALSE", Long.class)
                 .setParameter("email", email)
                 .getSingleResult() > 0
         );
@@ -431,7 +431,7 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
 
     /** Cùng khóa với mọi thao tác gán quyền; nhiều node không tạo admin hoặc mapping trùng nhau. */
     public void lockBootstrap(Connection connection) throws SQLException {
-        try (PreparedStatement query = connection.prepareStatement("SELECT pg_advisory_xact_lock(781205611)")) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT PG_ADVISORY_XACT_LOCK(781205611)")) {
             query.execute();
         }
     }
@@ -464,7 +464,7 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
                 """
                 INSERT INTO auth_users(username, password_hash, display_name, created_by, updated_by, email,
                     email_verified_at, active, activation_pending, must_change_password)
-                VALUES (?, ?, 'Quản trị viên', ?, ?, ?, CURRENT_TIMESTAMP, true, false, false)
+                VALUES (?, ?, 'Quản trị viên', ?, ?, ?, CURRENT_TIMESTAMP, TRUE, FALSE, FALSE)
                 RETURNING id
                 """
             )
@@ -486,8 +486,8 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
                 """
                 UPDATE auth_users
                 SET email = ?, email_verified_at = CASE WHEN email IS DISTINCT FROM ?
-                    OR email_verified_at IS NULL THEN CURRENT_TIMESTAMP ELSE email_verified_at END, active = true,
-                    deleted = false, activation_pending = false, must_change_password = false,
+                    OR email_verified_at IS NULL THEN CURRENT_TIMESTAMP ELSE email_verified_at END, active = TRUE,
+                    deleted = FALSE, activation_pending = FALSE, must_change_password = FALSE,
                         token_version = token_version + 1,
                     version = version + 1, updated_at = CURRENT_TIMESTAMP, updated_by = ?
                 WHERE id = ?
@@ -549,7 +549,7 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
                 """
                 INSERT INTO auth_users(username, display_name, email, password_hash, email_verified_at, active,
                     activation_pending, must_change_password, bootstrap_scope_pending)
-                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, true, false, false, true)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, TRUE, FALSE, FALSE, TRUE)
                 ON CONFLICT DO NOTHING
                 """
             )
@@ -608,7 +608,7 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
                 """
                 INSERT INTO auth_user_roles(user_id, role_code, scope_id)
                 SELECT u.id, ur.role_code, c.scope_id
-                FROM jsonb_to_recordset(?::jsonb) x(username text, role text, "carrierCode" text, "driverCode" text)
+                FROM JSONB_TO_RECORDSET(?::JSONB) x(username TEXT, role TEXT, "carrierCode" TEXT, "driverCode" TEXT)
                 JOIN auth_users u ON u.username = x.username
                 JOIN auth_user_roles ur ON ur.user_id = u.id AND ur.scope_id = 0
                     AND ur.role_code = x.role
@@ -629,7 +629,7 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
                 """
                 UPDATE carrier_drivers d
                 SET user_id = u.id, updated_at = CURRENT_TIMESTAMP, updated_by = 0, version = d.version + 1
-                FROM jsonb_to_recordset(?::jsonb) x(username text, "carrierCode" text, "driverCode" text)
+                FROM JSONB_TO_RECORDSET(?::JSONB) x(username TEXT, "carrierCode" TEXT, "driverCode" TEXT)
                 JOIN auth_users u ON u.username = x.username
                 JOIN carriers c ON c.code = x."carrierCode"
                 WHERE u.bootstrap_scope_pending
@@ -646,11 +646,11 @@ public class UserRepo extends JpaRepositorySupport<User, Long> {
             PreparedStatement query = connection.prepareStatement(
                 """
                 UPDATE auth_users
-                SET bootstrap_scope_pending = false
+                SET bootstrap_scope_pending = FALSE
                 WHERE bootstrap_scope_pending
                     AND (username IN (
-                        SELECT x.username FROM jsonb_to_recordset(?::jsonb)
-                            x(username text, "carrierCode" text)
+                        SELECT x.username FROM JSONB_TO_RECORDSET(?::JSONB)
+                            x(username TEXT, "carrierCode" TEXT)
                         WHERE x."carrierCode" IS NULL
                     ) OR EXISTS (
                         SELECT 1

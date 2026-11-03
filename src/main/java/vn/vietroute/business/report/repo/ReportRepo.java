@@ -31,12 +31,12 @@ public class ReportRepo {
         String filter = """
         FROM carriers owner
         WHERE %s
-            AND lower(owner.code || ' ' || owner.name) LIKE ? ESCAPE '!'
+            AND LOWER(owner.code || ' ' || owner.name) LIKE ? ESCAPE '!'
         """.formatted(UserRoleRepo.visibleSql());
         String text = body.getQuery() == null ? "" : body.getQuery().strip().toLowerCase(Locale.ROOT);
         String pattern = "%" + text.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
         long total;
-        try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + filter)) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT COUNT(*)" + filter)) {
             int at = UserRoleRepo.bindVisible(query, 1);
             query.setString(at, pattern);
             try (ResultSet row = query.executeQuery()) {
@@ -86,11 +86,11 @@ public class ReportRepo {
         sql.append(
             """
             ), trip_totals AS (
-                SELECT count(*) AS trip_count
+                SELECT COUNT(*) AS trip_count
             """
         );
         for (TripStatus status : TripStatus.values())
-            sql.append(",count(*) FILTER(WHERE status='")
+            sql.append(",COUNT(*) FILTER(WHERE status='")
                 .append(status.name())
                 .append("') AS trip_")
                 .append(status.name());
@@ -98,23 +98,23 @@ public class ReportRepo {
             """
                 FROM selected
             ), booking_totals AS (
-                SELECT count(*) AS booking_count
+                SELECT COUNT(*) AS booking_count
             """
         );
         for (BookingStatus status : BookingStatus.values())
-            sql.append(",count(*) FILTER(WHERE b.status='")
+            sql.append(",COUNT(*) FILTER(WHERE b.status='")
                 .append(status.name())
                 .append("') AS booking_")
                 .append(status.name());
         sql.append(
             """
-                , coalesce(sum(b.seats)
+                , COALESCE(SUM(b.seats)
                     FILTER (WHERE b.status IN ('CONFIRMED', 'COMPLETED')), 0) AS confirmed_seats
-                , coalesce(sum(b.total_price)
+                , COALESCE(SUM(b.total_price)
                     FILTER (WHERE b.status IN ('CONFIRMED', 'COMPLETED')), 0) AS confirmed_value
-                , coalesce(sum(b.paid_amount), 0) AS paid_amount
-                , coalesce(sum(b.refunded_amount), 0) AS refunded_amount
-                , coalesce(sum(b.paid_amount - b.refunded_amount)
+                , COALESCE(SUM(b.paid_amount), 0) AS paid_amount
+                , COALESCE(SUM(b.refunded_amount), 0) AS refunded_amount
+                , COALESCE(SUM(b.paid_amount - b.refunded_amount)
                     FILTER (WHERE b.status = 'CANCELLED'), 0) AS refund_outstanding
                 FROM bookings b
                 JOIN selected t ON t.id = b.trip_id AND t.carrier_id = b.carrier_id

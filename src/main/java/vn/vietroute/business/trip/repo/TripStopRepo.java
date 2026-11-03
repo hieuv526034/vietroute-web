@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.business.trip.dto.response.TripResponse;
 import vn.vietroute.business.trip.entity.TripStop;
@@ -13,7 +14,6 @@ import vn.vietroute.common.exception.BusinessException;
 
 /** Actual timestamp do server ghi trên cùng transaction sau khi service đã khóa trip/kiểm phân công. */
 public interface TripStopRepo extends Repository<TripStop, Long> {
-    @Transactional
     @Modifying
     @Query(
         value = """
@@ -34,7 +34,6 @@ public interface TripStopRepo extends Repository<TripStop, Long> {
         @Param("actor") long actor
     );
 
-    @Transactional
     @Modifying
     @Query(
         value = """
@@ -55,7 +54,11 @@ public interface TripStopRepo extends Repository<TripStop, Long> {
         @Param("actor") long actor
     );
 
-    /** Giữ CAS một dòng; lệnh JPA tham gia transaction JPA/JDBC đang mở của service. */
+    /**
+     * Service gọi qua proxy và phải mở transaction trước khi khóa trip. MANDATORY không tạo
+     * giao dịch ngắn riêng rồi nhả khóa sớm; query con chỉ thực thi trong giao dịch hiện tại.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
     default void mark(TripResponse trip, int order, boolean arrival, Instant now, long actor) {
         int changed = arrival
             ? markArrival(trip.getId(), trip.getCarrierId(), trip.getScopeId(), order, now, actor)

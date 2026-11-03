@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.Column;
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
@@ -69,6 +70,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.transaction.IllegalTransactionStateException;
+import org.springframework.transaction.UnexpectedRollbackException;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import vn.vietroute.auth.dto.FunctionDTO;
 import vn.vietroute.auth.dto.RoleDTO;
@@ -110,6 +113,8 @@ import vn.vietroute.business.report.dto.search.ReportCarrierSearch;
 import vn.vietroute.business.report.dto.search.ReportSearch;
 import vn.vietroute.business.report.repo.ReportRepo;
 import vn.vietroute.business.report.service.ReportService;
+import vn.vietroute.business.trip.dto.response.TripResponse;
+import vn.vietroute.business.trip.repo.TripStopRepo;
 import vn.vietroute.common.api_journal.dto.response.ApiJournalDetail;
 import vn.vietroute.common.api_journal.dto.response.ApiJournalEntry;
 import vn.vietroute.common.api_journal.dto.search.ApiJournalSearch;
@@ -848,6 +853,65 @@ class BusinessIntegrationTest {
             .getResponse();
         assertEquals(401, invalid.getStatus());
         assertEquals(null, invalid.getHeader("Server-Timing"));
+    }
+
+    @Test
+    void nestedTransactionFailureCannotCommitJpaOrJdbcEvenWhenCallerCatchesIt() throws Exception {
+        sql("INSERT INTO auth_functions(code,name_vi,name_en) VALUES('TXJOIN','Kiểm transaction','Transaction test')");
+        var transactions = root.getBean(JdbcTransactions.class);
+        var functions = root.getBean(FunctionRepo.class);
+        assertThrows(UnexpectedRollbackException.class, () ->
+            transactions.execute(connection -> {
+                var function = functions.lock("TXJOIN");
+                function.setDescription("JPA chưa commit");
+                functions.saveAndFlush(function);
+                assertThrows(IllegalStateException.class, () ->
+                    transactions.execute(joined -> {
+                        try (
+                            var statement = joined.createStatement();
+                            var row = statement.executeQuery("SELECT txid_current()")
+                        ) {
+                            row.next();
+                            assertEquals(
+                                row.getLong(1),
+                                (
+                                    (Number) root
+                                        .getBean(EntityManager.class)
+                                        .createNativeQuery("SELECT txid_current()")
+                                        .getSingleResult()
+                                ).longValue()
+                            );
+                        }
+                        var resource = new FunctionDTO();
+                        resource.setTarget("GET /transaction-fixture");
+                        resource.setKind("ENDPOINT");
+                        resource.setHttpMethod("GET");
+                        resource.setPathTemplate("/transaction-fixture");
+                        resource.setHandler("Transaction fixture");
+                        resource.setDescription("Kiểm rollback chung");
+                        root.getBean(FunctionResourceRepo.class).replace(joined, "TXJOIN", List.of(resource), 0);
+                        throw new IllegalStateException("Caller bắt lỗi con");
+                    })
+                );
+                return null;
+            })
+        );
+        assertEquals("", sql("SELECT description FROM auth_functions WHERE code='TXJOIN'"));
+        assertEquals("0", sql("SELECT COUNT(*) FROM auth_function_resources WHERE function_code='TXJOIN'"));
+    }
+
+    @Test
+    void repositoryLockAndTripProgressRequireServiceTransactionBeforeExecutingQuery() {
+        assertThrows(IllegalTransactionStateException.class, () ->
+            root.getBean(FunctionRepo.class).lock("ADMIN_CONSOLE")
+        );
+        assertThrows(IllegalTransactionStateException.class, () ->
+            root.getBean(TripStopRepo.class).mark(new TripResponse(), 1, true, Instant.now(), 0)
+        );
+        var search = new FunctionSearch();
+        assertTrue(root.getBean(FunctionRepo.class).search(search).getTotalElements() > 0);
+        assertTrue(root.getBean(FunctionResourceRepo.class).targetsFor(List.of("VEHICLE_READ")).size() > 0);
+        assertTrue(root.getBean(RoleFunctionRepo.class).functionTargets(Set.of("VEHICLE_READ")).size() > 0);
     }
 
     @Test

@@ -70,7 +70,7 @@ public interface RoleFunctionRepo extends JpaRepository<RoleFunction, Long> {
                     """
                     INSERT INTO auth_role_functions(role_code, function_code, created_by, updated_by)
                     SELECT ?, code, ?, ?
-                    FROM unnest(?::text []) code
+                    FROM UNNEST(?::TEXT []) code
                     ON CONFLICT DO NOTHING
                     """
                 )
@@ -135,7 +135,6 @@ public interface RoleFunctionRepo extends JpaRepository<RoleFunction, Long> {
         }
     }
 
-    @Transactional(readOnly = true)
     @Query(
         value = """
         SELECT DISTINCT target
@@ -146,6 +145,7 @@ public interface RoleFunctionRepo extends JpaRepository<RoleFunction, Long> {
     )
     Set<String> assignedTargets(@Param("codes") Set<String> codes);
 
+    @Transactional(readOnly = true)
     default Set<String> functionTargets(Set<String> functions) {
         return functions.isEmpty() ? Set.of() : assignedTargets(functions);
     }

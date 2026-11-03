@@ -33,7 +33,7 @@ public class RouteRepo extends BaseRepository {
     private static final String COLUMNS = """
     r.id, r.carrier_id, r.scope_id, owner.name AS carrier_name, r.code, r.name_vi, r.name_en, r.description,
         r.active, r.version, r.created_at, r.updated_at, r.created_by, r.updated_by, (
-            SELECT count(*)
+            SELECT COUNT(*)
             FROM carrier_route_stops s
             WHERE s.route_id = r.id
         ) AS stop_count, (%s) AS can_update
@@ -49,12 +49,12 @@ public class RouteRepo extends BaseRepository {
             String filter = """
             %s
             WHERE %s
-                AND (?::boolean IS NULL OR r.active = ?)
-                AND (?::bigint IS NULL OR owner.id = ?)
-                AND lower(concat_ws(' ', r.code, r.name_vi, r.name_en, owner.name)) LIKE ? ESCAPE '\\'
+                AND (?::BOOLEAN IS NULL OR r.active = ?)
+                AND (?::BIGINT IS NULL OR owner.id = ?)
+                AND LOWER(CONCAT_WS(' ', r.code, r.name_vi, r.name_en, owner.name)) LIKE ? ESCAPE '\\'
             """.formatted(FROM, UserRoleRepo.visibleSql());
             long count;
-            try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + filter)) {
+            try (PreparedStatement query = connection.prepareStatement("SELECT COUNT(*)" + filter)) {
                 bind(query, 1, search);
                 try (ResultSet rows = query.executeQuery()) {
                     rows.next();
@@ -124,7 +124,7 @@ public class RouteRepo extends BaseRepository {
         try (
             PreparedStatement query = connection.prepareStatement(
                 """
-                SELECT s.stop_order, s.location_id, l.name AS name_vi, l.props->>'nameEn' AS name_en, l.props->>'address' AS address, (l.props->>'latitude')::numeric AS latitude, (l.props->>'longitude')::numeric AS longitude,
+                SELECT s.stop_order, s.location_id, l.name AS name_vi, l.props->>'nameEn' AS name_en, l.props->>'address' AS address, (l.props->>'latitude')::NUMERIC AS latitude, (l.props->>'longitude')::NUMERIC AS longitude,
                     s.arrival_offset_minutes,
                     s.departure_offset_minutes, s.cumulative_fare, s.pickup_allowed, s.dropoff_allowed,
                     p.id, p.name, w.id, w.name

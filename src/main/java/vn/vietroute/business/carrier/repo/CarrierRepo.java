@@ -187,17 +187,17 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
         throws SQLException {
         String searchText =
             kind == Kind.CARRIER
-                ? "lower(owner.code || ' ' || owner.name || ' ' || owner.phone)"
-                : "lower(concat_ws(' '," + kind.search + "))";
+                ? "LOWER(owner.code || ' ' || owner.name || ' ' || owner.phone)"
+                : "LOWER(CONCAT_WS(' '," + kind.search + "))";
         String filter = """
         FROM %s
         WHERE %s
-            AND (?::boolean IS NULL OR %s.active = ?)
-            AND (?::bigint IS NULL OR owner.id = ?)
+            AND (?::BOOLEAN IS NULL OR %s.active = ?)
+            AND (?::BIGINT IS NULL OR owner.id = ?)
             AND %s LIKE ? ESCAPE '\\'
         """.formatted(kind.from, UserRoleRepo.visibleSql(), kind.alias, searchText);
         long total;
-        try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + filter)) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT COUNT(*)" + filter)) {
             bindSearch(query, 1, page);
             try (ResultSet row = query.executeQuery()) {
                 row.next();
@@ -296,7 +296,7 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
                 JOIN auth_user_roles ur ON ur.user_id = u.id
                 JOIN auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
                 JOIN (
-                    SELECT scope_id, user_id, bool_and(active) AS active, max(version) AS version
+                    SELECT scope_id, user_id, BOOL_AND(active) AS active, MAX(version) AS version
                     FROM auth_user_roles
                     WHERE scope_id > 0
                     GROUP BY scope_id, user_id
@@ -351,7 +351,7 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
             PreparedStatement query = connection.prepareStatement(
                 """
                 UPDATE carrier_drivers
-                SET user_id = ?, active = false, updated_by = ?, updated_at = CURRENT_TIMESTAMP, version = version + 1
+                SET user_id = ?, active = FALSE, updated_by = ?, updated_at = CURRENT_TIMESTAMP, version = version + 1
                 WHERE id = ? AND carrier_id = ? AND scope_id = ? AND user_id IS NULL AND version = ?
                 """
             )
@@ -550,12 +550,12 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
 
     /** Từ khóa nguyên văn và phân trang ổn định name/id được xử lý hoàn toàn trong PostgreSQL. */
     public PageResponse<Published> page(Connection connection, PublicCarrierSearch body) throws SQLException {
-        String where = FROM + " AND lower(c.code || ' ' || c.name || ' ' || c.phone) LIKE ? ESCAPE '!'";
+        String where = FROM + " AND LOWER(c.code || ' ' || c.name || ' ' || c.phone) LIKE ? ESCAPE '!'";
         String text = body.getQuery() == null ? "" : body.getQuery().strip().toLowerCase(Locale.ROOT);
         // LIKE tương thích index trigram; escape để %, _ và ! vẫn là ký tự nguyên văn như strpos trước đây.
         String pattern = "%" + text.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
         long total;
-        try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + where)) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT COUNT(*)" + where)) {
             query.setString(1, pattern);
             try (ResultSet row = query.executeQuery()) {
                 row.next();

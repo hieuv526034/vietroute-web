@@ -54,7 +54,7 @@ public class DatabaseInitializer implements InitializingBean {
     private Void initialize(Connection connection) throws SQLException {
         // PostgreSQL tự giải phóng advisory lock khi commit/rollback hoặc mất kết nối.
         try (Statement statement = connection.createStatement()) {
-            statement.execute("SELECT pg_advisory_xact_lock(781205610)");
+            statement.execute("SELECT PG_ADVISORY_XACT_LOCK(781205610)");
         }
         prepareSchema(connection);
         // Chỉ nhận baseline hiện hành; đổi baseline là thao tác bảo trì ngoài runtime, không tự reset history.
@@ -129,7 +129,7 @@ public class DatabaseInitializer implements InitializingBean {
                 SELECT n.nspname FROM pg_catalog.pg_class c
                 JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
                 WHERE c.relname=? AND c.relkind IN ('r','p')
-                    AND left(n.nspname,3)<>'pg_' AND n.nspname<>'information_schema'
+                    AND LEFT(n.nspname,3)<>'pg_' AND n.nspname<>'information_schema'
                 """
             )
         ) {

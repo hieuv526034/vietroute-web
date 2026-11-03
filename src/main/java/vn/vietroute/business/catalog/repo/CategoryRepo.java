@@ -34,7 +34,7 @@ public class CategoryRepo extends JpaRepositorySupport<Category, Long> {
 
     private static final String COLUMNS = """
     c.*, p.name AS parent_name, p.props->>'nameEn' AS parent_name_en,
-    COALESCE(p.active,false) AS parent_active
+    COALESCE(p.active,FALSE) AS parent_active
     """;
 
     private static final String FROM = """
@@ -63,9 +63,9 @@ public class CategoryRepo extends JpaRepositorySupport<Category, Long> {
         boolean publicOnly
     ) throws SQLException {
         String filter = """
-        WHERE c.type=? AND (?::text IS NULL OR c.ref_type=?)
-            AND ((?::bigint IS NULL AND c.parent_id IS NULL) OR c.parent_id=?)
-            AND (?::boolean IS NULL OR c.active=?)
+        WHERE c.type=? AND (?::TEXT IS NULL OR c.ref_type=?)
+            AND ((?::BIGINT IS NULL AND c.parent_id IS NULL) OR c.parent_id=?)
+            AND (?::BOOLEAN IS NULL OR c.active=?)
                 AND (NOT ? OR (c.active AND g.active AND NOT EXISTS (
                     WITH RECURSIVE ancestors AS (
                         SELECT a.id,a.parent_id,a.active,a.ref_type FROM category a WHERE a.id=c.parent_id
@@ -76,11 +76,11 @@ public class CategoryRepo extends JpaRepositorySupport<Category, Long> {
                     SELECT 1 FROM ancestors a JOIN category ag ON ag.group_code=a.ref_type
                     WHERE NOT a.active OR NOT ag.active
                 )))
-            AND lower(c.code || ' ' || c.name || ' ' || COALESCE(c.props->>'nameEn','') ||
-                ' ' || COALESCE(c.props->>'address','')) LIKE lower(?) ESCAPE '!'
+            AND LOWER(c.code || ' ' || c.name || ' ' || COALESCE(c.props->>'nameEn','') ||
+                ' ' || COALESCE(c.props->>'address','')) LIKE LOWER(?) ESCAPE '!'
         """;
         long count;
-        try (PreparedStatement query = connection.prepareStatement("SELECT count(*) " + FROM + filter)) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT COUNT(*) " + FROM + filter)) {
             bind(query, page, refType, type, publicOnly);
             try (ResultSet row = query.executeQuery()) {
                 row.next();
@@ -140,7 +140,7 @@ public class CategoryRepo extends JpaRepositorySupport<Category, Long> {
     public Category group(String code) {
         return BusinessRules.requireFound(
             entityManager
-                .createQuery("select c from Category c where c.type='GROUP' and c.code=:code", Category.class)
+                .createQuery("SELECT c FROM Category c WHERE c.type='GROUP' AND c.code=:code", Category.class)
                 .setParameter("code", code)
                 .setLockMode(LockModeType.PESSIMISTIC_READ)
                 .getResultStream()
@@ -163,7 +163,7 @@ public class CategoryRepo extends JpaRepositorySupport<Category, Long> {
     public void requireProps(Map<String, Object> props, Map<String, Object> group) {
         read(connection -> {
             try (
-                PreparedStatement query = connection.prepareStatement("SELECT category_props_valid(?::jsonb,?::jsonb)")
+                PreparedStatement query = connection.prepareStatement("SELECT category_props_valid(?::JSONB,?::JSONB)")
             ) {
                 query.setString(1, json.writeValueAsString(props));
                 query.setString(2, json.writeValueAsString(group.getOrDefault("fields", List.of())));
@@ -220,8 +220,8 @@ public class CategoryRepo extends JpaRepositorySupport<Category, Long> {
                 """
                 INSERT INTO category(type, ref_type, code, name, props, sort_order)
                 SELECT 'VALUE', seed.ref_type, seed.code, seed.name,
-                    jsonb_build_object('nameEn', seed.name_en) ||
-                        CASE WHEN seed.seats IS NULL THEN '{}'::jsonb ELSE jsonb_build_object('seatCount', seed.seats) END,
+                    JSONB_BUILD_OBJECT('nameEn', seed.name_en) ||
+                        CASE WHEN seed.seats IS NULL THEN '{}'::JSONB ELSE JSONB_BUILD_OBJECT('seatCount', seed.seats) END,
                     seed.sort_order
                 FROM (VALUES
                     ('VEHICLE_TYPE','SEAT','Ghế ngồi','Seated coach',45,0),
@@ -258,10 +258,10 @@ public class CategoryRepo extends JpaRepositorySupport<Category, Long> {
         String provinces = """
         INSERT INTO category(type, ref_type, code, name, props, sort_order)
         SELECT 'VALUE', 'PROVINCE', p."localCode", p.name,
-            jsonb_build_object('nameEn', p."nameEn", 'administrativeCode', p.code, 'divisionType', p."divisionType"),
-            p.code::integer
-        FROM jsonb_to_recordset((?::jsonb)->'provinces') p(
-            code text, name text, "nameEn" text, "divisionType" text, "localCode" text
+            JSONB_BUILD_OBJECT('nameEn', p."nameEn", 'administrativeCode', p.code, 'divisionType', p."divisionType"),
+            p.code::INTEGER
+        FROM JSONB_TO_RECORDSET((?::JSONB)->'provinces') p(
+            code TEXT, name TEXT, "nameEn" TEXT, "divisionType" TEXT, "localCode" TEXT
         )
         JOIN category g ON g.group_code = 'PROVINCE' AND g.active
         WHERE NOT EXISTS (
@@ -276,11 +276,11 @@ public class CategoryRepo extends JpaRepositorySupport<Category, Long> {
         String wards = """
         INSERT INTO category(type, ref_type, code, parent_id, name, props, sort_order)
         SELECT 'VALUE', 'WARD', w.code, c.id, w.name,
-            jsonb_build_object('nameEn', w.name, 'administrativeCode', w.code, 'divisionType', w."divisionType"), 0
-        FROM jsonb_to_recordset((?::jsonb)->'provinces') p("localCode" text, wards jsonb)
+            JSONB_BUILD_OBJECT('nameEn', w.name, 'administrativeCode', w.code, 'divisionType', w."divisionType"), 0
+        FROM JSONB_TO_RECORDSET((?::JSONB)->'provinces') p("localCode" TEXT, wards JSONB)
         JOIN category c ON c.type = 'VALUE' AND c.ref_type = 'PROVINCE' AND c.code = p."localCode" AND c.active
         JOIN category g ON g.group_code = 'WARD' AND g.active
-        CROSS JOIN LATERAL jsonb_to_recordset(p.wards) w(code text, name text, "divisionType" text)
+        CROSS JOIN LATERAL JSONB_TO_RECORDSET(p.wards) w(code TEXT, name TEXT, "divisionType" TEXT)
         WHERE NOT EXISTS (
             SELECT 1 FROM category item WHERE item.ref_type = 'WARD' AND item.code = w.code
         )

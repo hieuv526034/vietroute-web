@@ -13,14 +13,19 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.dto.FunctionDTO;
 import vn.vietroute.auth.dto.search.FunctionSearch;
 import vn.vietroute.auth.entity.Function;
 
-/** Repository Spring Data thật; SQL tra cứu khai báo đầy đủ, schema lấy từ cấu hình Hibernate. */
+/**
+ * SQL dùng schema Hibernate. Transaction đọc đặt ở default method được service gọi qua proxy;
+ * các query bên trong tham gia giao dịch đó, không trông chờ annotation ở lời gọi nội bộ.
+ */
 public interface FunctionRepo extends JpaRepository<Function, String> {
     /** LIKE escape giữ nguyên %, _ và !; count và trang dùng cùng điều kiện. */
+    @Transactional(readOnly = true)
     default Page<Function> search(FunctionSearch search) {
         String keyword =
             "%" +
@@ -29,33 +34,32 @@ public interface FunctionRepo extends JpaRepository<Function, String> {
         return searchByFilters(keyword, search.getActive(), PageRequest.of(search.getPage(), search.getSize()));
     }
 
-    @Transactional(readOnly = true)
     @Query(
         value = """
         SELECT f.*
         FROM {h-schema}auth_functions f
         WHERE NOT f.deleted
-            AND (CAST(:active AS boolean) IS NULL OR f.active = :active)
-            AND (lower(f.code) LIKE :keyword ESCAPE '!'
-                OR lower(f.name_vi) LIKE :keyword ESCAPE '!'
-                OR lower(f.name_en) LIKE :keyword ESCAPE '!')
+            AND (CAST(:active AS BOOLEAN) IS NULL OR f.active = :active)
+            AND (LOWER(f.code) LIKE :keyword ESCAPE '!'
+                OR LOWER(f.name_vi) LIKE :keyword ESCAPE '!'
+                OR LOWER(f.name_en) LIKE :keyword ESCAPE '!')
         ORDER BY f.code
         """,
         countQuery = """
-        SELECT count(*)
+        SELECT COUNT(*)
         FROM {h-schema}auth_functions f
         WHERE NOT f.deleted
-            AND (CAST(:active AS boolean) IS NULL OR f.active = :active)
-            AND (lower(f.code) LIKE :keyword ESCAPE '!'
-                OR lower(f.name_vi) LIKE :keyword ESCAPE '!'
-                OR lower(f.name_en) LIKE :keyword ESCAPE '!')
+            AND (CAST(:active AS BOOLEAN) IS NULL OR f.active = :active)
+            AND (LOWER(f.code) LIKE :keyword ESCAPE '!'
+                OR LOWER(f.name_vi) LIKE :keyword ESCAPE '!'
+                OR LOWER(f.name_en) LIKE :keyword ESCAPE '!')
         """,
         nativeQuery = true
     )
     Page<Function> searchByFilters(@Param("keyword") String keyword, @Param("active") Boolean active, Pageable page);
 
     /** Khóa một function trên transaction của service; giữ bản ghi kể cả khi đã ngừng. */
-    @Transactional
+    @Transactional(propagation = Propagation.MANDATORY)
     @Query(
         value = """
         SELECT f.*
@@ -68,7 +72,6 @@ public interface FunctionRepo extends JpaRepository<Function, String> {
     Function lock(@Param("code") String code);
 
     /** Đọc grant hiện hành theo user; không suy quyền từ role trong token hoặc cache. */
-    @Transactional(readOnly = true)
     @Query(
         value = """
         SELECT DISTINCT f.code, f.name_vi, f.name_en, fr.kind, fr.target
@@ -86,6 +89,7 @@ public interface FunctionRepo extends JpaRepository<Function, String> {
     )
     List<Map<String, Object>> capabilityRows(@Param("userId") long userId);
 
+    @Transactional(readOnly = true)
     default List<FunctionDTO> capabilities(long user) {
         Map<String, FunctionDTO> found = new LinkedHashMap<>();
         Map<String, Set<String>> targets = new LinkedHashMap<>();
@@ -108,7 +112,6 @@ public interface FunctionRepo extends JpaRepository<Function, String> {
         return List.copyOf(found.values());
     }
 
-    @Transactional(readOnly = true)
     @Query(
         value = """
         SELECT DISTINCT ON (fr.target) fr.target, fr.name_vi, fr.name_en, fr.icon
@@ -127,6 +130,7 @@ public interface FunctionRepo extends JpaRepository<Function, String> {
     )
     List<Map<String, Object>> navigationRows(@Param("userId") long userId);
 
+    @Transactional(readOnly = true)
     default List<FunctionDTO> navigation(long user, String current, Locale locale) {
         List<FunctionDTO> result = new ArrayList<>();
         for (Map<String, Object> row : navigationRows(user)) {

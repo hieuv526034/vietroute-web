@@ -81,9 +81,9 @@ public class TripSegmentRepo {
         try (
             PreparedStatement query = connection.prepareStatement(
                 """
-                SELECT part.segment_order, sum(b.seats), count(*)
+                SELECT part.segment_order, SUM(b.seats), COUNT(*)
                 FROM bookings b
-                CROSS JOIN LATERAL generate_series(b.pickup_order, b.dropoff_order - 1) part(segment_order)
+                CROSS JOIN LATERAL GENERATE_SERIES(b.pickup_order, b.dropoff_order - 1) part(segment_order)
                 WHERE b.trip_id = ?
                     AND b.status = 'CONFIRMED'
                 GROUP BY part.segment_order
@@ -136,7 +136,7 @@ public class TripSegmentRepo {
                     UPDATE trip_segments s
                     SET reserved_seats = s.reserved_seats - needed.seats, version = s.version + needed.changes,
                         updated_by = ?, updated_at = CURRENT_TIMESTAMP
-                    FROM unnest(?::integer [], ?::bigint [], ?::bigint []) needed(segment_order, seats, changes)
+                    FROM UNNEST(?::INTEGER [], ?::BIGINT [], ?::BIGINT []) needed(segment_order, seats, changes)
                     WHERE s.trip_id = ? AND s.segment_order = needed.segment_order
                     """
                 )

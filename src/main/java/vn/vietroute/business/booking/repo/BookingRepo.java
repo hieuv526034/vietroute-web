@@ -129,7 +129,7 @@ public class BookingRepo extends BaseRepository {
             AND b.status IN ('CONFIRMED', 'COMPLETED')
         """.formatted(FROM);
         long total;
-        try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + filter)) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT COUNT(*)" + filter)) {
             query.setLong(1, tripId);
             try (ResultSet row = query.executeQuery()) {
                 row.next();
@@ -181,11 +181,11 @@ public class BookingRepo extends BaseRepository {
         JOIN carriers owner ON owner.id = t.carrier_id AND owner.scope_id = t.scope_id
         WHERE %s AND owner.active
             AND (t.status = 'IN_PROGRESS' OR (t.status = 'OPEN' AND t.departure_at > CURRENT_TIMESTAMP))
-            AND strpos(lower(concat_ws(' ', t.code, t.name_vi, t.name_en, owner.name)), ?) > 0
+            AND strpos(LOWER(CONCAT_WS(' ', t.code, t.name_vi, t.name_en, owner.name)), ?) > 0
         """.formatted(UserRoleRepo.visibleSql());
         String text = body.getQuery() == null ? "" : body.getQuery().strip().toLowerCase(Locale.ROOT);
         long total;
-        try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + filter)) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT COUNT(*)" + filter)) {
             int at = UserRoleRepo.bindVisible(query, 1);
             query.setString(at, text);
             try (ResultSet row = query.executeQuery()) {
@@ -379,12 +379,12 @@ public class BookingRepo extends BaseRepository {
         String where = """
         %s
         WHERE %s
-            AND (?::bigint IS NULL OR b.trip_id = ?)
-            AND (?::text IS NULL OR b.status = ?)
-            AND strpos(lower(concat_ws(' ', b.code, t.code, b.contact_name, b.contact_phone)), ?) > 0
+            AND (?::BIGINT IS NULL OR b.trip_id = ?)
+            AND (?::TEXT IS NULL OR b.status = ?)
+            AND strpos(LOWER(CONCAT_WS(' ', b.code, t.code, b.contact_name, b.contact_phone)), ?) > 0
         """.formatted(FROM, customerId == null ? UserRoleRepo.visibleSql() : "b.customer_id=?");
         long total;
-        try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + where)) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT COUNT(*)" + where)) {
             bindSearch(query, 1, search, customerId);
             try (ResultSet row = query.executeQuery()) {
                 row.next();
@@ -547,7 +547,7 @@ public class BookingRepo extends BaseRepository {
         try (
             PreparedStatement query = connection.prepareStatement(
                 """
-                SELECT count(*)
+                SELECT COUNT(*)
                 FROM (
                     SELECT id
                     FROM bookings
@@ -555,7 +555,7 @@ public class BookingRepo extends BaseRepository {
                         AND status IN ('PENDING', 'CONFIRMED')
                     ORDER BY id
                     FOR UPDATE
-                ) locked
+                ) LOCKED
                 """
             )
         ) {
@@ -794,7 +794,7 @@ public class BookingRepo extends BaseRepository {
         };
         String sql = """
         WITH parameters AS (
-            SELECT ?::text AS state, ?::text AS note, ?::bigint AS actor
+            SELECT ?::TEXT AS state, ?::TEXT AS note, ?::BIGINT AS actor
         ), targets AS MATERIALIZED (
             SELECT b.id, b.trip_id, b.carrier_id, b.scope_id, b.status, b.version
             FROM bookings b
@@ -821,13 +821,13 @@ public class BookingRepo extends BaseRepository {
             RETURNING booking_id
         )
         SELECT (
-            SELECT count(*)
+            SELECT COUNT(*)
             FROM targets
         ), (
-            SELECT count(*)
+            SELECT COUNT(*)
             FROM changed
         ), (
-            SELECT count(*)
+            SELECT COUNT(*)
             FROM logged
         )
         """.formatted(predicate);

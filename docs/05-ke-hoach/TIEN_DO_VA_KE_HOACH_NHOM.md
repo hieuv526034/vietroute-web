@@ -245,6 +245,14 @@ Bổ sung exporter để người mới dùng: bản template14 SQL có schema/n
 
 Node74/74 đạt, gồm ca xuất SQL mẫu/phân trang/literal và loại mutation/khóa; đã chạy cả11 SQL ví dụ trên preview PostgreSQL loopback15462/vietroute_category_preview_v4, schema vietroute_category01, bằng transaction chỉ đọc và rollback: exit0. Cụm test đã dừng sau kiểm. Bộ Java210/75 PostgreSQL của QUERY01 vẫn là bằng chứng gần nhất, không chạy lại vì không sửa Java. Đồng bộ quy ước/tài liệu và kết quả Node trong Word, render81 trang và rà trang thay đổi. npm ci/format/format:check/rules/docs/diff đạt; checker260 Java/189 liên kết trong22 tài liệu. Không merge dev/main hoặc deploy.
 
+## TRANSACTION01 — SQL viết hoa và ranh giới giao dịch
+
+Theo yêu cầu03/11/2026, hieuv526034 tiếp tục nhánh `hieuv526034/category01-danh-muc-chung`, nền4724404/[PR166](https://github.com/hieuv526034/vietroute-web/pull/166), chưa merge dev/main. Chuẩn hóa111 chuỗi SQL/JPQL trong19 file: viết HOA từ khóa/hàm/kiểu dữ liệu, giữ nguyên literal, identifier có quote và tên tham số. Đối chiếu từng chuỗi trước/sau chỉ khác kiểu chữ; mười SQL migration/checksum giữ nguyên. Không thêm class production, auth40/business106/common58.
+
+JdbcTransactions dùng TransactionTemplate REQUIRED qua manager cả khi đang có giao dịch; callback con lỗi đánh dấu rollback-only dù caller bắt lỗi. Các default method Repo đọc theo tập đặt @Transactional tại hàm ngoài qua proxy, query con không dựa annotation tự gọi. FunctionRepo.lock/TripStopRepo.mark dùng MANDATORY, thiếu transaction service bị chặn trước SQL. Giữ cùng connection JPA/JDBC, thứ tự khóa/CAS và history rollback, không self-injection/AopContext hoặc mở transaction riêng để nhả khóa sớm.
+
+Nhóm tập trung13/13 đạt; clean verify214/214 Java, gồm77 PostgreSQL và4 H2 JPA,0 fail/error/skip, WAR thành công. Ca mới kiểm nested callback thành công không commit sớm; lỗi con đã bắt vẫn rollback JPA/JDBC, cùng transaction ID thực ở PostgreSQL; khóa/tiến độ ngoài transaction bị chặn và default method đọc gọi qua proxy vẫn chạy. Node74/74 đạt; cả11 SELECT ví dụ viết hoa chạy trên preview PostgreSQL loopback15462 bằng READ ONLY/ROLLBACK, exit0. Cập nhật quy ước backend/AGENTS và Word; không đổi DDL/API/UI/quyền/mật khẩu hoặc ghi DB thật. Oracle và chuyển nốt Repo JDBC cũ vẫn là phần chưa nghiệm thu; không merge dev/main hoặc deploy.
+
 ## Còn lại và bước tiếp
 
 Source DUYLONG01 đã có trên dev/main và Live theo bằng chứng trên; DUYLONG02 chốt tài liệu nghiệm thu. Chưa có Oracle runtime/regression, kiểm tải/SLA hoặc backup di động/PITR/RPO/RTO; DPAPI local phụ thuộc tài khoản Windows. AccountChallengeRepo còn SQL phụ cũ chưa được luồng hiện hành gọi, cần dọn riêng khi sửa auth, không trình bày như chức năng đang hoạt động. Kiểm thêm cách chạy Maven Wrapper trên máy trước khi dùng hướng dẫn local.

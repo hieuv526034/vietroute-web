@@ -61,7 +61,7 @@ public class ApiJournalRepo {
                 INSERT INTO api_request_journal(id,started_at,instance_id,trace_id,method,endpoint,controller,
                     http_status,duration_ms,code,message_key,diagnostic,sql_state,replay_path,query_json,
                     request_body,response_body,content_kind,request_user_id)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?::jsonb,?,?,?,?)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?::JSONB,?,?,?,?)
                 """
             )
         ) {
@@ -98,7 +98,7 @@ public class ApiJournalRepo {
     public PageResponse<ApiJournalEntry> page(ApiJournalSearch search, int minutes) {
         try (Connection connection = database.open()) {
             long total;
-            try (PreparedStatement query = timed(connection, "SELECT count(*) FROM api_request_journal " + FILTER)) {
+            try (PreparedStatement query = timed(connection, "SELECT COUNT(*) FROM api_request_journal " + FILTER)) {
                 bind(query, search, minutes);
                 try (ResultSet row = query.executeQuery()) {
                     row.next();
@@ -175,7 +175,7 @@ public class ApiJournalRepo {
             connection.setAutoCommit(false);
             try {
                 try (
-                    PreparedStatement lock = timed(connection, "SELECT pg_try_advisory_xact_lock(781205615)");
+                    PreparedStatement lock = timed(connection, "SELECT PG_TRY_ADVISORY_XACT_LOCK(781205615)");
                     ResultSet row = lock.executeQuery()
                 ) {
                     row.next();

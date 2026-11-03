@@ -23,7 +23,7 @@ public class AccountChallengeRepo extends JpaRepositorySupport<AccountChallenge,
 
     /** Serialize đăng ký/bind email giữa các node; không khóa toàn bộ request đăng nhập. */
     public void lockRegistration(Connection connection) throws SQLException {
-        try (PreparedStatement query = connection.prepareStatement("SELECT pg_advisory_xact_lock(781205617)")) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT PG_ADVISORY_XACT_LOCK(781205617)")) {
             query.execute();
         }
     }
@@ -53,7 +53,7 @@ public class AccountChallengeRepo extends JpaRepositorySupport<AccountChallenge,
         try (
             PreparedStatement budget = connection.prepareStatement(
                 """
-                SELECT count(*)
+                SELECT COUNT(*)
                 FROM system_jobs
                 WHERE type = 'AUTH_ACCOUNT_MAIL'
                     AND dedup_key LIKE ?

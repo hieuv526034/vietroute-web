@@ -55,7 +55,7 @@ public class JourneyRepo extends BaseRepository {
             JOIN trip_stops dropoff ON dropoff.trip_id = t.id AND dropoff.dropoff_allowed
                 AND dropoff.stop_order > pick.stop_order
             JOIN LATERAL (
-                SELECT min(capacity - reserved_seats) AS remaining, count(*) AS segments
+                SELECT MIN(capacity - reserved_seats) AS remaining, COUNT(*) AS segments
                 FROM trip_segments seg
                 WHERE seg.trip_id = t.id AND seg.segment_order >= pick.stop_order
                     AND seg.segment_order < dropoff.stop_order
@@ -65,23 +65,23 @@ public class JourneyRepo extends BaseRepository {
                 AND (t.status = 'IN_PROGRESS' OR (t.status = 'OPEN' AND t.departure_at > CURRENT_TIMESTAMP))
                 AND pick.scheduled_departure_at >= ?
                 AND pick.scheduled_departure_at < ?
-                AND ((?::bigint IS NOT NULL AND pick.location_id = ?) OR (?::bigint IS NULL AND pick.province_id = ?))
-                AND ((?::bigint IS NOT NULL AND dropoff.location_id = ?) OR (?::bigint IS NULL AND
+                AND ((?::BIGINT IS NOT NULL AND pick.location_id = ?) OR (?::BIGINT IS NULL AND pick.province_id = ?))
+                AND ((?::BIGINT IS NOT NULL AND dropoff.location_id = ?) OR (?::BIGINT IS NULL AND
                     dropoff.province_id = ?))
-                AND (?::bigint IS NULL OR c.id = ?)
-                AND (?::bigint IS NULL OR t.vehicle_type_id = ?)
+                AND (?::BIGINT IS NULL OR c.id = ?)
+                AND (?::BIGINT IS NULL OR t.vehicle_type_id = ?)
                 AND avail.remaining >= ?
-                AND (?::numeric IS NULL OR dropoff.cumulative_fare - pick.cumulative_fare >= ?)
-                AND (?::numeric IS NULL OR dropoff.cumulative_fare - pick.cumulative_fare <= ?)
-                AND (?::bigint IS NULL OR EXISTS (
+                AND (?::NUMERIC IS NULL OR dropoff.cumulative_fare - pick.cumulative_fare >= ?)
+                AND (?::NUMERIC IS NULL OR dropoff.cumulative_fare - pick.cumulative_fare <= ?)
+                AND (?::BIGINT IS NULL OR EXISTS (
                     SELECT 1 FROM category location WHERE location.id=pick.location_id AND location.parent_id=?
                 ))
-                AND (?::bigint IS NULL OR EXISTS (
+                AND (?::BIGINT IS NULL OR EXISTS (
                     SELECT 1 FROM category location WHERE location.id=dropoff.location_id AND location.parent_id=?
                 ))
             """.formatted(PUBLISHED);
             long total;
-            try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + filter)) {
+            try (PreparedStatement query = connection.prepareStatement("SELECT COUNT(*)" + filter)) {
                 bind(query, body);
                 try (ResultSet row = query.executeQuery()) {
                     row.next();

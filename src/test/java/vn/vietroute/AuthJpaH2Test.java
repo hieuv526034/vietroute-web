@@ -3,6 +3,7 @@ package vn.vietroute;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import jakarta.persistence.EntityManagerFactory;
 import java.time.Instant;
@@ -21,6 +22,8 @@ import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.SharedEntityManagerCreator;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.UnexpectedRollbackException;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import vn.vietroute.auth.entity.User;
 import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.common.exception.BusinessException;
@@ -107,6 +110,47 @@ class AuthJpaH2Test {
             assertEquals(Map.of("123", 4L), value.getScopeMembershipVersions());
             return null;
         });
+    }
+
+    @Test
+    void caughtFailureInNestedCallbackStillRollsBackJpaAndJdbc() {
+        assertThrows(UnexpectedRollbackException.class, () ->
+            transactions.execute(connection -> {
+                var value = users.saveAndFlush(user("nestedrollback"));
+                assertThrows(IllegalStateException.class, () ->
+                    transactions.execute(joined -> {
+                        assertTrue(TransactionSynchronizationManager.isActualTransactionActive());
+                        try (
+                            var query = joined.prepareStatement(
+                                "UPDATE auth_users SET display_name='Nested' WHERE id=?"
+                            )
+                        ) {
+                            query.setLong(1, value.getId());
+                            assertEquals(1, query.executeUpdate());
+                        }
+                        throw new IllegalStateException("Lỗi callback con đã được caller bắt");
+                    })
+                );
+                // Caller tiếp tục bình thường nhưng không được commit phần JPA/JDBC trước lỗi con.
+                assertEquals(1L, users.count());
+                return null;
+            })
+        );
+        assertEquals(0L, transactions.<Long>execute(connection -> users.count()).longValue());
+    }
+
+    @Test
+    void nestedSuccessfulCallbackJoinsOuterTransactionWithoutEarlyCommit() {
+        assertThrows(IllegalStateException.class, () ->
+            transactions.execute(connection -> {
+                transactions.execute(joined -> users.saveAndFlush(user("nestedcommit")));
+                assertEquals(1L, users.count());
+                throw new IllegalStateException("Lỗi ngoài sau callback con thành công");
+            })
+        );
+        assertEquals(0L, transactions.<Long>execute(connection -> users.count()).longValue());
+        transactions.execute(connection -> transactions.execute(joined -> users.saveAndFlush(user("nestedok"))));
+        assertEquals(1L, transactions.<Long>execute(connection -> users.count()).longValue());
     }
 
     @Test

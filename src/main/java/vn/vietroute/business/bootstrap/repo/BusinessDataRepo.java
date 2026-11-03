@@ -46,7 +46,7 @@ public class BusinessDataRepo {
     private BusinessDataResponse seed(Connection connection, long actor, JsonNode data) throws SQLException {
         try (
             PreparedStatement lock = connection.prepareStatement(
-                "SELECT pg_advisory_xact_lock(781205611),pg_advisory_xact_lock(781205690)"
+                "SELECT PG_ADVISORY_XACT_LOCK(781205611),PG_ADVISORY_XACT_LOCK(781205690)"
             )
         ) {
             lock.execute();
@@ -57,11 +57,11 @@ public class BusinessDataRepo {
             PreparedStatement query = connection.prepareStatement(
                 """
                 SELECT (
-                    SELECT count(*)
+                    SELECT COUNT(*)
                     FROM carriers
                 ) + (
-                    SELECT count(*)
-                    FROM jsonb_to_recordset(?::jsonb) x(code text, name text)
+                    SELECT COUNT(*)
+                    FROM JSONB_TO_RECORDSET(?::JSONB) x(code TEXT, name TEXT)
                     WHERE NOT EXISTS (
                         SELECT 1
                         FROM carriers c
@@ -69,7 +69,7 @@ public class BusinessDataRepo {
                     )
                 ), EXISTS (
                     SELECT 1
-                    FROM jsonb_to_recordset(?::jsonb) x(code text, name text)
+                    FROM JSONB_TO_RECORDSET(?::JSONB) x(code TEXT, name TEXT)
                     JOIN carriers c USING(code)
                     WHERE c.name <> x.name
                 )
@@ -92,12 +92,12 @@ public class BusinessDataRepo {
             connection,
             """
             INSERT INTO category(type, ref_type, code, name, props, sort_order, created_by, updated_by)
-            SELECT 'VALUE', type, code, "nameVi", jsonb_build_object('nameEn', "nameEn") ||
-                CASE WHEN type='VEHICLE_TYPE' THEN jsonb_build_object('seatCount',
-                    CASE code WHEN 'SEAT' THEN 45 WHEN 'SLEEPER' THEN 40 ELSE 9 END) ELSE '{}'::jsonb END,
+            SELECT 'VALUE', type, code, "nameVi", JSONB_BUILD_OBJECT('nameEn', "nameEn") ||
+                CASE WHEN type='VEHICLE_TYPE' THEN JSONB_BUILD_OBJECT('seatCount',
+                    CASE code WHEN 'SEAT' THEN 45 WHEN 'SLEEPER' THEN 40 ELSE 9 END) ELSE '{}'::JSONB END,
                 "sortOrder", ?, ?
-            FROM jsonb_to_recordset(?::jsonb) x(type text, code text, "nameVi" text, "nameEn" text,
-                "sortOrder" integer)
+            FROM JSONB_TO_RECORDSET(?::JSONB) x(type TEXT, code TEXT, "nameVi" TEXT, "nameEn" TEXT,
+                "sortOrder" INTEGER)
             ON CONFLICT (ref_type, code) DO NOTHING
             """,
             data.path("catalogs"),
@@ -107,9 +107,9 @@ public class BusinessDataRepo {
             connection,
             """
             INSERT INTO category(type, ref_type, code, name, props, sort_order, active, created_by, updated_by)
-            SELECT 'VALUE', 'PROVINCE', code, "nameVi", jsonb_build_object('nameEn', "nameEn"), "sortOrder", active, ?, ?
-            FROM jsonb_to_recordset(?::jsonb) x(code text, "nameVi" text, "nameEn" text, "sortOrder" integer,
-                active boolean)
+            SELECT 'VALUE', 'PROVINCE', code, "nameVi", JSONB_BUILD_OBJECT('nameEn', "nameEn"), "sortOrder", active, ?, ?
+            FROM JSONB_TO_RECORDSET(?::JSONB) x(code TEXT, "nameVi" TEXT, "nameEn" TEXT, "sortOrder" INTEGER,
+                active BOOLEAN)
             ON CONFLICT (ref_type, code) DO NOTHING
             """,
             data.path("provinces"),
@@ -119,10 +119,10 @@ public class BusinessDataRepo {
             connection,
             """
             INSERT INTO category(type, ref_type, code, parent_id, name, props, sort_order, active, created_by, updated_by)
-            SELECT 'VALUE', 'LOCATION', x.code, w.id, x."nameVi", jsonb_build_object('nameEn', x."nameEn",
+            SELECT 'VALUE', 'LOCATION', x.code, w.id, x."nameVi", JSONB_BUILD_OBJECT('nameEn', x."nameEn",
                 'address', x.address, 'latitude', x.latitude, 'longitude', x.longitude), x."sortOrder", x.active, ?, ?
-            FROM jsonb_to_recordset(?::jsonb) x(code text, "provinceCode" text, "wardCode" text, "nameVi" text, "nameEn" text,
-                address text, latitude numeric, longitude numeric, "sortOrder" integer, active boolean)
+            FROM JSONB_TO_RECORDSET(?::JSONB) x(code TEXT, "provinceCode" TEXT, "wardCode" TEXT, "nameVi" TEXT, "nameEn" TEXT,
+                address TEXT, latitude NUMERIC, longitude NUMERIC, "sortOrder" INTEGER, active BOOLEAN)
             JOIN category p ON p.type='VALUE' AND p.ref_type='PROVINCE' AND p.code = x."provinceCode"
             JOIN category w ON w.type='VALUE' AND w.ref_type='WARD' AND w.code=x."wardCode" AND w.parent_id=p.id
             ON CONFLICT (ref_type, code) DO NOTHING
@@ -138,8 +138,8 @@ public class BusinessDataRepo {
                     description, active, created_by, updated_by)
                 SELECT nextval('carrier_scope_ids'), 'CARRIER_' || x.code, x.name, x.name, x.code, x.name, x.phone,
                     x.description, x.active, ?, ?
-                FROM jsonb_to_recordset(?::jsonb) x(code text, name text, phone text, description text,
-                    active boolean)
+                FROM JSONB_TO_RECORDSET(?::JSONB) x(code TEXT, name TEXT, phone TEXT, description TEXT,
+                    active BOOLEAN)
                 WHERE NOT EXISTS (
                     SELECT 1
                     FROM carriers c
@@ -150,14 +150,14 @@ public class BusinessDataRepo {
             ), history AS (
                 INSERT INTO auth_access_changes(event_type, target_kind, target_key, actor_id, before_state,
                     after_state, created_by, updated_by)
-                SELECT 'SCOPE_CREATED', 'SCOPE', scope_id::text, created_by, '{}'::jsonb, jsonb_build_object('roles',
-                    '[]'::jsonb, 'permissions', '[]'::jsonb, 'resources', '[]'::jsonb, 'mappingCount', 0,
-                    'delta', false, 'active', true, 'deleted', false, 'nameVi', scope_name_vi, 'nameEn',
+                SELECT 'SCOPE_CREATED', 'SCOPE', scope_id::TEXT, created_by, '{}'::JSONB, JSONB_BUILD_OBJECT('roles',
+                    '[]'::JSONB, 'permissions', '[]'::JSONB, 'resources', '[]'::JSONB, 'mappingCount', 0,
+                    'delta', FALSE, 'active', TRUE, 'deleted', FALSE, 'nameVi', scope_name_vi, 'nameEn',
                     scope_name_en, 'version', 0), created_by, created_by
                 FROM created
                 RETURNING id
             )
-            SELECT count(*)
+            SELECT COUNT(*)
             FROM created
             """,
             data.path("carriers"),
@@ -169,8 +169,8 @@ public class BusinessDataRepo {
             INSERT INTO carrier_vehicles(carrier_id, scope_id, code, plate_number, vehicle_type_id, capacity,
                 active, created_by, updated_by)
             SELECT c.id, c.scope_id, x.code, x."plateNumber", t.id, x.capacity, x.active, ?, ?
-            FROM jsonb_to_recordset(?::jsonb) x(code text, "carrierCode" text, "typeCode" text,
-                "plateNumber" text, capacity integer, active boolean)
+            FROM JSONB_TO_RECORDSET(?::JSONB) x(code TEXT, "carrierCode" TEXT, "typeCode" TEXT,
+                "plateNumber" TEXT, capacity INTEGER, active BOOLEAN)
             JOIN carriers c ON c.code = x."carrierCode"
             JOIN category t ON t.ref_type = 'VEHICLE_TYPE' AND t.type='VALUE'
                 AND t.code = x."typeCode"
@@ -185,7 +185,7 @@ public class BusinessDataRepo {
             INSERT INTO carrier_drivers(carrier_id, scope_id, code, name, phone, active, created_by,
                 updated_by)
             SELECT c.id, c.scope_id, x.code, x.name, x.phone, x.active, ?, ?
-            FROM jsonb_to_recordset(?::jsonb) x(code text, "carrierCode" text, name text, phone text, active boolean)
+            FROM JSONB_TO_RECORDSET(?::JSONB) x(code TEXT, "carrierCode" TEXT, name TEXT, phone TEXT, active BOOLEAN)
             JOIN carriers c ON c.code = x."carrierCode"
             ON CONFLICT (carrier_id, code) DO NOTHING
             """,
@@ -253,10 +253,10 @@ public class BusinessDataRepo {
                 SELECT r.id, r.carrier_id, r.scope_id, l.id, x.position, x.arrival, x.departure, x.fare, x.pickup,
                     x.dropoff
                 FROM (
-                VALUES ('HCMHANOI', 'VRTHUDUC', 1, 0, 0, 0, true, false), ('HCMHANOI', 'VRDANANG', 2, 1080, 1110,
-                    450000, true, true), ('HCMHANOI', 'VRHANOI', 3, 2040, 2040, 900000, false, true), ('HANOIHCM',
-                    'VRHANOI', 1, 0, 0, 0, true, false), ('HANOIHCM', 'VRDANANG', 2, 960, 990, 450000, true,
-                    true), ('HANOIHCM', 'VRTHUDUC', 3, 2040, 2040, 900000, false, true)) x(route_code,
+                VALUES ('HCMHANOI', 'VRTHUDUC', 1, 0, 0, 0, TRUE, FALSE), ('HCMHANOI', 'VRDANANG', 2, 1080, 1110,
+                    450000, TRUE, TRUE), ('HCMHANOI', 'VRHANOI', 3, 2040, 2040, 900000, FALSE, TRUE), ('HANOIHCM',
+                    'VRHANOI', 1, 0, 0, 0, TRUE, FALSE), ('HANOIHCM', 'VRDANANG', 2, 960, 990, 450000, TRUE,
+                    TRUE), ('HANOIHCM', 'VRTHUDUC', 3, 2040, 2040, 900000, FALSE, TRUE)) x(route_code,
                     location_code, position, arrival, departure, fare, pickup, dropoff)
                 JOIN carrier_routes r ON r.code = x.route_code
                 JOIN carriers c ON c.id = r.carrier_id
@@ -282,8 +282,8 @@ public class BusinessDataRepo {
             connection,
             """
             WITH input AS (
-                SELECT * FROM jsonb_to_recordset(?::jsonb)
-                    x("carrierCode" text, code text, "nameVi" text, "nameEn" text, stops jsonb)
+                SELECT * FROM JSONB_TO_RECORDSET(?::JSONB)
+                    x("carrierCode" TEXT, code TEXT, "nameVi" TEXT, "nameEn" TEXT, stops JSONB)
             ), added AS (
                 INSERT INTO carrier_routes(carrier_id, scope_id, code, name_vi, name_en, description)
                 SELECT c.id, c.scope_id, x.code, x."nameVi", x."nameEn",
@@ -297,8 +297,8 @@ public class BusinessDataRepo {
             SELECT r.id,r.carrier_id,r.scope_id,l.id,s."stopOrder",s.arrival,s.departure,s.fare,s.pickup,s.dropoff
             FROM added r JOIN carriers c ON c.id=r.carrier_id
             JOIN input x ON x.code=r.code AND x."carrierCode"=c.code
-            CROSS JOIN LATERAL jsonb_to_recordset(x.stops) s("locationCode" text,"stopOrder" integer,
-                arrival integer,departure integer,fare numeric,pickup boolean,dropoff boolean)
+            CROSS JOIN LATERAL JSONB_TO_RECORDSET(x.stops) s("locationCode" TEXT,"stopOrder" INTEGER,
+                arrival INTEGER,departure INTEGER,fare NUMERIC,pickup BOOLEAN,dropoff BOOLEAN)
             JOIN category l ON l.type='VALUE' AND l.ref_type='LOCATION' AND l.code=s."locationCode"
             """,
             routes
@@ -309,16 +309,16 @@ public class BusinessDataRepo {
             connection,
             """
             CREATE TEMP TABLE vr_init_trips ON COMMIT DROP AS
-            WITH config AS (SELECT ?::jsonb data), input AS (
-                SELECT x.*,d.day,coalesce(x."codePrefix",config.data->'profile'->>'version') profile,
-                    date_trunc('minute',CURRENT_TIMESTAMP)+INTERVAL '10 minutes' anchor
-                FROM config CROSS JOIN LATERAL jsonb_to_recordset(config.data->'routes')
-                    x("carrierCode" text,code text,"vehicleCode" text,"driverCode" text,
-                        "driverUsername" text,"intervalDays" integer,slot integer,"departureTime" text,
-                        "pastDays" integer,"futureDays" integer,"codePrefix" text)
-                CROSS JOIN LATERAL generate_series(
-                    -coalesce(x."pastDays",(config.data->'profile'->>'pastDays')::integer),
-                    coalesce(x."futureDays",(config.data->'profile'->>'futureDays')::integer)) d(day)
+            WITH config AS (SELECT ?::JSONB data), input AS (
+                SELECT x.*,d.day,COALESCE(x."codePrefix",config.data->'profile'->>'version') profile,
+                    DATE_TRUNC('minute',CURRENT_TIMESTAMP)+INTERVAL '10 minutes' anchor
+                FROM config CROSS JOIN LATERAL JSONB_TO_RECORDSET(config.data->'routes')
+                    x("carrierCode" TEXT,code TEXT,"vehicleCode" TEXT,"driverCode" TEXT,
+                        "driverUsername" TEXT,"intervalDays" INTEGER,slot INTEGER,"departureTime" TEXT,
+                        "pastDays" INTEGER,"futureDays" INTEGER,"codePrefix" TEXT)
+                CROSS JOIN LATERAL GENERATE_SERIES(
+                    -COALESCE(x."pastDays",(config.data->'profile'->>'pastDays')::INTEGER),
+                    COALESCE(x."futureDays",(config.data->'profile'->>'futureDays')::INTEGER)) d(day)
                 WHERE d.day % x."intervalDays"=0
             ), added AS (
                 INSERT INTO carrier_trips(carrier_id,scope_id,route_id,vehicle_id,driver_id,driver_user_id,
@@ -326,10 +326,10 @@ public class BusinessDataRepo {
                     vehicle_type_name_en,driver_name,driver_phone,departure_at,end_at,capacity,status,
                     operation_note,created_at,updated_at)
                 SELECT c.id,c.scope_id,r.id,v.id,drv.id,u.id,
-                    x.profile||'R'||lpad(x.slot::text,2,'0')||'D'||
+                    x.profile||'R'||lpad(x.slot::TEXT,2,'0')||'D'||
                         CASE WHEN x."departureTime" IS NOT NULL
-                            THEN to_char(t.departure AT TIME ZONE 'Asia/Ho_Chi_Minh','YYYYMMDD')
-                            ELSE lpad((x.day+7)::text,2,'0') END,
+                            THEN TO_CHAR(t.departure AT TIME ZONE 'Asia/Ho_Chi_Minh','YYYYMMDD')
+                            ELSE lpad((x.day+7)::TEXT,2,'0') END,
                     r.name_vi,r.name_en,v.plate_number,v.vehicle_type_id,kind.name,kind.props->>'nameEn',
                     drv.name,drv.phone,t.departure,t.departure+duration.minutes*INTERVAL '1 minute',
                     v.capacity,
@@ -345,8 +345,8 @@ public class BusinessDataRepo {
                         WHEN x.day=8 AND x.slot%5=0 THEN 'Hủy lịch chạy do điều chỉnh kế hoạch khai thác'
                         WHEN x.day=0 AND x.slot%4=2 THEN 'Đã khởi hành, đang phục vụ hành khách'
                         ELSE 'Có mặt tại điểm đón trước giờ khởi hành 20 phút' END,
-                    least(t.departure-INTERVAL '3 days',CURRENT_TIMESTAMP-INTERVAL '1 day'),
-                    least(t.departure-INTERVAL '2 days',CURRENT_TIMESTAMP-INTERVAL '12 hours')
+                    LEAST(t.departure-INTERVAL '3 days',CURRENT_TIMESTAMP-INTERVAL '1 day'),
+                    LEAST(t.departure-INTERVAL '2 days',CURRENT_TIMESTAMP-INTERVAL '12 hours')
                 FROM input x JOIN carriers c ON c.code=x."carrierCode" AND c.active AND c.scope_active
                 JOIN carrier_routes r ON r.carrier_id=c.id AND r.code=x.code AND r.active
                 JOIN carrier_vehicles v ON v.carrier_id=c.id AND v.code=x."vehicleCode" AND v.active
@@ -354,10 +354,10 @@ public class BusinessDataRepo {
                 JOIN auth_users u ON u.id=drv.user_id AND u.username=x."driverUsername" AND u.active
                     AND NOT u.deleted AND NOT u.must_change_password AND u.email_verified_at IS NOT NULL
                 JOIN category kind ON kind.id=v.vehicle_type_id AND kind.ref_type='VEHICLE_TYPE' AND kind.type='VALUE' AND kind.active
-                CROSS JOIN LATERAL (SELECT max(departure_offset_minutes) minutes,
-                    count(*) count FROM carrier_route_stops WHERE route_id=r.id) duration
+                CROSS JOIN LATERAL (SELECT MAX(departure_offset_minutes) minutes,
+                    COUNT(*) count FROM carrier_route_stops WHERE route_id=r.id) duration
                 CROSS JOIN LATERAL (SELECT CASE WHEN x."departureTime" IS NOT NULL THEN
-                        ((c.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date+x.day+x."departureTime"::time)
+                        ((c.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date+x.day+x."departureTime"::TIME)
                             AT TIME ZONE 'Asia/Ho_Chi_Minh'
                     ELSE x.anchor+x.day*INTERVAL '1 day'
                         +CASE WHEN x.day=0 AND x.slot=1 THEN INTERVAL '0 minutes'
@@ -380,7 +380,7 @@ public class BusinessDataRepo {
                 name_vi,name_en,address,latitude,longitude,scheduled_arrival_at,scheduled_departure_at,
                 actual_arrival_at,actual_departure_at,cumulative_fare,pickup_allowed,dropoff_allowed)
             SELECT t.id,t.carrier_id,t.scope_id,l.id,w.parent_id,s.stop_order,l.name AS name_vi,l.props->>'nameEn' AS name_en,
-                l.props->>'address' AS address,(l.props->>'latitude')::numeric AS latitude,(l.props->>'longitude')::numeric AS longitude,t.departure_at+s.arrival_offset_minutes*INTERVAL '1 minute',
+                l.props->>'address' AS address,(l.props->>'latitude')::NUMERIC AS latitude,(l.props->>'longitude')::NUMERIC AS longitude,t.departure_at+s.arrival_offset_minutes*INTERVAL '1 minute',
                 t.departure_at+s.departure_offset_minutes*INTERVAL '1 minute',
                 CASE WHEN t.status='COMPLETED' OR t.status='IN_PROGRESS' AND s.stop_order=1
                     THEN t.departure_at+s.arrival_offset_minutes*INTERVAL '1 minute' END,
@@ -400,7 +400,7 @@ public class BusinessDataRepo {
             INSERT INTO trip_segments(trip_id,carrier_id,scope_id,segment_order,capacity)
             SELECT t.id,t.carrier_id,t.scope_id,s.stop_order,t.capacity
             FROM vr_init_trips t JOIN trip_stops s ON s.trip_id=t.id
-            WHERE s.stop_order<(SELECT max(stop_order) FROM trip_stops WHERE trip_id=t.id)
+            WHERE s.stop_order<(SELECT MAX(stop_order) FROM trip_stops WHERE trip_id=t.id)
             """,
             null
         );
@@ -416,10 +416,10 @@ public class BusinessDataRepo {
             INSERT INTO trip_events(trip_id,carrier_id,scope_id,stop_order,event_type,note,created_at)
             SELECT t.id,t.carrier_id,t.scope_id,e.stop_order,e.event_type,e.note,e.event_at
             FROM vr_init_trips t CROSS JOIN LATERAL (
-                SELECT NULL::integer stop_order,'CREATED'::text event_type,'Lập kế hoạch chạy tuyến'::text note,
-                    least(t.departure_at-INTERVAL '3 days',CURRENT_TIMESTAMP-INTERVAL '1 day') AS event_at
+                SELECT NULL::INTEGER stop_order,'CREATED'::TEXT event_type,'Lập kế hoạch chạy tuyến'::TEXT note,
+                    LEAST(t.departure_at-INTERVAL '3 days',CURRENT_TIMESTAMP-INTERVAL '1 day') AS event_at
                 UNION ALL SELECT NULL,'OPENED','Công bố lịch và tiếp nhận đặt chỗ',
-                    least(t.departure_at-INTERVAL '2 days',CURRENT_TIMESTAMP-INTERVAL '12 hours') WHERE t.status<>'DRAFT'
+                    LEAST(t.departure_at-INTERVAL '2 days',CURRENT_TIMESTAMP-INTERVAL '12 hours') WHERE t.status<>'DRAFT'
                 UNION ALL SELECT 1,'STARTED','Xác nhận khởi hành tại điểm đầu',t.departure_at
                     WHERE t.status IN ('IN_PROGRESS','COMPLETED')
                 UNION ALL SELECT s.stop_order,'ARRIVED','Đến điểm đón trả theo hành trình',s.actual_arrival_at
@@ -428,7 +428,7 @@ public class BusinessDataRepo {
                     FROM trip_stops s WHERE s.trip_id=t.id AND s.stop_order>1 AND s.actual_departure_at IS NOT NULL
                 UNION ALL SELECT NULL,'COMPLETED','Hoàn tất phục vụ hành khách',t.end_at WHERE t.status='COMPLETED'
                 UNION ALL SELECT NULL,'CANCELLED','Điều chỉnh kế hoạch khai thác',
-                    least(t.departure_at-INTERVAL '12 hours',CURRENT_TIMESTAMP-INTERVAL '3 hours') WHERE t.status='CANCELLED'
+                    LEAST(t.departure_at-INTERVAL '12 hours',CURRENT_TIMESTAMP-INTERVAL '3 hours') WHERE t.status='CANCELLED'
             ) e
             """,
             null
@@ -442,8 +442,8 @@ public class BusinessDataRepo {
             connection,
             """
             CREATE TEMP TABLE vr_init_bookings ON COMMIT DROP AS
-            WITH config AS (SELECT ?::jsonb data), candidates AS (
-                SELECT t.*,i.number,NULL::bigint customer,'PHONE'::text source,
+            WITH config AS (SELECT ?::JSONB data), candidates AS (
+                SELECT t.*,i.number,NULL::BIGINT customer,'PHONE'::TEXT source,
                     'P'||i.number kind,
                     CASE WHEN t.status='CANCELLED' THEN 'CANCELLED'
                         WHEN i.number=5 THEN 'CANCELLED' WHEN i.number=6 THEN 'REJECTED'
@@ -451,14 +451,14 @@ public class BusinessDataRepo {
                         WHEN i.number<=2 AND t.status<>'IN_PROGRESS' THEN 'PENDING'
                         ELSE 'CONFIRMED' END booking_status
                 FROM vr_init_trips t CROSS JOIN config
-                CROSS JOIN LATERAL generate_series(1,(config.data->'profile'->>'phoneBookingsPerTrip')::integer) i(number)
+                CROSS JOIN LATERAL GENERATE_SERIES(1,(config.data->'profile'->>'phoneBookingsPerTrip')::INTEGER) i(number)
                 WHERE t.status<>'DRAFT'
                 UNION ALL
-                SELECT t.*,u.ordinality::integer,u.id,'WEB',u.kind,
+                SELECT t.*,u.ordinality::INTEGER,u.id,'WEB',u.kind,
                     CASE WHEN t.status='COMPLETED' THEN 'COMPLETED'
                         WHEN u.ordinality%2=1 THEN 'PENDING' ELSE 'CONFIRMED' END
                 FROM config CROSS JOIN LATERAL (
-                    SELECT a.id,x.ordinality,k.kind FROM jsonb_array_elements_text(
+                    SELECT a.id,x.ordinality,k.kind FROM JSONB_ARRAY_ELEMENTS_TEXT(
                         config.data->'customerUsernames') WITH ORDINALITY x(username,ordinality)
                     JOIN auth_users a ON a.username=x.username AND a.active AND NOT a.deleted
                     CROSS JOIN (VALUES ('WA'),('WH')) k(kind)
@@ -466,32 +466,32 @@ public class BusinessDataRepo {
                 JOIN LATERAL (SELECT v.* FROM vr_init_trips v WHERE
                     CASE WHEN u.kind='WH' THEN v.status='COMPLETED' ELSE
                         v.status='OPEN' AND v.departure_at>CURRENT_TIMESTAMP+INTERVAL '12 hours' END
-                    ORDER BY v.departure_at,v.code LIMIT 1 OFFSET ((u.ordinality-1)%12)) t ON true
+                    ORDER BY v.departure_at,v.code LIMIT 1 OFFSET ((u.ordinality-1)%12)) t ON TRUE
             ), priced AS (
-                SELECT x.*,first.id pickup_id,first.stop_order pickup_order,last.id dropoff_id,
-                    last.stop_order dropoff_order,last.cumulative_fare-first.cumulative_fare unit_price,
+                SELECT x.*,FIRST.id pickup_id,FIRST.stop_order pickup_order,LAST.id dropoff_id,
+                    LAST.stop_order dropoff_order,LAST.cumulative_fare-FIRST.cumulative_fare unit_price,
                     1+(x.number%2) seats,contact.name contact_name,contact.phone,
                     CASE WHEN x.booking_status IN ('CONFIRMED','COMPLETED','CANCELLED')
                         THEN CASE WHEN x.number%2=0 THEN 0.5 ELSE 1 END ELSE 0 END pay_ratio
                 FROM candidates x CROSS JOIN config
                 JOIN LATERAL (SELECT s.* FROM trip_stops s WHERE s.trip_id=x.id AND s.pickup_allowed
-                    ORDER BY stop_order LIMIT 1) first ON true
+                    ORDER BY stop_order LIMIT 1) FIRST ON TRUE
                 JOIN LATERAL (SELECT s.* FROM trip_stops s WHERE s.trip_id=x.id AND s.dropoff_allowed
-                    ORDER BY stop_order DESC LIMIT 1) last ON true
-                CROSS JOIN LATERAL jsonb_to_record(config.data->'contacts'->((x.number-1)%12)) contact(name text,phone text)
+                    ORDER BY stop_order DESC LIMIT 1) LAST ON TRUE
+                CROSS JOIN LATERAL jsonb_to_record(config.data->'contacts'->((x.number-1)%12)) contact(name TEXT,phone TEXT)
             ), added AS (
                 INSERT INTO bookings(trip_id,carrier_id,scope_id,customer_id,source_code,source_id,
                     pickup_stop_id,dropoff_stop_id,pickup_order,dropoff_order,seats,unit_price,total_price,
                     contact_name,contact_phone,status,request_key,paid_amount,refunded_amount,created_at,updated_at)
                 SELECT p.id,p.carrier_id,p.scope_id,p.customer,p.source,source.id,p.pickup_id,p.dropoff_id,
                     p.pickup_order,p.dropoff_order,p.seats,p.unit_price,p.unit_price*p.seats,p.contact_name,p.phone,
-                    p.booking_status,md5(p.code||':'||p.kind||':'||p.number)::uuid,
+                    p.booking_status,MD5(p.code||':'||p.kind||':'||p.number)::uuid,
                     p.unit_price*p.seats*p.pay_ratio,
                     CASE WHEN p.booking_status='CANCELLED' AND p.number%2=1
                         THEN p.unit_price*p.seats*p.pay_ratio ELSE 0 END,
-                    least(p.departure_at-INTERVAL '36 hours',CURRENT_TIMESTAMP-INTERVAL '6 hours'),
+                    LEAST(p.departure_at-INTERVAL '36 hours',CURRENT_TIMESTAMP-INTERVAL '6 hours'),
                     CASE WHEN p.booking_status='COMPLETED' THEN p.end_at
-                        ELSE least(p.departure_at-INTERVAL '30 hours',CURRENT_TIMESTAMP-INTERVAL '5 hours') END
+                        ELSE LEAST(p.departure_at-INTERVAL '30 hours',CURRENT_TIMESTAMP-INTERVAL '5 hours') END
                 FROM priced p JOIN category source ON source.ref_type='BOOKING_SOURCE' AND source.type='VALUE' AND source.code=p.source
                 WHERE p.source='PHONE' OR p.booking_status='COMPLETED' OR NOT EXISTS (
                     SELECT 1 FROM bookings b WHERE b.customer_id=p.customer AND b.source_code='WEB'
@@ -506,7 +506,7 @@ public class BusinessDataRepo {
             connection,
             """
             UPDATE trip_segments segment SET reserved_seats=occupied.seats
-            FROM (SELECT s.trip_id,s.segment_order,coalesce(sum(b.seats),0)::integer seats
+            FROM (SELECT s.trip_id,s.segment_order,COALESCE(SUM(b.seats),0)::INTEGER seats
                 FROM trip_segments s JOIN vr_init_trips t ON t.id=s.trip_id
                 LEFT JOIN vr_init_bookings b ON b.trip_id=s.trip_id AND b.status IN ('CONFIRMED','COMPLETED')
                     AND b.pickup_order<=s.segment_order AND b.dropoff_order>s.segment_order
@@ -521,10 +521,10 @@ public class BusinessDataRepo {
             INSERT INTO booking_events(booking_id,trip_id,carrier_id,scope_id,from_status,to_status,
                 event_type,amount,note,request_key,created_at)
             SELECT b.id,b.trip_id,b.carrier_id,b.scope_id,e.from_state,e.to_state,e.kind,e.amount,e.note,
-                md5(b.request_key::text||':'||e.kind)::uuid,e.event_at
+                MD5(b.request_key::TEXT||':'||e.kind)::uuid,e.event_at
             FROM vr_init_bookings b CROSS JOIN LATERAL (
-                SELECT NULL::text from_state,'PENDING'::text to_state,'CREATED'::text kind,
-                    0::numeric amount,'Tiếp nhận yêu cầu đặt chỗ'::text note,b.created_at AS event_at
+                SELECT NULL::TEXT from_state,'PENDING'::TEXT to_state,'CREATED'::TEXT kind,
+                    0::NUMERIC amount,'Tiếp nhận yêu cầu đặt chỗ'::TEXT note,b.created_at AS event_at
                 UNION ALL SELECT 'PENDING','CONFIRMED','CONFIRMED',0,'Xác nhận chỗ theo chặng',
                     b.created_at+INTERVAL '10 minutes'
                     WHERE b.status IN ('CONFIRMED','COMPLETED') OR b.status='CANCELLED' AND b.paid_amount>0

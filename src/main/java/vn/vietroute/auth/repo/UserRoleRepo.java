@@ -121,7 +121,7 @@ public class UserRoleRepo extends JpaRepositorySupport<UserRole, Long> {
         Array codes = connection.createArrayOf("text", roles.stream().toArray(String[]::new));
         try (
             PreparedStatement query = connection.prepareStatement(
-                "SELECT count(*) FROM auth_roles WHERE code=ANY(?) AND active AND NOT deleted"
+                "SELECT COUNT(*) FROM auth_roles WHERE code=ANY(?) AND active AND NOT deleted"
             )
         ) {
             query.setArray(1, codes);
@@ -136,7 +136,7 @@ public class UserRoleRepo extends JpaRepositorySupport<UserRole, Long> {
 
     /** Khóa transaction chung cho sửa role user, giữ invariant luôn có ít nhất một admin hoạt động. */
     public void lockRoleAssignments(Connection connection) throws SQLException {
-        try (PreparedStatement lock = connection.prepareStatement("SELECT pg_advisory_xact_lock(781205611)")) {
+        try (PreparedStatement lock = connection.prepareStatement("SELECT PG_ADVISORY_XACT_LOCK(781205611)")) {
             lock.execute();
         }
     }
@@ -189,17 +189,17 @@ public class UserRoleRepo extends JpaRepositorySupport<UserRole, Long> {
                     UPDATE auth_users u
                     SET scope_membership_versions = u.scope_membership_versions || v.versions
                     FROM (
-                        SELECT jsonb_object_agg(scope_id::text, next_version) AS versions
+                        SELECT JSONB_OBJECT_AGG(scope_id::TEXT, next_version) AS versions
                         FROM (
-                            SELECT scope_id, GREATEST(max(version), COALESCE((
-                                SELECT (scope_membership_versions ->> ur.scope_id::text)::bigint
+                            SELECT scope_id, GREATEST(MAX(version), COALESCE((
+                                SELECT (scope_membership_versions ->> ur.scope_id::TEXT)::BIGINT
                                 FROM auth_users
                                 WHERE id = ?
                             ), 0)) + 1 AS next_version
                             FROM auth_user_roles ur
                             WHERE user_id = ? AND scope_id > 0
                             GROUP BY scope_id
-                            HAVING bool_or(NOT (role_code = ANY(?)))
+                            HAVING BOOL_OR(NOT (role_code = ANY(?)))
                         ) affected
                     ) v
                     WHERE u.id = ? AND v.versions IS NOT NULL
@@ -246,7 +246,7 @@ public class UserRoleRepo extends JpaRepositorySupport<UserRole, Long> {
                     """
                     INSERT INTO auth_user_roles(user_id, role_code, created_by, updated_by)
                     SELECT ?, code, ?, ?
-                    FROM unnest(?::text []) code
+                    FROM UNNEST(?::TEXT []) code
                     ON CONFLICT DO NOTHING
                     """
                 )
@@ -337,18 +337,18 @@ public class UserRoleRepo extends JpaRepositorySupport<UserRole, Long> {
         FROM auth_user_roles
         WHERE scope_id > 0
         UNION
-        SELECT u.id, k.key::bigint
+        SELECT u.id, k.key::BIGINT
         FROM auth_users u
-        CROSS JOIN LATERAL jsonb_object_keys(u.scope_membership_versions) k(key)
+        CROSS JOIN LATERAL jsonb_object_keys(u.scope_membership_versions) k(KEY)
     )
     """;
 
     private static final String MEMBERS = """
     %s
-    SELECT m.scope_id, m.user_id, u.username, COALESCE(bool_and(ur.active), false) AS active,
-        COALESCE((u.scope_membership_versions ->> m.scope_id::text)::bigint, max(ur.version), 0) AS version,
-        COALESCE(max(ur.updated_at), u.updated_at) AS updated_at, COALESCE(max(ur.updated_by), u.updated_by)
-        AS updated_by, array_remove(array_agg(ur.role_code
+    SELECT m.scope_id, m.user_id, u.username, COALESCE(BOOL_AND(ur.active), FALSE) AS active,
+        COALESCE((u.scope_membership_versions ->> m.scope_id::TEXT)::BIGINT, MAX(ur.version), 0) AS version,
+        COALESCE(MAX(ur.updated_at), u.updated_at) AS updated_at, COALESCE(MAX(ur.updated_by), u.updated_by)
+        AS updated_by, array_remove(ARRAY_AGG(ur.role_code
     ORDER BY ur.role_code), NULL) AS role_codes
     FROM membership_keys m
     JOIN auth_users u ON u.id = m.user_id
@@ -360,12 +360,12 @@ public class UserRoleRepo extends JpaRepositorySupport<UserRole, Long> {
         return read(connection -> {
             String where = """
             FROM carriers
-            WHERE (?::boolean IS NULL OR scope_active = ?)
+            WHERE (?::BOOLEAN IS NULL OR scope_active = ?)
                 AND (scope_code ILIKE ? ESCAPE '!' OR scope_name_vi ILIKE ? ESCAPE '!' OR scope_name_en ILIKE ?
                     ESCAPE '!')
             """;
             long total;
-            try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + where)) {
+            try (PreparedStatement query = connection.prepareStatement("SELECT COUNT(*)" + where)) {
                 bind(query, search);
                 try (ResultSet row = query.executeQuery()) {
                     row.next();
@@ -414,7 +414,7 @@ public class UserRoleRepo extends JpaRepositorySupport<UserRole, Long> {
     /** Khóa quản trị do caller giữ; hạn mức áp dụng cả nhà xe tắt và ID không bị tái sử dụng. */
     public long allocate(Connection connection) throws SQLException {
         try (
-            PreparedStatement query = connection.prepareStatement("SELECT count(*) FROM carriers");
+            PreparedStatement query = connection.prepareStatement("SELECT COUNT(*) FROM carriers");
             ResultSet row = query.executeQuery()
         ) {
             row.next();
@@ -506,10 +506,10 @@ public class UserRoleRepo extends JpaRepositorySupport<UserRole, Long> {
                 PreparedStatement query = connection.prepareStatement(
                     """
                     %s
-                    SELECT count(*)
+                    SELECT COUNT(*)
                     FROM membership_keys
                     WHERE scope_id = ?
-                        AND (?::bigint IS NULL OR user_id = ?)
+                        AND (?::BIGINT IS NULL OR user_id = ?)
                     """.formatted(MEMBER_KEYS)
                 )
             ) {
@@ -552,7 +552,7 @@ public class UserRoleRepo extends JpaRepositorySupport<UserRole, Long> {
             PreparedStatement query = connection.prepareStatement(
                 """
                 %s
-                SELECT count(*)
+                SELECT COUNT(*)
                 FROM membership_keys
                 WHERE user_id = ?
                 """.formatted(MEMBER_KEYS)
@@ -578,9 +578,9 @@ public class UserRoleRepo extends JpaRepositorySupport<UserRole, Long> {
                 PreparedStatement query = connection.prepareStatement(
                     """
                     UPDATE auth_users
-                    SET scope_membership_versions = jsonb_set(scope_membership_versions, ARRAY [?::text],
-                        to_jsonb(?::bigint),
-                        true), version = version + 1, updated_at = CURRENT_TIMESTAMP, updated_by = ?
+                    SET scope_membership_versions = JSONB_SET(scope_membership_versions, ARRAY [?::TEXT],
+                        TO_JSONB(?::BIGINT),
+                        TRUE), version = version + 1, updated_at = CURRENT_TIMESTAMP, updated_by = ?
                     WHERE id = ?
                     """
                 )
@@ -606,7 +606,7 @@ public class UserRoleRepo extends JpaRepositorySupport<UserRole, Long> {
                     INSERT INTO auth_user_roles(user_id, role_code, scope_id, active, version, created_by,
                         updated_by)
                     SELECT ?, code, ?, ?, ?, ?, ?
-                    FROM unnest(?::text []) code
+                    FROM UNNEST(?::TEXT []) code
                     """
                 )
             ) {

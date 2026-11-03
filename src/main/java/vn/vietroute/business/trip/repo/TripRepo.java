@@ -63,7 +63,7 @@ public class TripRepo extends BaseRepository {
         AND EXISTS (
             SELECT 1
             FROM (
-                SELECT scope_id, user_id, bool_and(active) AS active, max(version) AS version
+                SELECT scope_id, user_id, BOOL_AND(active) AS active, MAX(version) AS version
                 FROM auth_user_roles
                 WHERE scope_id > 0
                 GROUP BY scope_id, user_id
@@ -99,15 +99,15 @@ public class TripRepo extends BaseRepository {
             String filter = """
             %s
             WHERE %s
-                AND (?::bigint IS NULL OR owner.id = ?)
-                AND (?::text IS NULL OR t.status = ?)
-                AND (?::timestamptz IS NULL OR (t.departure_at >= ? AND t.departure_at < ?))
-                AND strpos(lower(concat_ws(' ', t.code, t.name_vi, t.name_en, t.plate_number, owner.name)),
+                AND (?::BIGINT IS NULL OR owner.id = ?)
+                AND (?::TEXT IS NULL OR t.status = ?)
+                AND (?::TIMESTAMPTZ IS NULL OR (t.departure_at >= ? AND t.departure_at < ?))
+                AND strpos(LOWER(CONCAT_WS(' ', t.code, t.name_vi, t.name_en, t.plate_number, owner.name)),
                 ?) > 0
             %s
             """.formatted(FROM, UserRoleRepo.visibleSql(), driverUserId == null ? "" : " " + ASSIGNED);
             long total;
-            try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + filter)) {
+            try (PreparedStatement query = connection.prepareStatement("SELECT COUNT(*)" + filter)) {
                 bindSearch(query, 1, search, driverUserId);
                 try (ResultSet row = query.executeQuery()) {
                     row.next();
@@ -693,7 +693,7 @@ public class TripRepo extends BaseRepository {
                 SELECT id, carrier_id, scope_id, name_vi, name_en, active
                 FROM carrier_routes
                 WHERE id = ?
-                    AND (?::bigint IS NULL OR carrier_id = ?)
+                    AND (?::BIGINT IS NULL OR carrier_id = ?)
                 %s
                 """.formatted(lock ? " FOR SHARE" : "")
             )
@@ -722,7 +722,7 @@ public class TripRepo extends BaseRepository {
         try (
             PreparedStatement query = connection.prepareStatement(
                 """
-                SELECT l.id, p.id AS province_id, s.stop_order, l.name AS name_vi, l.props->>'nameEn' AS name_en, l.props->>'address' AS address, (l.props->>'latitude')::numeric AS latitude, (l.props->>'longitude')::numeric AS longitude,
+                SELECT l.id, p.id AS province_id, s.stop_order, l.name AS name_vi, l.props->>'nameEn' AS name_en, l.props->>'address' AS address, (l.props->>'latitude')::NUMERIC AS latitude, (l.props->>'longitude')::NUMERIC AS longitude,
                     s.arrival_offset_minutes, s.departure_offset_minutes, s.cumulative_fare,
                     s.pickup_allowed, s.dropoff_allowed,
                     l.active
@@ -887,7 +887,7 @@ public class TripRepo extends BaseRepository {
                 """;
                 id = "item.id";
                 code = "item.code";
-                name = "concat_ws(' / ',item.name_vi,item.name_en)";
+                name = "CONCAT_WS(' / ',item.name_vi,item.name_en)";
                 usable = "owner.active AND item.active";
             }
             case VEHICLE -> {
@@ -921,7 +921,7 @@ public class TripRepo extends BaseRepository {
                     AND EXISTS (
                         SELECT 1
                         FROM (
-                            SELECT scope_id, user_id, bool_and(active) AS active, max(version) AS version
+                            SELECT scope_id, user_id, BOOL_AND(active) AS active, MAX(version) AS version
                             FROM auth_user_roles
                             WHERE scope_id > 0
                             GROUP BY scope_id, user_id
@@ -948,11 +948,11 @@ public class TripRepo extends BaseRepository {
         FROM %s
         WHERE %s
             AND %s
-            AND (?::bigint IS NULL OR owner.id = ?)
-            AND strpos(lower(concat_ws(' ', %s, %s)), ?) > 0
+            AND (?::BIGINT IS NULL OR owner.id = ?)
+            AND strpos(LOWER(CONCAT_WS(' ', %s, %s)), ?) > 0
         """.formatted(from, UserRoleRepo.visibleSql(), usable, code, name);
         long total;
-        try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + filter)) {
+        try (PreparedStatement query = connection.prepareStatement("SELECT COUNT(*)" + filter)) {
             bindChoice(query, body);
             try (ResultSet row = query.executeQuery()) {
                 row.next();

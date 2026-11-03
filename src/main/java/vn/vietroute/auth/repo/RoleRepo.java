@@ -51,7 +51,7 @@ public class RoleRepo extends JpaRepositorySupport<Role, String> {
 
     public List<Role> all() {
         return entityManager
-            .createQuery("select r from Role r where r.deleted=false order by r.code", Role.class)
+            .createQuery("SELECT r FROM Role r WHERE r.deleted=FALSE ORDER BY r.code", Role.class)
             .getResultList();
     }
 
@@ -104,7 +104,7 @@ public class RoleRepo extends JpaRepositorySupport<Role, String> {
     /** Chỉ startup/sync tường minh; không tự khôi phục grant ordinary role hoặc thêm endpoint vào function đã init. */
     public void synchronizeEndpoints(Connection connection, JsonNode data, List<FunctionDTO> endpoints)
         throws SQLException {
-        try (PreparedStatement lock = connection.prepareStatement("SELECT pg_advisory_xact_lock(781205611)")) {
+        try (PreparedStatement lock = connection.prepareStatement("SELECT PG_ADVISORY_XACT_LOCK(781205611)")) {
             lock.execute();
         }
         initialize(connection, data);
@@ -172,14 +172,14 @@ public class RoleRepo extends JpaRepositorySupport<Role, String> {
         }
         try (
             PreparedStatement update = connection.prepareStatement(
-                "UPDATE auth_functions SET resources_initialized=true WHERE NOT resources_initialized"
+                "UPDATE auth_functions SET resources_initialized=TRUE WHERE NOT resources_initialized"
             )
         ) {
             update.executeUpdate();
         }
         try (
             PreparedStatement update = connection.prepareStatement(
-                "UPDATE auth_roles SET functions_initialized=true WHERE NOT functions_initialized"
+                "UPDATE auth_roles SET functions_initialized=TRUE WHERE NOT functions_initialized"
             )
         ) {
             update.executeUpdate();
@@ -194,7 +194,7 @@ public class RoleRepo extends JpaRepositorySupport<Role, String> {
             PreparedStatement update = connection.prepareStatement(
                 """
                 UPDATE auth_roles
-                SET active = true, deleted = false, all_scopes = true, protected_role = true, updated_by = ?,
+                SET active = TRUE, deleted = FALSE, all_scopes = TRUE, protected_role = TRUE, updated_by = ?,
                     updated_at = CURRENT_TIMESTAMP, version = version + 1
                 WHERE code = ?
                     AND (NOT active OR deleted OR NOT all_scopes OR NOT protected_role)
@@ -218,7 +218,7 @@ public class RoleRepo extends JpaRepositorySupport<Role, String> {
             PreparedStatement update = connection.prepareStatement(
                 """
                 UPDATE auth_functions
-                SET active = true, deleted = false, updated_by = ?, updated_at = CURRENT_TIMESTAMP,
+                SET active = TRUE, deleted = FALSE, updated_by = ?, updated_at = CURRENT_TIMESTAMP,
                     version = version + 1
                 WHERE code = ?
                     AND (NOT active OR deleted)
