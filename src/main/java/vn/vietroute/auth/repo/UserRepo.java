@@ -28,7 +28,6 @@ import vn.vietroute.common.exception.BusinessException;
 
 /** SQL native của User; transaction ghi do Service/Initializer sở hữu. */
 public interface UserRepo extends JpaRepository<User, Long> {
-    @Transactional(readOnly = true)
     @Query(
         value = """
         SELECT u.id, u.username, u.display_name, u.email, u.email_verified_at,
@@ -112,7 +111,6 @@ public interface UserRepo extends JpaRepository<User, Long> {
     )
     Map<String, Object> byUsername(@Param("username") String username);
 
-    @Transactional(propagation = Propagation.MANDATORY)
     @Query(
         value = """
         SELECT u.id, u.username, u.display_name, u.email, u.email_verified_at, u.activation_pending,
@@ -188,7 +186,6 @@ public interface UserRepo extends JpaRepository<User, Long> {
     )
     Map<String, Object> accountRow(@Param("id") Long id);
 
-    @Transactional(propagation = Propagation.MANDATORY)
     @Query(
         value = """
         SELECT u.id, u.username, u.display_name, u.email, u.email_verified_at, u.activation_pending,
@@ -227,17 +224,18 @@ public interface UserRepo extends JpaRepository<User, Long> {
     )
     Map<String, Object> accountLockedRow(@Param("id") Long id);
 
+    @Transactional(propagation = Propagation.MANDATORY)
     default User findByUsername(String username, boolean lock) {
         Map<String, Object> row = lock ? byUsernameLocked(username) : byUsername(username);
         return row == null || row.isEmpty() ? null : account(row);
     }
 
+    @Transactional(propagation = Propagation.MANDATORY)
     default User load(Long id, boolean lock) {
         Map<String, Object> row = lock ? accountLockedRow(id) : accountRow(id);
         return row == null || row.isEmpty() ? null : account(row);
     }
 
-    @Transactional(propagation = Propagation.MANDATORY)
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(
         value = """
@@ -255,63 +253,61 @@ public interface UserRepo extends JpaRepository<User, Long> {
         @Param("systemActor") long actor
     );
 
+    @Transactional(propagation = Propagation.MANDATORY)
     default void recordFailure(long id, int attempts, Instant lockedUntil) {
         recordFailureRow(id, attempts, lockedUntil, SystemActor.ID);
     }
 
-    @Transactional(propagation = Propagation.MANDATORY)
     @Query(
         value = """
-        UPDATE {h-schema}auth_users u
-        SET failed_login_attempts = 0, locked_until = NULL, updated_at = CURRENT_TIMESTAMP, updated_by = :systemActor,
-            version = version + 1
-        WHERE u.id = :id AND NOT u.deleted
-        RETURNING
-        u.id, u.username, u.display_name, u.email, u.email_verified_at, u.activation_pending,
-            u.password_hash, u.active, u.must_change_password, u.failed_login_attempts, u.locked_until,
-            u.token_version, u.version, u.created_at, u.updated_at, u.created_by, u.updated_by
-        , ARRAY(
-            SELECT r.code
-            FROM {h-schema}auth_user_roles ur
-            JOIN {h-schema}auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
-            WHERE ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
-            ORDER BY r.code
-        ) AS role_codes, ARRAY(
-            SELECT DISTINCT fr.target
-            FROM {h-schema}auth_user_roles ur
-            JOIN {h-schema}auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
-            JOIN {h-schema}auth_role_functions rf ON rf.role_code = r.code
-            JOIN {h-schema}auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
-            JOIN {h-schema}auth_function_resources fr ON fr.function_code = f.code
-            WHERE ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
-            ORDER BY fr.target
-        ) AS resource_targets, ARRAY(
-            SELECT DISTINCT fr.target
-            FROM {h-schema}auth_user_roles ur
-            JOIN {h-schema}auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted AND r.all_scopes
-            JOIN {h-schema}auth_role_functions rf ON rf.role_code = r.code
-            JOIN {h-schema}auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
-            JOIN {h-schema}auth_function_resources fr ON fr.function_code = f.code
-            WHERE ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
-            ORDER BY fr.target
-        ) AS global_targets
-        """,
+            UPDATE {h-schema}auth_users u
+            SET failed_login_attempts = 0, locked_until = NULL, updated_at = CURRENT_TIMESTAMP, updated_by = :systemActor,
+                version = version + 1
+            WHERE u.id = :id AND NOT u.deleted
+            RETURNING
+            u.id, u.username, u.display_name, u.email, u.email_verified_at, u.activation_pending,
+                u.password_hash, u.active, u.must_change_password, u.failed_login_attempts, u.locked_until,
+                u.token_version, u.version, u.created_at, u.updated_at, u.created_by, u.updated_by
+            , ARRAY(
+                SELECT r.code
+                FROM {h-schema}auth_user_roles ur
+                JOIN {h-schema}auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
+                WHERE ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
+                ORDER BY r.code
+            ) AS role_codes, ARRAY(
+                SELECT DISTINCT fr.target
+                FROM {h-schema}auth_user_roles ur
+                JOIN {h-schema}auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
+                JOIN {h-schema}auth_role_functions rf ON rf.role_code = r.code
+                JOIN {h-schema}auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
+                JOIN {h-schema}auth_function_resources fr ON fr.function_code = f.code
+                WHERE ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
+                ORDER BY fr.target
+            ) AS resource_targets, ARRAY(
+                SELECT DISTINCT fr.target
+                FROM {h-schema}auth_user_roles ur
+                JOIN {h-schema}auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted AND r.all_scopes
+                JOIN {h-schema}auth_role_functions rf ON rf.role_code = r.code
+                JOIN {h-schema}auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
+                JOIN {h-schema}auth_function_resources fr ON fr.function_code = f.code
+                WHERE ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
+                ORDER BY fr.target
+            ) AS global_targets
+            """,
         nativeQuery = true
     )
     Map<String, Object> completeLoginRow(@Param("id") long id, @Param("systemActor") long actor);
 
+    @Transactional(propagation = Propagation.MANDATORY)
     default User completeLogin(long id) {
         Map<String, Object> row = completeLoginRow(id, SystemActor.ID);
         if (row == null || row.isEmpty()) throw new BusinessException(ErrorCode.DATABASE_UNAVAILABLE);
         return account(row);
     }
 
+    @Transactional(propagation = Propagation.MANDATORY)
     default void resetFailures(long id) {
-        recordFailure(id, 0, null);
-    }
-
-    default void changePassword(long id, String hash) {
-        changePassword(id, hash, id);
+        recordFailureRow(id, 0, null, SystemActor.ID);
     }
 
     @Transactional(propagation = Propagation.MANDATORY)

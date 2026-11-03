@@ -29,11 +29,11 @@ public interface FunctionResourceRepo extends JpaRepository<FunctionResource, Lo
 
     @Query(
         value = """
-        SELECT function_code, target
-        FROM {h-schema}auth_function_resources
-        WHERE function_code IN (:codes)
-        ORDER BY function_code, target
-        """,
+            SELECT function_code, target
+            FROM {h-schema}auth_function_resources
+            WHERE function_code IN (:codes)
+            ORDER BY function_code, target
+            """,
         nativeQuery = true
     )
     List<Map<String, Object>> targetsRows(@Param("codes") List<String> codes);

@@ -22,6 +22,7 @@ import lombok.Setter;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.repo.UserRoleRepo;
+import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.carrier.dto.request.CarrierRequest;
 import vn.vietroute.business.carrier.dto.request.DriverRequest;
 import vn.vietroute.business.carrier.dto.request.VehicleRequest;
@@ -263,12 +264,16 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
 
     /** Tạo scope và nhà xe cùng transaction; lỗi UNIQUE rollback cả scope, không để scope mồ côi. */
     public long insertCarrier(CarrierRequest body, long actor) {
-        long scope = scopes.create(
-            body.getName(),
-            actor,
-            settings.getScopeCapacity(),
-            schema.quoted() + ".carrier_scope_ids"
+        UserPrincipal current = UserPrincipal.current();
+        BusinessRules.require(current.id() == actor, ErrorCode.ACCESS_DENIED);
+        scopes.requireGlobal(current);
+        scopes.lockRoleAssignments();
+        BusinessRules.require(
+            scopes.scopeCount() < settings.getScopeCapacity(),
+            ErrorCode.ACCESS_CAPACITY_REACHED,
+            settings.getScopeCapacity()
         );
+        long scope = scopes.nextScopeId(schema.quoted() + ".carrier_scope_ids");
         Carrier value = Carrier.builder()
             .scopeId(scope)
             .code(body.getCode())

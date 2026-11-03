@@ -242,7 +242,7 @@ public class UserService {
             for (String previous : users.previousPasswords(value.getId())) {
                 BusinessRules.require(!passwords.matches(body.getNewPassword(), previous), ErrorCode.PASSWORD_REUSED);
             }
-            users.changePassword(actor.id(), hash);
+            users.changePassword(actor.id(), hash, actor.id());
             challenges.invalidate(actor.id());
             return null;
         });

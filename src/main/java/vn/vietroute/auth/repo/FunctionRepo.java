@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,31 +32,31 @@ public interface FunctionRepo extends JpaRepository<Function, String> {
     default Page<Function> search(FunctionSearch search) {
         String keyword =
             "%" +
-            search.getQuery().toLowerCase(Locale.ROOT).replace("!", "!!").replace("%", "!%").replace("_", "!_") +
-            "%";
+                search.getQuery().toLowerCase(Locale.ROOT).replace("!", "!!").replace("%", "!%").replace("_", "!_") +
+                "%";
         return searchByFilters(keyword, search.getActive(), PageRequest.of(search.getPage(), search.getSize()));
     }
 
     @Query(
         value = """
-        SELECT f.*
-        FROM {h-schema}auth_functions f
-        WHERE NOT f.deleted
-            AND (CAST(:active AS BOOLEAN) IS NULL OR f.active = :active)
-            AND (LOWER(f.code) LIKE :keyword ESCAPE '!'
-                OR LOWER(f.name_vi) LIKE :keyword ESCAPE '!'
-                OR LOWER(f.name_en) LIKE :keyword ESCAPE '!')
-        ORDER BY f.code
-        """,
+            SELECT f.*
+            FROM {h-schema}auth_functions f
+            WHERE NOT f.deleted
+                AND (CAST(:active AS BOOLEAN) IS NULL OR f.active = :active)
+                AND (LOWER(f.code) LIKE :keyword ESCAPE '!'
+                    OR LOWER(f.name_vi) LIKE :keyword ESCAPE '!'
+                    OR LOWER(f.name_en) LIKE :keyword ESCAPE '!')
+            ORDER BY f.code
+            """,
         countQuery = """
-        SELECT COUNT(*)
-        FROM {h-schema}auth_functions f
-        WHERE NOT f.deleted
-            AND (CAST(:active AS BOOLEAN) IS NULL OR f.active = :active)
-            AND (LOWER(f.code) LIKE :keyword ESCAPE '!'
-                OR LOWER(f.name_vi) LIKE :keyword ESCAPE '!'
-                OR LOWER(f.name_en) LIKE :keyword ESCAPE '!')
-        """,
+            SELECT COUNT(*)
+            FROM {h-schema}auth_functions f
+            WHERE NOT f.deleted
+                AND (CAST(:active AS BOOLEAN) IS NULL OR f.active = :active)
+                AND (LOWER(f.code) LIKE :keyword ESCAPE '!'
+                    OR LOWER(f.name_vi) LIKE :keyword ESCAPE '!'
+                    OR LOWER(f.name_en) LIKE :keyword ESCAPE '!')
+            """,
         nativeQuery = true
     )
     Page<Function> searchByFilters(@Param("keyword") String keyword, @Param("active") Boolean active, Pageable page);
@@ -66,11 +67,11 @@ public interface FunctionRepo extends JpaRepository<Function, String> {
     @Transactional(propagation = Propagation.MANDATORY)
     @Query(
         value = """
-        SELECT f.*
-        FROM {h-schema}auth_functions f
-        WHERE f.code = :code
-        FOR UPDATE
-        """,
+            SELECT f.*
+            FROM {h-schema}auth_functions f
+            WHERE f.code = :code
+            FOR UPDATE
+            """,
         nativeQuery = true
     )
     Function lock(@Param("code") String code);
@@ -80,17 +81,17 @@ public interface FunctionRepo extends JpaRepository<Function, String> {
      */
     @Query(
         value = """
-        SELECT DISTINCT f.code, f.name_vi, f.name_en, fr.kind, fr.target
-        FROM {h-schema}auth_users u
-        JOIN {h-schema}auth_user_roles ur ON ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
-        JOIN {h-schema}auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
-        JOIN {h-schema}auth_role_functions rf ON rf.role_code = r.code
-        JOIN {h-schema}auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
-        JOIN {h-schema}auth_function_resources fr ON fr.function_code = f.code
-        WHERE u.id = :userId AND u.active AND NOT u.deleted AND NOT u.activation_pending
-            AND NOT u.must_change_password AND u.email_verified_at IS NOT NULL
-        ORDER BY f.code, fr.target
-        """,
+            SELECT DISTINCT f.code, f.name_vi, f.name_en, fr.kind, fr.target
+            FROM {h-schema}auth_users u
+            JOIN {h-schema}auth_user_roles ur ON ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
+            JOIN {h-schema}auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
+            JOIN {h-schema}auth_role_functions rf ON rf.role_code = r.code
+            JOIN {h-schema}auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
+            JOIN {h-schema}auth_function_resources fr ON fr.function_code = f.code
+            WHERE u.id = :userId AND u.active AND NOT u.deleted AND NOT u.activation_pending
+                AND NOT u.must_change_password AND u.email_verified_at IS NOT NULL
+            ORDER BY f.code, fr.target
+            """,
         nativeQuery = true
     )
     List<Map<String, Object>> capabilityRows(@Param("userId") long userId);
@@ -120,18 +121,18 @@ public interface FunctionRepo extends JpaRepository<Function, String> {
 
     @Query(
         value = """
-        SELECT DISTINCT ON (fr.target) fr.target, fr.name_vi, fr.name_en, fr.icon
-        FROM {h-schema}auth_users u
-        JOIN {h-schema}auth_user_roles ur ON ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
-        JOIN {h-schema}auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
-        JOIN {h-schema}auth_role_functions rf ON rf.role_code = r.code
-        JOIN {h-schema}auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
-        JOIN {h-schema}auth_function_resources fr ON fr.function_code = f.code
-        WHERE u.id = :userId AND u.active AND NOT u.deleted AND NOT u.activation_pending
-            AND NOT u.must_change_password AND u.email_verified_at IS NOT NULL
-            AND fr.kind = 'MENU' AND fr.http_method = 'GET'
-        ORDER BY fr.target, f.sort_order, fr.sort_order, f.code
-        """,
+            SELECT DISTINCT ON (fr.target) fr.target, fr.name_vi, fr.name_en, fr.icon
+            FROM {h-schema}auth_users u
+            JOIN {h-schema}auth_user_roles ur ON ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
+            JOIN {h-schema}auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
+            JOIN {h-schema}auth_role_functions rf ON rf.role_code = r.code
+            JOIN {h-schema}auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
+            JOIN {h-schema}auth_function_resources fr ON fr.function_code = f.code
+            WHERE u.id = :userId AND u.active AND NOT u.deleted AND NOT u.activation_pending
+                AND NOT u.must_change_password AND u.email_verified_at IS NOT NULL
+                AND fr.kind = 'MENU' AND fr.http_method = 'GET'
+            ORDER BY fr.target, f.sort_order, fr.sort_order, f.code
+            """,
         nativeQuery = true
     )
     List<Map<String, Object>> navigationRows(@Param("userId") long userId);

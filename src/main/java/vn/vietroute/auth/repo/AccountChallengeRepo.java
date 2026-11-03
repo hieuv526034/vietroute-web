@@ -8,16 +8,17 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.entity.AccountChallenge;
 
-/** SQL native của AccountChallenge; transaction ghi do Service/Initializer sở hữu. */
+/**
+ * SQL native của AccountChallenge; transaction ghi do Service/Initializer sở hữu.
+ */
 public interface AccountChallengeRepo extends JpaRepository<AccountChallenge, Long> {
-    @Transactional(propagation = Propagation.MANDATORY)
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(
         value = """
-        DELETE FROM {h-schema}auth_account_challenges
-        WHERE user_id = :userId AND purpose = :purpose AND token_hash = :hash AND token_version = :version
-            AND expires_at > CURRENT_TIMESTAMP
-        """,
+            DELETE FROM {h-schema}auth_account_challenges
+            WHERE user_id = :userId AND purpose = :purpose AND token_hash = :hash AND token_version = :version
+                AND expires_at > CURRENT_TIMESTAMP
+            """,
         nativeQuery = true
     )
     int consumeRow(
@@ -27,6 +28,7 @@ public interface AccountChallengeRepo extends JpaRepository<AccountChallenge, Lo
         @Param("version") long version
     );
 
+    @Transactional(propagation = Propagation.MANDATORY)
     default boolean consume(long user, String purpose, String hash, long version) {
         return consumeRow(user, purpose, hash, version) == 1;
     }
@@ -35,9 +37,9 @@ public interface AccountChallengeRepo extends JpaRepository<AccountChallenge, Lo
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(
         value = """
-        DELETE FROM {h-schema}auth_account_challenges
-        WHERE user_id = :userId
-        """,
+            DELETE FROM {h-schema}auth_account_challenges
+            WHERE user_id = :userId
+            """,
         nativeQuery = true
     )
     int invalidate(@Param("userId") long user);

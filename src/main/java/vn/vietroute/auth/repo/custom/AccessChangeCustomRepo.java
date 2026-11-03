@@ -2,6 +2,7 @@ package vn.vietroute.auth.repo.custom;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -10,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import org.springframework.stereotype.Repository;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -18,7 +20,9 @@ import vn.vietroute.common.base.BaseRepository;
 import vn.vietroute.common.constant.ApplicationConstants.Http;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 
-/** SQL ghi batch theo tập; caller sở hữu transaction/connection và quyền nghiệp vụ. */
+/**
+ * SQL ghi batch theo tập; caller sở hữu transaction/connection và quyền nghiệp vụ.
+ */
 @Repository
 public class AccessChangeCustomRepo extends BaseRepository {
 
@@ -27,14 +31,16 @@ public class AccessChangeCustomRepo extends BaseRepository {
     }
 
     private static final String INSERT = """
-    INSERT INTO auth_access_changes(event_type, target_kind, target_key, actor_id, trace_id,
-        before_state, after_state, created_by, updated_by)
-    VALUES (?, ?, ?, ?, ?, ?::JSONB, ?::JSONB, ?, ?)
-    """;
+        INSERT INTO auth_access_changes(event_type, target_kind, target_key, actor_id, trace_id,
+            before_state, after_state, created_by, updated_by)
+        VALUES (?, ?, ?, ?, ?, ?::JSONB, ?::JSONB, ?, ?)
+        """;
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
-    /** Thu hồi nhiều membership ghi một batch, không truy vấn hoặc execute mỗi dòng. */
+    /**
+     * Thu hồi nhiều membership ghi một batch, không truy vấn hoặc execute mỗi dòng.
+     */
     public void appendMemberships(
         Connection connection,
         long user,
@@ -103,7 +109,9 @@ public class AccessChangeCustomRepo extends BaseRepository {
         return read(AccessChangeCustomRepo::cleanup);
     }
 
-    /** Dọn một lô trong transaction startup/nhật ký, không thêm query vào từng mutation. */
+    /**
+     * Dọn một lô trong transaction startup/nhật ký, không thêm query vào từng mutation.
+     */
     public static int cleanup(Connection connection) throws SQLException {
         try (PreparedStatement lock = connection.prepareStatement("SELECT PG_TRY_ADVISORY_XACT_LOCK(781205618)")) {
             try (ResultSet row = lock.executeQuery()) {
@@ -114,20 +122,20 @@ public class AccessChangeCustomRepo extends BaseRepository {
         try (
             PreparedStatement query = connection.prepareStatement(
                 """
-                DELETE
-                FROM auth_access_changes
-                WHERE id IN (
-                    SELECT id
+                    DELETE
                     FROM auth_access_changes
-                    WHERE created_at < CURRENT_TIMESTAMP - INTERVAL '7 days'
-                        OR id < (
-                            SELECT COALESCE(MAX(id), 0) - 1000
-                            FROM auth_access_changes
-                        )
-                    ORDER BY id
-                    LIMIT 200
-                )
-                """
+                    WHERE id IN (
+                        SELECT id
+                        FROM auth_access_changes
+                        WHERE created_at < CURRENT_TIMESTAMP - INTERVAL '7 days'
+                            OR id < (
+                                SELECT COALESCE(MAX(id), 0) - 1000
+                                FROM auth_access_changes
+                            )
+                        ORDER BY id
+                        LIMIT 200
+                    )
+                    """
             )
         ) {
             return query.executeUpdate();

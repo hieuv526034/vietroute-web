@@ -39,12 +39,12 @@ public interface RoleFunctionRepo extends JpaRepository<RoleFunction, Long> {
     @Transactional(readOnly = true)
     @Query(
         value = """
-        SELECT EXISTS (
-            SELECT 1
-            FROM {h-schema}auth_role_functions
-            WHERE function_code = :code
-        )
-        """,
+            SELECT EXISTS (
+                SELECT 1
+                FROM {h-schema}auth_role_functions
+                WHERE function_code = :code
+            )
+            """,
         nativeQuery = true
     )
     boolean usesFunction(@Param("code") String code);

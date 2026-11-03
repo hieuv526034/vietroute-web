@@ -269,6 +269,12 @@ Sáu CustomRepo auth nằm trong auth/repo/custom. Năm CustomRepo business cũn
 
 Nhóm auth/H2/context đạt 20/20. Lượt hồi quy đầu phát hiện hai ca tạo nhà xe lỗi vì Hibernate không thay {h-schema} trong literal tên sequence; đã sửa bind tên sequence từ JdbcSchema đã validate. Kiểm lại bốn ca tập trung đạt, gồm tạo nhà xe và INSERT history bị database bỏ qua vẫn rollback tài khoản. Maven clean verify cuối đạt 215/215 Java, gồm 78 PostgreSQL local, không fail/error/skip; WAR thành công. Node đạt 74/74. Exporter xuất 73 SQL và 38 SELECT mẫu đã chạy trên preview PostgreSQL local với READ ONLY/ROLLBACK; loại cấp sequence và advisory lock khỏi ví dụ chỉ đọc. Format/rules/docs/diff-check đạt. Word cập nhật query, kết quả test và tư liệu sơ đồ, render 81 trang và rà các trang sửa. Chưa áp DB thật hoặc tích hợp dev/main.
 
+## TXENTRY01 — transaction tại điểm vào Repo
+
+Hieuv526034 tiếp tục nhánh `hieuv526034/category01-danh-muc-chung`, nền `f90d552`. User đã format 14 file Repo auth và cấu hình IDE trước lượt này. Bản sửa giữ các thay đổi đó trong working tree, chuyển annotation transaction từ query helper sang default method mà Service gọi. Các hàm credential/ghi/khóa cần transaction Service dùng MANDATORY; đọc projection phiên vẫn readOnly. Giữ annotation trên query khóa được bean khác gọi trực tiếp. Bỏ wrapper đổi mật khẩu hai tham số, gọi query ba tham số từ Service; phối hợp cấp scope qua các method proxy trong CarrierRepo. Không thêm class hoặc thay SQL/migration.
+
+Mở rộng ca kiểm PostgreSQL hiện có để gọi các entry credential/history/mapping ngoài transaction và xác nhận bị chặn trước query; cùng transaction ID, bộ đếm sai và rollback toàn giao dịch vẫn đúng. Nhóm tập trung 8/8 đạt. Maven clean verify đầy đủ đạt 215/215 Java, gồm 78 PostgreSQL local, không fail/error/skip; WAR thành công. Rà các lời gọi theo đúng chữ ký không còn entry trong cùng class/interface gọi tiếp method transactional. Rules/docs/diff-check đạt; format:check báo 14 file Repo auth khác Prettier do giữ format user vừa chỉnh. Không đổi formatter/checker để bỏ cảnh báo.
+
 ## Còn lại và bước tiếp
 
 Source DUYLONG01 đã có trên dev/main và Live theo bằng chứng trên; DUYLONG02 chốt tài liệu nghiệm thu. Chưa có Oracle runtime/regression, kiểm tải/SLA hoặc backup di động/PITR/RPO/RTO; DPAPI local phụ thuộc tài khoản Windows. Kiểm thêm cách chạy Maven Wrapper trên máy trước khi dùng hướng dẫn local.

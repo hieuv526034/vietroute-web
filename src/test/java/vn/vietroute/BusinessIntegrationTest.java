@@ -76,6 +76,7 @@ import org.springframework.transaction.UnexpectedRollbackException;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import vn.vietroute.auth.dto.FunctionDTO;
 import vn.vietroute.auth.dto.RoleDTO;
+import vn.vietroute.auth.dto.request.RoleRequest;
 import vn.vietroute.auth.dto.request.UserRequest;
 import vn.vietroute.auth.dto.search.FunctionSearch;
 import vn.vietroute.auth.entity.AccessChange;
@@ -903,7 +904,23 @@ class BusinessIntegrationTest {
     }
 
     @Test
-    void repositoryLockAndTripProgressRequireServiceTransactionBeforeExecutingQuery() {
+    void repositoryLockAndTripProgressRequireServiceTransactionBeforeExecutingQuery() throws Exception {
+        var users = root.getBean(UserRepo.class);
+        var mappings = root.getBean(UserRoleRepo.class);
+        assertThrows(IllegalTransactionStateException.class, () -> users.findByUsername("testadmin", true));
+        assertThrows(IllegalTransactionStateException.class, () -> users.load(1L, true));
+        assertThrows(IllegalTransactionStateException.class, () -> users.recordFailure(1, 1, null));
+        assertThrows(IllegalTransactionStateException.class, () -> users.resetFailures(1));
+        assertThrows(IllegalTransactionStateException.class, () -> users.completeLogin(1));
+        assertThrows(IllegalTransactionStateException.class, () ->
+            root.getBean(AccountChallengeRepo.class).consume(1, "AUTH", "fixture", 0)
+        );
+        assertThrows(IllegalTransactionStateException.class, () ->
+            root.getBean(AccessChangeRepo.class).append("TEST", "USER", "1", 0, Map.of(), Map.of())
+        );
+        assertThrows(IllegalTransactionStateException.class, () -> mappings.prepareRoles(1, Set.of(), 0, 0));
+        assertThrows(IllegalTransactionStateException.class, () -> mappings.prepareMembership(1, 1, 0, 0));
+        assertThrows(IllegalTransactionStateException.class, () -> mappings.save(1, new RoleRequest(), 0));
         assertThrows(IllegalTransactionStateException.class, () ->
             root.getBean(FunctionRepo.class).lock("ADMIN_CONSOLE")
         );
@@ -914,6 +931,18 @@ class BusinessIntegrationTest {
         assertTrue(root.getBean(FunctionRepo.class).search(search).getTotalElements() > 0);
         assertTrue(root.getBean(FunctionResourceRepo.class).targetsFor(List.of("VEHICLE_READ")).size() > 0);
         assertTrue(root.getBean(RoleFunctionRepo.class).functionTargets(Set.of("VEHICLE_READ")).size() > 0);
+        assertTrue(users.load(1L) != null);
+        String before = sql("SELECT failed_login_attempts FROM auth_users WHERE id=1");
+        assertThrows(IllegalStateException.class, () ->
+            root.getBean(JdbcTransactions.class).execute(connection -> {
+                var manager = root.getBean(EntityManager.class);
+                Object transaction = manager.createNativeQuery("SELECT TXID_CURRENT()").getSingleResult();
+                users.recordFailure(1, 2, null);
+                assertEquals(transaction, manager.createNativeQuery("SELECT TXID_CURRENT()").getSingleResult());
+                throw new IllegalStateException("Rollback toàn bộ transaction của service");
+            })
+        );
+        assertEquals(before, sql("SELECT failed_login_attempts FROM auth_users WHERE id=1"));
     }
 
     @Test
