@@ -34,9 +34,11 @@ import vn.vietroute.business.catalog.constant.CategoryRefType;
 import vn.vietroute.common.base.BaseEntity;
 import vn.vietroute.common.base.JpaRepositorySupport;
 import vn.vietroute.common.base.PageResponse;
+import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
+import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.validation.BusinessRules;
 
 /** Repo nhà xe/xe/tài xế: SELECT kiểm ID + scope trước CRUD JPA, không dùng companyId client làm quyền. */
@@ -101,10 +103,15 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
     }
 
     private final UserRoleRepo scopes;
+    private final AppSettings settings;
 
-    public CarrierRepo(EntityManager manager, UserRoleRepo scopes) {
+    private final JdbcSchema schema;
+
+    public CarrierRepo(EntityManager manager, UserRoleRepo scopes, AppSettings settings, JdbcSchema schema) {
         super(Carrier.class, manager);
         this.scopes = scopes;
+        this.settings = settings;
+        this.schema = schema;
     }
 
     /** Phân trang cùng predicate scope ở count và dữ liệu; không lọc trong RAM sau khi lấy trang. */
@@ -159,9 +166,9 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
             case VEHICLE -> Routes.ADMIN_VEHICLES;
             case DRIVER -> Routes.ADMIN_DRIVERS;
         };
-        UserRoleRepo.bindVisible(query, "PUT " + path + Routes.BY_ID);
+        UserRoleRepo.bindVisible(query::setParameter, "PUT " + path + Routes.BY_ID);
         if (kind == Kind.DRIVER) UserRoleRepo.bindVisible(
-            query,
+            query::setParameter,
             "POST " + path + Routes.DRIVER_ACCOUNT,
             "assignTarget"
         );
@@ -186,7 +193,7 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
 
             bindColumns(query, kind);
             query.setParameter("id", id);
-            UserRoleRepo.bindVisible(query);
+            UserRoleRepo.bindVisible(query::setParameter);
             {
                 List<?> rowValues = query.getResultList();
 
@@ -247,7 +254,7 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
     }
 
     private void bindSearch(Query query, CarrierSearch page) {
-        UserRoleRepo.bindVisible(query);
+        UserRoleRepo.bindVisible(query::setParameter);
         query.setParameter("active", page.getActive());
         query.setParameter("carrierId", page.getCarrierId());
         String search = page.getQuery() == null ? "" : page.getQuery().strip().toLowerCase(Locale.ROOT);
@@ -256,7 +263,12 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
 
     /** Tạo scope và nhà xe cùng transaction; lỗi UNIQUE rollback cả scope, không để scope mồ côi. */
     public long insertCarrier(CarrierRequest body, long actor) {
-        long scope = scopes.create(body.getName(), actor);
+        long scope = scopes.create(
+            body.getName(),
+            actor,
+            settings.getScopeCapacity(),
+            schema.quoted() + ".carrier_scope_ids"
+        );
         Carrier value = Carrier.builder()
             .scopeId(scope)
             .code(body.getCode())

@@ -9,7 +9,6 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 import java.time.Clock;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -60,18 +59,13 @@ class SystemAuditTest {
 
     @Test
     void loginRejectsSystemWithoutChangingItsAuditOrFailureCounter() {
-        var repository = new UserRepo(TestJpa.MANAGER) {
-            @Override
-            public User findByUsername(String username, boolean lock) {
-                assertEquals(SystemActor.USERNAME, username);
+        var repository = TestJpa.stub(UserRepo.class, (method, args) -> {
+            if (method.getName().equals("findByUsername")) {
+                assertEquals(SystemActor.USERNAME, args[0]);
                 return system();
             }
-
-            @Override
-            public void recordFailure(long id, int attempts, Instant until) {
-                throw new AssertionError("Không cập nhật actor kỹ thuật từ request đăng nhập");
-            }
-        };
+            throw new AssertionError("Không cập nhật actor kỹ thuật từ request đăng nhập");
+        });
         var transactionManager = new AbstractPlatformTransactionManager() {
             @Override
             protected Object doGetTransaction() {
@@ -89,6 +83,7 @@ class SystemAuditTest {
         };
         var auth = new UserService(
             repository,
+            null,
             null,
             null,
             null,

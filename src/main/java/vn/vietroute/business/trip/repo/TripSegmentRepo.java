@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import vn.vietroute.business.trip.repo.custom.TripSegmentCustomRepo;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.validation.BusinessRules;
 

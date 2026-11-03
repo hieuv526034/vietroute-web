@@ -26,8 +26,9 @@ import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import vn.vietroute.auth.entity.User;
 import vn.vietroute.auth.repo.AccountChallengeRepo;
-import vn.vietroute.auth.repo.UserCustomRepo;
 import vn.vietroute.auth.repo.UserRepo;
+import vn.vietroute.auth.repo.custom.UserCustomRepo;
+import vn.vietroute.support.TestJpa;
 
 /** H2 in-memory kiểm JDBC thật/rollback cho SQL portable, không giả lập PostgreSQL migration hoặc scope guard. */
 class AuthJdbcH2Test {
@@ -92,13 +93,13 @@ class AuthJdbcH2Test {
             "INSERT INTO auth_users(id,username,display_name,password_hash,previous_password_hash_1,previous_password_hash_2,failed_login_attempts) VALUES(1,'passwordtest','Test','current','previous1','previous2',4)"
         );
         commit();
-        new UserRepo(manager).changePassword(1, "next", 1);
+        TestJpa.repository(UserRepo.class, manager).changePassword(1, "next", 1);
         assertEquals("next,current,previous1,1,1,false,0", state());
         rollback();
         assertEquals("current,previous1,previous2,0,0,true,4", state());
-        new UserRepo(manager).changePassword(1, "next", 1);
+        TestJpa.repository(UserRepo.class, manager).changePassword(1, "next", 1);
         commit();
-        new UserRepo(manager).changePassword(1, "next2", 1);
+        TestJpa.repository(UserRepo.class, manager).changePassword(1, "next2", 1);
         commit();
         assertEquals("next2,next,current,2,2,false,0", state());
     }
@@ -115,16 +116,16 @@ class AuthJdbcH2Test {
             query.executeUpdate();
         }
         commit();
-        var accounts = new AccountChallengeRepo(manager);
-        assertFalse(accounts.consume(connection, 1, "ACTIVATE", "hashed-code", 7));
-        assertFalse(accounts.consume(connection, 1, "RESET", "wrong-code", 7));
-        assertFalse(accounts.consume(connection, 1, "RESET", "hashed-code", 6));
-        assertTrue(accounts.consume(connection, 1, "RESET", "hashed-code", 7));
-        assertFalse(accounts.consume(connection, 1, "RESET", "hashed-code", 7));
+        var accounts = TestJpa.repository(AccountChallengeRepo.class, manager);
+        assertFalse(accounts.consume(1, "ACTIVATE", "hashed-code", 7));
+        assertFalse(accounts.consume(1, "RESET", "wrong-code", 7));
+        assertFalse(accounts.consume(1, "RESET", "hashed-code", 6));
+        assertTrue(accounts.consume(1, "RESET", "hashed-code", 7));
+        assertFalse(accounts.consume(1, "RESET", "hashed-code", 7));
         rollback();
-        assertTrue(accounts.consume(connection, 1, "RESET", "hashed-code", 7));
+        assertTrue(accounts.consume(1, "RESET", "hashed-code", 7));
         commit();
-        assertFalse(accounts.consume(connection, 1, "RESET", "hashed-code", 7));
+        assertFalse(accounts.consume(1, "RESET", "hashed-code", 7));
     }
 
     @Test
@@ -133,8 +134,8 @@ class AuthJdbcH2Test {
         execute(
             "INSERT INTO auth_account_challenges VALUES(1,'RESET','expired',0,TIMESTAMP WITH TIME ZONE '2000-01-01 00:00:00+00'),(1,'ACTIVATE','activation',0,TIMESTAMP WITH TIME ZONE '2099-01-01 00:00:00+00')"
         );
-        var accounts = new AccountChallengeRepo(manager);
-        assertFalse(accounts.consume(connection, 1, "RESET", "expired", 0));
+        var accounts = TestJpa.repository(AccountChallengeRepo.class, manager);
+        assertFalse(accounts.consume(1, "RESET", "expired", 0));
         accounts.invalidate(1);
         assertEquals(0, count("auth_account_challenges"));
     }

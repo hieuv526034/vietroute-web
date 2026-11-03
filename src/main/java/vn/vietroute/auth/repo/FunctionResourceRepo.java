@@ -11,7 +11,9 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.entity.FunctionResource;
 
-/** Repository bảng FunctionResource; CRUD JPA và SQL batch/query phức tạp cùng transaction server. */
+/**
+ * Repository bảng FunctionResource; CRUD JPA và SQL batch/query phức tạp cùng transaction server.
+ */
 public interface FunctionResourceRepo extends JpaRepository<FunctionResource, Long> {
     @Transactional(readOnly = true)
     @Query(
@@ -36,7 +38,9 @@ public interface FunctionResourceRepo extends JpaRepository<FunctionResource, Lo
     )
     List<Map<String, Object>> targetsRows(@Param("codes") List<String> codes);
 
-    /** Đọc tập cho toàn trang; vòng lặp chỉ map dữ liệu đã tải, không query từng function. */
+    /**
+     * Đọc tập cho toàn trang; vòng lặp chỉ map dữ liệu đã tải, không query từng function.
+     */
     @Transactional(readOnly = true)
     default Map<String, Set<String>> targetsFor(List<String> functions) {
         Map<String, Set<String>> result = new LinkedHashMap<>();

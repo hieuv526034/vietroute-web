@@ -23,11 +23,12 @@ import vn.vietroute.auth.dto.request.UserRequest;
 import vn.vietroute.auth.dto.search.UserSearch;
 import vn.vietroute.auth.entity.User;
 import vn.vietroute.auth.initializer.AuthInitializer;
-import vn.vietroute.auth.repo.AccessChangeCustomRepo;
 import vn.vietroute.auth.repo.AccessChangeRepo;
 import vn.vietroute.auth.repo.AccountChallengeRepo;
 import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.auth.repo.UserRoleRepo;
+import vn.vietroute.auth.repo.custom.AccessChangeCustomRepo;
+import vn.vietroute.auth.repo.custom.UserRoleCustomRepo;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.config.application.AppSettings;
@@ -44,6 +45,7 @@ public class UserService {
 
     private final UserRepo users;
     private final UserRoleRepo mappings;
+    private final UserRoleCustomRepo roleBatch;
     private final AccountChallengeRepo challenges;
     private final AccessChangeRepo changes;
     private final PasswordEncoder passwords;
@@ -127,7 +129,7 @@ public class UserService {
             mappings.requireDelegableRoles(body.getRoles());
             User value = createModel(body, hash, actor.id());
             users.saveAndFlush(value);
-            mappings.replaceRoles(connection, value.getId(), body.getRoles(), value.getVersion(), actor.id());
+            roleBatch.replaceRoles(connection, value.getId(), body.getRoles(), value.getVersion(), actor.id());
             changes.append(
                 "ACCOUNT_CREATED",
                 "USER",
@@ -194,13 +196,9 @@ public class UserService {
             User value = managed(id, version, actor);
             Set<String> before = mappings.assignedRoles(id);
             List<RoleDTO> scopedBefore = mappings.memberships(id);
-            mappings.replaceRoles(connection, id, Set.of(), value.getVersion(), actor.id());
+            roleBatch.replaceRoles(connection, id, Set.of(), value.getVersion(), actor.id());
             changeBatch.appendMemberships(connection, id, scopedBefore, List.of(), actor.id());
-            users.refresh(value);
-            value.setDeleted(true);
-            value.setActive(false);
-            audit(value, actor.id());
-            users.saveAndFlush(value);
+            BusinessRules.require(users.softDelete(id, actor.id()) == 1, ErrorCode.STALE_VERSION);
             challenges.invalidate(id);
             changes.append(
                 "ACCOUNT_DELETED",
@@ -237,7 +235,13 @@ public class UserService {
                 failure[0] = count >= 5 ? ErrorCode.ACCOUNT_LOCKED : ErrorCode.PASSWORD_INCORRECT;
                 return null;
             }
-            users.requireNewPassword(value, body.getNewPassword(), passwords);
+            BusinessRules.require(
+                !passwords.matches(body.getNewPassword(), value.getPasswordHash()),
+                ErrorCode.PASSWORD_REUSED
+            );
+            for (String previous : users.previousPasswords(value.getId())) {
+                BusinessRules.require(!passwords.matches(body.getNewPassword(), previous), ErrorCode.PASSWORD_REUSED);
+            }
             users.changePassword(actor.id(), hash);
             challenges.invalidate(actor.id());
             return null;
@@ -292,12 +296,12 @@ public class UserService {
         body.setDisplayName(name);
         User value = createModel(body, hash, actor.id());
         users.saveAndFlush(value);
-        mappings.replaceRoles(connection, value.getId(), Set.of(role), 0, actor.id());
+        roleBatch.replaceRoles(connection, value.getId(), Set.of(role), 0, actor.id());
         UserRequest membership = new UserRequest();
         membership.setRoles(Set.of(role));
         membership.setActive(true);
         membership.setVersion(0L);
-        mappings.assign(connection, scope, value.getId(), membership, actor.id());
+        roleBatch.assign(connection, scope, value.getId(), membership, actor.id());
         changes.append(
             "SCOPE_MEMBERSHIP",
             "MEMBERSHIP",

@@ -36,18 +36,13 @@ public class AccessTestConfig {
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    public static class AuthorizationFixture extends UserRepo {
+    public static class AuthorizationFixture {
 
         public final Map<Long, User> states = new HashMap<>();
         public boolean strict;
         public int reads;
         public int failAt = Integer.MAX_VALUE;
 
-        public AuthorizationFixture() {
-            super(TestJpa.MANAGER);
-        }
-
-        @Override
         public User load(Long id) {
             if (++reads >= failAt) throw new BusinessException(ErrorCode.DATABASE_UNAVAILABLE);
             if (strict || states.containsKey(id)) return states.get(id);
@@ -72,10 +67,19 @@ public class AccessTestConfig {
             );
         }
 
-        @Override
         public PageResponse<UserDTO> search(UserSearch search) {
             return PageResponse.of(List.of(), search, 0);
         }
+    }
+
+    @Bean
+    @Primary
+    public UserRepo isolatedAccounts(AuthorizationFixture state) {
+        return TestJpa.stub(UserRepo.class, (method, args) -> {
+            if (method.getName().equals("load") && args.length == 1) return state.load((Long) args[0]);
+            if (method.getName().equals("search")) return state.search((UserSearch) args[0]);
+            throw new AssertionError(method);
+        });
     }
 
     public static List<SimpleGrantedAuthority> upgradedAuthorities(String... codes) {

@@ -7,7 +7,9 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.entity.RoleFunction;
 
-/** Repository bảng RoleFunction; CRUD JPA và SQL batch/query phức tạp cùng transaction server. */
+/**
+ * Repository bảng RoleFunction; CRUD JPA và SQL batch/query phức tạp cùng transaction server.
+ */
 public interface RoleFunctionRepo extends JpaRepository<RoleFunction, Long> {
     @Transactional(readOnly = true)
     @Query(
@@ -47,7 +49,9 @@ public interface RoleFunctionRepo extends JpaRepository<RoleFunction, Long> {
     )
     boolean usesFunction(@Param("code") String code);
 
-    /** Role inactive vẫn giữ trần ủy quyền; không thêm điều kiện active làm mất bảo vệ này. */
+    /**
+     * Role inactive vẫn giữ trần ủy quyền; không thêm điều kiện active làm mất bảo vệ này.
+     */
     @Transactional(readOnly = true)
     @Query(
         value = """
@@ -72,7 +76,9 @@ public interface RoleFunctionRepo extends JpaRepository<RoleFunction, Long> {
     )
     Set<String> assignedTargets(@Param("codes") Set<String> codes);
 
-    /** Kiểm cả tập trước batch mapping, giữ nguyên điều kiện tồn tại của function. */
+    /**
+     * Kiểm cả tập trước batch mapping, giữ nguyên điều kiện tồn tại của function.
+     */
     @Query(
         value = """
         SELECT COUNT(*)

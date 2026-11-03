@@ -1,4 +1,4 @@
-package vn.vietroute.business.trip.repo;
+package vn.vietroute.business.trip.repo.custom;
 
 import java.sql.Array;
 import java.sql.Array;

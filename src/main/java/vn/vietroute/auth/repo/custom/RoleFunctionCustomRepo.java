@@ -1,4 +1,4 @@
-package vn.vietroute.auth.repo;
+package vn.vietroute.auth.repo.custom;
 
 import java.sql.Array;
 import java.sql.Connection;

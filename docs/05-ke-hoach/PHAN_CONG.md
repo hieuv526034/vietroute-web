@@ -21,7 +21,7 @@ Không suy email từ nhánh hoặc sửa author lịch sử. Username Git khôn
 
 | Phần việc | Source và đầu ra |
 |---|---|
-| Auth | [auth](../../src/main/java/vn/vietroute/auth):40 lớp/8 bảng; tài khoản, role/function/menu/API, lifecycle và bootstrap |
+| Auth | [auth](../../src/main/java/vn/vietroute/auth):46 lớp/8 bảng; tài khoản, role/function/menu/API, lifecycle và bootstrap |
 | Common | [common](../../src/main/java/vn/vietroute/common): config, transaction JPA/JDBC, API response/lỗi/locale, validation và journal |
 | Database | [migration](../../src/main/resources/db/migration/postgresql): schema/history/index, review bước mới và backup/restore; giữ checksum8 baseline |
 | Khởi tạo | DatabaseInitializer/AuthInitializer/BusinessDataInitializer; cờ init, account/quyền, idempotence và audit system |

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import vn.vietroute.auth.repo.AccessChangeRepo;
+import vn.vietroute.support.TestJpa;
 
 /** H2 kiểm history JPA thật, JDBC thấy cùng transaction và rollback xóa toàn bộ history chưa commit. */
 class AccessChangeHistoryTest {
@@ -34,7 +35,7 @@ class AccessChangeHistoryTest {
         try (var manager = factory.getObject().createEntityManager()) {
             manager.getTransaction().begin();
             var connection = manager.unwrap(Session.class).doReturningWork(value -> value);
-            new AccessChangeRepo(manager).append(
+            TestJpa.repository(AccessChangeRepo.class, manager).append(
                 "USER_ROLES",
                 "USER",
                 "7",

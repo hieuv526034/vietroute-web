@@ -1,48 +1,44 @@
 package vn.vietroute.auth.repo;
 
-import jakarta.persistence.EntityManager;
-import java.sql.Connection;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.entity.AccountChallenge;
-import vn.vietroute.common.base.JpaRepositorySupport;
 
-/** Dọn/tiêu thụ mã trên transaction caller; không mở API đăng ký, email hoặc khôi phục mật khẩu. */
-@Repository
-public class AccountChallengeRepo extends JpaRepositorySupport<AccountChallenge, Long> {
+/** SQL native của AccountChallenge; transaction ghi do Service/Initializer sở hữu. */
+public interface AccountChallengeRepo extends JpaRepository<AccountChallenge, Long> {
+    @Transactional(propagation = Propagation.MANDATORY)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+        value = """
+        DELETE FROM {h-schema}auth_account_challenges
+        WHERE user_id = :userId AND purpose = :purpose AND token_hash = :hash AND token_version = :version
+            AND expires_at > CURRENT_TIMESTAMP
+        """,
+        nativeQuery = true
+    )
+    int consumeRow(
+        @Param("userId") long user,
+        @Param("purpose") String purpose,
+        @Param("hash") String hash,
+        @Param("version") long version
+    );
 
-    public AccountChallengeRepo(EntityManager manager) {
-        super(AccountChallenge.class, manager);
+    default boolean consume(long user, String purpose, String hash, long version) {
+        return consumeRow(user, purpose, hash, version) == 1;
     }
 
-    /** Xóa đúng mã còn hạn, mục đích và phiên bản; một lần tiêu thụ, cùng rollback với caller. */
-    public boolean consume(Connection connection, long user, String purpose, String hash, long version) {
-        return (
-            entityManager
-                .createNativeQuery(
-                    """
-                    DELETE FROM {h-schema}auth_account_challenges
-                    WHERE user_id = :userId AND purpose = :purpose AND token_hash = :hash AND token_version = :version
-                        AND expires_at > CURRENT_TIMESTAMP
-                    """
-                )
-                .setParameter("userId", user)
-                .setParameter("purpose", purpose)
-                .setParameter("hash", hash)
-                .setParameter("version", version)
-                .executeUpdate() == 1
-        );
-    }
-
-    /** Đổi mật khẩu/thu hồi phiên phải xóa toàn bộ mã cũ trong cùng transaction. */
-    public void invalidate(long user) {
-        entityManager
-            .createNativeQuery(
-                """
-                DELETE FROM {h-schema}auth_account_challenges
-                WHERE user_id = :userId
-                """
-            )
-            .setParameter("userId", user)
-            .executeUpdate();
-    }
+    @Transactional(propagation = Propagation.MANDATORY)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+        value = """
+        DELETE FROM {h-schema}auth_account_challenges
+        WHERE user_id = :userId
+        """,
+        nativeQuery = true
+    )
+    int invalidate(@Param("userId") long user);
 }

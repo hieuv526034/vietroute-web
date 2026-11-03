@@ -1,4 +1,4 @@
-package vn.vietroute.business.catalog.repo;
+package vn.vietroute.business.catalog.repo.custom;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -54,7 +54,9 @@ public class CategoryCustomRepo {
      */
     private void seedAdministrative(Connection connection) throws SQLException {
         String source;
-        try (InputStream input = CategoryRepo.class.getResourceAsStream("/bootstrap/administrative-divisions.json")) {
+        try (
+            InputStream input = CategoryCustomRepo.class.getResourceAsStream("/bootstrap/administrative-divisions.json")
+        ) {
             if (input == null) throw new IOException("Administrative dataset missing");
             source = new String(input.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException exception) {

@@ -79,7 +79,7 @@ public class RouteRepo extends BaseRepository {
                 Tuple.class
             );
 
-            UserRoleRepo.bindVisible(query, "PUT " + Routes.ADMIN_ROUTES + Routes.BY_ID);
+            UserRoleRepo.bindVisible(query::setParameter, "PUT " + Routes.ADMIN_ROUTES + Routes.BY_ID);
             bind(query, search);
             query.setParameter("pageSize", search.getSize());
             query.setParameter("offset", search.offset());
@@ -94,7 +94,7 @@ public class RouteRepo extends BaseRepository {
     }
 
     private void bind(Query query, CarrierSearch search) {
-        UserRoleRepo.bindVisible(query);
+        UserRoleRepo.bindVisible(query::setParameter);
         query.setParameter("active", search.getActive());
         query.setParameter("carrierId", search.getCarrierId());
         String text = search.getQuery() == null ? "" : search.getQuery().strip().toLowerCase(Locale.ROOT);
@@ -115,9 +115,9 @@ public class RouteRepo extends BaseRepository {
                 Tuple.class
             );
 
-            UserRoleRepo.bindVisible(query, "PUT " + Routes.ADMIN_ROUTES + Routes.BY_ID);
+            UserRoleRepo.bindVisible(query::setParameter, "PUT " + Routes.ADMIN_ROUTES + Routes.BY_ID);
             query.setParameter("routeId", id);
-            UserRoleRepo.bindVisible(query);
+            UserRoleRepo.bindVisible(query::setParameter);
             {
                 List<?> rowValues = query.getResultList();
 

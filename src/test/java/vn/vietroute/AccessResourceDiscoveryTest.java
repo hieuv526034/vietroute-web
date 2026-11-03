@@ -59,6 +59,8 @@ class AccessResourceDiscoveryTest {
                 transactions,
                 new RootConfig().objectMapper(),
                 null,
+                null,
+                null,
                 null
             );
             var listener = new EndpointAccess(null, null, disabled);
@@ -76,6 +78,8 @@ class AccessResourceDiscoveryTest {
                     null,
                     transactions,
                     new RootConfig().objectMapper(),
+                    null,
+                    null,
                     null,
                     null
                 )

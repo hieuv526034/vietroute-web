@@ -17,13 +17,14 @@ import vn.vietroute.auth.dto.search.RoleSearch;
 import vn.vietroute.auth.dto.search.UserSearch;
 import vn.vietroute.auth.entity.Role;
 import vn.vietroute.auth.entity.User;
-import vn.vietroute.auth.repo.AccessChangeCustomRepo;
 import vn.vietroute.auth.repo.AccessChangeRepo;
-import vn.vietroute.auth.repo.RoleFunctionCustomRepo;
 import vn.vietroute.auth.repo.RoleFunctionRepo;
 import vn.vietroute.auth.repo.RoleRepo;
 import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.auth.repo.UserRoleRepo;
+import vn.vietroute.auth.repo.custom.AccessChangeCustomRepo;
+import vn.vietroute.auth.repo.custom.RoleFunctionCustomRepo;
+import vn.vietroute.auth.repo.custom.UserRoleCustomRepo;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.config.application.AppSettings;
@@ -40,6 +41,7 @@ public class RoleService {
     private final RoleRepo roles;
     private final UserRepo users;
     private final UserRoleRepo mappings;
+    private final UserRoleCustomRepo roleBatch;
     private final RoleFunctionRepo functions;
     private final AccessChangeRepo changes;
     private final JdbcTransactions transactions;
@@ -214,7 +216,7 @@ public class RoleService {
             mappings.requireDelegableRoles(affected);
             BusinessRules.require(body.getVersion() != null, ErrorCode.INVALID_REQUEST);
             List<RoleDTO> scopedBefore = mappings.memberships(id);
-            mappings.replaceRoles(connection, id, body.getRoles(), body.getVersion(), actor.id());
+            roleBatch.replaceRoles(connection, id, body.getRoles(), body.getVersion(), actor.id());
             List<RoleDTO> scopedAfter = mappings.memberships(id);
             changes.append(
                 "USER_ROLES",
@@ -288,7 +290,7 @@ public class RoleService {
             mappings.validateMappings(body.getRoles(), Set.of());
             mappings.requireDelegableRoles(body.getRoles());
             RoleDTO before = mappings.member(scope, user);
-            mappings.assign(connection, scope, user, body, actor.id());
+            roleBatch.assign(connection, scope, user, body, actor.id());
             RoleDTO after = mappings.member(scope, user);
             changes.append(
                 "SCOPE_MEMBERSHIP",

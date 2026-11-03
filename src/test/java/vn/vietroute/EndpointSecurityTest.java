@@ -31,7 +31,7 @@ class EndpointSecurityTest {
 
     private final StateRepo states = new StateRepo();
 
-    private final EndpointAccess service = new EndpointAccess(null, states, null);
+    private final EndpointAccess service = new EndpointAccess(null, states.repository, null);
 
     private Authentication login() {
         return UsernamePasswordAuthenticationToken.authenticated(
@@ -151,16 +151,16 @@ class EndpointSecurityTest {
         assertFalse(UserPrincipal.globalData());
     }
 
-    private static class StateRepo extends UserRepo {
+    private static class StateRepo {
 
         private User value;
         private boolean failure;
 
-        StateRepo() {
-            super(TestJpa.MANAGER);
-        }
+        private final UserRepo repository = TestJpa.stub(UserRepo.class, (method, args) -> {
+            if (method.getName().equals("load")) return load((Long) args[0]);
+            throw new AssertionError(method);
+        });
 
-        @Override
         public User load(Long id) {
             if (failure) throw new BusinessException(ErrorCode.DATABASE_UNAVAILABLE);
             return value;

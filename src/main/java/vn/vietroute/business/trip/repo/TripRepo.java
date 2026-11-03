@@ -36,6 +36,8 @@ import vn.vietroute.business.trip.dto.response.TripResponse;
 import vn.vietroute.business.trip.dto.response.TripStopResponse;
 import vn.vietroute.business.trip.dto.search.TripChoiceSearch;
 import vn.vietroute.business.trip.dto.search.TripSearch;
+import vn.vietroute.business.trip.repo.custom.TripSegmentCustomRepo;
+import vn.vietroute.business.trip.repo.custom.TripStopCustomRepo;
 import vn.vietroute.common.base.BaseRepository;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.Business;
@@ -141,7 +143,7 @@ public class TripRepo extends BaseRepository {
                 Tuple.class
             );
 
-            UserRoleRepo.bindVisible(query, "PUT " + Routes.ADMIN_TRIPS + Routes.BY_ID);
+            UserRoleRepo.bindVisible(query::setParameter, "PUT " + Routes.ADMIN_TRIPS + Routes.BY_ID);
             bindSearch(query, search, driverUserId);
             query.setParameter("pageSize", search.getSize());
             query.setParameter("offset", search.offset());
@@ -155,7 +157,7 @@ public class TripRepo extends BaseRepository {
     }
 
     private void bindSearch(Query query, TripSearch body, Long driverUserId) {
-        UserRoleRepo.bindVisible(query);
+        UserRoleRepo.bindVisible(query::setParameter);
         query.setParameter("carrierId", body.getCarrierId());
         query.setParameter("status", body.getStatus() == null ? null : body.getStatus().name());
         ZoneId zone = ZoneId.of(Business.TIME_ZONE);
@@ -197,9 +199,9 @@ public class TripRepo extends BaseRepository {
                 Tuple.class
             );
 
-            UserRoleRepo.bindVisible(query, "PUT " + Routes.ADMIN_TRIPS + Routes.BY_ID);
+            UserRoleRepo.bindVisible(query::setParameter, "PUT " + Routes.ADMIN_TRIPS + Routes.BY_ID);
             query.setParameter("tripId", id);
-            UserRoleRepo.bindVisible(query);
+            UserRoleRepo.bindVisible(query::setParameter);
             if (driverUserId != null) query.setParameter("driverUserId", driverUserId);
 
             List<?> rowValues = query.getResultList();
@@ -907,7 +909,7 @@ public class TripRepo extends BaseRepository {
     }
 
     private void bindChoice(Query query, TripChoiceSearch body) {
-        UserRoleRepo.bindVisible(query);
+        UserRoleRepo.bindVisible(query::setParameter);
         query.setParameter("carrierId", body.getCarrierId());
         query.setParameter("keyword", body.getQuery() == null ? "" : body.getQuery().strip().toLowerCase(Locale.ROOT));
     }

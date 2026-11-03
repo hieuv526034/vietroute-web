@@ -87,26 +87,26 @@ import vn.vietroute.auth.entity.RoleFunction;
 import vn.vietroute.auth.entity.User;
 import vn.vietroute.auth.entity.UserRole;
 import vn.vietroute.auth.initializer.AuthInitializer;
-import vn.vietroute.auth.repo.AccessChangeCustomRepo;
 import vn.vietroute.auth.repo.AccessChangeRepo;
+import vn.vietroute.auth.repo.AccountChallengeRepo;
 import vn.vietroute.auth.repo.FunctionRepo;
-import vn.vietroute.auth.repo.FunctionResourceCustomRepo;
 import vn.vietroute.auth.repo.FunctionResourceRepo;
-import vn.vietroute.auth.repo.RoleCustomRepo;
-import vn.vietroute.auth.repo.RoleFunctionCustomRepo;
 import vn.vietroute.auth.repo.RoleFunctionRepo;
 import vn.vietroute.auth.repo.RoleRepo;
-import vn.vietroute.auth.repo.UserCustomRepo;
 import vn.vietroute.auth.repo.UserRepo;
-import vn.vietroute.auth.repo.UserRoleCustomRepo;
 import vn.vietroute.auth.repo.UserRoleRepo;
+import vn.vietroute.auth.repo.custom.AccessChangeCustomRepo;
+import vn.vietroute.auth.repo.custom.FunctionResourceCustomRepo;
+import vn.vietroute.auth.repo.custom.RoleCustomRepo;
+import vn.vietroute.auth.repo.custom.RoleFunctionCustomRepo;
+import vn.vietroute.auth.repo.custom.UserCustomRepo;
 import vn.vietroute.auth.security.EndpointAccess;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.UserService;
 import vn.vietroute.business.booking.repo.BookingRepo;
 import vn.vietroute.business.bootstrap.initializer.BusinessDataInitializer;
-import vn.vietroute.business.bootstrap.repo.BusinessDataCustomRepo;
 import vn.vietroute.business.bootstrap.repo.BusinessDataRepo;
+import vn.vietroute.business.bootstrap.repo.custom.BusinessDataCustomRepo;
 import vn.vietroute.business.carrier.dto.search.CarrierSearch;
 import vn.vietroute.business.carrier.dto.search.PublicCarrierSearch;
 import vn.vietroute.business.carrier.repo.CarrierRepo;
@@ -141,6 +141,7 @@ import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.support.LegacyBusinessGrants;
 import vn.vietroute.support.PooledReadProbe;
 import vn.vietroute.support.SqlPlanProbe;
+import vn.vietroute.support.TestJpa;
 
 /** PostgreSQL thật, hai context WAR; chỉ cho phép DB test loopback, không đọc .env hoặc dùng Neon. */
 @EnabledIfSystemProperty(
@@ -357,12 +358,13 @@ class BusinessIntegrationTest {
             admin,
             (nodeManager, nodeTransactions) -> {
                 var nodeReports = new ReportRepo(nodeManager);
-                var nodeScopes = new UserRoleRepo(
+                var nodeScopes = TestJpa.repository(UserRoleRepo.class, nodeManager);
+                var nodeCarriers = new CarrierRepo(
                     nodeManager,
+                    nodeScopes,
                     root.getBean(AppSettings.class),
-                    root.getBean(UserRoleCustomRepo.class)
+                    root.getBean(JdbcSchema.class)
                 );
-                var nodeCarriers = new CarrierRepo(nodeManager, nodeScopes);
                 return connection -> {
                     assertTrue(nodeReports.summary(report).getTripCount() > 0);
                     assertEquals(20, nodeCarriers.page(search).getTotalElements());
@@ -582,6 +584,36 @@ class BusinessIntegrationTest {
                 assertTrue(rows.next());
             }
         }
+    }
+
+    @Test
+    void suppressedNativeAuthHistoryRollsBackTheAccountMutation() throws Exception {
+        String previous = sql("SELECT display_name FROM auth_users WHERE id=1");
+        sql(
+            "CREATE FUNCTION suppress_auth_history() RETURNS trigger LANGUAGE plpgsql AS " +
+                "'BEGIN RETURN NULL; END'; CREATE TRIGGER suppress_auth_history " +
+                "BEFORE INSERT ON auth_access_changes FOR EACH ROW EXECUTE FUNCTION suppress_auth_history()"
+        );
+        var failure = assertThrows(BusinessException.class, () ->
+            root.getBean(JdbcTransactions.class).execute(connection -> {
+                var users = root.getBean(UserRepo.class);
+                var account = users.lock(1);
+                account.setDisplayName("Audit rollback fixture");
+                users.saveAndFlush(account);
+                root.getBean(AccessChangeRepo.class).append(
+                    "ACCOUNT_UPDATED",
+                    "USER",
+                    "1",
+                    0,
+                    Map.of("displayName", previous),
+                    Map.of("displayName", "Audit rollback fixture")
+                );
+                return null;
+            })
+        );
+        assertEquals(ErrorCode.DATABASE_UNAVAILABLE, failure.getErrorCode());
+        assertEquals(previous, sql("SELECT display_name FROM auth_users WHERE id=1"));
+        assertEquals("0", sql("SELECT COUNT(*) FROM auth_access_changes WHERE target_key='1'"));
     }
 
     /** Đếm execute thực tế (batch là một lượt JDBC), không chỉ prepareStatement để bỏ sót execute trong for. */
@@ -1120,7 +1152,9 @@ class BusinessIntegrationTest {
             root.getBean(JdbcTransactions.class),
             json,
             root.getBean(UserCustomRepo.class),
-            root.getBean(RoleCustomRepo.class)
+            root.getBean(RoleCustomRepo.class),
+            root.getBean(AccountChallengeRepo.class),
+            root.getBean(FunctionResourceCustomRepo.class)
         );
         var tx = root.getBean(JdbcTransactions.class);
         tx.execute(connection -> {
@@ -1741,7 +1775,9 @@ class BusinessIntegrationTest {
             transactions,
             json,
             root.getBean(UserCustomRepo.class),
-            root.getBean(RoleCustomRepo.class)
+            root.getBean(RoleCustomRepo.class),
+            root.getBean(AccountChallengeRepo.class),
+            root.getBean(FunctionResourceCustomRepo.class)
         );
         BusinessDataRepo repo = new BusinessDataRepo(
             root.getBean(EntityManager.class),

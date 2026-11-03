@@ -261,6 +261,14 @@ Bỏ callback JDBC khỏi Repo tra cứu, đăng nhập, đổi mật khẩu và
 
 Maven clean verify đạt 214/214 Java, gồm 77 PostgreSQL local, không fail/error/skip, đóng gói WAR thành công. Ca hủy chuyến 5.001 đơn dùng 4 câu JPA và 1 lượt ghi batch JDBC. Node đạt 74/74. Exporter sinh 15 câu SQL và 12 SELECT mẫu đã chạy trên preview PostgreSQL local trong READ ONLY/ROLLBACK. Format, rules trên 271 Java, docs 189 liên kết và diff-check đạt. Báo cáo Word đã cập nhật sơ đồ, render 81 trang và rà các trang sửa. Mười file migration giữ nguyên. Chưa áp dụng lên môi trường thật.
 
+## AUTHQUERY01 — tám Repo auth khai báo native query
+
+Hieuv526034 tiếp tục nhánh `hieuv526034/category01-danh-muc-chung`, nền `0feaa87`, PR 166. Chuyển UserRepo, UserRoleRepo, RoleRepo, AccountChallengeRepo và AccessChangeRepo từ class thực thi EntityManager sang interface Spring Data. Auth hiện có tám interface Repo, toàn bộ SQL viết tay là @Query native với named parameter và {h-schema}. Default method chỉ ánh xạ hoặc phối hợp query. Luồng bootstrap chuyển về AuthInitializer, kiểm password history ở UserService. CAS, khóa, trạng thái account/tokenVersion và scope giữ trong cùng transaction.
+
+Sáu CustomRepo auth nằm trong auth/repo/custom. Năm CustomRepo business cũng chuyển sang repo/custom tương ứng; phần query business tiếp tục theo JPA02. Tổng số file/bảng giữ 46 auth, 111 business, 58 common và 22 bảng. Không sửa migration. Fixture đổi sang factory/proxy interface, không kế thừa class Repo cũ.
+
+Nhóm auth/H2/context đạt 20/20. Lượt hồi quy đầu phát hiện hai ca tạo nhà xe lỗi vì Hibernate không thay {h-schema} trong literal tên sequence; đã sửa bind tên sequence từ JdbcSchema đã validate. Kiểm lại bốn ca tập trung đạt, gồm tạo nhà xe và INSERT history bị database bỏ qua vẫn rollback tài khoản. Maven clean verify cuối đạt 215/215 Java, gồm 78 PostgreSQL local, không fail/error/skip; WAR thành công. Node đạt 74/74. Exporter xuất 73 SQL và 38 SELECT mẫu đã chạy trên preview PostgreSQL local với READ ONLY/ROLLBACK; loại cấp sequence và advisory lock khỏi ví dụ chỉ đọc. Format/rules/docs/diff-check đạt. Word cập nhật query, kết quả test và tư liệu sơ đồ, render 81 trang và rà các trang sửa. Chưa áp DB thật hoặc tích hợp dev/main.
+
 ## Còn lại và bước tiếp
 
 Source DUYLONG01 đã có trên dev/main và Live theo bằng chứng trên; DUYLONG02 chốt tài liệu nghiệm thu. Chưa có Oracle runtime/regression, kiểm tải/SLA hoặc backup di động/PITR/RPO/RTO; DPAPI local phụ thuộc tài khoản Windows. Kiểm thêm cách chạy Maven Wrapper trên máy trước khi dùng hướng dẫn local.

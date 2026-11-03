@@ -47,7 +47,7 @@ public class ReportRepo {
         {
             Query query = entityManager.createNativeQuery("SELECT COUNT(*)" + filter, Tuple.class);
 
-            UserRoleRepo.bindVisible(query);
+            UserRoleRepo.bindVisible(query::setParameter);
             query.setParameter("keyword", pattern);
             {
                 Tuple row = (Tuple) query.getSingleResult();
@@ -66,7 +66,7 @@ public class ReportRepo {
                 Tuple.class
             );
 
-            UserRoleRepo.bindVisible(query);
+            UserRoleRepo.bindVisible(query::setParameter);
             query.setParameter("keyword", pattern);
             query.setParameter("pageSize", body.getSize());
             query.setParameter("offset", body.offset());
@@ -146,7 +146,7 @@ public class ReportRepo {
         {
             Query query = entityManager.createNativeQuery(sql.toString(), Tuple.class);
 
-            UserRoleRepo.bindVisible(query);
+            UserRoleRepo.bindVisible(query::setParameter);
             ZoneId zone = ZoneId.of(Business.TIME_ZONE);
             query.setParameter("fromAt", body.getFromDate().atStartOfDay(zone).toOffsetDateTime());
             query.setParameter("toAt", body.getToDate().plusDays(1).atStartOfDay(zone).toOffsetDateTime());

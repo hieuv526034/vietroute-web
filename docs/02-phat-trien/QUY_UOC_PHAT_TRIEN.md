@@ -12,6 +12,7 @@ vn.vietroute/
     controller/api/       REST API
     dto/{request,response,search}/
     entity/ repo/ service/
+    repo/custom/           CustomRepo ghi batch
     constant/ initializer/   chỉ tạo khi có trách nhiệm thật
   common/
     config/{application,database,web}/
@@ -54,7 +55,7 @@ Mỗi API có @Operation; field Request/DTO/Search có @Schema và validation th
 
 ## JPA và JDBC chung transaction
 
-Quy ước bổ sung03/11/2026: query nghiệp vụ tra cứu, CRUD và khóa dùng Spring Data/JPA/Hibernate; JDBC nghiệp vụ chỉ dành cho ghi batch/bulk theo tập. Repo interface dùng @Query; Repo có implementation riêng dùng EntityManager/native SQL. Giữ SQL đầy đủ bằng text block, named parameter rõ nghĩa; không nối giá trị client hoặc giấu query trong executor tự viết. Hạ tầng migration/schema/transaction và journal pool riêng tiếp tục dùng JDBC. JDBC ghi theo tập nằm ở các lớp CustomRepo, nhận connection từ transaction của Service. Tình trạng kiểm thử của JPA02 ghi trong tiến độ.
+Quy ước bổ sung03/11/2026: query nghiệp vụ tra cứu, CRUD và khóa dùng Spring Data/JPA/Hibernate; JDBC nghiệp vụ chỉ dành cho ghi batch/bulk theo tập. Auth có tám interface Repo Spring Data, query viết tay dùng @Query(nativeQuery=true). Luồng init ở AuthInitializer, ghi batch ở repo/custom. Repo nghiệp vụ khác còn implementation riêng dùng EntityManager/native SQL. Giữ SQL đầy đủ bằng text block, named parameter rõ nghĩa; không nối giá trị client hoặc giấu query trong executor tự viết. Hạ tầng migration/schema/transaction và journal pool riêng tiếp tục dùng JDBC. JDBC ghi theo tập nằm ở các lớp repo/custom/...CustomRepo, nhận connection từ transaction của Service. Tình trạng kiểm thử của JPA02 ghi trong tiến độ.
 
 JpaConfig dùng JpaTransactionManager, SharedEntityManagerCreator và TransactionAwareDataSourceProxy. JdbcTransactions.execute tham gia transaction hiện tại hoặc tạo transaction qua manager; JPA saveAndFlush và JDBC mapping/history cùng rollback. Repo không bật autocommit hoặc commit connection riêng. Sau SQL atomic đổi version, refresh entity đang managed trước save tiếp.
 
@@ -66,9 +67,9 @@ Connection bắt đầu transaction trước SET LOCAL search_path; schema valid
 
 ## Query khai báo và SQL để kiểm DB
 
-FunctionRepo, FunctionResourceRepo, RoleFunctionRepo và TripStopRepo là interface Spring Data đăng ký qua @EnableJpaRepositories trong JpaConfig. Dùng @Query native và @Param ở interface, EntityManager.createNativeQuery với named parameter ở Repo có implementation. CRUD theo entity dùng JPA; các câu truy vấn viết tay nằm trong Repo để đối chiếu trực tiếp.
+Tám Repo auth và TripStopRepo là interface Spring Data đăng ký qua @EnableJpaRepositories trong JpaConfig. Auth khai báo query native bằng @Query và @Param, không thực thi SQL bằng EntityManager. Các default method chỉ ánh xạ kết quả hoặc phối hợp query khai báo; transaction ghi bắt buộc thuộc Service/Initializer. Repo nghiệp vụ khác có implementation riêng còn dùng EntityManager/native SQL. CRUD entity dùng JpaRepository.
 
-Native query dùng `{h-schema}`; Hibernate thay bằng schema từ cấu hình, ví dụ `vietroute.auth_functions`. Entity không gắn schema cố định. Các query gán quyền vẫn giữ toàn bộ điều kiện user/role/function hiện hành, không cache hoặc suy grant từ tên role. Query trả Map chỉ là projection nội bộ repo, không trả thẳng ra API. Gán mapping và ghi nhiều đoạn dùng JDBC trong CustomRepo, cùng transaction với khóa trip/booking/segments qua JPA; cập nhật điểm chuyến bằng @Modifying giữ kiểm phân công/khóa trip tại service và CAS một dòng tại repo.
+Native query dùng `{h-schema}`; Hibernate thay bằng schema từ cấu hình, ví dụ `vietroute.auth_functions`. Entity không gắn schema cố định. Riêng tên sequence trong NEXTVAL được bind qua :sequence từ JdbcSchema đã validate; {h-schema} không được thay bên trong SQL string literal. Các query gán quyền vẫn giữ toàn bộ điều kiện user/role/function hiện hành, không cache hoặc suy grant từ tên role. Query trả Map chỉ là projection nội bộ repo, không trả thẳng ra API. Gán mapping và ghi nhiều đoạn dùng JDBC trong CustomRepo, cùng transaction với khóa trip/booking/segments qua JPA; cập nhật điểm chuyến bằng @Modifying giữ kiểm phân công/khóa trip tại service và CAS một dòng tại repo.
 
 Xuất SQL có schema cụ thể từ chính text block trong Repo bằng [exporter](../../scripts/development/export-repository-queries.py):
 
@@ -76,7 +77,7 @@ Xuất SQL có schema cụ thể từ chính text block trong Repo bằng [expor
 python -X utf8 scripts/development/export-repository-queries.py --schema vietroute
 ```
 
-Mở `target/repository-queries.sql`:15 câu gồm cả count, table đã có schema, giữ `:thamSo` để bind trong DB editor hoặc thay giá trị khi kiểm. Query nhận Pageable có LIMIT/OFFSET tương ứng để không mất phần phân trang do Spring Data áp dụng. Giá trị `page` bắt đầu từ0, không là số trang hiển thị trên UI.
+Mở `target/repository-queries.sql`:73 câu gồm cả count, table đã có schema, giữ `:thamSo` để bind trong DB editor hoặc thay giá trị khi kiểm. Query nhận Pageable có LIMIT/OFFSET tương ứng để không mất phần phân trang do Spring Data áp dụng. Giá trị `page` bắt đầu từ0, không là số trang hiển thị trên UI.
 
 Người mới có thể tạo bản ví dụ đã điền tham số và chạy trực tiếp bằng:
 
@@ -84,7 +85,7 @@ Người mới có thể tạo bản ví dụ đã điền tham số và chạy 
 python -X utf8 scripts/development/export-repository-queries.py --schema vietroute --example --user-id 1 --page-size 20 --page 0
 ```
 
-Mở `target/repository-queries-example.sql`:12 SELECT, gồm BEGIN READ ONLY/ROLLBACK, có schema/giá trị mẫu và LIMIT/OFFSET. Mẫu dùng userId1, role CUSTOMER, code ADMIN_CONSOLE; đổi theo dữ liệu cần kiểm. `active=NULL` nghĩa là không lọc trạng thái, `keyword=%` nghĩa là không lọc từ khóa. Bản này bỏ mutation và SELECT giữ khóa; giữ lệnh khóa/cập nhật tại bản template 15 câu. Không coi giá trị mẫu là thông tin đăng nhập.
+Mở `target/repository-queries-example.sql`:38 SELECT, gồm BEGIN READ ONLY/ROLLBACK, có schema/giá trị mẫu và LIMIT/OFFSET. Mẫu dùng userId1, role CUSTOMER, code ADMIN_CONSOLE; đổi theo dữ liệu cần kiểm. `active=NULL` nghĩa là không lọc trạng thái, `keyword=%` nghĩa là không lọc từ khóa. Bản này bỏ mutation, SELECT giữ khóa, cấp sequence và hàm advisory lock; giữ lệnh khóa/cập nhật tại bản template 73 câu. Không coi giá trị mẫu là thông tin đăng nhập.
 
 Công cụ không đọc .env, kết nối DB hoặc thực thi SQL; không đưa password/token/PII vào file. Chạy lại sau khi sửa query, không duy trì bản SQL chép tay thứ hai. Với EntityManager, lấy text block trong Repo, ghép fragment cố định theo nhánh đang kiểm rồi thay {h-schema} bằng schema môi trường kèm dấu chấm. Giá trị named parameter bind trong DB editor. Với batch, dùng SQL trong CustomRepo và SET LOCAL search_path tới schema môi trường.
 

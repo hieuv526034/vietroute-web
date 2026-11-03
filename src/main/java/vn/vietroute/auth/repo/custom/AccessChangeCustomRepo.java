@@ -1,4 +1,4 @@
-package vn.vietroute.auth.repo;
+package vn.vietroute.auth.repo.custom;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -9,15 +9,16 @@ import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.auth.security.EndpointAccess;
 import vn.vietroute.auth.security.UserPrincipal;
 
-public class NativeSecurityFixture extends UserRepo {
+public class NativeSecurityFixture {
 
     public User state;
     public int reads;
-    public final EndpointAccess service = new EndpointAccess(null, this, null);
+    public final UserRepo repository = TestJpa.stub(UserRepo.class, (method, args) -> {
+        if (method.getName().equals("load") && args.length == 1) return load((Long) args[0]);
+        throw new AssertionError(method);
+    });
 
-    public NativeSecurityFixture() {
-        super(TestJpa.MANAGER);
-    }
+    public final EndpointAccess service = new EndpointAccess(null, repository, null);
 
     public Authentication actor(long id, String role, long version) {
         return UsernamePasswordAuthenticationToken.authenticated(
@@ -89,7 +90,6 @@ public class NativeSecurityFixture extends UserRepo {
             .build();
     }
 
-    @Override
     public User load(Long id) {
         reads++;
         return state;

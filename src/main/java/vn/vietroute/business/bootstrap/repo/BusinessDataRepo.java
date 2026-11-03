@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Repository;
 import vn.vietroute.business.bootstrap.dto.response.BusinessDataResponse;
+import vn.vietroute.business.bootstrap.repo.custom.BusinessDataCustomRepo;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;

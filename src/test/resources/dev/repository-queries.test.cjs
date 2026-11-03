@@ -69,6 +69,10 @@ test('SQL ví dụ điền giá trị và phân trang, giữ literal, bỏ mutat
         Function lockKey();
         @Query(value = """SELECT * FROM {h-schema}auth_functions FOR KEY SHARE""", nativeQuery = true)
         Function lockSharedKey();
+        @Query(value = """SELECT NEXTVAL('{h-schema}carrier_scope_ids')""", nativeQuery = true)
+        long sequence();
+        @Query(value = """SELECT CAST(PG_ADVISORY_XACT_LOCK(781205611) AS TEXT)""", nativeQuery = true)
+        String advisory();
     }`, (invoke, output) => {
         const result = invoke('schema_test', ['--example', '--page-size', '5', '--page', '2']);
         assert.equal(result.status, 0, result.stderr);
@@ -80,7 +84,7 @@ test('SQL ví dụ điền giá trị và phân trang, giữ literal, bỏ mutat
         assert.match(sql, /CAST\(NULL AS boolean\)/);
         assert.match(sql, /':literal'/);
         assert.match(sql, /LIMIT 5 OFFSET 10/);
-        assert.doesNotMatch(sql, /SET active|FOR UPDATE;|FOR NO KEY UPDATE;|FOR KEY SHARE;/);
+        assert.doesNotMatch(sql, /SET active|FOR UPDATE;|FOR NO KEY UPDATE;|FOR KEY SHARE;|NEXTVAL|PG_ADVISORY/);
         assert.match(sql, /ROLLBACK;$/);
     });
 });

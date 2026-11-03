@@ -197,7 +197,7 @@ public class BookingRepo extends BaseRepository {
         {
             Query query = entityManager.createNativeQuery("SELECT COUNT(*)" + filter, Tuple.class);
 
-            UserRoleRepo.bindVisible(query);
+            UserRoleRepo.bindVisible(query::setParameter);
             query.setParameter("keyword", text);
             {
                 Tuple row = (Tuple) query.getSingleResult();
@@ -216,7 +216,7 @@ public class BookingRepo extends BaseRepository {
                 Tuple.class
             );
 
-            UserRoleRepo.bindVisible(query);
+            UserRoleRepo.bindVisible(query::setParameter);
             query.setParameter("keyword", text);
             query.setParameter("pageSize", body.getSize());
             query.setParameter("offset", body.offset());
@@ -355,7 +355,7 @@ public class BookingRepo extends BaseRepository {
             );
 
             query.setParameter("id", id);
-            if (customerId == null) UserRoleRepo.bindVisible(query);
+            if (customerId == null) UserRoleRepo.bindVisible(query::setParameter);
             else query.setParameter("customerId", customerId);
             {
                 List<?> rowValues = query.getResultList();
@@ -389,7 +389,7 @@ public class BookingRepo extends BaseRepository {
             );
 
             if (customerId == null) UserRoleRepo.bindVisible(
-                query,
+                query::setParameter,
                 "PUT " + Routes.ADMIN_BOOKINGS + Routes.BOOKING_STATE
             );
             query.setParameter("id", id);
@@ -406,7 +406,7 @@ public class BookingRepo extends BaseRepository {
     }
 
     private void bindScope(Query query, Long customerId) {
-        if (customerId == null) UserRoleRepo.bindVisible(query);
+        if (customerId == null) UserRoleRepo.bindVisible(query::setParameter);
         else query.setParameter("customerId", customerId);
     }
 
@@ -446,7 +446,7 @@ public class BookingRepo extends BaseRepository {
             );
 
             if (customerId == null) UserRoleRepo.bindVisible(
-                query,
+                query::setParameter,
                 "PUT " + Routes.ADMIN_BOOKINGS + Routes.BOOKING_STATE
             );
             bindSearch(query, search, customerId);

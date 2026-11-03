@@ -24,7 +24,9 @@ import vn.vietroute.auth.entity.Function;
  * các query bên trong tham gia giao dịch đó, không trông chờ annotation ở lời gọi nội bộ.
  */
 public interface FunctionRepo extends JpaRepository<Function, String> {
-    /** LIKE escape giữ nguyên %, _ và !; count và trang dùng cùng điều kiện. */
+    /**
+     * LIKE escape giữ nguyên %, _ và !; count và trang dùng cùng điều kiện.
+     */
     @Transactional(readOnly = true)
     default Page<Function> search(FunctionSearch search) {
         String keyword =
@@ -58,7 +60,9 @@ public interface FunctionRepo extends JpaRepository<Function, String> {
     )
     Page<Function> searchByFilters(@Param("keyword") String keyword, @Param("active") Boolean active, Pageable page);
 
-    /** Khóa một function trên transaction của service; giữ bản ghi kể cả khi đã ngừng. */
+    /**
+     * Khóa một function trên transaction của service; giữ bản ghi kể cả khi đã ngừng.
+     */
     @Transactional(propagation = Propagation.MANDATORY)
     @Query(
         value = """
@@ -71,7 +75,9 @@ public interface FunctionRepo extends JpaRepository<Function, String> {
     )
     Function lock(@Param("code") String code);
 
-    /** Đọc grant hiện hành theo user; không suy quyền từ role trong token hoặc cache. */
+    /**
+     * Đọc grant hiện hành theo user; không suy quyền từ role trong token hoặc cache.
+     */
     @Query(
         value = """
         SELECT DISTINCT f.code, f.name_vi, f.name_en, fr.kind, fr.target

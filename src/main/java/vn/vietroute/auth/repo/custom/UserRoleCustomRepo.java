@@ -1,18 +1,28 @@
-package vn.vietroute.auth.repo;
+package vn.vietroute.auth.repo.custom;
 
 import java.sql.Array;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.dto.request.UserRequest;
+import vn.vietroute.auth.repo.UserRoleRepo;
 
 /** Ghi dữ liệu theo lô trên connection của giao dịch nghiệp vụ. */
 @Repository
+@RequiredArgsConstructor
+@Transactional(propagation = Propagation.MANDATORY)
 public class UserRoleCustomRepo {
 
-    public void replaceRoles(Connection connection, long id, Set<String> roles, long actor) throws SQLException {
+    private final UserRoleRepo mappings;
+
+    public void replaceRoles(Connection connection, long id, Set<String> roles, long version, long actor)
+        throws SQLException {
+        mappings.prepareRoles(id, roles, version, actor);
         Array codes = connection.createArrayOf(
             "text",
             roles
@@ -71,8 +81,8 @@ public class UserRoleCustomRepo {
         }
     }
 
-    public void assign(Connection connection, long scope, long user, UserRequest body, long actor, long version)
-        throws SQLException {
+    public void assign(Connection connection, long scope, long user, UserRequest body, long actor) throws SQLException {
+        long version = mappings.prepareMembership(scope, user, body.getVersion(), actor);
         Array codes = connection.createArrayOf(
             "text",
             body

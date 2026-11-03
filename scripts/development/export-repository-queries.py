@@ -102,7 +102,11 @@ def export(source_root, schema, example=False, user_id=1, page_size=20, page=0):
     ]
     values = {
         'active': None, 'keyword': '%', 'code': 'ADMIN_CONSOLE', 'codes': ('ADMIN_CONSOLE',),
-        'role': 'CUSTOMER', 'userId': user_id, 'pageSize': page_size, 'offset': page * page_size,
+        'role': 'CUSTOMER', 'roleCode': None, 'userId': user_id, 'pageSize': page_size,
+        'size': page_size, 'offset': page * page_size, 'id': user_id, 'user': user_id, 'viewerId': user_id,
+        'viewerVersion': 0, 'tokenVersion': 0, 'scope': 1, 'scopeId': 1, 'systemId': 0,
+        'username': 'admin', 'name': 'admin', 'usernamePrefix': '%', 'email': 'example@example.invalid',
+        'names': ('admin',), 'viewTarget': 'GET /operations/access',
     }
     if example:
         result.extend([
@@ -115,7 +119,8 @@ def export(source_root, schema, example=False, user_id=1, page_size=20, page=0):
     count = 0
     for path, method, kind, sql, pageable in queries(source_root):
         if example and (not re.match(r'^SELECT\b', sql, re.I) or re.search(
-                r'\bFOR\s+(?:NO\s+KEY\s+UPDATE|KEY\s+SHARE|UPDATE|SHARE)\b', sql, re.I)):
+                r'\bFOR\s+(?:NO\s+KEY\s+UPDATE|KEY\s+SHARE|UPDATE|SHARE)\b'
+                r'|\b(?:NEXTVAL|SETVAL|SET_CONFIG|PG_NOTIFY|PG_(?:TRY_)?ADVISORY_\w*LOCK\w*)\s*\(', sql, re.I)):
             continue
         count += 1
         rendered = sql.replace('{h-schema}', '"' + schema + '".')

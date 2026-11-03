@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;
 import vn.vietroute.auth.initializer.AuthInitializer;
-import vn.vietroute.auth.repo.UserCustomRepo;
+import vn.vietroute.auth.repo.custom.UserCustomRepo;
 import vn.vietroute.business.bootstrap.repo.BusinessDataRepo;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.application.ConfigValues;

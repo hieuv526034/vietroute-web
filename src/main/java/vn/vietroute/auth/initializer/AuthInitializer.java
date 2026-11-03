@@ -11,15 +11,18 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.Supplier;
 import lombok.Getter;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import vn.vietroute.auth.dto.FunctionDTO;
 import vn.vietroute.auth.entity.User;
-import vn.vietroute.auth.repo.RoleCustomRepo;
+import vn.vietroute.auth.repo.AccountChallengeRepo;
 import vn.vietroute.auth.repo.RoleRepo;
-import vn.vietroute.auth.repo.UserCustomRepo;
 import vn.vietroute.auth.repo.UserRepo;
+import vn.vietroute.auth.repo.custom.FunctionResourceCustomRepo;
+import vn.vietroute.auth.repo.custom.RoleCustomRepo;
+import vn.vietroute.auth.repo.custom.UserCustomRepo;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.application.ConfigValues;
 import vn.vietroute.common.config.application.ConfigurationEnvironment;
@@ -35,6 +38,8 @@ public class AuthInitializer {
     private final UserCustomRepo userBatch;
     private final RoleCustomRepo roleBatch;
     private final RoleRepo roles;
+    private final AccountChallengeRepo challenges;
+    private final FunctionResourceCustomRepo resources;
     private final AppSettings settings;
     private final ConfigurationEnvironment environment;
     private final PasswordEncoder passwords;
@@ -52,9 +57,13 @@ public class AuthInitializer {
         JdbcTransactions transactions,
         ObjectMapper mapper,
         UserCustomRepo userBatch,
-        RoleCustomRepo roleBatch
+        RoleCustomRepo roleBatch,
+        AccountChallengeRepo challenges,
+        FunctionResourceCustomRepo resources
     ) {
         this.users = users;
+        this.challenges = challenges;
+        this.resources = resources;
         this.userBatch = userBatch;
         this.roleBatch = roleBatch;
         this.roles = roles;
@@ -73,8 +82,7 @@ public class AuthInitializer {
     /** Caller giữ transaction migration; mật khẩu chỉ encode khi account thật sự chưa tồn tại. */
     public void initialize(Connection connection) throws SQLException {
         roleBatch.initialize(connection, data);
-        users.initializeBootstrap(
-            connection,
+        initializeBootstrap(
             settings.getBootstrapUsername().toLowerCase(Locale.ROOT),
             settings.getBootstrapEmail(),
             () -> passwords.encode(settings.getBootstrapPassword()),
@@ -85,7 +93,7 @@ public class AuthInitializer {
         if (!values.flag(Env.DEFAULT_ACCOUNTS_ENABLED, false)) return;
         Set<String> names = new LinkedHashSet<>();
         data.path("accounts").forEach(item -> names.add(item.path("username").asText()));
-        Set<String> existing = users.existingUsernames(connection, names);
+        Set<String> existing = users.existingUsernames(names);
         List<User> missing = new ArrayList<>();
         for (JsonNode item : data.path("accounts")) {
             String username = item.path("username").asText();
@@ -114,9 +122,38 @@ public class AuthInitializer {
     public void synchronize(List<FunctionDTO> endpoints) {
         if (!settings.isAccessSyncEnabled()) return;
         transactions.execute(connection -> {
-            roles.synchronizeEndpoints(connection, data, endpoints);
+            users.lockBootstrap();
+            roleBatch.synchronizeEndpoints(connection, data, endpoints);
+            String role = data.path("bootstrapRole").asText();
+            String function = data.path("bootstrapFunction").asText("ADMIN_CONSOLE");
+            roles.repairBootstrapRole(role, 0);
+            resources.replace(
+                connection,
+                function,
+                endpoints
+                    .stream()
+                    .filter(item -> !item.isPublicEndpoint() && !item.isSelfService())
+                    .toList(),
+                0
+            );
+            roles.repairBootstrapFunction(function, 0);
+            roles.assignBootstrapFunction(role, function, 0);
             return null;
         });
+    }
+
+    /** Tạo khi thiếu, giữ hash cũ; sửa trạng thái bootstrap chỉ khi cờ init được bật. */
+    private long initializeBootstrap(String username, String email, Supplier<String> hash, long actor, String role) {
+        users.lockBootstrap();
+        Long id = users.bootstrapId(username);
+        boolean created = id == null;
+        if (created) {
+            id = users.insertBootstrap(username, email, hash.get(), actor);
+        } else if (users.repairBootstrap(id, email, actor) > 0) {
+            challenges.invalidate(id);
+        }
+        if (users.assignBootstrap(id, role, actor) > 0 && !created) users.revokeBootstrapTokens(id, actor);
+        return id;
     }
 
     public String driverRole() {

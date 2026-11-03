@@ -1,4 +1,4 @@
-package vn.vietroute.business.bootstrap.repo;
+package vn.vietroute.business.bootstrap.repo.custom;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

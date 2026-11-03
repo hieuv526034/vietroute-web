@@ -1,4 +1,4 @@
-package vn.vietroute.auth.repo;
+package vn.vietroute.auth.repo.custom;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.sql.Connection;

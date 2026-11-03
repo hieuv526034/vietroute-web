@@ -15,7 +15,7 @@
 | auth_account_challenges | Mã theo user/purpose/hash/tokenVersion/expiry; lifecycle còn dùng invalidate, không mở self-registration/email/reset |
 | auth_access_changes | Event/actor/target/whitelist before-after/traceId/version trong transaction; không màn/API history |
 
-Auth 46 file gồm 8 entity, 8 repo, 6 CustomRepo ghi batch, 4 service,3 API,1 page,9 DTO,2 config,4 security,1 initializer. User/Role/Function giữ service CRUD và mapping; JwtService giữ token. Không tạo service/API rỗng cho bảng nối. Một số mapping/challenge có identity kỹ thuật UNIQUE cho JPA nhưng PK/FK nghiệp vụ ghép vẫn giữ.
+Auth 46 file gồm 8 entity, 8 repo, 6 CustomRepo ghi batch trong repo/custom, 4 service,3 API,1 page,9 DTO,2 config,4 security,1 initializer. User/Role/Function giữ service CRUD và mapping; JwtService giữ token. Tám Repo là interface Spring Data, query native bằng @Query. Khởi tạo bootstrap do AuthInitializer phối hợp các query và batch. Không tạo service/API rỗng cho bảng nối. Một số mapping/challenge có identity kỹ thuật UNIQUE cho JPA nhưng PK/FK nghiệp vụ ghép vẫn giữ.
 
 ```mermaid
 flowchart LR

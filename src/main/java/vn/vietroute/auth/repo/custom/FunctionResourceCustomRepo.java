@@ -1,4 +1,4 @@
-package vn.vietroute.auth.repo;
+package vn.vietroute.auth.repo.custom;
 
 import java.sql.Array;
 import java.sql.Connection;
@@ -8,11 +8,15 @@ import java.util.List;
 import org.springframework.stereotype.Repository;
 import vn.vietroute.auth.dto.FunctionDTO;
 
-/** SQL ghi batch theo tập; caller sở hữu transaction/connection và quyền nghiệp vụ. */
+/**
+ * SQL ghi batch theo tập; caller sở hữu transaction/connection và quyền nghiệp vụ.
+ */
 @Repository
 public class FunctionResourceCustomRepo {
 
-    /** Caller giữ khóa Function; xóa phần bỏ và batch upsert phần chọn, giữ nhãn menu đã cấu hình. */
+    /**
+     * Caller giữ khóa Function; xóa phần bỏ và batch upsert phần chọn, giữ nhãn menu đã cấu hình.
+     */
     public void replace(Connection connection, String code, List<FunctionDTO> selected, long actor)
         throws SQLException {
         Array targets = connection.createArrayOf(

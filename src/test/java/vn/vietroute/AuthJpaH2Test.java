@@ -29,6 +29,7 @@ import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.jdbc.JdbcTransactions;
+import vn.vietroute.support.TestJpa;
 
 /** H2 kiểm JPA thật + JDBC cùng transaction; migration/array/scope vẫn phải kiểm PostgreSQL riêng. */
 class AuthJpaH2Test {
@@ -71,7 +72,7 @@ class AuthJpaH2Test {
             new JdbcConnectionFactory(new TransactionAwareDataSourceProxy(source), new JdbcSchema("h2_auth")),
             beans.getBeanProvider(PlatformTransactionManager.class)
         );
-        users = new UserRepo(shared);
+        users = TestJpa.repository(UserRepo.class, shared);
     }
 
     @AfterEach

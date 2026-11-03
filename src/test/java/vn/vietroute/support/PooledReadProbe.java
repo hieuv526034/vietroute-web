@@ -251,7 +251,7 @@ public final class PooledReadProbe {
                 selectedSchema
             );
             transactions = new JdbcTransactions(connections, beans.getBeanProvider(PlatformTransactionManager.class));
-            guard = new EndpointAccess(null, new UserRepo(shared), null);
+            guard = new EndpointAccess(null, TestJpa.repository(UserRepo.class, shared), null);
             read = readFactory.apply(shared, transactions);
         }
 
