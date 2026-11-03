@@ -10,8 +10,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietroute.common.base.BaseEntity;
-import vn.vietroute.common.jdbc.JdbcIndex;
-import vn.vietroute.common.jdbc.JdbcTable;
 
 /**
  * Entity đầy đủ cột carrier_vehicles; migration giữ DDL/index, repo giữ query và transaction do service quản lý.
@@ -27,19 +25,6 @@ import vn.vietroute.common.jdbc.JdbcTable;
         @Index(name = "idx_vehicles_type", columnList = "vehicle_type_id"),
         @Index(name = "idx_vehicles_created_by", columnList = "created_by"),
         @Index(name = "idx_vehicles_updated_by", columnList = "updated_by"),
-    }
-)
-@JdbcTable(
-    name = "carrier_vehicles",
-    primaryKey = { "id" },
-    indexes = {
-        @JdbcIndex(name = "carrier_vehicles_pkey", columns = { "id" }, unique = true),
-        @JdbcIndex(name = "carrier_vehicles_plate_key_key", columns = { "plate_key" }, unique = true),
-        @JdbcIndex(name = "carrier_vehicles_carrier_id_code_key", columns = { "carrier_id", "code" }, unique = true),
-        @JdbcIndex(name = "idx_vehicles_carrier_state", columns = { "carrier_id", "active", "id" }, unique = false),
-        @JdbcIndex(name = "idx_vehicles_type", columns = { "vehicle_type_id" }, unique = false),
-        @JdbcIndex(name = "idx_vehicles_created_by", columns = { "created_by" }, unique = false),
-        @JdbcIndex(name = "idx_vehicles_updated_by", columns = { "updated_by" }, unique = false),
     }
 )
 @Getter

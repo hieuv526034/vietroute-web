@@ -58,7 +58,7 @@ JpaConfig dùng JpaTransactionManager, SharedEntityManagerCreator và Transactio
 
 SQL dài dùng text block, format SELECT/FROM/JOIN/WHERE/CTE/CASE/khóa/paging rõ ràng. Loop tính dữ liệu đã tải, bind addBatch hoặc lặp tập enum hữu hạn để dựng SQL whitelist là hợp lệ; tránh loop query/save theo từng bản ghi. Khóa nghiệp vụ theo trip → booking → segments; không gọi provider mạng khi giữ khóa. Lỗi history nghiệp vụ phải rollback mutation; journal là cơ chế ghi riêng có thể thất bại mà nghiệp vụ vẫn thành công.
 
-Connection bắt đầu transaction trước SET LOCAL search_path; schema validated, pg_temp cuối, không fallback public/$user hoặc session state qua pooler. Hibernate không tự DDL, không OSIV. @JdbcTable/@JdbcIndex kiểm metadata theo schema connection, không tự sinh index.
+Connection bắt đầu transaction trước SET LOCAL search_path; schema validated, pg_temp cuối, không fallback public/$user hoặc session state qua pooler. Hibernate không tự DDL, không OSIV. Entity chỉ dùng annotation JPA chuẩn; regression PostgreSQL đối chiếu PK/index với migration và metadata JPA. Startup không quét PK/index bằng validator riêng; DatabaseInitializer vẫn giữ migration/checksum/advisory lock/transaction và seed. Checksum kiểm file SQL đã áp, không chứng minh DB chưa bị sửa tay.
 
 ## Entity, audit và thời gian
 

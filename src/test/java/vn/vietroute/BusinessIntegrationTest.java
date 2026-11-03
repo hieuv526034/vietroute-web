@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.metamodel.EntityType;
 import java.lang.reflect.Field;
@@ -24,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -34,6 +36,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -41,6 +44,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -2896,6 +2900,103 @@ class BusinessIntegrationTest {
                     while (rows.next()) keys.add(rows.getString("COLUMN_NAME"));
                 }
                 assertEquals(keys, ids, table + " primary key");
+            }
+        }
+    }
+
+    /** Chuyển kiểm PK/index ra regression; metadata index chỉ khai báo bằng annotation JPA chuẩn. */
+    @Test
+    void migrationsCreateExpectedPrimaryKeysAndJpaIndexes() throws Exception {
+        try (Connection connection = root.getBean(JdbcConnectionFactory.class).open()) {
+            assertMigrationMetadata(connection);
+        }
+    }
+
+    /** Kiểm âm tính trên transaction test: thiếu/sai index hoặc PK phải được regression phát hiện. */
+    @Test
+    void schemaRegressionDetectsMissingIndexesWrongColumnsAndPrimaryKeys() throws Exception {
+        try (Connection connection = root.getBean(JdbcConnectionFactory.class).open()) {
+            assertFalse(connection.getAutoCommit());
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("DROP INDEX idx_bookings_trip_status");
+                assertThrows(AssertionError.class, () -> assertMigrationMetadata(connection));
+                statement.execute("CREATE INDEX idx_bookings_trip_status ON bookings(trip_id,id)");
+                assertThrows(AssertionError.class, () -> assertMigrationMetadata(connection));
+                statement.execute("DROP INDEX idx_bookings_trip_status");
+                statement.execute("CREATE INDEX idx_bookings_trip_status ON bookings(trip_id,status,id)");
+                assertMigrationMetadata(connection);
+                statement.execute("ALTER TABLE auth_account_challenges DROP CONSTRAINT auth_account_challenges_pkey");
+                assertThrows(AssertionError.class, () -> assertMigrationMetadata(connection));
+            } finally {
+                connection.rollback();
+            }
+            root.getBean(JdbcSchema.class).select(connection);
+            assertMigrationMetadata(connection);
+        }
+    }
+
+    private void assertMigrationMetadata(Connection connection) throws Exception {
+        List<Class<?>> models = root
+            .getBean(EntityManagerFactory.class)
+            .getMetamodel()
+            .getEntities()
+            .stream()
+            .<Class<?>>map(EntityType::getJavaType)
+            .toList();
+        assertEquals(21, models.size());
+        // Bốn bảng dùng ID kỹ thuật UNIQUE cho JPA nhưng PK nghiệp vụ trong migration vẫn là khóa ghép.
+        Map<String, List<String>> businessKeys = Map.of(
+            "auth_account_challenges",
+            List.of("user_id", "purpose"),
+            "auth_function_resources",
+            List.of("function_code", "kind", "target"),
+            "auth_role_functions",
+            List.of("role_code", "function_code"),
+            "auth_user_roles",
+            List.of("user_id", "role_code", "scope_id")
+        );
+        DatabaseMetaData metadata = connection.getMetaData();
+        String databaseSchema = connection.getSchema();
+        assertEquals(schema, databaseSchema);
+        for (Class<?> model : models) {
+            Table table = model.getAnnotation(Table.class);
+            List<String> mappedIds = new ArrayList<>();
+            for (Class<?> type = model; type != Object.class; type = type.getSuperclass()) {
+                for (Field field : type.getDeclaredFields()) {
+                    if (field.isAnnotationPresent(Id.class)) mappedIds.add(field.getAnnotation(Column.class).name());
+                }
+            }
+            Map<Short, String> actualKeys = new TreeMap<>();
+            try (ResultSet rows = metadata.getPrimaryKeys(null, databaseSchema, table.name())) {
+                while (rows.next()) actualKeys.put(rows.getShort("KEY_SEQ"), rows.getString("COLUMN_NAME"));
+            }
+            assertEquals(
+                businessKeys.getOrDefault(table.name(), mappedIds),
+                List.copyOf(actualKeys.values()),
+                table.name()
+            );
+            Map<String, Map<Short, String>> actualIndexes = new LinkedHashMap<>();
+            Map<String, Boolean> unique = new LinkedHashMap<>();
+            try (ResultSet rows = metadata.getIndexInfo(null, databaseSchema, table.name(), false, false)) {
+                while (rows.next()) {
+                    String name = rows.getString("INDEX_NAME");
+                    String column = rows.getString("COLUMN_NAME");
+                    if (name == null || column == null) continue;
+                    actualIndexes
+                        .computeIfAbsent(name, ignored -> new TreeMap<>())
+                        .put(rows.getShort("ORDINAL_POSITION"), column);
+                    unique.put(name, !rows.getBoolean("NON_UNIQUE"));
+                }
+            }
+            for (Index index : table.indexes()) {
+                String label = table.name() + "." + index.name();
+                assertTrue(actualIndexes.containsKey(index.name()), label);
+                assertEquals(
+                    Arrays.stream(index.columnList().split(",")).map(String::trim).toList(),
+                    List.copyOf(actualIndexes.get(index.name()).values()),
+                    label
+                );
+                assertEquals(index.unique(), unique.get(index.name()), label);
             }
         }
     }

@@ -45,5 +45,7 @@ for name in groups[sys.argv[1]]:
                          'duyLongAccountsCanSearchBookConfirmAndPayWithoutCrossCarrierAccess'})
         required.update({'categoryTreeLoadsDirectChildrenAndDeniesRemovedEndpoints',
                          'categoryUpgradeRetiresOnlyOldResourcesAndKeepsRevokedRolesInactive'})
+        required.update({'migrationsCreateExpectedPrimaryKeysAndJpaIndexes',
+                         'schemaRegressionDetectsMissingIndexesWrongColumnsAndPrimaryKeys'})
         assert required <= cases, 'Thiếu regression endpoint/JPA/batch/scope bắt buộc'
 print('Regression ' + sys.argv[1] + ': đủ ca kiểm, không fail/error/skip')

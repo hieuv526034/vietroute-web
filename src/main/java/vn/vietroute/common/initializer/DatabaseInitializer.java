@@ -14,34 +14,12 @@ import java.util.logging.Logger;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;
-import vn.vietroute.auth.entity.AccessChange;
-import vn.vietroute.auth.entity.AccountChallenge;
-import vn.vietroute.auth.entity.Function;
-import vn.vietroute.auth.entity.FunctionResource;
-import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.entity.RoleFunction;
-import vn.vietroute.auth.entity.User;
-import vn.vietroute.auth.entity.UserRole;
 import vn.vietroute.auth.initializer.AuthInitializer;
 import vn.vietroute.auth.repo.AccessChangeRepo;
-import vn.vietroute.business.booking.entity.Booking;
-import vn.vietroute.business.booking.entity.BookingEvent;
-import vn.vietroute.business.carrier.entity.Carrier;
-import vn.vietroute.business.carrier.entity.Driver;
-import vn.vietroute.business.carrier.entity.Vehicle;
-import vn.vietroute.business.catalog.entity.Category;
 import vn.vietroute.business.catalog.repo.CategoryRepo;
-import vn.vietroute.business.trip.entity.Route;
-import vn.vietroute.business.trip.entity.RouteStop;
-import vn.vietroute.business.trip.entity.Trip;
-import vn.vietroute.business.trip.entity.TripEvent;
-import vn.vietroute.business.trip.entity.TripSegment;
-import vn.vietroute.business.trip.entity.TripStop;
-import vn.vietroute.common.api_journal.entity.ApiJournal;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.constant.ApplicationConstants.Env;
 import vn.vietroute.common.jdbc.JdbcSchema;
-import vn.vietroute.common.jdbc.JdbcSchemaValidator;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 
 /** Migration/seed chạy theo cờ môi trường; tuyệt đối không chạy từ bước đóng gói Maven. */
@@ -72,7 +50,7 @@ public class DatabaseInitializer implements InitializingBean {
         LOG.info("VietRoute database migration and bootstrap completed");
     }
 
-    /** Một transaction bao trọn chuyển schema, migration, kiểm tra index và seed; lỗi ở đâu rollback ở đó. */
+    /** Một transaction bao trọn chuyển schema, migration có checksum và seed; lỗi ở đâu rollback ở đó. */
     private Void initialize(Connection connection) throws SQLException {
         // PostgreSQL tự giải phóng advisory lock khi commit/rollback hoặc mất kết nối.
         try (Statement statement = connection.createStatement()) {
@@ -94,30 +72,6 @@ public class DatabaseInitializer implements InitializingBean {
         for (String version : MigrationCatalog.versions()) {
             migrate(connection, version);
         }
-        JdbcSchemaValidator.verify(
-            connection,
-            User.class,
-            AccountChallenge.class,
-            Category.class,
-            Carrier.class,
-            Vehicle.class,
-            Driver.class,
-            Route.class,
-            RouteStop.class,
-            Trip.class,
-            TripStop.class,
-            TripSegment.class,
-            TripEvent.class,
-            Booking.class,
-            BookingEvent.class,
-            Role.class,
-            Function.class,
-            RoleFunction.class,
-            FunctionResource.class,
-            UserRole.class,
-            ApiJournal.class,
-            AccessChange.class
-        );
         auth.initialize(connection);
         AccessChangeRepo.cleanup(connection);
         catalogs.seedCatalogs(connection);

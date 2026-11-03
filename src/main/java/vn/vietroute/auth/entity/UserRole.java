@@ -11,12 +11,10 @@ import java.time.Instant;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import vn.vietroute.common.jdbc.JdbcTable;
 
 /** Model đầy đủ cột bảng auth_user_roles; chỉ DTO mới được nhận/trả ở API. */
 @Entity
 @Table(name = "auth_user_roles")
-@JdbcTable(name = "auth_user_roles", primaryKey = { "user_id", "role_code", "scope_id" })
 @Getter
 @Setter
 @NoArgsConstructor

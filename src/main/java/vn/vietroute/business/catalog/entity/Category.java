@@ -15,8 +15,6 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import vn.vietroute.common.base.BaseEntity;
-import vn.vietroute.common.jdbc.JdbcIndex;
-import vn.vietroute.common.jdbc.JdbcTable;
 
 /** Một entity cho nhóm và giá trị danh mục; thuộc tính riêng lưu JSON, quan hệ và audit giữ cột có ràng buộc. */
 @Entity
@@ -27,16 +25,6 @@ import vn.vietroute.common.jdbc.JdbcTable;
         @Index(name = "category_ref_code", columnList = "ref_type,code", unique = true),
         @Index(name = "idx_category_lookup", columnList = "ref_type,active,sort_order,id"),
         @Index(name = "idx_category_parent", columnList = "ref_type,parent_id,active,sort_order,id"),
-    }
-)
-@JdbcTable(
-    name = "category",
-    primaryKey = { "id" },
-    indexes = {
-        @JdbcIndex(name = "category_pkey", columns = { "id" }, unique = true),
-        @JdbcIndex(name = "category_ref_code", columns = { "ref_type", "code" }, unique = true),
-        @JdbcIndex(name = "idx_category_lookup", columns = { "ref_type", "active", "sort_order", "id" }),
-        @JdbcIndex(name = "idx_category_parent", columns = { "ref_type", "parent_id", "active", "sort_order", "id" }),
     }
 )
 @Getter

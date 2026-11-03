@@ -48,10 +48,10 @@ Phiên bản chính xác đọc [pom.xml](../../pom.xml) và [package.json](../.
 | business/booking | 15 | 2 | Đơn và sự kiện trạng thái/thu–hoàn |
 | business/report | 10 | 0 | Báo cáo và dashboard đọc dữ liệu nghiệp vụ |
 | business/bootstrap | 6 | 0 | Khởi tạo nền có cờ bật rõ ràng |
-| common | 61 | 1 | Nền MVC/DB, response/lỗi và api_request_journal |
+| common | 58 | 1 | Nền MVC/DB, response/lỗi và api_request_journal |
 | History migration | — | 1 | vietroute_schema_history |
 
-Source có 207 file Java trong ba khối chính và 22 bảng sau migration Category, gồm history. Xem tên bảng và quan hệ tại [schema](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md). Số file là mốc source, không phải bằng chứng một thành viên đã viết toàn bộ khối được phân công.
+Source có 204 file Java trong ba khối chính và 22 bảng sau migration Category, gồm history. Xem tên bảng và quan hệ tại [schema](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md). Số file là mốc source, không phải bằng chứng một thành viên đã viết toàn bộ khối được phân công.
 
 ## Một request đi qua đâu
 

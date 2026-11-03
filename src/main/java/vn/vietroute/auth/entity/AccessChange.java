@@ -14,12 +14,10 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import vn.vietroute.common.jdbc.JdbcTable;
 
 /** Model đầy đủ cột bảng auth_access_changes; chỉ DTO mới được nhận/trả ở API. */
 @Entity
 @Table(name = "auth_access_changes")
-@JdbcTable(name = "auth_access_changes", primaryKey = { "id" })
 @Getter
 @Setter
 @NoArgsConstructor

@@ -10,8 +10,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietroute.common.base.BaseEntity;
-import vn.vietroute.common.jdbc.JdbcIndex;
-import vn.vietroute.common.jdbc.JdbcTable;
 
 /** Entity đầy đủ cột carrier_route_stops; migration giữ DDL/index, repo giữ query và transaction do service quản lý. */
 @Entity
@@ -22,16 +20,6 @@ import vn.vietroute.common.jdbc.JdbcTable;
         @Index(name = "idx_route_stops_location", columnList = "location_id, route_id"),
         @Index(name = "idx_route_stops_created_by", columnList = "created_by"),
         @Index(name = "idx_route_stops_updated_by", columnList = "updated_by"),
-    }
-)
-@JdbcTable(
-    name = "carrier_route_stops",
-    primaryKey = { "id" },
-    indexes = {
-        @JdbcIndex(name = "carrier_route_stops_pkey", columns = { "id" }, unique = true),
-        @JdbcIndex(name = "idx_route_stops_location", columns = { "location_id", "route_id" }),
-        @JdbcIndex(name = "idx_route_stops_created_by", columns = { "created_by" }),
-        @JdbcIndex(name = "idx_route_stops_updated_by", columns = { "updated_by" }),
     }
 )
 @Getter

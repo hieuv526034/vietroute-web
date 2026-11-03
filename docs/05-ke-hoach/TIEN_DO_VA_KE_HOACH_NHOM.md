@@ -211,6 +211,16 @@ Chưa áp dụng Category lên hieuboy, chưa merge dev/main hoặc deploy Rende
 
 Đổi tên service Virginia không đổi hostname, đã trả lại tên cũ. Yêu cầu chuyển `vietroute-web.onrender.com` sang Singapore được Render AI phản hồi hostname cố định theo service; sau yêu cầu nhân viên, chat đã xác nhận escalated to the team và sẽ trả lời tại chat/email. Chưa có xác nhận chuyển hostname; giữ hai service hiện hành trong lúc chờ. Không coi việc gửi yêu cầu là đã chuyển thành công.
 
+## JDBCLEAN01 — bỏ metadata JDBC riêng khỏi entity
+
+Theo yêu cầu03/11/2026, người thực hiện hieuv526034 tiếp tục trên nhánh `hieuv526034/category01-danh-muc-chung`, đối chiếu commit8fbc025/PR166. Bỏ annotation riêng khỏi21 model và xóa ba lớp JdbcTable/JdbcIndex/JdbcSchemaValidator. Giữ annotation JPA chuẩn; bổ sung các index auth_users vào @Table. Common còn58 file, jdbc6; toàn ba khối production204 file, auth40/business106 giữ nguyên. Không đổi bảng, dữ liệu hoặc byte mười SQL/checksum hiện hành.
+
+DatabaseInitializer giữ cờ opt-in, chuẩn bị schema/LOCAL search_path, advisory lock, transaction, history/checksum, auth/init/cleanup và nạp Category từ JSON. Bỏ danh sách entity/lệnh validator trước seed. PK/index chuyển sang hai regression trong BusinessIntegrationTest dùng metadata JPA chuẩn; bốn PK nghiệp vụ ghép auth kiểm tường minh, không nhầm với ID kỹ thuật UNIQUE. Kiểm âm tính bỏ index, sai thứ tự/cột hoặc PK và rollback phát hiện đúng. Không tạo validator/annotation thay thế trong production. Runtime không còn quét PK/index; checksum file không thay thế kiểm DB bị sửa tay.
+
+JDK21/Maven3.9.11 cache `clean verify` đạt209 test, gồm74 PostgreSQL,0 fail/error/skip trên loopback15462/vietroute_business_test; không root .env/DB thật. Có khởi tạo mới, chạy lại giữ credential/dữ liệu, từ chối checksum/history sai và các ca JPA/JDBC/quyền/nghiệp vụ hiện có. Lượt đầu DB test đang tắt, lệnh bật thiếu tham số cổng; đã bật lại đúng cụm/cổng trước kiểm. Ca kiểm sau rollback cần chọn lại LOCAL schema, đã sửa test rồi clean build lại. Không sửa rule/formatter hoặc bỏ ca kiểm để đạt.
+
+npm ci/format/format:check/check:rules/check:docs/diff đạt; checker260 file Java/187 liên kết trong22 tài liệu. Đồng bộ AGENTS, tổng quan, quy ước backend, schema và Word theo cơ chế mới. Native Word xuất PDF vẫn81 trang; kiểm các trang thay đổi không tràn/cắt nội dung. WAR không còn ba class đã xóa. Cụm PostgreSQL test đã dừng sau kiểm. Không sửa ảnh/ERD vì DDL/nghiệp vụ không đổi. Chưa merge dev/main, chưa đổi DB thật hoặc deploy Render; phần formatter IDE có sẵn vẫn giữ ngoài thay đổi này.
+
 ## Còn lại và bước tiếp
 
 Source DUYLONG01 đã có trên dev/main và Live theo bằng chứng trên; DUYLONG02 chốt tài liệu nghiệm thu. Chưa có Oracle runtime/regression, kiểm tải/SLA hoặc backup di động/PITR/RPO/RTO; DPAPI local phụ thuộc tài khoản Windows. AccountChallengeRepo còn SQL phụ cũ chưa được luồng hiện hành gọi, cần dọn riêng khi sửa auth, không trình bày như chức năng đang hoạt động. Kiểm thêm cách chạy Maven Wrapper trên máy trước khi dùng hướng dẫn local.

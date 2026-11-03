@@ -13,8 +13,6 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietroute.business.trip.constant.TripStatus;
 import vn.vietroute.common.base.BaseEntity;
-import vn.vietroute.common.jdbc.JdbcIndex;
-import vn.vietroute.common.jdbc.JdbcTable;
 
 /** Entity đầy đủ cột carrier_trips; migration giữ DDL/index, repo giữ query và transaction do service quản lý. */
 @Entity
@@ -31,28 +29,6 @@ import vn.vietroute.common.jdbc.JdbcTable;
         @Index(name = "idx_trips_route", columnList = "route_id"),
         @Index(name = "idx_trips_created_by", columnList = "created_by"),
         @Index(name = "idx_trips_updated_by", columnList = "updated_by"),
-    }
-)
-@JdbcTable(
-    name = "carrier_trips",
-    primaryKey = { "id" },
-    indexes = {
-        @JdbcIndex(name = "carrier_trips_pkey", columns = { "id" }, unique = true),
-        @JdbcIndex(name = "idx_trips_carrier_status", columns = { "carrier_id", "status", "departure_at", "id" }),
-        @JdbcIndex(name = "idx_trips_vehicle_schedule", columns = { "vehicle_id", "departure_at", "end_at" }),
-        @JdbcIndex(name = "idx_trips_driver_schedule", columns = { "driver_id", "departure_at", "end_at" }),
-        @JdbcIndex(name = "idx_trips_driver_user", columns = { "driver_user_id", "status", "departure_at" }),
-        @JdbcIndex(
-            name = "idx_trips_report_departure",
-            columns = { "departure_at", "carrier_id", "id", "scope_id", "status" }
-        ),
-        @JdbcIndex(
-            name = "idx_trips_report_carrier_date",
-            columns = { "carrier_id", "departure_at", "id", "scope_id", "status" }
-        ),
-        @JdbcIndex(name = "idx_trips_route", columns = { "route_id" }),
-        @JdbcIndex(name = "idx_trips_created_by", columns = { "created_by" }),
-        @JdbcIndex(name = "idx_trips_updated_by", columns = { "updated_by" }),
     }
 )
 @Getter

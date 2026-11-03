@@ -90,7 +90,7 @@ db/migration/postgresql/
 
 Manifest ở [db/migration](../../src/main/resources/db/migration/postgresql/migrations.list) chạy tám bước nền đã có, sau đó chuyển ba bảng danh mục sang `category` ở bước thứ chín; bước thứ mười chuyển cha địa điểm từ tỉnh sang xã/phường và thay tài nguyên quản trị danh mục đã nghỉ. Bước003 chỉ bổ sung bảy grant Category vào ADMIN_CONSOLE hiện hữu, giữ trạng thái function/role/mapping và ghi history khi tập tài nguyên đổi; không nâng quyền các function đọc riêng nhóm cũ. Report và bootstrap dùng các bảng hiện có. History version như trip/001_schema.sql, SHA-256 byte gốc, installed_at; không format SQL đã áp dụng.
 
-DatabaseInitializer/MigrationCatalog giữ advisory lock/transaction/checksum/metadata. Connection transaction trước LOCAL search_path, schema qua VIETROUTE_DB_SCHEMA/fallback profile, pg_temp cuối; không prefix schema cứng vào entity/query, không public/$user fallback. pg_trgm tra namespace extension thật. Không tự DDL bằng Hibernate, không migration lúc Maven packaging.
+DatabaseInitializer/MigrationCatalog giữ advisory lock/transaction/checksum và init. Entity dùng annotation JPA chuẩn; PK/index được đối chiếu trong regression PostgreSQL, không còn validator metadata riêng ở startup. Bốn bảng auth có ID kỹ thuật UNIQUE vẫn giữ PK nghiệp vụ ghép trong migration và test. Connection transaction trước LOCAL search_path, schema qua VIETROUTE_DB_SCHEMA/fallback profile, pg_temp cuối; không prefix schema cứng vào entity/query, không public/$user fallback. pg_trgm tra namespace extension thật. Không tự DDL bằng Hibernate, không migration lúc Maven packaging. Checksum không phát hiện mọi thay đổi cấu trúc DB do sửa tay.
 
 Baseline mới hoặc history sai phải dừng runtime, không sửa checksum để xanh. Bảo trì/rebaseline theo [vận hành](../04-van-hanh/VAN_HANH.md#database-backup-và-rollback): backup kiểm phục hồi, dừng mọi node và kiểm cấu trúc trước đổi history; không đổi dữ liệu/hash/sequence/audit.
 
@@ -98,7 +98,7 @@ Baseline mới hoặc history sai phải dừng runtime, không sửa checksum �
 
 | Cờ | Startup khi bật có chủ đích |
 |---|---|
-| VIETROUTE_DB_INIT_ENABLED | Migration, kiểm checksum/metadata, AuthInitializer và nạp danh mục nền theo lô |
+| VIETROUTE_DB_INIT_ENABLED | Migration, kiểm checksum, AuthInitializer và nạp danh mục nền theo lô |
 | VIETROUTE_ACCESS_SYNC_ENABLED | Inventory và sync bootstrap sau MVC; mặc định theo DB_INIT khi không khai báo |
 | VIETROUTE_DEFAULT_ACCOUNTS_ENABLED | Tạo45 account ordinary còn thiếu, verified/active theo JSON/env |
 | VIETROUTE_BUSINESS_INIT_ENABLED | Nền catalog/carrier/scope/tuyến; cùng DEFAULT_ACCOUNTS tạo bộ vận hành đầy đủ |
