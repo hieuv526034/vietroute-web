@@ -14,7 +14,7 @@
         <main
             id="category-workspace"
             class="container-xl workspace-page"
-            th:attr="data-loading=#{ui.loading},data-empty=#{ui.empty},data-create=#{ui.location.create},data-edit=#{ui.location.edit},data-stop=#{ui.location.inactive},data-active=#{ui.location.active},data-no-read=#{ui.accessTree.noRead},data-group=#{ui.category.group},data-invalid=#{validation.invalid},data-seat-count=#{ui.category.seatCount},data-parent-label=#{ui.category.parentLabel},data-geography=#{ui.category.geography},data-branch-help=#{ui.category.branchHelp},data-search-help=#{ui.category.searchHelp},data-matches=#{ui.category.matches},data-map-open=#{ui.category.mapOpen},data-map-help=#{ui.category.mapHelp},data-map-center=#{ui.category.mapCenter},data-map-error=#{ui.category.mapError},data-map-required=#{ui.category.mapRequired},data-address=#{ui.location.address},data-latitude=#{ui.category.latitude},data-longitude=#{ui.category.longitude}"
+            th:attr="data-loading=#{ui.loading},data-empty=#{ui.empty},data-create=#{ui.location.create},data-edit=#{ui.location.edit},data-stop=#{ui.location.inactive},data-active=#{ui.location.active},data-no-read=#{ui.accessTree.noRead},data-group=#{ui.category.group},data-add-group=#{ui.category.addGroup},data-edit-group=#{ui.category.editGroup},data-invalid=#{validation.invalid},data-seat-count=#{ui.category.seatCount},data-parent-label=#{ui.category.parentLabel},data-geography=#{ui.category.geography},data-branch-help=#{ui.category.branchHelp},data-search-help=#{ui.category.searchHelp},data-matches=#{ui.category.matches},data-map-open=#{ui.category.mapOpen},data-map-help=#{ui.category.mapHelp},data-map-center=#{ui.category.mapCenter},data-map-error=#{ui.category.mapError},data-map-required=#{ui.category.mapRequired},data-map-search-short=#{ui.category.mapSearchShort},data-map-search-empty=#{ui.category.mapSearchEmpty},data-map-search-error=#{ui.category.mapSearchError},data-map-search-results=#{ui.category.mapSearchResults},data-address=#{ui.location.address},data-latitude=#{ui.category.latitude},data-longitude=#{ui.category.longitude}"
         >
             <div class="page-heading">
                 <h1 th:text="#{ui.category.title}"></h1>
@@ -53,66 +53,50 @@
                             id="category-tree-title"
                             th:text="#{ui.category.group}"
                         ></h2>
-                        <div class="row-actions">
-                            <button
-                                id="category-add-value"
-                                class="button"
-                                type="button"
-                                hidden
-                                th:text="#{ui.location.create}"
-                            ></button>
-                            <button
-                                id="category-edit-group"
-                                class="button button-outline"
-                                type="button"
-                                hidden
-                                th:text="#{ui.category.editGroup}"
-                            ></button>
-                            <button
-                                id="category-add-group"
-                                class="button button-outline"
-                                type="button"
-                                hidden
-                                th:text="#{ui.category.addGroup}"
-                            ></button>
-                        </div>
                     </div>
                     <p
                         id="category-tree-help"
                         class="form-help"
                     ></p>
-                    <form
-                        id="category-search"
-                        class="category-search"
-                        role="search"
-                        hidden
-                    >
-                        <div>
-                            <label
-                                for="category-keyword"
-                                th:text="#{ui.location.search}"
-                            ></label>
-                            <input
-                                id="category-keyword"
-                                type="search"
-                                class="form-control"
-                                maxlength="160"
-                                th:placeholder="#{ui.category.searchPlaceholder}"
-                            />
-                        </div>
-                        <button
-                            type="submit"
-                            class="button"
-                            th:text="#{ui.location.searchButton}"
-                        ></button>
-                        <button
-                            id="category-clear-search"
-                            type="button"
-                            class="button button-outline"
+                    <div class="category-toolbar">
+                        <form
+                            id="category-search"
+                            class="category-search"
+                            role="search"
                             hidden
-                            th:text="#{ui.category.clearSearch}"
-                        ></button>
-                    </form>
+                        >
+                            <div>
+                                <label
+                                    for="category-keyword"
+                                    class="visually-hidden"
+                                    th:text="#{ui.location.search}"
+                                ></label>
+                                <input
+                                    id="category-keyword"
+                                    type="search"
+                                    class="form-control"
+                                    maxlength="160"
+                                    th:placeholder="#{ui.category.searchPlaceholder}"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                class="button"
+                                th:text="#{ui.location.searchButton}"
+                            ></button>
+                            <button
+                                id="category-clear-search"
+                                type="button"
+                                class="button button-outline"
+                                hidden
+                                th:text="#{ui.category.clearSearch}"
+                            ></button>
+                        </form>
+                        <div
+                            id="category-actions"
+                            class="row-actions"
+                        ></div>
+                    </div>
                     <p
                         id="category-result-summary"
                         class="form-help"
@@ -306,6 +290,51 @@
                     </form>
                 </fieldset>
             </dialog>
+            <template id="category-map-search">
+                <div
+                    class="category-map-search"
+                    role="search"
+                    th:attr="aria-label=#{ui.category.mapSearchLabel}"
+                >
+                    <label
+                        for="category-map-query"
+                        class="visually-hidden"
+                        th:text="#{ui.category.mapSearchLabel}"
+                    ></label>
+                    <div class="category-map-query">
+                        <input
+                            id="category-map-query"
+                            class="form-control"
+                            type="search"
+                            autocomplete="off"
+                            maxlength="160"
+                            aria-describedby="category-map-source"
+                            th:placeholder="#{ui.category.mapSearchPlaceholder}"
+                        />
+                        <button
+                            type="button"
+                            class="button button-outline"
+                            data-map-submit
+                            th:text="#{ui.location.searchButton}"
+                        ></button>
+                    </div>
+                    <small
+                        id="category-map-source"
+                        class="text-muted"
+                        th:text="#{ui.category.mapSearchSource}"
+                    ></small>
+                    <p
+                        class="form-help"
+                        role="status"
+                        data-map-status
+                    ></p>
+                    <ul
+                        class="category-map-results"
+                        data-map-results
+                        hidden
+                    ></ul>
+                </div>
+            </template>
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
