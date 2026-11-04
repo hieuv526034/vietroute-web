@@ -71,7 +71,7 @@ public final class PostgreSqlDialect implements JdbcDialect {
         }
         try (
             PreparedStatement statement = connection.prepareStatement(
-                "SELECT pg_catalog.set_config('search_path', ?, true)"
+                "SELECT pg_catalog.set_config('search_path', ?, TRUE)"
             )
         ) {
             statement.setString(1, "\"" + name + "\", pg_temp");

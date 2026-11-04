@@ -9,12 +9,10 @@ import java.time.Instant;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import vn.vietroute.common.jdbc.JdbcTable;
 
 /** Model đầy đủ cột bảng auth_functions; chỉ DTO mới được nhận/trả ở API. */
 @Entity
 @Table(name = "auth_functions")
-@JdbcTable(name = "auth_functions", primaryKey = { "code" })
 @Getter
 @Setter
 @NoArgsConstructor

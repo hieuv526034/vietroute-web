@@ -21,7 +21,9 @@
     const pickers = Array.from(form.querySelectorAll('.journey-picker')).map((element) => ({
         side: element.dataset.side,
         province: element.querySelector('[data-place-province]'),
+        ward: element.querySelector('[data-place-ward]'),
         select: element.querySelector('[data-place-select]'),
+        wardsReady: false,
         ready: false,
     }));
     const filters = Array.from(form.querySelectorAll('.journey-filter-picker')).map((element) => ({
@@ -59,7 +61,10 @@
     };
     const sync = () => {
         node('journey-dialog-controls').disabled = busy;
-        for (const picker of pickers) picker.select.disabled = busy || !picker.province.value || !picker.ready;
+        for (const picker of pickers) {
+            picker.ward.disabled = busy || !picker.province.value || !picker.wardsReady;
+            picker.select.disabled = busy || !picker.ward.value || !picker.ready;
+        }
     };
     const perform = async (action) => {
         if (busy) return;
@@ -88,11 +93,21 @@
         tables.readOptions(
             async (paging) => (await api.get(path, { params: { ...params, ...paging }, timeout: 10000 })).data.data,
         );
+    const findWards = async (picker) => {
+        picker.wardsReady = false;
+        picker.ready = false;
+        picker.ward.replaceChildren(option('', labels.all));
+        picker.select.replaceChildren(option('', labels.all));
+        if (!picker.province.value) return;
+        const items = await choices('/api/v1/categories', { refType: 'WARD', parentId: picker.province.value });
+        picker.ward.replaceChildren(option('', labels.all), ...items.map((item) => option(item.id, item.name)));
+        picker.wardsReady = true;
+    };
     const findPlaces = async (picker) => {
         picker.ready = false;
         picker.select.replaceChildren(option('', labels.all));
-        if (!picker.province.value) return;
-        const items = await choices('/api/v1/locations', { provinceId: picker.province.value });
+        if (!picker.ward.value) return;
+        const items = await choices('/api/v1/categories', { refType: 'LOCATION', parentId: picker.ward.value });
         picker.select.replaceChildren(option('', labels.all), ...items.map((item) => option(item.id, item.name)));
         picker.ready = true;
     };
@@ -133,8 +148,8 @@
         pager.update(page);
     };
     const findFilter = async (filter) => {
-        const path = filter.kind === 'CARRIER' ? '/api/v1/carriers' : '/api/v1/catalogs/VEHICLE_TYPE';
-        const items = await choices(path);
+        const path = filter.kind === 'CARRIER' ? '/api/v1/carriers' : '/api/v1/categories';
+        const items = await choices(path, filter.kind === 'CARRIER' ? {} : { refType: 'VEHICLE_TYPE' });
         filter.select.replaceChildren(option('', labels.all), ...items.map((item) => option(item.id, item.name)));
     };
     const detail = () => {
@@ -207,12 +222,14 @@
             if (form.elements[name].value) criteria[name] = form.elements[name].value;
         for (const picker of pickers) {
             criteria[picker.side + 'ProvinceId'] = picker.province.value;
+            if (picker.ward.value) criteria[picker.side + 'WardId'] = picker.ward.value;
             if (picker.select.value) criteria[picker.side + 'LocationId'] = picker.select.value;
         }
         void perform(() => load({ ...pager.query, page: 0 }));
     });
     for (const picker of pickers) {
-        picker.province.addEventListener('change', () => perform(() => findPlaces(picker)));
+        picker.province.addEventListener('change', () => perform(() => findWards(picker)));
+        picker.ward.addEventListener('change', () => perform(() => findPlaces(picker)));
     }
     node('journey-refresh').addEventListener('click', () =>
         perform(async () => {
@@ -232,13 +249,15 @@
                 .map((part) => [part.type, part.value]),
         );
         form.elements.date.value = `${parts.year}-${parts.month}-${parts.day}`;
-        const provinces = await choices('/api/v1/provinces');
+        const provinces = await choices('/api/v1/categories', { refType: 'PROVINCE' });
         for (const picker of pickers) {
             picker.province.replaceChildren(
                 option('', labels.choose),
                 ...provinces.map((item) => option(item.id, item.name)),
             );
+            picker.ward.replaceChildren(option('', labels.all));
             picker.select.replaceChildren(option('', labels.all));
+            picker.wardsReady = false;
             picker.ready = false;
         }
         await window.VietRouteRequests.allReads(filters.map(findFilter));

@@ -148,29 +148,15 @@ public final class ApplicationConstants {
 
         public static final String AUTH_LOGOUT = AUTH + LOGOUT_ACTION;
 
-        public static final String CATALOGS = API + "/catalogs";
+        public static final String CATEGORIES = API + "/categories";
 
-        public static final String CATALOG_PREFIX = CATALOGS + "/";
+        public static final String ADMIN_CATEGORIES = ADMIN_API + "/categories";
 
-        public static final String CATALOG_BY_TYPE = CATALOGS + "/{type}";
+        public static final String ADMIN_CATEGORY_GROUPS = ADMIN_CATEGORIES + "/groups";
 
-        public static final String ADMIN_CATALOGS = ADMIN_API + "/catalogs";
+        public static final String CATEGORY_PAGE = "/operations/categories";
 
         public static final String BY_ID = "/{id}";
-
-        public static final String ADMIN_CATALOG_BY_ID = ADMIN_CATALOGS + BY_ID;
-
-        public static final String CATALOG_VEHICLE_TYPES_PAGE = "/catalogs/vehicle-types";
-
-        public static final String CATALOG_BOOKING_SOURCES_PAGE = "/catalogs/booking-sources";
-
-        public static final String CATALOG_PROVINCES_PAGE = "/catalogs/provinces";
-
-        public static final String CATALOG_LOCATIONS_PAGE = "/catalogs/locations";
-
-        public static final String ADMIN_VEHICLE_TYPES = ADMIN_API + "/vehicle-types";
-
-        public static final String ADMIN_BOOKING_SOURCES = ADMIN_API + "/booking-sources";
 
         public static final String CARRIERS_PAGE = "/operations/carriers";
         public static final String PUBLIC_CARRIERS_PAGE = "/carriers";
@@ -231,20 +217,6 @@ public final class ApplicationConstants {
 
         public static final String ADMIN_DEMO = ADMIN_API + "/demo";
 
-        public static final String PROVINCES = API + "/provinces";
-
-        public static final String LOCATIONS = API + "/locations";
-
-        public static final String ADMIN_PROVINCES = ADMIN_API + "/provinces";
-
-        public static final String ADMIN_PROVINCES_BY_ID = ADMIN_PROVINCES + BY_ID;
-
-        public static final String ADMIN_LOCATIONS = ADMIN_API + "/locations";
-
-        public static final String ADMIN_LOCATIONS_BY_ID = ADMIN_LOCATIONS + BY_ID;
-
-        public static final String LOCATION_PAGE = "/operations/locations";
-
         public static final String ACCOUNTS = ADMIN_API + "/accounts";
 
         public static final String ACCESS = ADMIN_API + "/access";
@@ -276,8 +248,6 @@ public final class ApplicationConstants {
         public static final String ASSET_MATCHER = ASSETS + "**";
 
         public static final String WEBJAR_MATCHER = WEBJARS + "**";
-
-        public static final String CATALOG_MATCHER = CATALOG_PREFIX + "**";
 
         public static final String ADMIN_API_MATCHER = ADMIN_API + "/**";
 
@@ -421,10 +391,5 @@ public final class ApplicationConstants {
     public enum LocaleCode {
         vi,
         en,
-    }
-
-    public enum CatalogType {
-        VEHICLE_TYPE,
-        BOOKING_SOURCE,
     }
 }

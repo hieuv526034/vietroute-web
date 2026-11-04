@@ -1,8 +1,8 @@
 package vn.vietroute.support;
 
+import java.lang.reflect.Proxy;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -36,18 +36,13 @@ public class AccessTestConfig {
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    public static class AuthorizationFixture extends UserRepo {
+    public static class AuthorizationFixture {
 
         public final Map<Long, User> states = new HashMap<>();
         public boolean strict;
         public int reads;
         public int failAt = Integer.MAX_VALUE;
 
-        public AuthorizationFixture() {
-            super(TestJpa.MANAGER, null);
-        }
-
-        @Override
         public User load(Long id) {
             if (++reads >= failAt) throw new BusinessException(ErrorCode.DATABASE_UNAVAILABLE);
             if (strict || states.containsKey(id)) return states.get(id);
@@ -72,10 +67,19 @@ public class AccessTestConfig {
             );
         }
 
-        @Override
         public PageResponse<UserDTO> search(UserSearch search) {
             return PageResponse.of(List.of(), search, 0);
         }
+    }
+
+    @Bean
+    @Primary
+    public UserRepo isolatedAccounts(AuthorizationFixture state) {
+        return TestJpa.stub(UserRepo.class, (method, args) -> {
+            if (method.getName().equals("load") && args.length == 1) return state.load((Long) args[0]);
+            if (method.getName().equals("search")) return state.search((UserSearch) args[0]);
+            throw new AssertionError(method);
+        });
     }
 
     public static List<SimpleGrantedAuthority> upgradedAuthorities(String... codes) {
@@ -85,24 +89,29 @@ public class AccessTestConfig {
     @Bean
     @Primary
     public FunctionRepo isolatedFunctionMenus(AuthorizationFixture state) {
-        return new FunctionRepo(TestJpa.MANAGER, null) {
-            @Override
-            @Transactional(propagation = Propagation.NOT_SUPPORTED)
-            public List<FunctionDTO> capabilities(long id) {
-                User user = state.load(id);
+        return (FunctionRepo) Proxy.newProxyInstance(
+            FunctionRepo.class.getClassLoader(),
+            new Class<?>[] { FunctionRepo.class },
+            (proxy, method, args) -> {
+                if (method.getDeclaringClass() == Object.class) return switch (method.getName()) {
+                    case "toString" -> "IsolatedFunctionMenus";
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    case "equals" -> proxy == args[0];
+                    default -> throw new UnsupportedOperationException(method.getName());
+                };
+                if (
+                    !Set.of("capabilities", "navigation").contains(method.getName())
+                ) throw new UnsupportedOperationException(method.getName());
+                User user = state.load((Long) args[0]);
                 if (user == null || user.isMustChangePassword() || user.getEmailVerifiedAt() == null) return List.of();
-                FunctionDTO dto = new FunctionDTO();
-                dto.setFunction("TEST_FUNCTION");
-                dto.setTargets(user.getTargets());
-                dto.setView(true);
-                return List.of(dto);
-            }
-
-            @Override
-            @Transactional(propagation = Propagation.NOT_SUPPORTED)
-            public List<FunctionDTO> navigation(long id, String current, Locale locale) {
-                User user = state.load(id);
-                if (user == null || user.isMustChangePassword() || user.getEmailVerifiedAt() == null) return List.of();
+                if ("capabilities".equals(method.getName())) {
+                    FunctionDTO dto = new FunctionDTO();
+                    dto.setFunction("TEST_FUNCTION");
+                    dto.setTargets(user.getTargets());
+                    dto.setView(true);
+                    return List.of(dto);
+                }
+                String current = (String) args[1];
                 return user
                     .getTargets()
                     .stream()
@@ -119,6 +128,6 @@ public class AccessTestConfig {
                     })
                     .toList();
             }
-        };
+        );
     }
 }

@@ -14,36 +14,12 @@ import java.util.logging.Logger;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;
-import vn.vietroute.auth.entity.AccessChange;
-import vn.vietroute.auth.entity.AccountChallenge;
-import vn.vietroute.auth.entity.Function;
-import vn.vietroute.auth.entity.FunctionResource;
-import vn.vietroute.auth.entity.Role;
-import vn.vietroute.auth.entity.RoleFunction;
-import vn.vietroute.auth.entity.User;
-import vn.vietroute.auth.entity.UserRole;
 import vn.vietroute.auth.initializer.AuthInitializer;
-import vn.vietroute.auth.repo.AccessChangeRepo;
-import vn.vietroute.business.booking.entity.Booking;
-import vn.vietroute.business.booking.entity.BookingEvent;
-import vn.vietroute.business.carrier.entity.Carrier;
-import vn.vietroute.business.carrier.entity.Driver;
-import vn.vietroute.business.carrier.entity.Vehicle;
-import vn.vietroute.business.catalog.entity.CatalogItem;
-import vn.vietroute.business.catalog.entity.Location;
-import vn.vietroute.business.catalog.entity.Province;
-import vn.vietroute.business.catalog.repo.CatalogItemRepo;
-import vn.vietroute.business.trip.entity.Route;
-import vn.vietroute.business.trip.entity.RouteStop;
-import vn.vietroute.business.trip.entity.Trip;
-import vn.vietroute.business.trip.entity.TripEvent;
-import vn.vietroute.business.trip.entity.TripSegment;
-import vn.vietroute.business.trip.entity.TripStop;
-import vn.vietroute.common.api_journal.entity.ApiJournal;
+import vn.vietroute.auth.repo.custom.AccessChangeCustomRepo;
+import vn.vietroute.business.catalog.repo.custom.CategoryCustomRepo;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.constant.ApplicationConstants.Env;
 import vn.vietroute.common.jdbc.JdbcSchema;
-import vn.vietroute.common.jdbc.JdbcSchemaValidator;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 
 /** Migration/seed chạy theo cờ môi trường; tuyệt đối không chạy từ bước đóng gói Maven. */
@@ -63,7 +39,7 @@ public class DatabaseInitializer implements InitializingBean {
 
     private final JdbcSchema schema;
 
-    private final CatalogItemRepo catalogs;
+    private final CategoryCustomRepo catalogs;
 
     @Override
     public void afterPropertiesSet() {
@@ -74,11 +50,11 @@ public class DatabaseInitializer implements InitializingBean {
         LOG.info("VietRoute database migration and bootstrap completed");
     }
 
-    /** Một transaction bao trọn chuyển schema, migration, kiểm tra index và seed; lỗi ở đâu rollback ở đó. */
+    /** Một transaction bao trọn chuyển schema, migration có checksum và seed; lỗi ở đâu rollback ở đó. */
     private Void initialize(Connection connection) throws SQLException {
         // PostgreSQL tự giải phóng advisory lock khi commit/rollback hoặc mất kết nối.
         try (Statement statement = connection.createStatement()) {
-            statement.execute("SELECT pg_advisory_xact_lock(781205610)");
+            statement.execute("SELECT PG_ADVISORY_XACT_LOCK(781205610)");
         }
         prepareSchema(connection);
         // Chỉ nhận baseline hiện hành; đổi baseline là thao tác bảo trì ngoài runtime, không tự reset history.
@@ -96,34 +72,8 @@ public class DatabaseInitializer implements InitializingBean {
         for (String version : MigrationCatalog.versions()) {
             migrate(connection, version);
         }
-        JdbcSchemaValidator.verify(
-            connection,
-            User.class,
-            AccountChallenge.class,
-            CatalogItem.class,
-            Carrier.class,
-            Vehicle.class,
-            Driver.class,
-            Province.class,
-            Location.class,
-            Route.class,
-            RouteStop.class,
-            Trip.class,
-            TripStop.class,
-            TripSegment.class,
-            TripEvent.class,
-            Booking.class,
-            BookingEvent.class,
-            Role.class,
-            Function.class,
-            RoleFunction.class,
-            FunctionResource.class,
-            UserRole.class,
-            ApiJournal.class,
-            AccessChange.class
-        );
         auth.initialize(connection);
-        AccessChangeRepo.cleanup(connection);
+        AccessChangeCustomRepo.cleanup(connection);
         catalogs.seedCatalogs(connection);
         return null;
     }
@@ -179,7 +129,7 @@ public class DatabaseInitializer implements InitializingBean {
                 SELECT n.nspname FROM pg_catalog.pg_class c
                 JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
                 WHERE c.relname=? AND c.relkind IN ('r','p')
-                    AND left(n.nspname,3)<>'pg_' AND n.nspname<>'information_schema'
+                    AND LEFT(n.nspname,3)<>'pg_' AND n.nspname<>'information_schema'
                 """
             )
         ) {

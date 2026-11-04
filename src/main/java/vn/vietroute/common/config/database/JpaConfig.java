@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
@@ -21,6 +22,7 @@ import vn.vietroute.common.jdbc.JdbcSchema;
 
 /** Spring MVC thuần: JPA CRUD và JDBC batch/SQL dùng cùng connection và ranh giới commit/rollback. */
 @Configuration
+@EnableJpaRepositories(basePackages = { "vn.vietroute.auth.repo", "vn.vietroute.business" })
 @EnableTransactionManagement(proxyTargetClass = true)
 public class JpaConfig {
 
@@ -99,6 +101,7 @@ public class JpaConfig {
     }
 
     @Bean
+    @Primary
     public EntityManager entityManager(EntityManagerFactory factory) {
         return SharedEntityManagerCreator.createSharedEntityManager(factory);
     }

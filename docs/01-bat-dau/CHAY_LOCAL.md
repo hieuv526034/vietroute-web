@@ -39,7 +39,7 @@ Thứ tự: baseline/bootstrap/account → danh mục/nhà xe/xe/hồ sơ → sc
 
 ## Tài khoản và dữ liệu khởi tạo
 
-Đây là dữ liệu giả lập quan hệ/lịch/giá/chỗ/tiền/history, không hoạt động thương mại đã xác minh. Bộ đầy đủ trên DB mới có 46 account sử dụng (+system0 không đăng nhập),7 nhà xe,25 xe/25 tài xế,12 tỉnh/14 địa điểm,28 mẫu tuyến,646 chuyến,3866 đơn (3840 PHONE/26 WEB). Có các trạng thái và tình huống thu/hoàn để học, không chỉ số lượng ngẫu nhiên.
+Đây là dữ liệu giả lập quan hệ/lịch/giá/chỗ/tiền/history, không hoạt động thương mại đã xác minh. Bộ đầy đủ trên DB mới có 46 account sử dụng (+system0 không đăng nhập),7 nhà xe,25 xe/25 tài xế,34 tỉnh/thành,3.321 xã/phường và14 địa điểm đón/trả,28 mẫu tuyến,646 chuyến,3866 đơn (3840 PHONE/26 WEB). Có các trạng thái và tình huống thu/hoàn để học, không chỉ số lượng ngẫu nhiên.
 
 Chỉ login username/password. Account cũ giữ mật khẩu đã đổi, env không là công cụ reset. Seed ordinary tối thiểu8 ký tự/tối đa 72 byte BCrypt theo ngoại lệ đã chốt; admin bootstrap/tạo/đổi password giữ độ phức tạp. Không lưu credential vào slide hoặc chia sẻ terminal.
 

@@ -1,22 +1,27 @@
 package vn.vietroute.business.carrier.repo;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.LockModeType;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Types;
-import java.time.Instant;
-import java.util.ArrayList;
+import static vn.vietroute.common.base.BaseRepository.booleanValue;
+import static vn.vietroute.common.base.BaseRepository.instantValue;
+import static vn.vietroute.common.base.BaseRepository.intValue;
+import static vn.vietroute.common.base.BaseRepository.longValue;
+import static vn.vietroute.common.base.BaseRepository.stringValue;
+
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.repo.UserRoleRepo;
+import vn.vietroute.auth.security.UserPrincipal;
+import vn.vietroute.business.carrier.dto.projection.CarrierLookupProjection;
 import vn.vietroute.business.carrier.dto.request.CarrierRequest;
 import vn.vietroute.business.carrier.dto.request.DriverRequest;
 import vn.vietroute.business.carrier.dto.request.VehicleRequest;
@@ -26,496 +31,788 @@ import vn.vietroute.business.carrier.entity.Carrier;
 import vn.vietroute.business.carrier.entity.Driver;
 import vn.vietroute.business.carrier.entity.Vehicle;
 import vn.vietroute.common.base.BaseEntity;
-import vn.vietroute.common.base.JpaRepositorySupport;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
-import vn.vietroute.common.exception.BusinessException;
-import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.validation.BusinessRules;
 
-/** Repo nhà xe/xe/tài xế: SELECT kiểm ID + scope trước CRUD JPA, không dùng companyId client làm quyền. */
-@Repository
-public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
+/**
+ * SQL native và ánh xạ của CarrierRepo; transaction ghi thuộc Service.
+ */
+public interface CarrierRepo extends JpaRepository<Carrier, Long> {
+    String CARRIER_COLUMNS =
+        """
+        owner.id, owner.scope_id, owner.code, owner.name, owner.phone, owner.description, owner.active,
+        owner.created_at, owner.updated_at, owner.created_by, owner.updated_by, owner.version, (
+        """ +
+        UserRoleRepo.UPDATE_VISIBLE +
+        ") AS can_update ";
 
-    private enum Kind {
-        CARRIER(
-            "carriers owner",
-            "owner",
-            """
-            owner.id, owner.scope_id, owner.code, owner.name, owner.phone, owner.description, owner.active,
-                owner.created_at, owner.updated_at, owner.created_by, owner.updated_by,
-                owner.version
-            """,
-            "owner.code,owner.name,owner.phone"
-        ),
-        VEHICLE(
-            """
-            carrier_vehicles item
-            JOIN carriers owner ON owner.id = item.carrier_id AND owner.scope_id = item.scope_id
-            JOIN catalog_items vt ON vt.id = item.vehicle_type_id
-            """,
-            "item",
-            """
-            item.id, item.scope_id, item.carrier_id, owner.name AS carrier_name, item.code, item.plate_number,
-                item.vehicle_type_id, vt.name_vi AS vehicle_type_name, item.capacity, item.active,
-                item.created_at, item.updated_at, item.created_by, item.updated_by, item.version
-            """,
-            "item.code,item.plate_number,owner.name"
-        ),
-        DRIVER(
-            """
-            carrier_drivers item
-            JOIN carriers owner ON owner.id = item.carrier_id AND owner.scope_id = item.scope_id
-            """,
-            "item",
-            """
-            item.id, item.scope_id, item.carrier_id, owner.name AS carrier_name, item.code, item.name, item.phone,
-                item.user_id, item.active, item.created_at, item.updated_at, item.created_by, item.updated_by,
-                item.version
-            """,
-            "item.code,item.name,item.phone,owner.name"
+    String CARRIER_FILTER =
+        "FROM {h-schema}carriers owner WHERE " +
+        UserRoleRepo.VISIBLE +
+        """
+        AND (CAST(:active AS BOOLEAN) IS NULL OR owner.active = :active)
+        AND (CAST(:carrierId AS BIGINT) IS NULL OR owner.id = :carrierId)
+        AND LOWER(owner.code || ' ' || owner.name || ' ' || owner.phone) LIKE :keyword ESCAPE '\\'
+        """;
+
+    @Query(value = "SELECT COUNT(*) " + CARRIER_FILTER, nativeQuery = true)
+    long carrierCount(
+        long viewerId,
+        long viewerVersion,
+        String viewTarget,
+        Boolean active,
+        Long carrierId,
+        String keyword
+    );
+
+    @Query(
+        value = "SELECT " + CARRIER_COLUMNS + CARRIER_FILTER + "ORDER BY owner.id DESC LIMIT :pageSize OFFSET :offset ",
+        nativeQuery = true
+    )
+    List<Map<String, Object>> carrierRows(
+        long viewerId,
+        long viewerVersion,
+        String viewTarget,
+        Boolean active,
+        Long carrierId,
+        String keyword,
+        String updateTarget,
+        int pageSize,
+        long offset
+    );
+
+    @Transactional(readOnly = true)
+    default PageResponse<Carrier> carriers(CarrierSearch body) {
+        return carrierPage(body);
+    }
+
+    private PageResponse<Carrier> carrierPage(CarrierSearch body) {
+        UserPrincipal actor = UserPrincipal.current();
+        String text = body.getQuery() == null ? "" : body.getQuery().strip().toLowerCase(Locale.ROOT);
+        String keyword = pattern(text);
+        long total = carrierCount(
+            actor.id(),
+            actor.tokenVersion(),
+            actor.getTarget(),
+            body.getActive(),
+            body.getCarrierId(),
+            keyword
         );
-
-        private final String from;
-        private final String alias;
-        private final String columns;
-        private final String search;
-
-        Kind(String from, String alias, String columns, String search) {
-            this.from = from;
-            this.alias = alias;
-            this.columns = columns;
-            this.search = search;
-        }
+        List<Carrier> rows = carrierRows(
+            actor.id(),
+            actor.tokenVersion(),
+            actor.getTarget(),
+            body.getActive(),
+            body.getCarrierId(),
+            keyword,
+            "PUT " + Routes.ADMIN_CARRIERS + Routes.BY_ID,
+            body.getSize(),
+            body.offset()
+        )
+            .stream()
+            .map(CarrierRepo::mapCarrier)
+            .toList();
+        return PageResponse.of(rows, body, total);
     }
 
-    @FunctionalInterface
-    private interface RowMapper<T> {
-        T map(ResultSet row) throws SQLException;
+    @Query(
+        value = "SELECT " +
+            CARRIER_COLUMNS +
+            "FROM {h-schema}carriers owner WHERE owner.id = :id AND " +
+            UserRoleRepo.VISIBLE,
+        nativeQuery = true
+    )
+    Map<String, Object> carrierRow(long viewerId, long viewerVersion, String viewTarget, String updateTarget, long id);
+
+    @Query(
+        value = "SELECT " +
+            CARRIER_COLUMNS +
+            "FROM {h-schema}carriers owner WHERE owner.id = :id AND " +
+            UserRoleRepo.VISIBLE +
+            "FOR UPDATE OF owner ",
+        nativeQuery = true
+    )
+    Map<String, Object> carrierLockedRow(
+        long viewerId,
+        long viewerVersion,
+        String viewTarget,
+        String updateTarget,
+        long id
+    );
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default Carrier carrier(long id, boolean lock) {
+        UserPrincipal actor = UserPrincipal.current();
+        String update = "PUT " + Routes.ADMIN_CARRIERS + Routes.BY_ID;
+        Map<String, Object> row = lock
+            ? carrierLockedRow(actor.id(), actor.tokenVersion(), actor.getTarget(), update, id)
+            : carrierRow(actor.id(), actor.tokenVersion(), actor.getTarget(), update, id);
+        return mapCarrier(BusinessRules.requireFound(row == null || row.isEmpty() ? null : row));
     }
 
-    private final UserRoleRepo scopes;
+    String VEHICLE_COLUMNS =
+        """
+        item.id, item.scope_id, item.carrier_id, owner.name AS carrier_name, item.code, item.plate_number,
+        item.vehicle_type_id, vt.name AS vehicle_type_name, item.capacity, item.active,
+        item.created_at, item.updated_at, item.created_by, item.updated_by, item.version, (
+        """ +
+        UserRoleRepo.UPDATE_VISIBLE +
+        ") AS can_update ";
 
-    public CarrierRepo(EntityManager manager, JdbcTransactions transactions, UserRoleRepo scopes) {
-        super(Carrier.class, manager, transactions);
-        this.scopes = scopes;
+    String VEHICLE_FILTER =
+        """
+        FROM {h-schema}carrier_vehicles item
+        JOIN {h-schema}carriers owner ON owner.id = item.carrier_id AND owner.scope_id = item.scope_id
+        JOIN {h-schema}category vt ON vt.id = item.vehicle_type_id AND vt.ref_type= 'VEHICLE_TYPE' AND vt.type= 'VALUE'
+        WHERE
+        """ +
+        UserRoleRepo.VISIBLE +
+        """
+        AND (CAST(:active AS BOOLEAN) IS NULL OR item.active = :active)
+        AND (CAST(:carrierId AS BIGINT) IS NULL OR owner.id = :carrierId)
+        AND LOWER(CONCAT_WS(' ', item.code, item.plate_number, owner.name)) LIKE :keyword ESCAPE '\\'
+        """;
+
+    @Query(value = "SELECT COUNT(*) " + VEHICLE_FILTER, nativeQuery = true)
+    long vehicleCount(
+        long viewerId,
+        long viewerVersion,
+        String viewTarget,
+        Boolean active,
+        Long carrierId,
+        String keyword
+    );
+
+    @Query(
+        value = "SELECT " + VEHICLE_COLUMNS + VEHICLE_FILTER + "ORDER BY item.id DESC LIMIT :pageSize OFFSET :offset ",
+        nativeQuery = true
+    )
+    List<Map<String, Object>> vehicleRows(
+        long viewerId,
+        long viewerVersion,
+        String viewTarget,
+        Boolean active,
+        Long carrierId,
+        String keyword,
+        String updateTarget,
+        int pageSize,
+        long offset
+    );
+
+    @Transactional(readOnly = true)
+    default PageResponse<Vehicle> vehicles(CarrierSearch body) {
+        UserPrincipal actor = UserPrincipal.current();
+        String text = body.getQuery() == null ? "" : body.getQuery().strip().toLowerCase(Locale.ROOT);
+        String keyword = pattern(text);
+        long total = vehicleCount(
+            actor.id(),
+            actor.tokenVersion(),
+            actor.getTarget(),
+            body.getActive(),
+            body.getCarrierId(),
+            keyword
+        );
+        List<Vehicle> rows = vehicleRows(
+            actor.id(),
+            actor.tokenVersion(),
+            actor.getTarget(),
+            body.getActive(),
+            body.getCarrierId(),
+            keyword,
+            "PUT " + Routes.ADMIN_VEHICLES + Routes.BY_ID,
+            body.getSize(),
+            body.offset()
+        )
+            .stream()
+            .map(CarrierRepo::mapVehicle)
+            .toList();
+        return PageResponse.of(rows, body, total);
     }
 
-    /** Phân trang cùng predicate scope ở count và dữ liệu; không lọc trong RAM sau khi lấy trang. */
-    public PageResponse<Carrier> carriers(CarrierSearch search) {
-        return read(connection -> page(connection, Kind.CARRIER, search, CarrierRepo::carrier));
+    @Query(
+        value = "SELECT " +
+            VEHICLE_COLUMNS +
+            """
+            FROM {h-schema}carrier_vehicles item
+            JOIN {h-schema}carriers owner ON owner.id = item.carrier_id AND owner.scope_id = item.scope_id
+            JOIN {h-schema}category vt ON vt.id = item.vehicle_type_id AND vt.ref_type= 'VEHICLE_TYPE' AND vt.type= 'VALUE'
+            WHERE item.id = :id AND
+            """ +
+            UserRoleRepo.VISIBLE,
+        nativeQuery = true
+    )
+    Map<String, Object> vehicleRow(long viewerId, long viewerVersion, String viewTarget, String updateTarget, long id);
+
+    @Query(
+        value = "SELECT " +
+            VEHICLE_COLUMNS +
+            """
+            FROM {h-schema}carrier_vehicles item
+            JOIN {h-schema}carriers owner ON owner.id = item.carrier_id AND owner.scope_id = item.scope_id
+            JOIN {h-schema}category vt ON vt.id = item.vehicle_type_id AND vt.ref_type= 'VEHICLE_TYPE' AND vt.type= 'VALUE'
+            WHERE item.id = :id AND
+            """ +
+            UserRoleRepo.VISIBLE +
+            "FOR UPDATE OF item ",
+        nativeQuery = true
+    )
+    Map<String, Object> vehicleLockedRow(
+        long viewerId,
+        long viewerVersion,
+        String viewTarget,
+        String updateTarget,
+        long id
+    );
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default Vehicle vehicle(long id, boolean lock) {
+        UserPrincipal actor = UserPrincipal.current();
+        String update = "PUT " + Routes.ADMIN_VEHICLES + Routes.BY_ID;
+        Map<String, Object> row = lock
+            ? vehicleLockedRow(actor.id(), actor.tokenVersion(), actor.getTarget(), update, id)
+            : vehicleRow(actor.id(), actor.tokenVersion(), actor.getTarget(), update, id);
+        return mapVehicle(BusinessRules.requireFound(row == null || row.isEmpty() ? null : row));
     }
 
-    /** Picker cho CREATE dùng đúng quyền scoped CREATE của tài nguyên con, không lộ hồ sơ đầy đủ của nhà xe. */
-    public PageResponse<Carrier> choices(CarrierSearch search) {
-        return read(connection -> page(connection, Kind.CARRIER, search, CarrierRepo::carrier));
+    String DRIVER_COLUMNS =
+        """
+        item.id, item.scope_id, item.carrier_id, owner.name AS carrier_name, item.code, item.name, item.phone,
+        item.user_id, item.active, item.created_at, item.updated_at, item.created_by, item.updated_by, item.version, (
+        """ +
+        UserRoleRepo.UPDATE_VISIBLE +
+        ") AS can_update, ( " +
+        UserRoleRepo.ASSIGN_VISIBLE +
+        ") AS can_assign ";
+
+    String DRIVER_FILTER =
+        """
+        FROM {h-schema}carrier_drivers item
+        JOIN {h-schema}carriers owner ON owner.id = item.carrier_id AND owner.scope_id = item.scope_id
+        WHERE
+        """ +
+        UserRoleRepo.VISIBLE +
+        """
+        AND (CAST(:active AS BOOLEAN) IS NULL OR item.active = :active)
+        AND (CAST(:carrierId AS BIGINT) IS NULL OR owner.id = :carrierId)
+        AND LOWER(CONCAT_WS(' ', item.code, item.name, item.phone, owner.name)) LIKE :keyword ESCAPE '\\'
+        """;
+
+    @Query(value = "SELECT COUNT(*) " + DRIVER_FILTER, nativeQuery = true)
+    long driverCount(
+        long viewerId,
+        long viewerVersion,
+        String viewTarget,
+        Boolean active,
+        Long carrierId,
+        String keyword
+    );
+
+    @Query(
+        value = "SELECT " + DRIVER_COLUMNS + DRIVER_FILTER + "ORDER BY item.id DESC LIMIT :pageSize OFFSET :offset ",
+        nativeQuery = true
+    )
+    List<Map<String, Object>> driverRows(
+        long viewerId,
+        long viewerVersion,
+        String viewTarget,
+        Boolean active,
+        Long carrierId,
+        String keyword,
+        String updateTarget,
+        String assignTarget,
+        int pageSize,
+        long offset
+    );
+
+    @Transactional(readOnly = true)
+    default PageResponse<Driver> drivers(CarrierSearch body) {
+        UserPrincipal actor = UserPrincipal.current();
+        String text = body.getQuery() == null ? "" : body.getQuery().strip().toLowerCase(Locale.ROOT);
+        String keyword = pattern(text);
+        long total = driverCount(
+            actor.id(),
+            actor.tokenVersion(),
+            actor.getTarget(),
+            body.getActive(),
+            body.getCarrierId(),
+            keyword
+        );
+        List<Driver> rows = driverRows(
+            actor.id(),
+            actor.tokenVersion(),
+            actor.getTarget(),
+            body.getActive(),
+            body.getCarrierId(),
+            keyword,
+            "PUT " + Routes.ADMIN_DRIVERS + Routes.BY_ID,
+            "POST " + Routes.ADMIN_DRIVERS + Routes.DRIVER_ACCOUNT,
+            body.getSize(),
+            body.offset()
+        )
+            .stream()
+            .map(CarrierRepo::mapDriver)
+            .toList();
+        return PageResponse.of(rows, body, total);
     }
 
-    public PageResponse<Vehicle> vehicles(CarrierSearch search) {
-        return read(connection -> page(connection, Kind.VEHICLE, search, CarrierRepo::vehicle));
+    @Query(
+        value = "SELECT " +
+            DRIVER_COLUMNS +
+            """
+            FROM {h-schema}carrier_drivers item
+            JOIN {h-schema}carriers owner ON owner.id = item.carrier_id AND owner.scope_id = item.scope_id
+            WHERE item.id = :id AND
+            """ +
+            UserRoleRepo.VISIBLE,
+        nativeQuery = true
+    )
+    Map<String, Object> driverRow(
+        long viewerId,
+        long viewerVersion,
+        String viewTarget,
+        String updateTarget,
+        String assignTarget,
+        long id
+    );
+
+    @Query(
+        value = "SELECT " +
+            DRIVER_COLUMNS +
+            """
+            FROM {h-schema}carrier_drivers item
+            JOIN {h-schema}carriers owner ON owner.id = item.carrier_id AND owner.scope_id = item.scope_id
+            WHERE item.id = :id AND
+            """ +
+            UserRoleRepo.VISIBLE +
+            "FOR UPDATE OF item ",
+        nativeQuery = true
+    )
+    Map<String, Object> driverLockedRow(
+        long viewerId,
+        long viewerVersion,
+        String viewTarget,
+        String updateTarget,
+        String assignTarget,
+        long id
+    );
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default Driver driver(long id, boolean lock) {
+        UserPrincipal actor = UserPrincipal.current();
+        String update = "PUT " + Routes.ADMIN_DRIVERS + Routes.BY_ID;
+        Map<String, Object> row = lock
+            ? driverLockedRow(
+                  actor.id(),
+                  actor.tokenVersion(),
+                  actor.getTarget(),
+                  update,
+                  "POST " + Routes.ADMIN_DRIVERS + Routes.DRIVER_ACCOUNT,
+                  id
+              )
+            : driverRow(
+                  actor.id(),
+                  actor.tokenVersion(),
+                  actor.getTarget(),
+                  update,
+                  "POST " + Routes.ADMIN_DRIVERS + Routes.DRIVER_ACCOUNT,
+                  id
+              );
+        return mapDriver(BusinessRules.requireFound(row == null || row.isEmpty() ? null : row));
     }
 
-    public PageResponse<Driver> drivers(CarrierSearch search) {
-        return read(connection -> page(connection, Kind.DRIVER, search, CarrierRepo::driver));
+    @Transactional(readOnly = true)
+    default PageResponse<Carrier> choices(CarrierSearch body) {
+        return carrierPage(body);
     }
 
-    /** Resource/action là metadata từ service server; scope luôn đọc từ owner trong database. */
-    public Carrier carrier(Connection connection, long id, boolean lock) throws SQLException {
-        return find(connection, Kind.CARRIER, id, lock, CarrierRepo::carrier);
-    }
+    @Query(
+        value = """
+        INSERT INTO {h-schema}carriers(scope_id, code, name, phone, description, active,
+            scope_code, scope_name_vi, scope_name_en, scope_active, scope_version, created_by, updated_by)
+        VALUES (:scope, :code, :name, :phone, :description, :active, :scopeCode, :name, :name, TRUE, 0, :actor, :actor)
+        RETURNING id
+        """,
+        nativeQuery = true
+    )
+    long insertCarrierRow(
+        long scope,
+        String code,
+        String name,
+        String phone,
+        String description,
+        boolean active,
+        String scopeCode,
+        long actor
+    );
 
-    public Vehicle vehicle(Connection connection, long id, boolean lock) throws SQLException {
-        return find(connection, Kind.VEHICLE, id, lock, CarrierRepo::vehicle);
-    }
-
-    public Driver driver(Connection connection, long id, boolean lock) throws SQLException {
-        return find(connection, Kind.DRIVER, id, lock, CarrierRepo::driver);
-    }
-
-    /** Cờ UI chỉ là giao của quyền scoped UPDATE; capabilities/policy chung vẫn bắt buộc trên trình duyệt/API. */
-    private static String columns(Kind kind) {
-        return (
-            kind.columns +
-            ",(" +
-            UserRoleRepo.visibleSql() +
-            ") AS can_update" +
-            (kind == Kind.DRIVER ? ",(" + UserRoleRepo.visibleSql() + ") AS can_assign" : "")
+    @Transactional(propagation = Propagation.MANDATORY)
+    default long insertCarrier(long scope, CarrierRequest body, long actor) {
+        return insertCarrierRow(
+            scope,
+            body.getCode(),
+            body.getName().strip(),
+            body.getPhone().strip(),
+            body.getDescription().strip(),
+            body.isActive(),
+            "CARRIER_" + scope,
+            actor
         );
     }
 
-    private static int bindColumns(PreparedStatement query, Kind kind) throws SQLException {
-        String path = switch (kind) {
-            case CARRIER -> Routes.ADMIN_CARRIERS;
-            case VEHICLE -> Routes.ADMIN_VEHICLES;
-            case DRIVER -> Routes.ADMIN_DRIVERS;
-        };
-        int next = UserRoleRepo.bindVisible(query, 1, "PUT " + path + Routes.BY_ID);
-        return kind == Kind.DRIVER
-            ? UserRoleRepo.bindVisible(query, next, "POST " + path + Routes.DRIVER_ACCOUNT)
-            : next;
-    }
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+        value = """
+        UPDATE {h-schema}carriers
+        SET name = :name, phone = :phone, description = :description, active = :active,
+            updated_at = CURRENT_TIMESTAMP, updated_by = :actor, version = version + 1
+        WHERE id = :id AND scope_id = :scope AND version = :version
+        """,
+        nativeQuery = true
+    )
+    int updateCarrierRow(
+        long id,
+        long scope,
+        Long version,
+        String name,
+        String phone,
+        String description,
+        boolean active,
+        long actor
+    );
 
-    private <T> T find(Connection connection, Kind kind, long id, boolean lock, RowMapper<T> mapper)
-        throws SQLException {
-        String sql = """
-        SELECT %s
-        FROM %s
-        WHERE %s.id = ?
-            AND %s
-        %s
-        """.formatted(
-            columns(kind),
-            kind.from,
-            kind.alias,
-            UserRoleRepo.visibleSql(),
-            lock ? " FOR UPDATE OF " + kind.alias : ""
-        );
-        try (PreparedStatement query = connection.prepareStatement(sql)) {
-            int index = bindColumns(query, kind);
-            query.setLong(index++, id);
-            UserRoleRepo.bindVisible(query, index);
-            try (ResultSet row = query.executeQuery()) {
-                if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
-                return mapper.map(row);
-            }
-        }
-    }
-
-    private <T> PageResponse<T> page(Connection connection, Kind kind, CarrierSearch page, RowMapper<T> mapper)
-        throws SQLException {
-        String searchText =
-            kind == Kind.CARRIER
-                ? "lower(owner.code || ' ' || owner.name || ' ' || owner.phone)"
-                : "lower(concat_ws(' '," + kind.search + "))";
-        String filter = """
-        FROM %s
-        WHERE %s
-            AND (?::boolean IS NULL OR %s.active = ?)
-            AND (?::bigint IS NULL OR owner.id = ?)
-            AND %s LIKE ? ESCAPE '\\'
-        """.formatted(kind.from, UserRoleRepo.visibleSql(), kind.alias, searchText);
-        long total;
-        try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + filter)) {
-            bindSearch(query, 1, page);
-            try (ResultSet row = query.executeQuery()) {
-                row.next();
-                total = row.getLong(1);
-            }
-        }
-        ArrayList<T> content = new ArrayList<T>();
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT %s
-                %s
-                ORDER BY %s.id DESC
-                LIMIT ? OFFSET ?
-                """.formatted(columns(kind), filter, kind.alias)
-            )
-        ) {
-            int index = bindColumns(query, kind);
-            index = bindSearch(query, index, page);
-            query.setInt(index++, page.getSize());
-            query.setLong(index, page.offset());
-            try (ResultSet rows = query.executeQuery()) {
-                while (rows.next()) content.add(mapper.map(rows));
-            }
-        }
-        return PageResponse.of(content, page, total);
-    }
-
-    private int bindSearch(PreparedStatement query, int start, CarrierSearch page) throws SQLException {
-        int index = UserRoleRepo.bindVisible(query, start);
-        query.setObject(index++, page.getActive(), Types.BOOLEAN);
-        query.setObject(index++, page.getActive(), Types.BOOLEAN);
-        query.setObject(index++, page.getCarrierId(), Types.BIGINT);
-        query.setObject(index++, page.getCarrierId(), Types.BIGINT);
-        String search = page.getQuery() == null ? "" : page.getQuery().strip().toLowerCase(Locale.ROOT);
-        query.setString(index++, "%" + search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%");
-        return index;
-    }
-
-    /** Tạo scope và nhà xe cùng transaction; lỗi UNIQUE rollback cả scope, không để scope mồ côi. */
-    public long insertCarrier(Connection connection, CarrierRequest body, long actor) throws SQLException {
-        long scope = scopes.create(connection, body.getName(), actor);
-        Carrier value = Carrier.builder()
-            .scopeId(scope)
-            .code(body.getCode())
-            .name(body.getName().strip())
-            .phone(body.getPhone().strip())
-            .description(body.getDescription().strip())
-            .active(body.isActive())
-            .scopeCode("CARRIER_" + scope)
-            .scopeNameVi(body.getName().strip())
-            .scopeNameEn(body.getName().strip())
-            .scopeActive(true)
-            .scopeVersion(0)
-            .build();
-        return created(value, actor).getId();
-    }
-
-    /** Carrier ID/scope/code bất biến; compare-and-set version là điểm chốt ghi cạnh tranh. */
-    public void updateCarrier(Connection connection, Carrier current, CarrierRequest body, long actor) {
-        // Request dùng chung cho tạo/sửa; mã được gửi lại phải trùng định danh đã lưu.
+    @Transactional(propagation = Propagation.MANDATORY)
+    default void updateCarrier(Carrier current, CarrierRequest body, long actor) {
         BusinessRules.require(
             body.getCode() == null || current.getCode().equals(body.getCode()),
             ErrorCode.INVALID_REQUEST
         );
-        Carrier value = locked(Carrier.class, current.getId(), body.getVersion());
-        BusinessRules.require(value.getScopeId() == current.getScopeId(), ErrorCode.STALE_VERSION);
-        value.setName(body.getName().strip());
-        value.setPhone(body.getPhone().strip());
-        value.setDescription(body.getDescription().strip());
-        value.setActive(body.isActive());
-        changed(value, actor);
+        BusinessRules.require(
+            updateCarrierRow(
+                current.getId(),
+                current.getScopeId(),
+                body.getVersion(),
+                body.getName().strip(),
+                body.getPhone().strip(),
+                body.getDescription().strip(),
+                body.isActive(),
+                actor
+            ) == 1,
+            ErrorCode.STALE_VERSION
+        );
     }
 
-    /** Loại xe active được khóa trong transaction; FK ghép cũng chặn nhầm BOOKING_SOURCE. */
-    public void requireVehicleType(Connection connection, long id) throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                "SELECT id FROM catalog_items WHERE id=? AND type='VEHICLE_TYPE' AND active FOR SHARE"
-            )
-        ) {
-            query.setLong(1, id);
-            try (ResultSet row = query.executeQuery()) {
-                if (!row.next()) throw new BusinessException(ErrorCode.INVALID_REQUEST);
-            }
-        }
+    @Query(
+        value = """
+        SELECT id
+        FROM {h-schema}category
+        WHERE id = :id AND ref_type = 'VEHICLE_TYPE' AND type = 'VALUE' AND active
+        FOR SHARE
+        """,
+        nativeQuery = true
+    )
+    List<Long> vehicleTypeRows(long id);
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default void requireVehicleType(long id) {
+        BusinessRules.require(!vehicleTypeRows(id).isEmpty(), ErrorCode.INVALID_REQUEST);
     }
 
-    /** Account không tự được cấp role: chỉ liên kết DRIVER đã có role global và scope đúng nhà xe. */
-    public void requireDriverUser(Connection connection, long id, long scope) throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT u.id
-                FROM auth_users u
-                JOIN auth_user_roles ur ON ur.user_id = u.id
-                JOIN auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
-                JOIN (
-                    SELECT scope_id, user_id, bool_and(active) AS active, max(version) AS version
-                    FROM auth_user_roles
-                    WHERE scope_id > 0
-                    GROUP BY scope_id, user_id
-                ) sm ON sm.user_id = u.id
-                    AND sm.scope_id = ?
-                    AND sm.active
-                JOIN (
-                    SELECT scope_id, user_id, role_code
-                    FROM auth_user_roles
-                    WHERE scope_id > 0 AND active
-                ) sr ON sr.scope_id = sm.scope_id
-                    AND sr.user_id = sm.user_id
-                    AND sr.role_code = ur.role_code
-                WHERE u.id = ? AND u.active AND NOT u.activation_pending AND NOT u.must_change_password
-                    AND u.email_verified_at IS NOT NULL
-                FOR SHARE OF u
-                """
-            )
-        ) {
-            query.setLong(1, scope);
-            query.setLong(2, id);
-            try (ResultSet row = query.executeQuery()) {
-                if (!row.next()) throw new BusinessException(ErrorCode.INVALID_REQUEST);
-            }
-        }
+    @Query(
+        value = """
+        SELECT u.id
+        FROM {h-schema}auth_users u
+        JOIN {h-schema}auth_user_roles ur ON ur.user_id = u.id
+        JOIN {h-schema}auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
+        JOIN (
+            SELECT scope_id, user_id, BOOL_AND(active) AS active, MAX(version) AS version
+            FROM {h-schema}auth_user_roles
+            WHERE scope_id > 0
+            GROUP BY scope_id, user_id
+        ) sm ON sm.user_id = u.id
+            AND sm.scope_id = :scope
+            AND sm.active
+        JOIN (
+            SELECT scope_id, user_id, role_code
+            FROM {h-schema}auth_user_roles
+            WHERE scope_id > 0 AND active
+        ) sr ON sr.scope_id = sm.scope_id
+            AND sr.user_id = sm.user_id
+            AND sr.role_code = ur.role_code
+        WHERE u.id = :id AND u.active AND NOT u.activation_pending AND NOT u.must_change_password
+            AND u.email_verified_at IS NOT NULL
+        FOR SHARE OF u
+        """,
+        nativeQuery = true
+    )
+    List<Long> driverUserRows(long id, long scope);
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default void requireDriverUser(long id, long scope) {
+        BusinessRules.require(!driverUserRows(id, scope).isEmpty(), ErrorCode.INVALID_REQUEST);
     }
 
-    /** Caller giữ khóa cha trước hồ sơ như luồng tạo/phân công chuyến, tránh thay identity khi đã có nhiệm vụ. */
-    public void requireDriverUnassigned(Connection connection, long id) throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT 1
-                FROM carrier_trips
-                WHERE driver_id = ?
-                    AND status IN ('DRAFT', 'OPEN', 'IN_PROGRESS')
-                LIMIT 1
-                """
-            )
-        ) {
-            query.setLong(1, id);
-            try (ResultSet row = query.executeQuery()) {
-                if (row.next()) throw new BusinessException(ErrorCode.RESOURCE_IN_USE);
-            }
-        }
+    @Query(
+        value = """
+        SELECT EXISTS (
+            SELECT 1 FROM {h-schema}carrier_trips
+            WHERE driver_id = :id AND status IN ('DRAFT', 'OPEN', 'IN_PROGRESS')
+        )
+        """,
+        nativeQuery = true
+    )
+    boolean driverAssigned(long id);
+
+    default void requireDriverUnassigned(long id) {
+        BusinessRules.require(!driverAssigned(id), ErrorCode.RESOURCE_IN_USE);
     }
 
-    /** Hồ sơ cấp account mới tạm ngừng để hoàn tất đổi mật khẩu/email; không thay quy tắc account ready. */
-    public void linkProvisionedDriver(Connection connection, Driver current, long user, long actor)
-        throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                UPDATE carrier_drivers
-                SET user_id = ?, active = false, updated_by = ?, updated_at = CURRENT_TIMESTAMP, version = version + 1
-                WHERE id = ? AND carrier_id = ? AND scope_id = ? AND user_id IS NULL AND version = ?
-                """
-            )
-        ) {
-            query.setLong(1, user);
-            query.setLong(2, actor);
-            query.setLong(3, current.getId());
-            query.setLong(4, current.getCarrierId());
-            query.setLong(5, current.getScopeId());
-            query.setLong(6, current.getVersion());
-            updated(query);
-        }
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+        value = """
+        UPDATE {h-schema}carrier_drivers
+        SET user_id = :user, active = FALSE, updated_by = :actor, updated_at = CURRENT_TIMESTAMP, version = version + 1
+        WHERE id = :currentId AND carrier_id = :carrierId AND scope_id = :scopeId AND user_id IS NULL AND version =
+            :currentVersion
+        """,
+        nativeQuery = true
+    )
+    int linkDriverRow(long user, long actor, long currentId, long carrierId, long scopeId, long currentVersion);
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default void linkProvisionedDriver(Driver current, long user, long actor) {
+        BusinessRules.require(
+            linkDriverRow(
+                user,
+                actor,
+                current.getId(),
+                current.getCarrierId(),
+                current.getScopeId(),
+                current.getVersion()
+            ) == 1,
+            ErrorCode.STALE_VERSION
+        );
     }
 
-    public long insertVehicle(Connection connection, Carrier parent, VehicleRequest body, long actor) {
-        Vehicle value = Vehicle.builder()
-            .carrierId(parent.getId())
-            .scopeId(parent.getScopeId())
-            .code(body.getCode())
-            .plateNumber(body.getPlateNumber().strip().toUpperCase(Locale.ROOT))
-            .vehicleTypeId(body.getVehicleTypeId())
-            .vehicleType("VEHICLE_TYPE")
-            .capacity(body.getCapacity())
-            .active(body.isActive())
-            .build();
-        return created(value, actor).getId();
+    @Query(
+        value = """
+        INSERT INTO {h-schema}carrier_vehicles(carrier_id, scope_id, code, plate_number, vehicle_type_id,
+            vehicle_type, capacity, active, created_by, updated_by)
+        VALUES (:carrierId, :scope, :code, :plateNumber, :vehicleTypeId, 'VEHICLE_TYPE', :capacity, :active, :actor,
+            :actor)
+        RETURNING id
+        """,
+        nativeQuery = true
+    )
+    long insertVehicleRow(
+        long carrierId,
+        long scope,
+        String code,
+        String plateNumber,
+        long vehicleTypeId,
+        int capacity,
+        boolean active,
+        long actor
+    );
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default long insertVehicle(Carrier parent, VehicleRequest body, long actor) {
+        return insertVehicleRow(
+            parent.getId(),
+            parent.getScopeId(),
+            body.getCode(),
+            body.getPlateNumber().strip().toUpperCase(Locale.ROOT),
+            body.getVehicleTypeId(),
+            body.getCapacity(),
+            body.isActive(),
+            actor
+        );
     }
 
-    public void updateVehicle(Connection connection, Vehicle current, VehicleRequest body, long actor) {
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+        value = """
+        UPDATE {h-schema}carrier_vehicles
+        SET plate_number = :plateNumber, vehicle_type_id = :vehicleTypeId, capacity = :capacity, active = :active,
+            updated_at = CURRENT_TIMESTAMP, updated_by = :actor, version = version + 1
+        WHERE id = :id AND carrier_id = :carrierId AND scope_id = :scope AND version = :version
+        """,
+        nativeQuery = true
+    )
+    int updateVehicleRow(
+        long id,
+        long carrierId,
+        long scope,
+        Long version,
+        String plateNumber,
+        long vehicleTypeId,
+        int capacity,
+        boolean active,
+        long actor
+    );
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default void updateVehicle(Vehicle current, VehicleRequest body, long actor) {
         BusinessRules.require(
             (body.getCode() == null || current.getCode().equals(body.getCode())) &&
                 (body.getCarrierId() == null || current.getCarrierId() == body.getCarrierId()),
             ErrorCode.INVALID_REQUEST
         );
-        Vehicle value = locked(Vehicle.class, current.getId(), body.getVersion());
         BusinessRules.require(
-            value.getCarrierId() == current.getCarrierId() && value.getScopeId() == current.getScopeId(),
+            updateVehicleRow(
+                current.getId(),
+                current.getCarrierId(),
+                current.getScopeId(),
+                body.getVersion(),
+                body.getPlateNumber().strip().toUpperCase(Locale.ROOT),
+                body.getVehicleTypeId(),
+                body.getCapacity(),
+                body.isActive(),
+                actor
+            ) == 1,
             ErrorCode.STALE_VERSION
         );
-        value.setPlateNumber(body.getPlateNumber().strip().toUpperCase(Locale.ROOT));
-        value.setVehicleTypeId(body.getVehicleTypeId());
-        value.setCapacity(body.getCapacity());
-        value.setActive(body.isActive());
-        changed(value, actor);
     }
 
-    public long insertDriver(Connection connection, Carrier parent, DriverRequest body, long actor) {
-        Driver value = Driver.builder()
-            .carrierId(parent.getId())
-            .scopeId(parent.getScopeId())
-            .code(body.getCode())
-            .name(body.getName().strip())
-            .phone(body.getPhone().strip())
-            .userId(body.getUserId())
-            .active(body.isActive())
-            .build();
-        return created(value, actor).getId();
+    @Query(
+        value = """
+        INSERT INTO {h-schema}carrier_drivers(carrier_id, scope_id, code, name, phone, user_id, active, created_by,
+            updated_by)
+        VALUES (:carrierId, :scope, :code, :name, :phone, :userId, :active, :actor, :actor)
+        RETURNING id
+        """,
+        nativeQuery = true
+    )
+    long insertDriverRow(
+        long carrierId,
+        long scope,
+        String code,
+        String name,
+        String phone,
+        Long userId,
+        boolean active,
+        long actor
+    );
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default long insertDriver(Carrier parent, DriverRequest body, long actor) {
+        return insertDriverRow(
+            parent.getId(),
+            parent.getScopeId(),
+            body.getCode(),
+            body.getName().strip(),
+            body.getPhone().strip(),
+            body.getUserId(),
+            body.isActive(),
+            actor
+        );
     }
 
-    public void updateDriver(Connection connection, Driver current, DriverRequest body, long actor) {
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+        value = """
+        UPDATE {h-schema}carrier_drivers
+        SET name = :name, phone = :phone, user_id = :userId, active = :active,
+            updated_at = CURRENT_TIMESTAMP, updated_by = :actor, version = version + 1
+        WHERE id = :id AND carrier_id = :carrierId AND scope_id = :scope AND version = :version
+        """,
+        nativeQuery = true
+    )
+    int updateDriverRow(
+        long id,
+        long carrierId,
+        long scope,
+        Long version,
+        String name,
+        String phone,
+        Long userId,
+        boolean active,
+        long actor
+    );
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default void updateDriver(Driver current, DriverRequest body, long actor) {
         BusinessRules.require(
             (body.getCode() == null || current.getCode().equals(body.getCode())) &&
                 (body.getCarrierId() == null || current.getCarrierId() == body.getCarrierId()),
             ErrorCode.INVALID_REQUEST
         );
-        Driver value = locked(Driver.class, current.getId(), body.getVersion());
         BusinessRules.require(
-            value.getCarrierId() == current.getCarrierId() && value.getScopeId() == current.getScopeId(),
+            updateDriverRow(
+                current.getId(),
+                current.getCarrierId(),
+                current.getScopeId(),
+                body.getVersion(),
+                body.getName().strip(),
+                body.getPhone().strip(),
+                body.getUserId(),
+                body.isActive(),
+                actor
+            ) == 1,
             ErrorCode.STALE_VERSION
         );
-        value.setName(body.getName().strip());
-        value.setPhone(body.getPhone().strip());
-        value.setUserId(body.getUserId());
-        value.setActive(body.isActive());
-        changed(value, actor);
     }
 
-    private static void updated(PreparedStatement query) throws SQLException {
-        if (query.executeUpdate() != 1) throw new BusinessException(ErrorCode.STALE_VERSION);
-    }
-
-    private static <T extends BaseEntity> T audit(T item, ResultSet row) throws SQLException {
-        item.setId(row.getLong("id"));
-        item.setCreatedAt(row.getTimestamp("created_at").toInstant());
-        item.setUpdatedAt(row.getTimestamp("updated_at").toInstant());
-        item.setCreatedBy(row.getLong("created_by"));
-        item.setUpdatedBy(row.getLong("updated_by"));
-        item.setVersion(row.getLong("version"));
+    private static <T extends BaseEntity> T audit(T item, Map<String, Object> row) {
+        item.setId(longValue(row.get("id")));
+        item.setCreatedAt(instantValue(row.get("created_at")));
+        item.setUpdatedAt(instantValue(row.get("updated_at")));
+        item.setCreatedBy(longValue(row.get("created_by")));
+        item.setUpdatedBy(longValue(row.get("updated_by")));
+        item.setVersion(longValue(row.get("version")));
         return item;
     }
 
-    private static Carrier carrier(ResultSet row) throws SQLException {
+    private static Carrier mapCarrier(Map<String, Object> row) {
         return audit(
             Carrier.builder()
-                .scopeId(row.getLong("scope_id"))
-                .canUpdate(row.getBoolean("can_update"))
-                .code(row.getString("code"))
-                .name(row.getString("name"))
-                .phone(row.getString("phone"))
-                .description(row.getString("description"))
-                .active(row.getBoolean("active"))
+                .scopeId(longValue(row.get("scope_id")))
+                .canUpdate(booleanValue(row.get("can_update")))
+                .code(stringValue(row.get("code")))
+                .name(stringValue(row.get("name")))
+                .phone(stringValue(row.get("phone")))
+                .description(stringValue(row.get("description")))
+                .active(booleanValue(row.get("active")))
                 .build(),
             row
         );
     }
 
-    private static Vehicle vehicle(ResultSet row) throws SQLException {
+    private static Vehicle mapVehicle(Map<String, Object> row) {
         return audit(
             Vehicle.builder()
-                .scopeId(row.getLong("scope_id"))
-                .canUpdate(row.getBoolean("can_update"))
-                .carrierId(row.getLong("carrier_id"))
-                .carrierName(row.getString("carrier_name"))
-                .code(row.getString("code"))
-                .plateNumber(row.getString("plate_number"))
-                .vehicleTypeId(row.getLong("vehicle_type_id"))
-                .vehicleTypeName(row.getString("vehicle_type_name"))
-                .capacity(row.getInt("capacity"))
-                .active(row.getBoolean("active"))
+                .scopeId(longValue(row.get("scope_id")))
+                .canUpdate(booleanValue(row.get("can_update")))
+                .carrierId(longValue(row.get("carrier_id")))
+                .carrierName(stringValue(row.get("carrier_name")))
+                .code(stringValue(row.get("code")))
+                .plateNumber(stringValue(row.get("plate_number")))
+                .vehicleTypeId(longValue(row.get("vehicle_type_id")))
+                .vehicleTypeName(stringValue(row.get("vehicle_type_name")))
+                .capacity(intValue(row.get("capacity")))
+                .active(booleanValue(row.get("active")))
                 .build(),
             row
         );
     }
 
-    private static Driver driver(ResultSet row) throws SQLException {
+    private static Driver mapDriver(Map<String, Object> row) {
         return audit(
             Driver.builder()
-                .scopeId(row.getLong("scope_id"))
-                .canUpdate(row.getBoolean("can_update"))
-                .canAssign(row.getBoolean("can_assign"))
-                .carrierId(row.getLong("carrier_id"))
-                .carrierName(row.getString("carrier_name"))
-                .code(row.getString("code"))
-                .name(row.getString("name"))
-                .phone(row.getString("phone"))
-                .userId(row.getObject("user_id", Long.class))
-                .active(row.getBoolean("active"))
+                .scopeId(longValue(row.get("scope_id")))
+                .canUpdate(booleanValue(row.get("can_update")))
+                .canAssign(booleanValue(row.get("can_assign")))
+                .carrierId(longValue(row.get("carrier_id")))
+                .carrierName(stringValue(row.get("carrier_name")))
+                .code(stringValue(row.get("code")))
+                .name(stringValue(row.get("name")))
+                .phone(stringValue(row.get("phone")))
+                .userId((Long) row.get("user_id"))
+                .active(booleanValue(row.get("active")))
                 .build(),
             row
         );
-    }
-
-    /** Timestamp/actor chỉ lấy từ server, không từ request; caller đang sở hữu transaction JPA/JDBC. */
-    private <E extends BaseEntity> E created(E value, long actor) {
-        Instant now = Instant.now();
-        value.setCreatedAt(now);
-        value.setUpdatedAt(now);
-        value.setCreatedBy(actor);
-        value.setUpdatedBy(actor);
-        entityManager.persist(value);
-        entityManager.flush();
-        return value;
-    }
-
-    private void changed(BaseEntity value, long actor) {
-        value.setUpdatedAt(Instant.now());
-        value.setUpdatedBy(actor);
-        entityManager.flush();
-    }
-
-    /** SELECT ID/scope đã được guard trên connection caller; khóa ORM giữ version đúng khi ghi. */
-    private <E extends BaseEntity> E locked(Class<E> model, long id, long version) {
-        E value = BusinessRules.requireFound(entityManager.find(model, id, LockModeType.PESSIMISTIC_WRITE));
-        BusinessRules.requireVersion(version, value.getVersion());
-        return value;
     }
 
     @Getter
@@ -536,72 +833,64 @@ public class CarrierRepo extends JpaRepositorySupport<Carrier, Long> {
         private String description;
     }
 
-    private static final String FROM = """
-    FROM carriers c
+    String PUBLIC_FILTER = """
+    FROM {h-schema}carriers c
     JOIN (
         SELECT scope_id AS id, scope_code AS code, scope_name_vi AS name_vi, scope_name_en AS name_en,
             scope_active AS active, scope_version AS version, updated_at, updated_by
-        FROM carriers
+        FROM {h-schema}carriers
     ) s ON s.id = c.scope_id
-    WHERE c.active AND s.active
+    WHERE c.active AND s.active AND LOWER(c.code || ' ' || c.name || ' ' || c.phone) LIKE :keyword ESCAPE '!'
     """;
-    private static final String COLUMNS = "c.id,c.code,c.name,c.phone,c.description";
 
-    /** Từ khóa nguyên văn và phân trang ổn định name/id được xử lý hoàn toàn trong PostgreSQL. */
-    public PageResponse<Published> page(Connection connection, PublicCarrierSearch body) throws SQLException {
-        String where = FROM + " AND lower(c.code || ' ' || c.name || ' ' || c.phone) LIKE ? ESCAPE '!'";
+    @Query(value = "SELECT COUNT(*) " + PUBLIC_FILTER, nativeQuery = true)
+    long publishedCount(String keyword);
+
+    @Query(
+        value = "SELECT c.id, c.code, c.name, c.phone, c.description " +
+            PUBLIC_FILTER +
+            "ORDER BY c.name, c.id LIMIT :pageSize OFFSET :offset ",
+        nativeQuery = true
+    )
+    List<CarrierLookupProjection> publishedRows(String keyword, int pageSize, long offset);
+
+    @Transactional(readOnly = true)
+    default PageResponse<Published> page(PublicCarrierSearch body) {
         String text = body.getQuery() == null ? "" : body.getQuery().strip().toLowerCase(Locale.ROOT);
-        // LIKE tương thích index trigram; escape để %, _ và ! vẫn là ký tự nguyên văn như strpos trước đây.
-        String pattern = "%" + text.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
-        long total;
-        try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + where)) {
-            query.setString(1, pattern);
-            try (ResultSet row = query.executeQuery()) {
-                row.next();
-                total = row.getLong(1);
-            }
-        }
-        ArrayList<Published> result = new ArrayList<Published>();
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT %s
-                %s
-                ORDER BY c.name, c.id
-                LIMIT ? OFFSET ?
-                """.formatted(COLUMNS, where)
-            )
-        ) {
-            query.setString(1, pattern);
-            query.setInt(2, body.getSize());
-            query.setLong(3, body.offset());
-            try (ResultSet row = query.executeQuery()) {
-                while (row.next()) result.add(map(row));
-            }
-        }
-        return PageResponse.of(result, body, total);
+        String keyword = "%" + text.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
+        long total = publishedCount(keyword);
+        return PageResponse.of(
+            publishedRows(keyword, body.getSize(), body.offset()).stream().map(CarrierRepo::published).toList(),
+            body,
+            total
+        );
     }
 
-    /** Nhà xe/scope ngừng công bố trả 404; không dùng membership để lọc mất lựa chọn công khai. */
-    public Published find(Connection connection, long id) throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT %s
-                %s
-                    AND c.id = ?
-                """.formatted(COLUMNS, FROM)
-            )
-        ) {
-            query.setLong(1, id);
-            try (ResultSet row = query.executeQuery()) {
-                if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
-                return map(row);
-            }
-        }
+    @Query(
+        value = """
+        SELECT c.id, c.code, c.name, c.phone, c.description
+        FROM {h-schema}carriers c
+        JOIN (
+            SELECT scope_id AS id, scope_code AS code, scope_name_vi AS name_vi, scope_name_en AS name_en,
+                scope_active AS active, scope_version AS version, updated_at, updated_by
+            FROM {h-schema}carriers
+        ) s ON s.id = c.scope_id
+        WHERE c.active AND s.active AND c.id = :id
+        """,
+        nativeQuery = true
+    )
+    List<CarrierLookupProjection> publishedById(long id);
+
+    @Transactional(readOnly = true)
+    default Published find(long id) {
+        return published(BusinessRules.requireFound(publishedById(id).stream().findFirst().orElse(null)));
     }
 
-    private Published map(ResultSet row) throws SQLException {
-        return new Published(row.getLong(1), row.getString(2), row.getString(3), row.getString(4), row.getString(5));
+    private static Published published(CarrierLookupProjection row) {
+        return new Published(row.getId(), row.getCode(), row.getName(), row.getPhone(), row.getDescription());
+    }
+
+    private static String pattern(String search) {
+        return "%" + search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
     }
 }

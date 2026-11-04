@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
-import vn.vietroute.auth.repo.AccessChangeRepo;
+import vn.vietroute.auth.repo.custom.AccessChangeCustomRepo;
 import vn.vietroute.common.api_journal.dto.response.ApiJournalDetail;
 import vn.vietroute.common.api_journal.dto.response.ApiJournalEntry;
 import vn.vietroute.common.api_journal.dto.search.ApiJournalSearch;
@@ -20,7 +20,9 @@ import vn.vietroute.common.base.BaseRepository;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 
-/** JDBC thuần, chỉ lưu projection đã lọc; mọi giá trị bind, SQL không gắn schema cố định. */
+/**
+ * JDBC thuần, chỉ lưu projection đã lọc; mọi giá trị bind, SQL không gắn schema cố định.
+ */
 @Repository
 public class ApiJournalRepo {
 
@@ -51,7 +53,9 @@ public class ApiJournalRepo {
     ) AS request_username
     """;
 
-    /** Insert và schema cùng transaction; chỉ báo thành công khi PostgreSQL xác nhận commit, không queue RAM. */
+    /**
+     * Insert và schema cùng transaction; chỉ báo thành công khi PostgreSQL xác nhận commit, không queue RAM.
+     */
     public void append(ApiJournalDetail detail) {
         try (
             Connection connection = database.open();
@@ -61,7 +65,7 @@ public class ApiJournalRepo {
                 INSERT INTO api_request_journal(id,started_at,instance_id,trace_id,method,endpoint,controller,
                     http_status,duration_ms,code,message_key,diagnostic,sql_state,replay_path,query_json,
                     request_body,response_body,content_kind,request_user_id)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?::jsonb,?,?,?,?)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?::JSONB,?,?,?,?)
                 """
             )
         ) {
@@ -94,11 +98,13 @@ public class ApiJournalRepo {
         }
     }
 
-    /** Chỉ đọc metadata của trang hiện tại, không tải tất cả snapshot JSON vào RAM để lọc. */
+    /**
+     * Chỉ đọc metadata của trang hiện tại, không tải tất cả snapshot JSON vào RAM để lọc.
+     */
     public PageResponse<ApiJournalEntry> page(ApiJournalSearch search, int minutes) {
         try (Connection connection = database.open()) {
             long total;
-            try (PreparedStatement query = timed(connection, "SELECT count(*) FROM api_request_journal " + FILTER)) {
+            try (PreparedStatement query = timed(connection, "SELECT COUNT(*) FROM api_request_journal " + FILTER)) {
                 bind(query, search, minutes);
                 try (ResultSet row = query.executeQuery()) {
                     row.next();
@@ -169,13 +175,15 @@ public class ApiJournalRepo {
         }
     }
 
-    /** Khóa advisory dùng chung toàn DB/schema, mỗi lượt xóa tối đa 500 hết hạn + 500 vượt mục tiêu. */
+    /**
+     * Khóa advisory dùng chung toàn DB/schema, mỗi lượt xóa tối đa 500 hết hạn + 500 vượt mục tiêu.
+     */
     public void cleanup(int minutes, int capacity) {
         try (Connection connection = database.open()) {
             connection.setAutoCommit(false);
             try {
                 try (
-                    PreparedStatement lock = timed(connection, "SELECT pg_try_advisory_xact_lock(781205615)");
+                    PreparedStatement lock = timed(connection, "SELECT PG_TRY_ADVISORY_XACT_LOCK(781205615)");
                     ResultSet row = lock.executeQuery()
                 ) {
                     row.next();
@@ -210,7 +218,7 @@ public class ApiJournalRepo {
                     query.setInt(1, capacity);
                     query.executeUpdate();
                 }
-                AccessChangeRepo.cleanup(connection);
+                AccessChangeCustomRepo.cleanup(connection);
                 connection.commit();
             } catch (SQLException | RuntimeException exception) {
                 try {

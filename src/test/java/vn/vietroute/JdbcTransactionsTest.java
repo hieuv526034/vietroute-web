@@ -149,7 +149,7 @@ class JdbcTransactionsTest {
                     case "close" -> closed.set(true);
                     case "prepareStatement" -> {
                         assertFalse(autoCommit, "Phải bắt đầu transaction trước khi chọn schema");
-                        assertEquals("SELECT pg_catalog.set_config('search_path', ?, true)", args[0]);
+                        assertEquals("SELECT pg_catalog.set_config('search_path', ?, TRUE)", args[0]);
                         if (rejectSchema) {
                             throw new SQLException("test-only", "schema-test");
                         }

@@ -69,7 +69,8 @@
       "latitude": 10.844,
       "longitude": 106.795,
       "sortOrder": 100,
-      "active": true
+      "active": true,
+      "wardCode": "26824"
     },
     {
       "code": "VRDANANG",
@@ -80,7 +81,8 @@
       "latitude": 16.071,
       "longitude": 108.15,
       "sortOrder": 110,
-      "active": true
+      "active": true,
+      "wardCode": "20200"
     },
     {
       "code": "VRHANOI",
@@ -91,7 +93,8 @@
       "latitude": 21.029,
       "longitude": 105.776,
       "sortOrder": 120,
-      "active": true
+      "active": true,
+      "wardCode": "00592"
     }
   ],
   "carriers": [

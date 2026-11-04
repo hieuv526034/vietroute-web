@@ -11,8 +11,6 @@ import java.time.Instant;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import vn.vietroute.common.jdbc.JdbcIndex;
-import vn.vietroute.common.jdbc.JdbcTable;
 
 /** Entity đầy đủ cột trip_events; migration giữ DDL/index, repo giữ query và transaction do service quản lý. */
 @Entity
@@ -22,15 +20,6 @@ import vn.vietroute.common.jdbc.JdbcTable;
         @Index(name = "trip_events_pkey", columnList = "id", unique = true),
         @Index(name = "idx_trip_events_trip", columnList = "trip_id, id"),
         @Index(name = "idx_trip_events_created_by", columnList = "created_by"),
-    }
-)
-@JdbcTable(
-    name = "trip_events",
-    primaryKey = { "id" },
-    indexes = {
-        @JdbcIndex(name = "trip_events_pkey", columns = { "id" }, unique = true),
-        @JdbcIndex(name = "idx_trip_events_trip", columns = { "trip_id", "id" }),
-        @JdbcIndex(name = "idx_trip_events_created_by", columns = { "created_by" }),
     }
 )
 @Getter

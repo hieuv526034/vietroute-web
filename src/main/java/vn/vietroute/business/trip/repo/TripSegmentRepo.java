@@ -1,186 +1,127 @@
 package vn.vietroute.business.trip.repo;
 
-import java.sql.Array;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import org.springframework.stereotype.Repository;
+import java.util.List;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.Repository;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import vn.vietroute.business.trip.dto.projection.TripSegmentProjection;
+import vn.vietroute.business.trip.entity.TripSegment;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.validation.BusinessRules;
 
-/** Một thuật toán tồn chỗ dùng cho WEB/PHONE/xác nhận/hủy; caller bắt buộc khóa trip trước. */
-@Repository
-public class TripSegmentRepo {
+/**
+ * SQL native và ánh xạ của TripSegmentRepo; transaction ghi thuộc Service.
+ */
+public interface TripSegmentRepo extends Repository<TripSegment, Long> {
+    @Query(
+        value = """
+        SELECT segment_order AS "segmentOrder", capacity, reserved_seats AS "reservedSeats"
+        FROM {h-schema}trip_segments
+        WHERE trip_id = :tripId AND segment_order >= :pickup AND segment_order < :dropoff
+        ORDER BY segment_order
+        FOR UPDATE
+        """,
+        nativeQuery = true
+    )
+    List<TripSegmentProjection> lockedRows(long tripId, int pickup, int dropoff);
 
-    /** Khóa đủ đoạn tăng dần; không tăng khi PENDING. Lỗi đoạn bất kỳ rollback toàn bộ giao dịch caller. */
-    public void change(
-        Connection connection,
-        long tripId,
-        int pickup,
-        int dropoff,
-        int seats,
-        boolean reserve,
-        long actor
-    ) throws SQLException {
-        ArrayList<Integer> orders = new ArrayList<Integer>();
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT segment_order, capacity, reserved_seats
-                FROM trip_segments
-                WHERE trip_id = ? AND segment_order >= ? AND segment_order < ?
-                ORDER BY segment_order
-                FOR UPDATE
-                """
-            )
-        ) {
-            query.setLong(1, tripId);
-            query.setInt(2, pickup);
-            query.setInt(3, dropoff);
-            try (ResultSet row = query.executeQuery()) {
-                while (row.next()) {
-                    BusinessRules.require(row.getInt(1) == pickup + orders.size(), ErrorCode.BOOKING_INVALID);
-                    BusinessRules.require(
-                        reserve ? row.getInt(2) - row.getInt(3) >= seats : row.getInt(3) >= seats,
-                        ErrorCode.BOOKING_CAPACITY
-                    );
-                    orders.add(row.getInt(1));
-                }
-            }
-        }
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+        value = """
+        UPDATE {h-schema}trip_segments
+        SET reserved_seats = reserved_seats + :delta, updated_by = :actor, updated_at = CURRENT_TIMESTAMP,
+            version = version + 1
+        WHERE trip_id = :tripId AND segment_order >= :pickup AND segment_order < :dropoff
+            AND reserved_seats + :delta BETWEEN 0 AND capacity
+        """,
+        nativeQuery = true
+    )
+    int changeRows(long tripId, int pickup, int dropoff, int delta, long actor);
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default void change(long tripId, int pickup, int dropoff, int seats, boolean reserve, long actor) {
+        List<TripSegmentProjection> rows = lockedRows(tripId, pickup, dropoff);
         BusinessRules.require(
-            seats > 0 && orders.size() == dropoff - pickup && !orders.isEmpty(),
+            seats > 0 && rows.size() == dropoff - pickup && !rows.isEmpty(),
             ErrorCode.BOOKING_INVALID
         );
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                UPDATE trip_segments
-                SET reserved_seats = reserved_seats + ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP,
-                    version = version + 1
-                WHERE trip_id = ? AND segment_order >= ? AND segment_order < ?
-                """
-            )
-        ) {
-            query.setInt(1, reserve ? seats : -seats);
-            query.setLong(2, actor);
-            query.setLong(3, tripId);
-            query.setInt(4, pickup);
-            query.setInt(5, dropoff);
-            BusinessRules.require(query.executeUpdate() == orders.size(), ErrorCode.BOOKING_INVALID);
+        int order = pickup;
+        for (TripSegmentProjection row : rows) {
+            BusinessRules.require(row.getSegmentOrder() == order++, ErrorCode.BOOKING_INVALID);
+            BusinessRules.require(
+                reserve ? row.getCapacity() - row.getReservedSeats() >= seats : row.getReservedSeats() >= seats,
+                ErrorCode.BOOKING_CAPACITY
+            );
         }
+        BusinessRules.require(
+            changeRows(tripId, pickup, dropoff, reserve ? seats : -seats, actor) == rows.size(),
+            ErrorCode.BOOKING_INVALID
+        );
     }
 
-    /** Hủy trip đã khóa booking: cộng chỗ cần trả theo đoạn trước, khóa đoạn tăng dần và cập nhật một lần. */
-    public void releaseTrip(Connection connection, long tripId, long actor) throws SQLException {
-        ArrayList<Integer> orders = new ArrayList<Integer>();
-        ArrayList<Long> seats = new ArrayList<Long>();
-        ArrayList<Long> changes = new ArrayList<Long>();
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT part.segment_order, sum(b.seats), count(*)
-                FROM bookings b
-                CROSS JOIN LATERAL generate_series(b.pickup_order, b.dropoff_order - 1) part(segment_order)
-                WHERE b.trip_id = ?
-                    AND b.status = 'CONFIRMED'
-                GROUP BY part.segment_order
-                ORDER BY part.segment_order
-                """
-            )
-        ) {
-            query.setLong(1, tripId);
-            try (ResultSet rows = query.executeQuery()) {
-                while (rows.next()) {
-                    orders.add(rows.getInt(1));
-                    seats.add(rows.getLong(2));
-                    changes.add(rows.getLong(3));
-                }
-            }
+    @Query(
+        value = """
+        SELECT part.segment_order AS "segmentOrder", SUM(b.seats) AS "seatsToRelease", COUNT(*) AS "versionChanges"
+        FROM {h-schema}bookings b
+        CROSS JOIN LATERAL GENERATE_SERIES(b.pickup_order, b.dropoff_order - 1) part(segment_order)
+        WHERE b.trip_id = :tripId
+            AND b.status = 'CONFIRMED'
+        GROUP BY part.segment_order
+        ORDER BY part.segment_order
+        """,
+        nativeQuery = true
+    )
+    List<TripSegmentProjection> cancellationRows(long tripId);
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    @Query(
+        value = """
+        SELECT segment_order AS "segmentOrder", reserved_seats AS "reservedSeats"
+        FROM {h-schema}trip_segments
+        WHERE trip_id = :tripId
+            AND segment_order = ANY(:orderArray)
+        ORDER BY segment_order
+        FOR UPDATE
+        """,
+        nativeQuery = true
+    )
+    List<TripSegmentProjection> releaseRows(long tripId, @Param("orderArray") Integer[] orders);
+
+    @Query(
+        value = """
+        SELECT segment_order AS "segmentOrder", capacity - reserved_seats AS "remainingSeats"
+        FROM {h-schema}trip_segments
+        WHERE trip_id = :tripId AND segment_order >= :pickup AND segment_order < :dropoff
+        ORDER BY segment_order
+        """,
+        nativeQuery = true
+    )
+    List<TripSegmentProjection> availableRows(long tripId, int pickup, int dropoff);
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default int available(long tripId, int pickup, int dropoff) {
+        List<TripSegmentProjection> rows = availableRows(tripId, pickup, dropoff);
+        BusinessRules.require(rows.size() == dropoff - pickup && !rows.isEmpty(), ErrorCode.BOOKING_INVALID);
+        int remaining = 200;
+        int order = pickup;
+        for (TripSegmentProjection row : rows) {
+            BusinessRules.require(row.getSegmentOrder() == order++, ErrorCode.BOOKING_INVALID);
+            remaining = Math.min(remaining, row.getRemainingSeats());
         }
-        if (orders.isEmpty()) return;
-        Array orderArray = connection.createArrayOf("integer", orders.toArray(Integer[]::new));
-        Array seatArray = connection.createArrayOf("bigint", seats.toArray(Long[]::new));
-        Array changeArray = connection.createArrayOf("bigint", changes.toArray(Long[]::new));
-        try {
-            try (
-                PreparedStatement query = connection.prepareStatement(
-                    """
-                    SELECT segment_order, reserved_seats
-                    FROM trip_segments
-                    WHERE trip_id = ?
-                        AND segment_order = ANY(?)
-                    ORDER BY segment_order
-                    FOR UPDATE
-                    """
-                )
-            ) {
-                query.setLong(1, tripId);
-                query.setArray(2, orderArray);
-                int count = 0;
-                try (ResultSet rows = query.executeQuery()) {
-                    while (rows.next()) {
-                        BusinessRules.require(rows.getInt(1) == orders.get(count), ErrorCode.BOOKING_INVALID);
-                        BusinessRules.require(rows.getLong(2) >= seats.get(count), ErrorCode.BOOKING_CAPACITY);
-                        count++;
-                    }
-                }
-                BusinessRules.require(count == orders.size(), ErrorCode.BOOKING_INVALID);
-            }
-            // Version vẫn tăng bằng số đơn chạm đoạn như vòng lặp cũ; chỉ giảm lượt JDBC, không đổi audit lịch sử.
-            try (
-                PreparedStatement query = connection.prepareStatement(
-                    """
-                    UPDATE trip_segments s
-                    SET reserved_seats = s.reserved_seats - needed.seats, version = s.version + needed.changes,
-                        updated_by = ?, updated_at = CURRENT_TIMESTAMP
-                    FROM unnest(?::integer [], ?::bigint [], ?::bigint []) needed(segment_order, seats, changes)
-                    WHERE s.trip_id = ? AND s.segment_order = needed.segment_order
-                    """
-                )
-            ) {
-                query.setLong(1, actor);
-                query.setArray(2, orderArray);
-                query.setArray(3, seatArray);
-                query.setArray(4, changeArray);
-                query.setLong(5, tripId);
-                BusinessRules.require(query.executeUpdate() == orders.size(), ErrorCode.BOOKING_INVALID);
-            }
-        } finally {
-            orderArray.free();
-            seatArray.free();
-            changeArray.free();
-        }
+        return remaining;
     }
 
-    /** Caller đã khóa trip; kiểm mỗi đoạn và trả chỗ nhỏ nhất cho cặp điểm, không tính toàn chuyến. */
-    public int available(Connection connection, long tripId, int pickup, int dropoff) throws SQLException {
-        int result = 200,
-            count = 0;
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT segment_order, capacity - reserved_seats
-                FROM trip_segments
-                WHERE trip_id = ? AND segment_order >= ? AND segment_order < ?
-                ORDER BY segment_order
-                """
-            )
-        ) {
-            query.setLong(1, tripId);
-            query.setInt(2, pickup);
-            query.setInt(3, dropoff);
-            try (ResultSet rows = query.executeQuery()) {
-                while (rows.next()) {
-                    BusinessRules.require(rows.getInt(1) == pickup + count, ErrorCode.BOOKING_INVALID);
-                    result = Math.min(result, rows.getInt(2));
-                    count++;
-                }
-            }
-        }
-        BusinessRules.require(count == dropoff - pickup && count > 0, ErrorCode.BOOKING_INVALID);
-        return result;
+    @Query(
+        value = "SELECT reserved_seats FROM {h-schema}trip_segments WHERE trip_id = :id ORDER BY segment_order FOR UPDATE ",
+        nativeQuery = true
+    )
+    List<Integer> reservedRows(long id);
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default int peakReserved(long id) {
+        return reservedRows(id).stream().mapToInt(Integer::intValue).max().orElse(0);
     }
 }

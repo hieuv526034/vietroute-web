@@ -21,12 +21,8 @@ import vn.vietroute.business.carrier.dto.request.VehicleRequest;
 import vn.vietroute.business.carrier.dto.response.CarrierResponse;
 import vn.vietroute.business.carrier.dto.response.PublicCarrierResponse;
 import vn.vietroute.business.carrier.dto.response.VehicleResponse;
-import vn.vietroute.business.catalog.dto.request.CatalogItemRequest;
-import vn.vietroute.business.catalog.dto.request.LocationRequest;
-import vn.vietroute.business.catalog.dto.request.ProvinceRequest;
-import vn.vietroute.business.catalog.dto.response.CatalogItemResponse;
-import vn.vietroute.business.catalog.dto.response.LocationResponse;
-import vn.vietroute.business.catalog.dto.response.ProvinceResponse;
+import vn.vietroute.business.catalog.dto.request.CategoryRequest;
+import vn.vietroute.business.catalog.dto.response.CategoryResponse;
 import vn.vietroute.business.report.dto.response.ReportCarrierResponse;
 import vn.vietroute.business.report.dto.response.ReportSummaryResponse;
 import vn.vietroute.business.trip.dto.request.RouteRequest;
@@ -166,26 +162,22 @@ public class ApiJournalService {
     public static final int MAX_SNAPSHOT = 4096;
 
     private static final Set<Class<?>> REQUEST_TYPES = Set.of(
-        CatalogItemRequest.class,
+        CategoryRequest.class,
         BookingRequest.class,
         CarrierRequest.class,
         DriverRequest.class,
         VehicleRequest.class,
-        LocationRequest.class,
-        ProvinceRequest.class,
         RouteRequest.class,
         RouteStopRequest.class,
         TripRequest.class
     );
     private static final Set<Class<?>> RESPONSE_TYPES = Set.of(
-        CatalogItemResponse.class,
+        CategoryResponse.class,
         BookingResponse.class,
         BookingEventResponse.class,
         CarrierResponse.class,
         VehicleResponse.class,
         PublicCarrierResponse.class,
-        LocationResponse.class,
-        ProvinceResponse.class,
         RouteResponse.class,
         RouteStopResponse.class,
         TripResponse.class,
@@ -248,7 +240,7 @@ public class ApiJournalService {
         if (value == null || !supports(value.getClass())) return "{\"capture\":\"BODY_OMITTED\"}";
         ObjectNode fields = mapper.valueToTree(value);
         // Gộp DTO không tự mở thêm field capture; active trước đây chỉ được ghi trong response.
-        if (value instanceof CatalogItemRequest) fields.remove("active");
+        if (value instanceof CategoryRequest) fields.remove("active");
         return encode(project(fields));
     }
 

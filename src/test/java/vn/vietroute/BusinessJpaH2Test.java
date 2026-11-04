@@ -5,10 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import org.h2.jdbcx.JdbcDataSource;
@@ -22,21 +24,21 @@ import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.SharedEntityManagerCreator;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.PlatformTransactionManager;
-import vn.vietroute.business.catalog.dto.request.CatalogItemRequest;
-import vn.vietroute.business.catalog.entity.CatalogItem;
-import vn.vietroute.business.catalog.repo.CatalogItemRepo;
-import vn.vietroute.common.constant.ApplicationConstants.CatalogType;
+import vn.vietroute.business.catalog.entity.Category;
+import vn.vietroute.business.catalog.repo.CategoryRepo;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.jdbc.JdbcTransactions;
+import vn.vietroute.common.validation.BusinessRules;
+import vn.vietroute.support.TestJpa;
 
 /** H2 kiểm CRUD JPA và rollback JDBC chung; dialect/index/scope thực vẫn được kiểm bằng PostgreSQL cô lập. */
 class BusinessJpaH2Test {
 
     private LocalContainerEntityManagerFactoryBean factory;
-    private CatalogItemRepo catalogs;
+    private CategoryRepo catalogs;
     private JdbcTransactions transactions;
 
     @BeforeEach
@@ -52,7 +54,9 @@ class BusinessJpaH2Test {
         factory.setDataSource(source);
         factory.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
         factory.setPackagesToScan("vn.vietroute.business.catalog.entity");
-        factory.setJpaPropertyMap(Map.of("hibernate.hbm2ddl.auto", "create-drop"));
+        factory.setJpaPropertyMap(
+            Map.of("hibernate.default_schema", "public", "hibernate.hbm2ddl.auto", "create-drop")
+        );
         factory.afterPropertiesSet();
         EntityManagerFactory emf = factory.getObject();
         EntityManager shared = SharedEntityManagerCreator.createSharedEntityManager(emf);
@@ -64,7 +68,7 @@ class BusinessJpaH2Test {
             new JdbcConnectionFactory(new TransactionAwareDataSourceProxy(source), new JdbcSchema("h2_business")),
             beans.getBeanProvider(PlatformTransactionManager.class)
         );
-        catalogs = new CatalogItemRepo(shared, transactions);
+        catalogs = TestJpa.repository(CategoryRepo.class, shared);
     }
 
     @AfterEach
@@ -74,25 +78,20 @@ class BusinessJpaH2Test {
 
     @Test
     void crudPreservesAuditAndVersionAndRejectsStaleUpdate() {
-        long id = transactions.execute(connection -> catalogs.insert(connection, create(), "H2CAT", 0).getId());
-        CatalogItem changed = transactions.execute(connection ->
-            catalogs.updateManaged(connection, id, CatalogType.VEHICLE_TYPE, update(0), 0)
-        );
+        long id = transactions.execute(connection -> catalogs.saveAndFlush(create("H2CAT")).getId());
+        Category changed = transactions.execute(connection -> update(id, 0));
         assertEquals(1, changed.getVersion());
         assertNotNull(changed.getCreatedAt());
         assertNotNull(changed.getUpdatedAt());
         assertEquals(0L, changed.getCreatedBy());
         assertEquals(0L, changed.getUpdatedBy());
         assertFalse(changed.isActive());
-        assertThrows(BusinessException.class, () ->
-            transactions.execute(connection ->
-                catalogs.updateManaged(connection, id, CatalogType.VEHICLE_TYPE, update(0), 0)
-            )
-        );
+        assertThrows(BusinessException.class, () -> transactions.execute(connection -> update(id, 0)));
         transactions.execute(connection -> {
-            CatalogItem actual = catalogs.findById(id).orElseThrow();
-            assertEquals("Tên mới", actual.getNameVi());
+            Category actual = catalogs.findById(id).orElseThrow();
+            assertEquals("Tên mới", actual.getName());
             assertEquals("H2CAT", actual.getCode());
+            assertEquals(16, actual.getProps().get("seatCount"));
             assertEquals(1, actual.getVersion());
             return null;
         });
@@ -102,7 +101,7 @@ class BusinessJpaH2Test {
     void jdbcObservesFlushedJpaAndFailureRollsBackInsertAndUpdate() {
         assertThrows(BusinessException.class, () ->
             transactions.execute(connection -> {
-                catalogs.insert(connection, create(), "ROLLBACK", 0);
+                catalogs.saveAndFlush(create("ROLLBACK"));
                 try (PreparedStatement query = connection.prepareStatement("SELECT * FROM missing_business_table")) {
                     query.execute();
                 }
@@ -111,15 +110,11 @@ class BusinessJpaH2Test {
         );
         long count = transactions.execute(connection -> catalogs.count());
         assertEquals(0L, count);
-        long id = transactions.execute(connection -> catalogs.insert(connection, create(), "H2CAT", 0).getId());
+        long id = transactions.execute(connection -> catalogs.saveAndFlush(create("H2CAT")).getId());
         assertThrows(BusinessException.class, () ->
             transactions.execute(connection -> {
-                catalogs.updateManaged(connection, id, CatalogType.VEHICLE_TYPE, update(0), 0);
-                try (
-                    PreparedStatement query = connection.prepareStatement(
-                        "SELECT name_vi FROM catalog_items WHERE id=?"
-                    )
-                ) {
+                update(id, 0);
+                try (PreparedStatement query = connection.prepareStatement("SELECT name FROM category WHERE id=?")) {
                     query.setLong(1, id);
                     try (ResultSet row = query.executeQuery()) {
                         row.next();
@@ -130,27 +125,34 @@ class BusinessJpaH2Test {
             })
         );
         transactions.execute(connection -> {
-            CatalogItem actual = catalogs.findById(id).orElseThrow();
-            assertEquals("Ghế ngồi", actual.getNameVi());
+            Category actual = catalogs.findById(id).orElseThrow();
+            assertEquals("Ghế ngồi", actual.getName());
             assertEquals(0, actual.getVersion());
             return null;
         });
     }
 
-    private CatalogItemRequest create() {
-        CatalogItemRequest body = new CatalogItemRequest();
-        body.setType(CatalogType.VEHICLE_TYPE);
-        body.setNameVi("Ghế ngồi");
-        body.setNameEn("Seated coach");
-        return body;
+    private Category create(String code) {
+        return Category.builder()
+            .code(code)
+            .type("VALUE")
+            .refType("VEHICLE_TYPE")
+            .name("Ghế ngồi")
+            .props(Map.of("seatCount", 16))
+            .active(true)
+            .createdAt(Instant.EPOCH)
+            .updatedAt(Instant.EPOCH)
+            .createdBy(0L)
+            .updatedBy(0L)
+            .build();
     }
 
-    private CatalogItemRequest update(long version) {
-        CatalogItemRequest body = new CatalogItemRequest();
-        body.setNameVi("Tên mới");
-        body.setNameEn("Updated name");
-        body.setActive(false);
-        body.setVersion(version);
-        return body;
+    private Category update(long id, long version) {
+        Category value = catalogs.locked(id);
+        BusinessRules.requireVersion(version, value.getVersion());
+        value.setName("Tên mới");
+        value.setActive(false);
+        value.setUpdatedAt(Instant.now());
+        return catalogs.saveAndFlush(value);
     }
 }

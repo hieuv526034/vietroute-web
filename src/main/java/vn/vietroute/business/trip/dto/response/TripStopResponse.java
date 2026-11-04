@@ -8,6 +8,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import vn.vietroute.business.trip.dto.projection.TripStopProjection;
 
 /** Snapshot độc lập danh mục/mẫu tuyến; không trả audit/actor riêng tư trên màn công khai. */
 @Getter
@@ -64,4 +65,26 @@ public class TripStopResponse {
 
     @Schema(description = "Được trả khách")
     private boolean dropoffAllowed;
+
+    /** Ánh xạ projection native; chỉ gọi sau kiểm quyền và phạm vi tại Repo. */
+    public static TripStopResponse from(TripStopProjection row) {
+        return new TripStopResponse(
+            row.getId(),
+            row.getLocationId(),
+            row.getProvinceId(),
+            row.getStopOrder(),
+            row.getNameVi(),
+            row.getNameEn(),
+            row.getAddress(),
+            row.getLatitude(),
+            row.getLongitude(),
+            row.getScheduledArrivalAt(),
+            row.getScheduledDepartureAt(),
+            row.getActualArrivalAt(),
+            row.getActualDepartureAt(),
+            row.getCumulativeFare(),
+            row.getPickupAllowed(),
+            row.getDropoffAllowed()
+        );
+    }
 }

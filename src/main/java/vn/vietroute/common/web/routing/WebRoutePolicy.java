@@ -89,9 +89,7 @@ public final class WebRoutePolicy {
 
     public static List<String> publicLookupMatchers() {
         return List.of(
-            Routes.CATALOG_MATCHER,
-            Routes.PROVINCES,
-            Routes.LOCATIONS,
+            Routes.CATEGORIES,
             Routes.PUBLIC_CARRIERS,
             Routes.PUBLIC_CARRIERS_MATCHER,
             Routes.PUBLIC_TRIPS,
@@ -102,9 +100,7 @@ public final class WebRoutePolicy {
     private static boolean publicLookup(String path, String method) {
         return (
             method.equals("GET") &&
-            (path.startsWith(Routes.CATALOG_PREFIX) ||
-                path.equals(Routes.PROVINCES) ||
-                path.equals(Routes.LOCATIONS) ||
+            (path.equals(Routes.CATEGORIES) ||
                 path.equals(Routes.PUBLIC_CARRIERS) ||
                 path.startsWith(Routes.PUBLIC_CARRIERS + "/") ||
                 path.equals(Routes.PUBLIC_TRIPS) ||

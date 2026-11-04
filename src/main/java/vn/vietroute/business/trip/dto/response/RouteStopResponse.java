@@ -51,4 +51,16 @@ public class RouteStopResponse {
 
     @Schema(description = "Cho phép trả")
     private boolean dropoffAllowed;
+
+    @Schema(description = "ID tỉnh/thành hiện hành của địa điểm")
+    private long provinceId;
+
+    @Schema(description = "Tên tỉnh/thành của địa điểm")
+    private String provinceName;
+
+    @Schema(description = "ID xã/phường trực tiếp chứa địa điểm")
+    private long wardId;
+
+    @Schema(description = "Tên xã/phường chứa địa điểm")
+    private String wardName;
 }

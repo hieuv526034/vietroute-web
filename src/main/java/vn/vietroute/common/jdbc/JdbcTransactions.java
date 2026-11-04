@@ -30,11 +30,14 @@ public class JdbcTransactions {
         this.transactionManagers = managers;
     }
 
-    /** Factory mở transaction và chọn schema LOCAL trước callback; thành công commit, lỗi rollback rồi đóng. */
+    /**
+     * REQUIRED qua template cả khi đang có transaction: lỗi ở callback con đánh dấu rollback-only,
+     * kể cả caller bắt lỗi rồi tiếp tục. Callback không phụ thuộc proxy hoặc self-invocation.
+     */
     public <T> T execute(BaseRepository.SqlWork<T> work) {
-        if (TransactionSynchronizationManager.isActualTransactionActive()) return joined(work);
         PlatformTransactionManager manager = transactionManagers == null ? null : transactionManagers.getIfAvailable();
         if (manager != null) return new TransactionTemplate(manager).execute(status -> joined(work));
+        if (TransactionSynchronizationManager.isActualTransactionActive()) return joined(work);
         try (Connection connection = connections.open()) {
             try {
                 T result = work.apply(connection);

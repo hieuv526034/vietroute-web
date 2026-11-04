@@ -3,9 +3,9 @@ INSERT INTO carriers(scope_id,scope_code,scope_name_vi,scope_name_en,code,name,p
 SELECT nextval('carrier_scope_ids'),'PERF03S'||n,'Scope fixture '||n,'Scope fixture '||n,'PERF03C'||n,
     CASE WHEN n%1000=0 THEN 'needlexyz ' ELSE 'Carrier fixture ' END||n,'0000000000'
 FROM generate_series(1,20000) n;
-INSERT INTO catalog_items(type,code,name_vi,name_en)
-SELECT 'VEHICLE_TYPE','PERF03CAT'||n,
-    CASE WHEN n%1000=0 THEN 'needlexyz ' ELSE 'Danh mục fixture ' END||n,'Catalog fixture '||n
+INSERT INTO category(type,ref_type,code,name,props)
+SELECT 'VALUE','VEHICLE_TYPE','PERF03CAT'||n,
+    CASE WHEN n%1000=0 THEN 'needlexyz ' ELSE 'Danh mục fixture ' END||n,jsonb_build_object('nameEn','Catalog fixture '||n,'seatCount',16)
 FROM generate_series(1,20000) n;
 
 INSERT INTO carrier_trips(carrier_id,scope_id,route_id,vehicle_id,driver_id,driver_user_id,code,name_vi,name_en,
@@ -35,11 +35,11 @@ JOIN trip_stops d ON d.trip_id=t.id AND d.stop_order=3
 CROSS JOIN bookings b CROSS JOIN generate_series(1,3) n
 WHERE t.code LIKE 'PERF03T%' AND b.id=:booking;
 ANALYZE carriers;
-ANALYZE catalog_items;
+ANALYZE category;
 ANALYZE carrier_trips;
 ANALYZE trip_stops;
 ANALYZE bookings;
 -- Tương đương dọn pending list sau đợt nạp bulk; giữ fastupdate production mặc định, không ép planner.
 SELECT pg_catalog.gin_clean_pending_list('idx_carriers_search_contact'::regclass);
 SELECT pg_catalog.gin_clean_pending_list('idx_carriers_search_name'::regclass);
-SELECT pg_catalog.gin_clean_pending_list('idx_catalog_search_text'::regclass);
+SELECT pg_catalog.gin_clean_pending_list('idx_category_search_text'::regclass);

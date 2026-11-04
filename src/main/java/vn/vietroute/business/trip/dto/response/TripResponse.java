@@ -1,8 +1,15 @@
 package vn.vietroute.business.trip.dto.response;
 
+import static vn.vietroute.common.base.BaseRepository.booleanValue;
+import static vn.vietroute.common.base.BaseRepository.instantValue;
+import static vn.vietroute.common.base.BaseRepository.intValue;
+import static vn.vietroute.common.base.BaseRepository.longValue;
+import static vn.vietroute.common.base.BaseRepository.stringValue;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -98,4 +105,41 @@ public class TripResponse {
 
     @Schema(description = "Sự kiện vận hành mới nhất, tối đa 100")
     private List<TripEventResponse> events;
+
+    /** Ánh xạ projection native; chỉ gọi sau kiểm quyền và phạm vi tại Repo. */
+    public static TripResponse from(
+        Map<String, Object> row,
+        List<TripStopResponse> stops,
+        List<TripEventResponse> events
+    ) {
+        return new TripResponse(
+            longValue(row.get("id")),
+            longValue(row.get("carrier_id")),
+            longValue(row.get("scope_id")),
+            stringValue(row.get("carrier_name")),
+            stringValue(row.get("carrier_phone")),
+            longValue(row.get("route_id")),
+            stringValue(row.get("code")),
+            stringValue(row.get("name_vi")),
+            stringValue(row.get("name_en")),
+            longValue(row.get("vehicle_id")),
+            stringValue(row.get("plate_number")),
+            longValue(row.get("vehicle_type_id")),
+            stringValue(row.get("vehicle_type_name_vi")),
+            stringValue(row.get("vehicle_type_name_en")),
+            longValue(row.get("driver_id")),
+            longValue(row.get("driver_user_id")),
+            stringValue(row.get("driver_name")),
+            stringValue(row.get("driver_phone")),
+            instantValue(row.get("departure_at")),
+            instantValue(row.get("end_at")),
+            intValue(row.get("capacity")),
+            TripStatus.valueOf(stringValue(row.get("status"))),
+            stringValue(row.get("operation_note")),
+            longValue(row.get("version")),
+            booleanValue(row.get("can_update")),
+            stops,
+            events
+        );
+    }
 }

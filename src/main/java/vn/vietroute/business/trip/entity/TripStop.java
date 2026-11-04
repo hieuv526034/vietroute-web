@@ -11,8 +11,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietroute.common.base.BaseEntity;
-import vn.vietroute.common.jdbc.JdbcIndex;
-import vn.vietroute.common.jdbc.JdbcTable;
 
 /** Entity đầy đủ cột trip_stops; migration giữ DDL/index, repo giữ query và transaction do service quản lý. */
 @Entity
@@ -26,25 +24,19 @@ import vn.vietroute.common.jdbc.JdbcTable;
         @Index(name = "idx_trip_stops_updated_by", columnList = "updated_by"),
     }
 )
-@JdbcTable(
-    name = "trip_stops",
-    primaryKey = { "id" },
-    indexes = {
-        @JdbcIndex(name = "trip_stops_pkey", columns = { "id" }, unique = true),
-        @JdbcIndex(name = "idx_trip_stops_search", columns = { "location_id", "scheduled_departure_at", "trip_id" }),
-        @JdbcIndex(
-            name = "idx_trip_stops_province_search",
-            columns = { "province_id", "scheduled_departure_at", "trip_id" }
-        ),
-        @JdbcIndex(name = "idx_trip_stops_created_by", columns = { "created_by" }),
-        @JdbcIndex(name = "idx_trip_stops_updated_by", columns = { "updated_by" }),
-    }
-)
 @Getter
 @Setter
 @NoArgsConstructor
 @SuperBuilder
 public class TripStop extends BaseEntity {
+
+    // Nhóm danh mục cố định do DB sinh, bảo vệ FK không trỏ nhầm loại.
+    @Column(name = "category_location_ref", insertable = false, updatable = false, length = 64)
+    private String categoryLocationRef;
+
+    // Nhóm danh mục cố định do DB sinh, bảo vệ FK không trỏ nhầm loại.
+    @Column(name = "category_province_ref", insertable = false, updatable = false, length = 64)
+    private String categoryProvinceRef;
 
     // ID chuyến trong carrier_trips.
     @Column(name = "trip_id", nullable = false)

@@ -36,7 +36,9 @@ class SchemaMigrationTest {
                 "booking/001_schema.sql",
                 "common/001_schema.sql",
                 "foundation/001_system_account.sql",
-                "foundation/002_references.sql"
+                "foundation/002_references.sql",
+                "catalog/002_category.sql",
+                "catalog/003_location_wards.sql"
             ),
             MigrationCatalog.versions()
         );
@@ -71,7 +73,7 @@ class SchemaMigrationTest {
         }
         Set<String> listed = new HashSet<>();
         for (String version : MigrationCatalog.versions()) assertTrue(listed.add(MigrationCatalog.resource(version)));
-        assertEquals(8, listed.size());
+        assertEquals(10, listed.size());
         assertEquals(packaged, listed);
     }
 

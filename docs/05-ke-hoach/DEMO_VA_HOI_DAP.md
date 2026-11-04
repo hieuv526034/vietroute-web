@@ -227,15 +227,15 @@ Browser → filter trace/journal/body guard → CSRF/JWT → EndpointAccess → 
 
 ### Q04. Sao đã dùng JPA lại còn JDBC?
 
-CRUD đơn giản dùng entity/JPA. Batch, SQL tổng hợp, giữ chỗ/khóa/CAS và query phức tạp dùng JDBC. Hai cách cùng JpaTransactionManager/connection qua proxy nên một thao tác không bị JPA commit mà JDBC rollback riêng. JDBC không đồng nghĩa bỏ entity hoặc nhét SQL vào service.
+CRUD entity dùng JPA; query viết tay, tổng hợp, giữ chỗ/khóa/CAS dùng native @Query của Spring Data. JDBC nghiệp vụ chỉ ghi batch/bulk trong CustomRepo. Hai cách cùng JpaTransactionManager/connection qua proxy nên một thao tác không bị JPA commit mà JDBC rollback riêng. JDBC không đồng nghĩa bỏ entity hoặc nhét SQL vào service.
 
 ### Q05. OOP và phân lớp thể hiện ở đâu?
 
 Entity mô tả dữ liệu/ràng buộc, Request/DTO là hợp đồng riêng; Service đóng gói quy tắc trạng thái/transaction; Repo che cách truy cập DB, controller điều phối HTTP. Kế thừa có mục đích ở BaseController/BaseDTO/JpaRepositorySupport; constructor injection giúp thay dependency trong test. Không tạo lớp rỗng để minh họa OOP; một Request/tài nguyên vẫn validation theo operation.
 
-### Q06. Vì sao có 24 bảng, không giảm hết về vài bảng?
+### Q06. Vì sao source có 22 bảng sau khi gộp danh mục?
 
-Auth 8, business 14, journal 1 và history 1. Các bảng tách quan hệ nhiều–nhiều, snapshot stop/segment, sự kiện tiền/trạng thái và dữ liệu nguồn có vòng đời khác nhau. Report/bootstrap không thêm bảng. Nêu một ví dụ: gộp trip_segments vào bookings sẽ khó giữ tồn theo đoạn và dùng lại chỗ trên đoạn không giao nhau.
+Auth có 8 bảng, nghiệp vụ có 12 bảng, journal và migration history mỗi phần có một bảng. `category` gom các nhóm danh mục và nối tỉnh với xã qua `parent_id`. `trip_segments` vẫn giữ tồn chỗ của từng đoạn để hai khách có thể dùng lại cùng chỗ trên hai đoạn không giao nhau. Báo cáo đọc từ các bảng nghiệp vụ.
 
 Nguồn: [tổng quan](../01-bat-dau/TONG_QUAN_HE_THONG.md), [quy ước backend](../02-phat-trien/QUY_UOC_PHAT_TRIEN.md), [pom.xml](../../pom.xml).
 
@@ -307,7 +307,7 @@ Service kiểm asset cùng nhà xe/scope, account tài xế và trạng thái, t
 
 ### Q22. Chống SQL injection và giới hạn dữ liệu ở đâu?
 
-Dữ liệu bind PreparedStatement, identifier/sort/fragment chỉ whitelist phía server; SQL đặt trong Repo. Validation Request không thay bind parameter hoặc scope SQL. Count và page cùng bộ lọc, size tối đa 100; không lấy toàn bảng xuống JavaScript rồi lọc quyền. JSONB/array nhận dữ liệu bind, không ghép chuỗi SQL từ client.
+Tra cứu/CRUD bind named parameter JPA; batch bind PreparedStatement. Identifier/sort/fragment chỉ whitelist phía server; SQL đặt trong Repo. Validation Request không thay bind parameter hoặc scope SQL. Count và page cùng bộ lọc, size tối đa 100; không lấy toàn bảng xuống JavaScript rồi lọc quyền. JSONB/array nhận dữ liệu bind, không ghép chuỗi SQL từ client.
 
 ### Q23. Tồn chỗ và giá theo chặng tính thế nào?
 
@@ -315,7 +315,7 @@ Tuyến A→B→C→D có capacity30. AB đã giữ 5, BC đã giữ 10, CD đã
 
 ### Q24. PENDING có giữ chỗ chưa, hai người giành chỗ cuối thế nào?
 
-PENDING chỉ là yêu cầu, chưa giữ chỗ nên nhiều yêu cầu có thể chờ. Lúc CONFIRMED, transaction khóa/kiểm lại sức chứa trên mọi segment và cập nhật nguyên tử. Nếu chỉ còn 1 chỗ cho hai yêu cầu, không được cả hai cùng thành công; bên không đủ nhận BOOKING_CAPACITY/409. Kết quả tìm kiếm không phải lời hứa chỗ đến lúc xác nhận.
+PENDING chỉ là yêu cầu, chưa giữ chỗ nên nhiều yêu cầu có thể chờ. Lúc CONFIRMED, transaction khóa/kiểm lại sức chứa trên mọi segment và cập nhật nguyên tử. Nếu chỉ còn 1 chỗ cho hai yêu cầu, không được cả hai cùng thành công; bên không đủ nhận BOOKING_CAPACITY/409. UPDATE còn kiểm giới hạn0..capacity ngay trong SQL; lỗi history phải rollback cả chỗ. Kết quả tìm kiếm không phải lời hứa chỗ đến lúc xác nhận.
 
 ### Q25. Vì sao phải có thứ tự khóa?
 
@@ -335,7 +335,7 @@ Không. Hủy đủ điều kiện đổi trạng thái và trả chỗ nếu đ
 
 ### Q29. Bấm thu tiền hai lần hoặc dùng lại requestKey khác nội dung thì sao?
 
-Thu/hoàn có UUID requestKey. Cùng booking/actor/kind/amount/note đã ghi trả kết quả hiện hành, không cộng tiền lần nữa; key trùng khác nội dung bị xung đột. Thao tác mới cần version đúng. PAYMENT chỉ CONFIRMED/COMPLETED và không vượt total; REFUND chỉ CANCELLED và tổng hoàn không vượt đã thu. Đây là ghi nhận thủ công, không tích hợp ngân hàng.
+Thu/hoàn có UUID requestKey. Cùng booking/actor/kind/amount/note đã ghi trả kết quả hiện hành, không cộng tiền lần nữa; key trùng khác nội dung bị xung đột. Thao tác mới cần version đúng. PAYMENT chỉ CONFIRMED/COMPLETED và không vượt total; REFUND chỉ CANCELLED và tổng hoàn không vượt đã thu. UPDATE tiền và CHECK ở DB chặn thu vượt giá/hoàn vượt đã thu. History lỗi rollback cả tiền và key. Đây là ghi nhận thủ công, không tích hợp ngân hàng.
 
 Nguồn: [catalog](../../src/main/java/vn/vietroute/business/catalog), [carrier](../../src/main/java/vn/vietroute/business/carrier), [BookingService](../../src/main/java/vn/vietroute/business/booking/service/BookingService.java), [TripSegmentRepo](../../src/main/java/vn/vietroute/business/trip/repo/TripSegmentRepo.java), TripService/TripRepo và BusinessIntegrationTest.
 
@@ -526,3 +526,9 @@ Phân biệt bản trên dev và main/Render, ca thử cô lập và hạ tầng
 Đã dựng [báo cáo Word Nhóm10](bao-cao/Bao_cao_VietRoute_Nhom_10.docx) theo lệnh soạn đầy đủ của chủ dự án, kèm [sơ đồ SVG và ảnh gốc](bao-cao/Tu_lieu_VietRoute_Nhom_10.zip). Giữ ba chương, hai bìa, mục lục/danh mục, kết luận, tham khảo và phụ lục schema/demo; chỉ các thông tin chưa xác nhận trên bìa để ô [[...]]. Mẫu gốc giữ nguyên checksum. Bản này dùng dữ liệu local giả lập, không ảnh production hoặc minh chứng giao dịch thương mại.
 
 Field TOC/SEQ/PAGE được cập nhật bằng Microsoft Word cài sẵn rồi xuất PDF để rà trang; renderer đóng gói đã được chẩn đoán thiếu LibreOffice, không dùng lỗi đó để bỏ kiểm bố cục. Bằng chứng source/test/ảnh, phiên bản và giới hạn ở WORD01 trong tiến độ. Khi chỉnh nội dung hoặc thay ảnh, cập nhật mục lục/danh mục/số trang và kiểm lại bản in, không giữ số trang cũ.
+
+## Trình bày danh mục chung
+
+BangPhamIT mở Danh mục chung, chọn tab Tỉnh/thành và xã/phường. Nói “Dữ liệu được quản lý theo nhóm trong một bảng Category. Màn hình chỉ đọc tỉnh trước, mở tỉnh mới lấy xã/phường, nên không tải hàng nghìn dòng lúc mở trang.” Mở Hải Phòng rồi thu gọn. Nhập mã xã/phường 26824 và tìm. Nói “Kết quả có cả tỉnh cha và xã khớp. SQL recursive dựng đường dẫn để người dùng biết mục thuộc đâu.” Xóa tìm, chuyển Loại xe để chỉ số chỗ; chuyển Địa điểm để mở theo tỉnh, xã và chọn ghim trong modal.
+
+Nếu hỏi tại sao cây không phân trang, trả lời “Mỗi nhánh là một cấp trực tiếp. Phân trang có thể làm người dùng tưởng cha thiếu con. Chúng em tải theo cha, còn tìm toàn cây chạy ở DB và chỉ trả kết quả cùng tổ tiên.” Nếu hỏi khác biệt với select, trả lời “Select nghiệp vụ vẫn có lookup phân trang và lọc theo cha, chỉ trả trường công khai. Bảng quản trị dùng chế độ tree với grant riêng.” Nếu hỏi tìm không dấu, trả lời “Chuỗi tìm và dữ liệu được chuẩn hóa chữ thường và dấu tiếng Việt, mã vẫn tìm được. Tham số được bind, các ký tự wildcard do người dùng nhập được escape.”

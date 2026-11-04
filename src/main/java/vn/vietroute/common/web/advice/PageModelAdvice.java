@@ -63,7 +63,6 @@ public class PageModelAdvice {
             .stream()
             .map(item -> item.path())
             .collect(Collectors.toSet());
-        model.addAttribute("catalogAllowed", paths.contains(Routes.ADMIN));
         model.addAttribute("accessAllowed", paths.contains(Routes.ACCESS_PAGE));
         model.addAttribute("journalAllowed", paths.contains(Routes.API_JOURNAL_PAGE));
         model.addAttribute("docsAllowed", paths.contains(Routes.DOCS));
@@ -94,14 +93,10 @@ public class PageModelAdvice {
             sections.put(key, new ArrayList<>());
         }
         for (FunctionDTO entry : menu) {
+            // /admin là trang tổng quan cũ; không hiển thị thành một danh mục con trong menu đã lưu ở DB.
+            if (Routes.ADMIN.equals(entry.path())) continue;
             String key = switch (entry.path() == null ? "" : entry.path()) {
-                case
-                    Routes.ADMIN,
-                    Routes.CATALOG_VEHICLE_TYPES_PAGE,
-                    Routes.CATALOG_BOOKING_SOURCES_PAGE,
-                    Routes.CATALOG_PROVINCES_PAGE,
-                    Routes.CATALOG_LOCATIONS_PAGE,
-                    Routes.LOCATION_PAGE -> "catalog";
+                case Routes.CATEGORY_PAGE -> "catalog";
                 case Routes.CARRIERS_PAGE, Routes.VEHICLES_PAGE, Routes.DRIVERS_PAGE -> "carrier";
                 case Routes.ROUTES_PAGE, Routes.TRIPS_PAGE, Routes.DRIVER_TRIPS_PAGE -> "transport";
                 case Routes.BOOKINGS_PAGE, Routes.MY_BOOKINGS_PAGE -> "booking";
@@ -147,8 +142,7 @@ public class PageModelAdvice {
         if (Routes.HOME.equals(path)) return List.of();
         ArrayList<FunctionDTO> result = new ArrayList<FunctionDTO>();
         result.add(item(messages.getMessage("ui.home", null, locale), Routes.HOME, false));
-        String canonical = Routes.LOCATION_PAGE.equals(path) ? Routes.CATALOG_LOCATIONS_PAGE : path;
-        if (append(menu, canonical, result)) return List.copyOf(result);
+        if (append(menu, path, result)) return List.copyOf(result);
         String key = switch (path) {
             case Routes.DASHBOARD -> "ui.dashboard.title";
             case Routes.ACCOUNT -> "ui.account";

@@ -30,7 +30,7 @@ class AccessPolicyTest {
         try (var web = new NativeEndpointWebFixture()) {
             var state = new NativeSecurityFixture();
             state.state = state.ready(Set.of("CUSTOM"), Set.of("GET /api/v1/native-probe/{id}"));
-            var guard = new EndpointAccess(null, state, null);
+            var guard = new EndpointAccess(null, state.repository, null);
             guard.collect(web.context.getBean(RequestMappingHandlerMapping.class));
             var handler = new HandlerMethod(
                 new NativeEndpointWebFixture.ProbeAPI(),
@@ -55,7 +55,7 @@ class AccessPolicyTest {
     @Test
     void publicEndpointDoesNotRequireDbOrAcceptClientPermissionMetadata() throws Exception {
         try (var web = new NativeEndpointWebFixture()) {
-            var guard = new EndpointAccess(null, new NativeSecurityFixture(), null);
+            var guard = new EndpointAccess(null, new NativeSecurityFixture().repository, null);
             var request = new MockHttpServletRequest("GET", "/api/v1/auth/csrf");
             request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/api/v1/auth/csrf");
             request.addHeader("X-Role", "ADMIN");

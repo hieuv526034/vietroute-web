@@ -163,7 +163,7 @@
     const vehicleTypes = async () => {
         const select = form.elements.vehicleTypeId,
             current = select.selectedOptions[0];
-        const items = await choices('/api/v1/catalogs/VEHICLE_TYPE');
+        const items = await choices('/api/v1/categories?refType=VEHICLE_TYPE');
         const options = items.map((item) => option(item.id, item.name));
         if (current?.value && !items.some((item) => String(item.id) === current.value))
             options.unshift(option(current.value, current.textContent));
