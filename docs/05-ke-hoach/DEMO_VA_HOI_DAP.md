@@ -525,7 +525,7 @@ Phân biệt bản trên dev và main/Render, ca thử cô lập và hạ tầng
 
 Đã dựng [báo cáo Word Nhóm10](bao-cao/Bao_cao_VietRoute_Nhom_10.docx) theo lệnh soạn đầy đủ của chủ dự án, kèm [sơ đồ SVG và ảnh gốc](bao-cao/Tu_lieu_VietRoute_Nhom_10.zip). Giữ ba chương, hai bìa, mục lục/danh mục, kết luận, tham khảo và phụ lục schema/demo; chỉ các thông tin chưa xác nhận trên bìa để ô [[...]]. Mẫu gốc giữ nguyên checksum. Bản này dùng dữ liệu local giả lập, không ảnh production hoặc minh chứng giao dịch thương mại.
 
-Field TOC/SEQ/PAGE được cập nhật bằng Microsoft Word cài sẵn rồi xuất PDF để rà trang; renderer đóng gói đã được chẩn đoán thiếu LibreOffice, không dùng lỗi đó để bỏ kiểm bố cục. Bằng chứng source/test/ảnh, phiên bản và giới hạn ở WORD01 trong tiến độ. Khi chỉnh nội dung hoặc thay ảnh, cập nhật mục lục/danh mục/số trang và kiểm lại bản in, không giữ số trang cũ.
+Field TOC/SEQ/PAGE được cập nhật bằng Microsoft Word cài sẵn rồi xuất PDF để rà trang; renderer đóng gói đã được chẩn đoán thiếu LibreOffice, không dùng lỗi đó để bỏ kiểm bố cục. Phạm vi source/test/ảnh, kết quả kiểm và giới hạn ở tài liệu tiến độ. Khi chỉnh nội dung hoặc thay ảnh, cập nhật mục lục/danh mục/số trang và kiểm lại bản in, không giữ số trang cũ.
 
 ## Trình bày danh mục chung
 
