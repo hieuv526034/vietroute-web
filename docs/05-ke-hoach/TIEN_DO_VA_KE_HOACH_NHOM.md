@@ -26,9 +26,13 @@ Các kiểm tra bao gồm format/rules/docs, Node, Java/H2/PostgreSQL, tìm cây
 
 ## Trạng thái tích hợp và phát hành
 
-Đối chiếu GitHub ngày04/11/2026, dev ở d75332c và main ở1a45d15. PR166 đang ở nhánh thành viên. Chỉ xác nhận tích hợp sau khi PR merge và xác nhận Render Live khi deployment đối chiếu đúng commit. Luồng phát hành theo lệnh chủ dự án là PR thành viên → dev → PR phát hành → main → checksPass → Render.
+Ngày04/11/2026, [PR166](https://github.com/hieuv526034/vietroute-web/pull/166) đã merge vào dev025166b. [PR167](https://github.com/hieuv526034/vietroute-web/pull/167) phát hành dev → main, commit `7d21f30e3767771004037026cebc6f7a41af485d`. Production CI của PR và main đạt, gồm Java/PostgreSQL, Docker/Tomcat, bootstrap/JWT và recovery. [Render Singapore Live](https://dashboard.render.com/web/srv-dbk9elou01pc739ei3ug/deploys/dep-dbla8qon74is739hc8q0) đối chiếu đúng commit. [Mở ứng dụng](https://vietroute-web-sg.onrender.com/journeys?lang=vi). Các URL/API công khai và checksum category.js được đối chiếu sau triển khai.
+
+DB hieuboy/vietroute đã chuyển Category sau khi dừng node, sao lưu mới và kiểm phục hồi khớp24 bảng. Transaction chuyển giữ dữ liệu giao dịch/tài khoản/hash, đổi FK theo mã, kiểm typed FK và quyền rồi nạp JSON hành chính bằng CategoryCustomRepo. Kết quả22 bảng/history10,34 tỉnh/thành/3321 xã/phường. Bộ công cụ được diễn tập rollback/commit trên bản phục hồi trước thao tác thật. Backup mã hóa DPAPI CurrentUser giữ local, không nằm trong Git.
 
 ## Giới hạn và vận hành
+
+Deployment Singapore được kích hoạt sau khi resume và sau toàn bộ main CI thành công. Node Virginia hiện tạm dừng để code cũ không dùng schema Category. Hostname vietroute-web.onrender.com vẫn thuộc service Virginia; chưa có xác nhận chuyển hostname sang Singapore. Địa chỉ đang nghiệm thu là vietroute-web-sg.onrender.com.
 
 Thu/hoàn là ghi nhận thủ công, chưa kết nối ngân hàng hoặc ví. Tiến độ tài xế là xác nhận thao tác. Bản đồ dùng Leaflet/OpenStreetMap cần mạng và không xác minh ranh giới hành chính. PostgreSQL hiện hành chưa có TLS, đã được chủ dự án chấp thuận. Journal có thể mất bản ghi khi pool/DB lỗi, có counter để theo dõi.
 
