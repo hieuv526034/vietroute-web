@@ -56,4 +56,6 @@ Kiểm desktop và 320/390/768px; Tab/Shift+Tab, Escape, focus modal, locale vi/
 
 Mẫu tuyến chọn tỉnh riêng cho từng điểm dừng, sau đó tải xã/phường; chọn xã/phường mới tải điểm đón/trả. Chuyển tỉnh xóa lựa chọn địa điểm trước khi đọc API. Modal Category có mô tả riêng, thuộc tính khác nằm trong props.
 
-Địa điểm chọn tọa độ bằng Leaflet 1.9.4 đóng trong WebJar. Chỉ mở bản đồ mới tải tile OpenStreetMap, có attribution; bấm hoặc kéo ghim tự điền tọa độ sáu số lẻ. Phím mũi tên di chuyển bản đồ và nút Chọn vị trí ở tâm hỗ trợ bàn phím. Không đọc vị trí thiết bị, không tải trước tile hoặc tự gọi geocoding. Nền bản đồ cần mạng; không tự xác nhận ghim đúng ranh giới xã nếu chưa có dữ liệu polygon.
+Thanh Danh mục đặt các nút quản lý cùng hàng với ô tìm kiếm khi đủ chiều rộng. Thao tác thêm, sửa, ngừng sử dụng và quản lý nhóm dùng biểu tượng với tooltip và nhãn cho trình đọc màn hình.
+
+Địa điểm chọn tọa độ bằng Leaflet 1.9.4 đóng trong WebJar. Chỉ mở bản đồ mới tải tile OpenStreetMap, có attribution. Nút Tìm kiếm hoặc Enter gửi nội dung ô tra cứu sang [Photon](https://github.com/komoot/photon#demo-server), tối đa năm kết quả ở Việt Nam. Chọn kết quả để chuyển ghim và điền tọa độ sáu số lẻ. Địa chỉ trên form vẫn do người nhập kiểm tra. Khi không tra được, bấm hoặc kéo ghim, hoặc dùng phím mũi tên và nút Chọn vị trí ở tâm. Nền bản đồ và tra cứu cần mạng. Ghim tọa độ chưa xác minh ranh giới hành chính.

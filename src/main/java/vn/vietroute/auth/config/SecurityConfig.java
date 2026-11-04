@@ -129,7 +129,7 @@ public class SecurityConfig {
                 headers.contentSecurityPolicy(csp ->
                     csp.policyDirectives(
                         "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://tile.openstreetmap.org; font-src 'self'; " +
-                            "connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+                            "connect-src 'self' https://photon.komoot.io; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
                     )
                 )
             )
