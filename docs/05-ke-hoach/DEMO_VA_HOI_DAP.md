@@ -69,7 +69,7 @@ Không đọc mật khẩu thành tiếng hoặc chiếu .env. Lấy mật khẩ
 
 > Em chào thầy/cô. Nhóm em xây dựng VietRoute để quản lý nhà xe, tuyến, chuyến và đặt chỗ theo chặng. Sản phẩm có bốn tác nhân: quản trị viên, điều hành nhà xe, tài xế và khách hàng. Trong phần này em trình bày nền xác thực, phân quyền và cách tổ chức hệ thống; bạn Bang sẽ đi một luồng vận hành từ dữ liệu nguồn đến chuyến và đơn, sau đó em đối chiếu bằng báo cáo/dashboard.
 >
-> Ứng dụng dùng Java, Spring MVC, Spring Security và Thymeleaf, đóng gói WAR chạy trên Tomcat. Dự án không dùng Spring Boot. Dữ liệu hiện chạy bằng PostgreSQL; CRUD đơn giản dùng JPA, còn truy vấn tổng hợp, batch và khóa giữ chỗ dùng JDBC trong cùng cơ chế transaction. Controller nhận và kiểm dữ liệu, service xử lý nghiệp vụ, repo làm việc với DB; API trả DTO riêng.
+> Ứng dụng dùng Java, Spring MVC, Spring Security và Thymeleaf, đóng gói WAR chạy trên Tomcat. Dự án không dùng Spring Boot. Dữ liệu hiện chạy bằng PostgreSQL; CRUD dùng JPA, truy vấn tổng hợp và khóa giữ chỗ dùng native query Spring Data. JDBC ghi batch trong cùng transaction. Controller nhận và kiểm dữ liệu, service xử lý nghiệp vụ, repo làm việc với DB; API trả DTO riêng.
 
 Chỉ sơ đồ Browser → Controller → Service → Repo → PostgreSQL, rồi chỉ RootConfig/WebConfig và một BookingAPI/BookingService/BookingRepo nếu được hỏi. Không mở hàng loạt file hoặc đọc tên công nghệ quá lâu. **Bản ngắn:** giới thiệu bài toán/bốn tác nhân, nói ba lớp và chuyển H2.
 
