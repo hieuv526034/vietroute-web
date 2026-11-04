@@ -2,7 +2,7 @@
 
 Đọc cùng [quy ước backend](QUY_UOC_PHAT_TRIEN.md), [luồng từng thành viên](../05-ke-hoach/PHAN_CONG.md) và [vận hành](../04-van-hanh/VAN_HANH.md). Đây là mô hình source; dữ liệu/migration đã áp môi trường nào tra [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
 
-## Tám bảng auth và 40 class
+## Tám bảng auth và 46 class
 
 | Bảng | Nội dung và quyết định chính |
 |---|---|
@@ -15,7 +15,7 @@
 | auth_account_challenges | Mã theo user/purpose/hash/tokenVersion/expiry; lifecycle còn dùng invalidate, không mở self-registration/email/reset |
 | auth_access_changes | Event/actor/target/whitelist before-after/traceId/version trong transaction; không màn/API history |
 
-Auth 40 file:8 entity,8 repo,4 service,3 API,1 page,9 DTO,2 config,4 security,1 initializer. User/Role/Function giữ service CRUD và mapping; JwtService giữ token. Không tạo service/API rỗng cho bảng nối. Một số mapping/challenge có identity kỹ thuật UNIQUE cho JPA nhưng PK/FK nghiệp vụ ghép vẫn giữ.
+Auth 46 file gồm 8 entity, 8 repo, 6 CustomRepo ghi batch trong repo/custom, 4 service,3 API,1 page,9 DTO,2 config,4 security,1 initializer. User/Role/Function giữ service CRUD và mapping; JwtService giữ token. Tám Repo là interface Spring Data, query native bằng @Query. Khởi tạo bootstrap do AuthInitializer phối hợp các query và batch. Không tạo service/API rỗng cho bảng nối. Một số mapping/challenge có identity kỹ thuật UNIQUE cho JPA nhưng PK/FK nghiệp vụ ghép vẫn giữ.
 
 ```mermaid
 flowchart LR
@@ -30,18 +30,26 @@ flowchart LR
     X[Mutation quyền/tài khoản] --> H[auth_access_changes]
 ```
 
-## Mười bốn bảng nghiệp vụ và hạ tầng
+## Mười hai bảng nghiệp vụ và hạ tầng
 
 | Nhóm | Bảng và quan hệ |
 |---|---|
-| catalog 3 | catalog_items; location_provinces → location_places |
+| catalog 1 | category giữ nhóm, giá trị và cây cha–con |
 | carrier 3 | carriers → carrier_vehicles/carrier_drivers; hồ sơ tài xế nối auth_users |
 | trip 6 | carrier_routes → carrier_route_stops; carrier_trips → trip_stops/trip_segments/trip_events |
 | booking 2 | bookings → booking_events; nối trip, cặp điểm, owner và scope |
 | report/bootstrap | Không có bảng riêng; report đọc dữ liệu, bootstrap dùng JSON/SQL theo tập |
 | common/history 2 | api_request_journal; vietroute_schema_history |
 
-Tổng 8 auth +14 business +1 journal +1 history =24. Scope_* nằm trong carriers, không tạo bảng scope thứ25. Xe/tài xế thuộc nhà xe; trip_stops lưu snapshot độc lập mẫu tuyến, segment là đoạn giữa hai stop liền kề. Booking có pickup_order/dropoff_order để giữ chỗ trên đúng đoạn.
+Tổng 8 auth + 12 business + 1 journal + 1 history = 22. Các cột scope nằm trong carriers. Xe/tài xế thuộc nhà xe; trip_stops lưu snapshot độc lập mẫu tuyến, segment là đoạn giữa hai stop liền kề. Booking có pickup_order/dropoff_order để giữ chỗ trên đúng đoạn.
+
+## Booking đồng thời và ghi nhận tiền
+
+PENDING chỉ tiếp nhận yêu cầu, chưa giữ chỗ. Xác nhận khóa trip → booking → các segment tăng dần, kiểm đủ chặng và cập nhật trong cùng transaction. UPDATE chặng chỉ nhận giá trị `reserved_seats + delta` trong0..capacity; cập nhật thiếu dòng phải lỗi và rollback. CHECK ở DB giữ0 ≤ reserved_seats ≤ capacity. Hủy CONFIRMED trả chỗ một lần theo state/version; hủy PENDING không trả chỗ chưa từng giữ. Khóa PostgreSQL bảo vệ cả các node ứng dụng, không dùng synchronized hoặc bộ đếm RAM làm tồn chỗ.
+
+Tạo đơn và ghi thu/hoàn có UUID requestKey. Replay chỉ hợp lệ với cùng actor/nội dung/đơn; key khác nội dung hoặc dùng cho đơn khác nhận409. Thao tác mới kiểm version, khóa booking trước cộng tiền và ghi history cùng transaction. UPDATE tiền giữ tổng đã thu/hoàn tăng dần, đã thu không vượt giá đơn và đã hoàn không vượt đã thu; CHECK và unique request_key vẫn là lớp bảo vệ DB. History lỗi rollback cả tiền/version/key, nên có thể gửi lại cùng requestKey sau lỗi.
+
+Tiền hiện là ghi nhận thu/hoàn thủ công đã thực hiện bên ngoài. Hủy không tự chuyển tiền cho khách. Chưa có ví, trừ tiền ngân hàng hoặc payment gateway; các phần đó cần hợp đồng giao dịch và đối soát riêng. Ca đồng thời ở BusinessIntegrationTest kiểm8 request tại barrier và hai đơn ở hai chuyến dùng chung key; đây là regression DB local, không là bằng chứng năng lực tải production.
 
 ## Xác thực và grant endpoint
 
@@ -84,11 +92,15 @@ db/migration/postgresql/
   common/001_schema.sql
   foundation/001_system_account.sql
   foundation/002_references.sql
+  catalog/002_category.sql
+  catalog/003_location_wards.sql
 ```
 
-Manifest ở [db/migration](../../src/main/resources/db/migration/postgresql/migrations.list) quyết định thứ tự: sáu schema → system → FK. Không file SQL rỗng cho report/bootstrap hoặc giữ bộ migration cũ rồi DROP. History version như trip/001_schema.sql, SHA-256 byte gốc, installed_at; không format SQL đã áp dụng.
+Manifest ở [db/migration](../../src/main/resources/db/migration/postgresql/migrations.list) chạy tám bước nền đã có, sau đó chuyển ba bảng danh mục sang `category` ở bước thứ chín; bước thứ mười chuyển cha địa điểm từ tỉnh sang xã/phường và thay tài nguyên quản trị danh mục đã nghỉ. Bước003 chỉ bổ sung bảy grant Category vào ADMIN_CONSOLE hiện hữu, giữ trạng thái function/role/mapping và ghi history khi tập tài nguyên đổi; không nâng quyền các function đọc riêng nhóm cũ. Report và bootstrap dùng các bảng hiện có. History version như trip/001_schema.sql, SHA-256 byte gốc, installed_at; không format SQL đã áp dụng.
 
-DatabaseInitializer/MigrationCatalog giữ advisory lock/transaction/checksum/metadata. Connection transaction trước LOCAL search_path, schema qua VIETROUTE_DB_SCHEMA/fallback profile, pg_temp cuối; không prefix schema cứng vào entity/query, không public/$user fallback. pg_trgm tra namespace extension thật. Không tự DDL bằng Hibernate, không migration lúc Maven packaging.
+DatabaseInitializer/MigrationCatalog giữ advisory lock/transaction/checksum và init. Entity dùng annotation JPA chuẩn; PK/index được đối chiếu trong regression PostgreSQL, không còn validator metadata riêng ở startup. Bốn bảng auth có ID kỹ thuật UNIQUE vẫn giữ PK nghiệp vụ ghép trong migration và test. Connection transaction trước LOCAL search_path, schema qua VIETROUTE_DB_SCHEMA/fallback profile, pg_temp cuối; không prefix schema cứng vào entity/query, không public/$user fallback. pg_trgm tra namespace extension thật. Không tự DDL bằng Hibernate, không migration lúc Maven packaging. Checksum không phát hiện mọi thay đổi cấu trúc DB do sửa tay.
+
+Các native @Query dùng `{h-schema}` từ cùng cấu hình schema Hibernate. Query JPA và batch JDBC tham gia transaction hiện hành; không tạo connection riêng cho phần @Query hoặc đổi schema từ request. Cách xuất SQL đã điền schema nằm ở [quy ước query](QUY_UOC_PHAT_TRIEN.md#query-khai-báo-và-sql-để-kiểm-db).
 
 Baseline mới hoặc history sai phải dừng runtime, không sửa checksum để xanh. Bảo trì/rebaseline theo [vận hành](../04-van-hanh/VAN_HANH.md#database-backup-và-rollback): backup kiểm phục hồi, dừng mọi node và kiểm cấu trúc trước đổi history; không đổi dữ liệu/hash/sequence/audit.
 
@@ -96,7 +108,7 @@ Baseline mới hoặc history sai phải dừng runtime, không sửa checksum �
 
 | Cờ | Startup khi bật có chủ đích |
 |---|---|
-| VIETROUTE_DB_INIT_ENABLED | Migration/checksum/metadata + AuthInitializer |
+| VIETROUTE_DB_INIT_ENABLED | Migration, kiểm checksum, AuthInitializer và nạp danh mục nền theo lô |
 | VIETROUTE_ACCESS_SYNC_ENABLED | Inventory và sync bootstrap sau MVC; mặc định theo DB_INIT khi không khai báo |
 | VIETROUTE_DEFAULT_ACCOUNTS_ENABLED | Tạo45 account ordinary còn thiếu, verified/active theo JSON/env |
 | VIETROUTE_BUSINESS_INIT_ENABLED | Nền catalog/carrier/scope/tuyến; cùng DEFAULT_ACCOUNTS tạo bộ vận hành đầy đủ |
@@ -104,3 +116,45 @@ Baseline mới hoặc history sai phải dừng runtime, không sửa checksum �
 Bootstrap riêng theo identity env/JSON; init có thể chuẩn hóa trạng thái/email đúng bootstrap và giữ hash đã có, sync riêng chỉ sửa role/function/bindings. Ordinary role/function có marker một lần; restart không mở lại account hoặc quyền đã thu hồi. Bốn cờ đầy đủ trên DB mới tạo 46 account và bộ nghiệp vụ; ngày/mã neo lần đầu, không dịch ngày hoặc reset password lúc restart.
 
 AuthInitializer/UserRepo lấy account/scope/link từ [default-access.json](../../src/main/resources/auth/default-access.json); nền và vận hành ở [bootstrap](../../src/main/resources/bootstrap). HTTP /operations/demo và POST /api/v1/admin/demo chỉ seed bộ nền21 bản ghi, không cấp credential hoặc hàng nghìn đơn. Xem đầy đủ [account/key](../01-bat-dau/CHAY_LOCAL.md#tài-khoản-và-dữ-liệu-khởi-tạo). .env chứa secret chỉ local, không Git/WAR; OS/IDE ưu tiên, Oracle vẫn bị chặn trước SQL.
+
+## Danh mục chung và cây hành chính
+
+`category` dùng một bảng vật lý và 11 file Java. `CategoryRequest` dùng cho tạo và sửa. `CategorySearch` nhận bộ lọc phân trang. `CategoryResponse` có audit và version. `CategoryLookupResponse` chỉ trả các trường công khai.
+
+| Cột | Ý nghĩa |
+|---|---|
+| `id` | Khóa chính số dùng để liên kết bản ghi |
+| `code` | Mã ổn định, duy nhất trong `ref_type` |
+| `type` | `GROUP` định nghĩa cấu trúc và `VALUE` chứa giá trị |
+| `ref_type` | Bắt buộc ở mọi dòng. `GROUP` dùng chính `code` của nhóm. `VALUE` tham chiếu nhóm đó |
+| `parent_id` | FK vật lý tới `category.id`. Để trống với mục gốc. `WARD` trỏ tới `PROVINCE`; `LOCATION` trỏ tới `WARD` |
+| `description` | Mô tả vật lý, tối đa 1.000 ký tự; dùng chung cho nhóm và giá trị |
+| `name`, `props` | Tên Việt và JSONB cho tên Anh, mã hành chính, số chỗ gợi ý, địa chỉ và tọa độ tĩnh |
+| `active`, `sort_order`, `version`, audit | Trạng thái, thứ tự, kiểm cập nhật đồng thời và người thực hiện |
+| `group_code`, `value_ref` | Cột sinh chỉ đọc. FK nhóm dùng `group_code`. FK nghiệp vụ dùng cặp `(id, value_ref)` để loại bản ghi `GROUP` và nhóm sai |
+
+| ID minh họa | Type | Code | Ref type | Parent ID | Tên |
+|---|---|---|---|---|---|
+| 1 | GROUP | PROVINCE | PROVINCE | — | Tỉnh/thành |
+| 2 | GROUP | WARD | WARD | — | Xã/phường |
+| 10 | VALUE | HAIPHONG | PROVINCE | — | Hải Phòng |
+| 20 | VALUE | 11383 | WARD | 10 | Phường Lê Chân |
+| 21 | VALUE | DLGHAIPHONG | LOCATION | 10 | Điểm đón Duy Long |
+
+Năm nhóm có sẵn gồm `VEHICLE_TYPE`, `BOOKING_SOURCE`, `PROVINCE`, `WARD` và `LOCATION`. `props.fields` định nghĩa kiểu, khoảng giá trị và trường bắt buộc. Nhóm có `parentRefType` yêu cầu cha thuộc nhóm đó. `hierarchical: true` cho phép mục cùng nhóm làm cha. ID, mã, nhóm và cha được giữ cố định sau tạo để bảo toàn cây và khóa nghiệp vụ. Trigger kiểm quy tắc và khóa nhóm/cha trong transaction. Số chỗ gợi ý ở `props.seatCount` hỗ trợ danh mục loại xe. `carrier_vehicles.capacity` và snapshot chuyến là số chỗ dùng để bán.
+
+Bộ [đơn vị hành chính](../../src/main/resources/bootstrap/administrative-divisions.json) ghi nguồn, ngày tải và checksum. Dữ liệu gồm 34 tỉnh/thành và 3.321 đơn vị cấp xã từ bộ sau sáp nhập 2025. Mã và tỉnh cha đối chiếu với bảng chuyển đổi Cục Thống kê. Tên tỉnh lấy theo trang Cục Thống kê lúc thu thập. Mã hành chính lưu chuỗi trong `props.administrativeCode`, giữ số 0 đầu. Các mã nghiệp vụ như `HAIPHONG` tiếp tục nối với tuyến đã có. Khi bật DB_INIT, repo nhập theo tập và bỏ qua mục đã có. [Nguồn JSON](https://provinces.open-api.vn/) · [Cục Thống kê](https://danhmuchanhchinh.nso.gov.vn/).
+
+Trang `/operations/categories` chọn nhóm bằng tab. Đọc metadata nhóm qua `GET /api/v1/admin/categories/groups?tree=true`. Cây quản trị dùng `GET /api/v1/admin/categories?tree=true&refType=WARD` để lấy tỉnh gốc; thêm `parentId=<id>` chỉ lấy con trực tiếp. `refType=LOCATION` mở đường đi tỉnh → xã/phường → địa điểm. Nhánh trả đủ con, không dùng page/size để cắt dữ liệu. `hasChildren` điều khiển nút mở. Tìm `query` qua CTE `WITH RECURSIVE` trả các mục khớp cùng tổ tiên, có `searchMatch` phân biệt kết quả và đường dẫn. Tên hỗ trợ tìm không dấu, ký tự `%`/`_` được escape thành ký tự tìm literal. Không gửi đồng thời parentId và query trong chế độ cây.
+
+API lookup công khai `GET /api/v1/categories?refType=WARD&parentId=<id>` vẫn phân trang và trả whitelist. Thiếu cha thì xã/phường và địa điểm rỗng. Quyền page và từng API quản trị được kiểm riêng bằng grant DB; tree không tạo endpoint hoặc cấp quyền mới.
+
+Migration `catalog/002_category.sql` giữ ID của loại xe và nguồn đặt chỗ. Tỉnh và địa điểm được cấp ID không trùng qua bảng tạm. Bước này chuyển sáu FK nghiệp vụ, giữ nội dung snapshot và audit, rồi bỏ ba bảng cũ. Kiểm tra áp dụng theo môi trường ở [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
+
+`catalog.constant.CategoryRefType` quản lý mã nhóm nền dùng trong Java và ví dụ Swagger. Nhóm bổ sung được định nghĩa bằng dòng GROUP; không cần sửa constant nếu chưa có nghiệp vụ riêng dùng nhóm đó.
+
+Đã bỏ các page/API danh mục cũ, chỉ dùng `/operations/categories`, `/api/v1/categories` và `/api/v1/admin/categories`. API công khai nhận `refType`; xã/phường và điểm đón/trả còn bắt buộc chọn `parentId` để có kết quả. Request tạo/sửa nhận `description`; loại bản ghi dùng `GROUP` hoặc `VALUE`.
+
+Địa điểm thuộc một xã/phường; query tạo tuyến/chuyến JOIN địa điểm → xã/phường → tỉnh để kiểm trạng thái và lấy tỉnh cho snapshot. Bộ chọn tìm chuyến có xã/phường tùy chọn; backend lọc thêm bằng fromWardId/toWardId. Đổi tỉnh xóa xã và địa điểm; đổi xã xóa địa điểm.
+
+Nguồn hành chính giữ trong `bootstrap/administrative-divisions.json`, không có tác vụ chạy ngầm hoặc đồng bộ định kỳ. Khi bật DB_INIT, CategoryRepo đọc JSON và nạp tỉnh/xã bằng hai INSERT theo tập: lần đầu tạo dữ liệu thiếu, lần sau mã đã tồn tại được bỏ qua, giữ trạng thái và nội dung đã sửa. Không gọi API ngoài lúc startup/request. Khi có thay đổi địa giới thì cập nhật JSON có review. Với DB cũ, bước 003 chỉ nhận map mã/cha của bộ giả lập; địa điểm khác làm migration dừng để bổ sung map, không tự đoán xã theo tọa độ.

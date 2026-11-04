@@ -7,3 +7,5 @@ postgresql/booking/001_schema.sql
 postgresql/common/001_schema.sql
 postgresql/foundation/001_system_account.sql
 postgresql/foundation/002_references.sql
+postgresql/catalog/002_category.sql
+postgresql/catalog/003_location_wards.sql

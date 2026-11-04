@@ -8,6 +8,7 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.dto.RoleDTO;
 import vn.vietroute.auth.dto.UserDTO;
 import vn.vietroute.auth.dto.request.RoleRequest;
@@ -21,6 +22,9 @@ import vn.vietroute.auth.repo.RoleFunctionRepo;
 import vn.vietroute.auth.repo.RoleRepo;
 import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.auth.repo.UserRoleRepo;
+import vn.vietroute.auth.repo.custom.AccessChangeCustomRepo;
+import vn.vietroute.auth.repo.custom.RoleFunctionCustomRepo;
+import vn.vietroute.auth.repo.custom.UserRoleCustomRepo;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.config.application.AppSettings;
@@ -37,28 +41,29 @@ public class RoleService {
     private final RoleRepo roles;
     private final UserRepo users;
     private final UserRoleRepo mappings;
+    private final UserRoleCustomRepo roleBatch;
     private final RoleFunctionRepo functions;
     private final AccessChangeRepo changes;
     private final JdbcTransactions transactions;
     private final AppSettings settings;
+
+    private final AccessChangeCustomRepo changeBatch;
+
+    private final RoleFunctionCustomRepo functionBatch;
 
     public List<RoleDTO> all() {
         UserPrincipal.current();
         return roles.all().stream().map(RoleDTO::from).toList();
     }
 
+    @Transactional(readOnly = true)
     public PageResponse<RoleDTO> search(RoleSearch search) {
         UserPrincipal.current();
-        return transactions.execute(connection -> {
-            Page<Role> page = roles.search(search);
-            return PageResponse.of(
-                page.getContent().stream().map(RoleDTO::from).toList(),
-                search,
-                page.getTotalElements()
-            );
-        });
+        Page<Role> page = roles.search(search);
+        return PageResponse.of(page.getContent().stream().map(RoleDTO::from).toList(), search, page.getTotalElements());
     }
 
+    @Transactional
     public RoleDTO save(String code, RoleRequest body, boolean create, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         BusinessRules.require(
@@ -69,71 +74,67 @@ public class RoleService {
                 !body.getNameEn().isBlank(),
             ErrorCode.INVALID_REQUEST
         );
-        return transactions.execute(connection -> {
-            mappings.lockRoleAssignments(connection);
-            Role value;
-            if (create) {
-                BusinessRules.require(
-                    !roles.existsById(code) && roles.count() < settings.getAuthRegistryCapacity(),
-                    ErrorCode.CONFLICT
-                );
-                value = new Role();
-                value.setCode(code);
-                value.setCreatedAt(Instant.now());
-                value.setCreatedBy(actor.id());
-            } else {
-                value = BusinessRules.requireFound(roles.lock(code));
-                BusinessRules.require(!value.isProtectedRole() && !value.isDeleted(), ErrorCode.ACCESS_DENIED);
-                BusinessRules.require(
-                    body.getVersion() != null && value.getVersion() == body.getVersion(),
-                    ErrorCode.STALE_VERSION
-                );
-                mappings.requireDelegableRoles(connection, Set.of(code));
-            }
-            Set<String> targets = functions.targets(connection, code);
-            boolean wide = body.getAllScopes() == null ? value.isAllScopes() : body.getAllScopes();
-            if (wide) BusinessRules.require(
-                UserPrincipal.current().getGlobalTargets().containsAll(targets),
-                ErrorCode.ACCESS_DENIED
+        mappings.lockRoleAssignments();
+        Role value;
+        if (create) {
+            BusinessRules.require(
+                !roles.existsById(code) && roles.count() < settings.getAuthRegistryCapacity(),
+                ErrorCode.CONFLICT
             );
-            value.setAllScopes(wide);
-            value.setNameVi(body.getNameVi().strip());
-            value.setNameEn(body.getNameEn().strip());
-            if (create || body.getActive() != null) value.setActive(!Boolean.FALSE.equals(body.getActive()));
-            value.setUpdatedAt(Instant.now());
-            value.setUpdatedBy(actor.id());
-            roles.saveAndFlush(value);
-            changes.append(
-                connection,
-                create ? "ROLE_CREATED" : "ROLE_UPDATED",
-                "ROLE",
-                code,
-                actor.id(),
-                Map.of(),
-                Map.of("active", value.isActive(), "allScopes", wide)
+            value = new Role();
+            value.setCode(code);
+            value.setCreatedAt(Instant.now());
+            value.setCreatedBy(actor.id());
+        } else {
+            value = BusinessRules.requireFound(roles.lock(code));
+            BusinessRules.require(!value.isProtectedRole() && !value.isDeleted(), ErrorCode.ACCESS_DENIED);
+            BusinessRules.require(
+                body.getVersion() != null && value.getVersion() == body.getVersion(),
+                ErrorCode.STALE_VERSION
             );
-            return RoleDTO.from(value);
-        });
+            mappings.requireDelegableRoles(Set.of(code));
+        }
+        Set<String> targets = functions.targets(code);
+        boolean wide = body.getAllScopes() == null ? value.isAllScopes() : body.getAllScopes();
+        if (wide) BusinessRules.require(
+            UserPrincipal.current().getGlobalTargets().containsAll(targets),
+            ErrorCode.ACCESS_DENIED
+        );
+        value.setAllScopes(wide);
+        value.setNameVi(body.getNameVi().strip());
+        value.setNameEn(body.getNameEn().strip());
+        if (create || body.getActive() != null) value.setActive(!Boolean.FALSE.equals(body.getActive()));
+        value.setUpdatedAt(Instant.now());
+        value.setUpdatedBy(actor.id());
+        roles.saveAndFlush(value);
+        changes.append(
+            create ? "ROLE_CREATED" : "ROLE_UPDATED",
+            "ROLE",
+            code,
+            actor.id(),
+            Map.of(),
+            Map.of("active", value.isActive(), "allScopes", wide)
+        );
+        return RoleDTO.from(value);
     }
 
     public void delete(String code, long version, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         transactions.execute(connection -> {
-            mappings.lockRoleAssignments(connection);
+            mappings.lockRoleAssignments();
             Role value = BusinessRules.requireFound(roles.lock(code));
             BusinessRules.require(!value.isProtectedRole(), ErrorCode.ACCESS_DENIED);
             BusinessRules.require(value.getVersion() == version, ErrorCode.STALE_VERSION);
-            mappings.requireDelegableRoles(connection, Set.of(code));
-            BusinessRules.require(!mappings.usesRole(connection, code), ErrorCode.CONFLICT);
-            Set<String> before = functions.functions(connection, code);
-            functions.replace(connection, code, Set.of(), actor.id());
+            mappings.requireDelegableRoles(Set.of(code));
+            BusinessRules.require(!mappings.usesRole(code), ErrorCode.CONFLICT);
+            Set<String> before = functions.functions(code);
+            functionBatch.replace(connection, code, Set.of(), actor.id());
             value.setDeleted(true);
             value.setActive(false);
             value.setUpdatedAt(Instant.now());
             value.setUpdatedBy(actor.id());
             roles.saveAndFlush(value);
             changes.append(
-                connection,
                 "ROLE_DELETED",
                 "ROLE",
                 code,
@@ -145,30 +146,29 @@ public class RoleService {
         });
     }
 
+    @Transactional(readOnly = true)
     public RoleDTO functions(String code) {
         UserPrincipal.current();
-        return transactions.execute(connection -> {
-            Role value = BusinessRules.requireFound(roles.findById(code).orElse(null));
-            RoleDTO dto = RoleDTO.from(value);
-            dto.setFunctionCodes(functions.functions(connection, code));
-            return dto;
-        });
+        Role value = BusinessRules.requireFound(roles.findById(code).orElse(null));
+        RoleDTO dto = RoleDTO.from(value);
+        dto.setFunctionCodes(functions.functions(code));
+        return dto;
     }
 
     public RoleDTO assignFunctions(String code, RoleRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         BusinessRules.require(body.getFunctionCodes() != null, ErrorCode.INVALID_REQUEST);
         return transactions.execute(connection -> {
-            mappings.lockRoleAssignments(connection);
+            mappings.lockRoleAssignments();
             Role value = BusinessRules.requireFound(roles.lock(code));
             BusinessRules.require(!value.isProtectedRole() && !value.isDeleted(), ErrorCode.ACCESS_DENIED);
             BusinessRules.require(
                 body.getVersion() != null && value.getVersion() == body.getVersion(),
                 ErrorCode.STALE_VERSION
             );
-            Set<String> before = functions.functions(connection, code);
-            Set<String> targets = functions.functionTargets(connection, body.getFunctionCodes());
-            UserPrincipal.requireDelegable(functions.targets(connection, code));
+            Set<String> before = functions.functions(code);
+            Set<String> targets = functions.functionTargets(body.getFunctionCodes());
+            UserPrincipal.requireDelegable(functions.targets(code));
             UserPrincipal.requireDelegable(targets);
             if (value.isAllScopes()) BusinessRules.require(
                 UserPrincipal.current().getGlobalTargets().containsAll(targets),
@@ -178,9 +178,13 @@ public class RoleService {
             value.setUpdatedAt(Instant.now());
             value.setUpdatedBy(actor.id());
             roles.saveAndFlush(value);
-            functions.replace(connection, code, body.getFunctionCodes(), actor.id());
+            BusinessRules.require(
+                body.getFunctionCodes().isEmpty() ||
+                    functions.availableFunctions(body.getFunctionCodes()) == body.getFunctionCodes().size(),
+                ErrorCode.INVALID_REQUEST
+            );
+            functionBatch.replace(connection, code, body.getFunctionCodes(), actor.id());
             changes.append(
-                connection,
                 "ROLE_FUNCTIONS",
                 "ROLE",
                 code,
@@ -199,23 +203,22 @@ public class RoleService {
         UserPrincipal.requireCurrent(actor);
         BusinessRules.require(id > 0 && id != actor.id() && body.getRoles() != null, ErrorCode.ACCESS_DENIED);
         return transactions.execute(connection -> {
-            mappings.lockRoleAssignments(connection);
-            User value = BusinessRules.requireFound(users.load(connection, id, true));
+            mappings.lockRoleAssignments();
+            User value = BusinessRules.requireFound(users.load(id, true));
             BusinessRules.require(
                 !value.getUsername().equalsIgnoreCase(settings.getBootstrapUsername()),
                 ErrorCode.ACCESS_DENIED
             );
-            Set<String> before = mappings.assignedRoles(connection, id);
+            Set<String> before = mappings.assignedRoles(id);
             Set<String> affected = new LinkedHashSet<>(before);
             affected.addAll(body.getRoles());
-            mappings.validateMappings(connection, body.getRoles(), Set.of());
-            mappings.requireDelegableRoles(connection, affected);
+            mappings.validateMappings(body.getRoles(), Set.of());
+            mappings.requireDelegableRoles(affected);
             BusinessRules.require(body.getVersion() != null, ErrorCode.INVALID_REQUEST);
-            List<RoleDTO> scopedBefore = UserRoleRepo.memberships(connection, id);
-            mappings.replaceRoles(connection, id, body.getRoles(), body.getVersion(), actor.id());
-            List<RoleDTO> scopedAfter = UserRoleRepo.memberships(connection, id);
+            List<RoleDTO> scopedBefore = mappings.memberships(id);
+            roleBatch.replaceRoles(connection, id, body.getRoles(), body.getVersion(), actor.id());
+            List<RoleDTO> scopedAfter = mappings.memberships(id);
             changes.append(
-                connection,
                 "USER_ROLES",
                 "USER",
                 Long.toString(id),
@@ -223,8 +226,8 @@ public class RoleService {
                 Map.of("roles", before),
                 Map.of("roles", body.getRoles())
             );
-            changes.appendMemberships(connection, id, scopedBefore, scopedAfter, actor.id());
-            return UserDTO.from(users.load(connection, id, false));
+            changeBatch.appendMemberships(connection, id, scopedBefore, scopedAfter, actor.id());
+            return UserDTO.from(users.load(id, false));
         });
     }
 
@@ -238,6 +241,7 @@ public class RoleService {
         return mappings.members(id, search);
     }
 
+    @Transactional
     public RoleDTO saveScope(long id, RoleRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         BusinessRules.require(
@@ -250,20 +254,17 @@ public class RoleService {
                 body.getActive() != null,
             ErrorCode.INVALID_REQUEST
         );
-        return transactions.execute(connection -> {
-            mappings.lockRoleAssignments(connection);
-            mappings.save(connection, id, body, actor.id());
-            changes.append(
-                connection,
-                "SCOPE_UPDATED",
-                "SCOPE",
-                Long.toString(id),
-                actor.id(),
-                Map.of(),
-                Map.of("active", Boolean.TRUE.equals(body.getActive()))
-            );
-            return mappings.find(connection, id);
-        });
+        mappings.lockRoleAssignments();
+        mappings.save(id, body, actor.id());
+        changes.append(
+            "SCOPE_UPDATED",
+            "SCOPE",
+            Long.toString(id),
+            actor.id(),
+            Map.of(),
+            Map.of("active", Boolean.TRUE.equals(body.getActive()))
+        );
+        return mappings.find(id);
     }
 
     public RoleDTO assignScope(long scope, long user, UserRequest body, UserPrincipal actor) {
@@ -277,25 +278,21 @@ public class RoleService {
             ErrorCode.INVALID_REQUEST
         );
         return transactions.execute(connection -> {
-            mappings.lockRoleAssignments(connection);
-            BusinessRules.requireFound(mappings.find(connection, scope));
-            User target = BusinessRules.requireFound(users.load(connection, user, true));
+            mappings.lockRoleAssignments();
+            BusinessRules.requireFound(mappings.find(scope));
+            User target = BusinessRules.requireFound(users.load(user, true));
             BusinessRules.require(
-                !mappings.protectedUser(connection, user) &&
+                !mappings.protectedUser(user) &&
                     (!Boolean.TRUE.equals(body.getActive()) || (target.isActive() && !target.isActivationPending())),
                 ErrorCode.ACCESS_DENIED
             );
-            BusinessRules.require(
-                mappings.assignedRoles(connection, user).containsAll(body.getRoles()),
-                ErrorCode.INVALID_REQUEST
-            );
-            mappings.validateMappings(connection, body.getRoles(), Set.of());
-            mappings.requireDelegableRoles(connection, body.getRoles());
-            RoleDTO before = mappings.member(connection, scope, user);
-            mappings.assign(connection, scope, user, body, actor.id());
-            RoleDTO after = mappings.member(connection, scope, user);
+            BusinessRules.require(mappings.assignedRoles(user).containsAll(body.getRoles()), ErrorCode.INVALID_REQUEST);
+            mappings.validateMappings(body.getRoles(), Set.of());
+            mappings.requireDelegableRoles(body.getRoles());
+            RoleDTO before = mappings.member(scope, user);
+            roleBatch.assign(connection, scope, user, body, actor.id());
+            RoleDTO after = mappings.member(scope, user);
             changes.append(
-                connection,
                 "SCOPE_MEMBERSHIP",
                 "MEMBERSHIP",
                 scope + ":" + user,

@@ -10,22 +10,6 @@
       "resources": [
         {
           "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/booking-sources",
-          "nameVi": "Danh sách nguồn đặt chỗ",
-          "nameEn": "Danh sách nguồn đặt chỗ",
-          "icon": "menu",
-          "sortOrder": 0
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/booking-sources/{id}",
-          "nameVi": "Chi tiết nguồn đặt chỗ",
-          "nameEn": "Chi tiết nguồn đặt chỗ",
-          "icon": "menu",
-          "sortOrder": 1
-        },
-        {
-          "kind": "ENDPOINT",
           "target": "GET /api/v1/admin/bookings",
           "nameVi": "Tra đơn trong phạm vi nhà xe",
           "nameEn": "Tra đơn trong phạm vi nhà xe",
@@ -151,22 +135,6 @@
           "nameEn": "Chi tiết chuyến và snapshot điểm",
           "icon": "menu",
           "sortOrder": 17
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/vehicle-types",
-          "nameVi": "Danh sách loại xe",
-          "nameEn": "Danh sách loại xe",
-          "icon": "menu",
-          "sortOrder": 19
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/vehicle-types/{id}",
-          "nameVi": "Chi tiết loại xe",
-          "nameEn": "Chi tiết loại xe",
-          "icon": "menu",
-          "sortOrder": 20
         },
         {
           "kind": "ENDPOINT",
@@ -303,22 +271,6 @@
           "nameEn": "Sửa/ngừng sử dụng xe",
           "icon": "menu",
           "sortOrder": 37
-        },
-        {
-          "kind": "MENU",
-          "target": "GET /catalogs/booking-sources",
-          "nameVi": "Nguồn đặt chỗ",
-          "nameEn": "Booking sources",
-          "icon": "menu",
-          "sortOrder": 38
-        },
-        {
-          "kind": "MENU",
-          "target": "GET /catalogs/vehicle-types",
-          "nameVi": "Loại xe",
-          "nameEn": "Vehicle types",
-          "icon": "menu",
-          "sortOrder": 39
         },
         {
           "kind": "MENU",
@@ -509,30 +461,6 @@
         },
         {
           "kind": "ENDPOINT",
-          "target": "DELETE /api/v1/admin/booking-sources/{id}",
-          "nameVi": "Ngừng dùng nguồn đặt chỗ",
-          "nameEn": "Ngừng dùng nguồn đặt chỗ",
-          "icon": "menu",
-          "sortOrder": 3
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "DELETE /api/v1/admin/catalogs/{id}",
-          "nameVi": "Xóa mềm danh mục",
-          "nameEn": "Xóa mềm danh mục",
-          "icon": "menu",
-          "sortOrder": 4
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "DELETE /api/v1/admin/vehicle-types/{id}",
-          "nameVi": "Ngừng dùng loại xe",
-          "nameEn": "Ngừng dùng loại xe",
-          "icon": "menu",
-          "sortOrder": 5
-        },
-        {
-          "kind": "ENDPOINT",
           "target": "GET /api/v1/admin/access/functions",
           "nameVi": "Tìm và phân trang chức năng",
           "nameEn": "Tìm và phân trang chức năng",
@@ -685,22 +613,6 @@
         },
         {
           "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/booking-sources",
-          "nameVi": "Danh sách nguồn đặt chỗ",
-          "nameEn": "Danh sách nguồn đặt chỗ",
-          "icon": "menu",
-          "sortOrder": 26
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/booking-sources/{id}",
-          "nameVi": "Chi tiết nguồn đặt chỗ",
-          "nameEn": "Chi tiết nguồn đặt chỗ",
-          "icon": "menu",
-          "sortOrder": 27
-        },
-        {
-          "kind": "ENDPOINT",
           "target": "GET /api/v1/admin/bookings",
           "nameVi": "Tra đơn trong phạm vi nhà xe",
           "nameEn": "Tra đơn trong phạm vi nhà xe",
@@ -741,14 +653,6 @@
         },
         {
           "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/catalogs/{id}",
-          "nameVi": "Đọc danh mục quản trị",
-          "nameEn": "Đọc danh mục quản trị",
-          "icon": "menu",
-          "sortOrder": 33
-        },
-        {
-          "kind": "ENDPOINT",
           "target": "GET /api/v1/admin/drivers",
           "nameVi": "Danh sách tài xế theo phạm vi",
           "nameEn": "Danh sách tài xế theo phạm vi",
@@ -770,38 +674,6 @@
           "nameEn": "Chi tiết tài xế",
           "icon": "menu",
           "sortOrder": 36
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/locations",
-          "nameVi": "Danh sách địa điểm quản trị",
-          "nameEn": "Danh sách địa điểm quản trị",
-          "icon": "menu",
-          "sortOrder": 39
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/locations/{id}",
-          "nameVi": "Đọc địa điểm quản trị",
-          "nameEn": "Đọc địa điểm quản trị",
-          "icon": "menu",
-          "sortOrder": 40
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/provinces",
-          "nameVi": "Danh sách tỉnh/thành quản trị",
-          "nameEn": "Danh sách tỉnh/thành quản trị",
-          "icon": "menu",
-          "sortOrder": 41
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/provinces/{id}",
-          "nameVi": "Đọc tỉnh/thành quản trị",
-          "nameEn": "Đọc tỉnh/thành quản trị",
-          "icon": "menu",
-          "sortOrder": 42
         },
         {
           "kind": "ENDPOINT",
@@ -882,22 +754,6 @@
           "nameEn": "Chi tiết chuyến và snapshot điểm",
           "icon": "menu",
           "sortOrder": 58
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/vehicle-types",
-          "nameVi": "Danh sách loại xe",
-          "nameEn": "Danh sách loại xe",
-          "icon": "menu",
-          "sortOrder": 60
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "GET /api/v1/admin/vehicle-types/{id}",
-          "nameVi": "Chi tiết loại xe",
-          "nameEn": "Chi tiết loại xe",
-          "icon": "menu",
-          "sortOrder": 61
         },
         {
           "kind": "ENDPOINT",
@@ -989,14 +845,6 @@
         },
         {
           "kind": "ENDPOINT",
-          "target": "POST /api/v1/admin/booking-sources",
-          "nameVi": "Tạo nguồn đặt chỗ",
-          "nameEn": "Tạo nguồn đặt chỗ",
-          "icon": "menu",
-          "sortOrder": 77
-        },
-        {
-          "kind": "ENDPOINT",
           "target": "POST /api/v1/admin/bookings",
           "nameVi": "Gửi yêu cầu đặt PHONE",
           "nameEn": "Gửi yêu cầu đặt PHONE",
@@ -1010,14 +858,6 @@
           "nameEn": "Tạo nhà xe",
           "icon": "menu",
           "sortOrder": 79
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "POST /api/v1/admin/catalogs",
-          "nameVi": "Tạo mục danh mục",
-          "nameEn": "Tạo mục danh mục",
-          "icon": "menu",
-          "sortOrder": 80
         },
         {
           "kind": "ENDPOINT",
@@ -1045,22 +885,6 @@
         },
         {
           "kind": "ENDPOINT",
-          "target": "POST /api/v1/admin/locations",
-          "nameVi": "Tạo địa điểm",
-          "nameEn": "Tạo địa điểm",
-          "icon": "menu",
-          "sortOrder": 85
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "POST /api/v1/admin/provinces",
-          "nameVi": "Tạo tỉnh/thành",
-          "nameEn": "Tạo tỉnh/thành",
-          "icon": "menu",
-          "sortOrder": 87
-        },
-        {
-          "kind": "ENDPOINT",
           "target": "POST /api/v1/admin/routes",
           "nameVi": "Tạo tuyến và thứ tự điểm",
           "nameEn": "Tạo tuyến và thứ tự điểm",
@@ -1074,14 +898,6 @@
           "nameEn": "Tạo chuyến nháp từ tuyến",
           "icon": "menu",
           "sortOrder": 89
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "POST /api/v1/admin/vehicle-types",
-          "nameVi": "Tạo loại xe",
-          "nameEn": "Tạo loại xe",
-          "icon": "menu",
-          "sortOrder": 90
         },
         {
           "kind": "ENDPOINT",
@@ -1181,14 +997,6 @@
         },
         {
           "kind": "ENDPOINT",
-          "target": "PUT /api/v1/admin/booking-sources/{id}",
-          "nameVi": "Sửa nguồn đặt chỗ",
-          "nameEn": "Sửa nguồn đặt chỗ",
-          "icon": "menu",
-          "sortOrder": 107
-        },
-        {
-          "kind": "ENDPOINT",
           "target": "PUT /api/v1/admin/bookings/{id}/payment",
           "nameVi": "Ghi nhận thu hoặc hoàn trực tiếp",
           "nameEn": "Ghi nhận thu hoặc hoàn trực tiếp",
@@ -1213,35 +1021,11 @@
         },
         {
           "kind": "ENDPOINT",
-          "target": "PUT /api/v1/admin/catalogs/{id}",
-          "nameVi": "Sửa danh mục",
-          "nameEn": "Sửa danh mục",
-          "icon": "menu",
-          "sortOrder": 111
-        },
-        {
-          "kind": "ENDPOINT",
           "target": "PUT /api/v1/admin/drivers/{id}",
           "nameVi": "Sửa/ngừng sử dụng tài xế",
           "nameEn": "Sửa/ngừng sử dụng tài xế",
           "icon": "menu",
           "sortOrder": 112
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "PUT /api/v1/admin/locations/{id}",
-          "nameVi": "Sửa/ngừng sử dụng địa điểm",
-          "nameEn": "Sửa/ngừng sử dụng địa điểm",
-          "icon": "menu",
-          "sortOrder": 113
-        },
-        {
-          "kind": "ENDPOINT",
-          "target": "PUT /api/v1/admin/provinces/{id}",
-          "nameVi": "Sửa/ngừng sử dụng tỉnh/thành",
-          "nameEn": "Sửa/ngừng sử dụng tỉnh/thành",
-          "icon": "menu",
-          "sortOrder": 114
         },
         {
           "kind": "ENDPOINT",
@@ -1277,14 +1061,6 @@
         },
         {
           "kind": "ENDPOINT",
-          "target": "PUT /api/v1/admin/vehicle-types/{id}",
-          "nameVi": "Sửa loại xe",
-          "nameEn": "Sửa loại xe",
-          "icon": "menu",
-          "sortOrder": 119
-        },
-        {
-          "kind": "ENDPOINT",
           "target": "PUT /api/v1/admin/vehicles/{id}",
           "nameVi": "Sửa/ngừng sử dụng xe",
           "nameEn": "Sửa/ngừng sử dụng xe",
@@ -1306,46 +1082,6 @@
           "nameEn": "Hủy đơn của chính khách hàng",
           "icon": "menu",
           "sortOrder": 123
-        },
-        {
-          "kind": "MENU",
-          "target": "GET /admin",
-          "nameVi": "Danh mục",
-          "nameEn": "Catalogs",
-          "icon": "menu",
-          "sortOrder": 124
-        },
-        {
-          "kind": "MENU",
-          "target": "GET /catalogs/booking-sources",
-          "nameVi": "Nguồn đặt chỗ",
-          "nameEn": "Booking sources",
-          "icon": "menu",
-          "sortOrder": 125
-        },
-        {
-          "kind": "MENU",
-          "target": "GET /catalogs/locations",
-          "nameVi": "Địa điểm",
-          "nameEn": "Locations",
-          "icon": "menu",
-          "sortOrder": 126
-        },
-        {
-          "kind": "MENU",
-          "target": "GET /catalogs/provinces",
-          "nameVi": "Tỉnh thành",
-          "nameEn": "Provinces",
-          "icon": "menu",
-          "sortOrder": 127
-        },
-        {
-          "kind": "MENU",
-          "target": "GET /catalogs/vehicle-types",
-          "nameVi": "Loại xe",
-          "nameEn": "Vehicle types",
-          "icon": "menu",
-          "sortOrder": 128
         },
         {
           "kind": "MENU",
@@ -1429,14 +1165,6 @@
         },
         {
           "kind": "MENU",
-          "target": "GET /operations/locations",
-          "nameVi": "LocationPageController#locations",
-          "nameEn": "LocationPageController#locations",
-          "icon": "menu",
-          "sortOrder": 143
-        },
-        {
-          "kind": "MENU",
           "target": "GET /operations/reports",
           "nameVi": "Báo cáo vận hành",
           "nameEn": "Operations reports",
@@ -1466,6 +1194,62 @@
           "nameEn": "Vehicles",
           "icon": "menu",
           "sortOrder": 147
+        },
+        {
+          "kind": "MENU",
+          "target": "GET /operations/categories",
+          "nameVi": "Danh mục chung",
+          "nameEn": "Categories",
+          "icon": "menu",
+          "sortOrder": 121
+        },
+        {
+          "kind": "ENDPOINT",
+          "target": "GET /api/v1/admin/categories/groups",
+          "nameVi": "Đọc nhóm danh mục",
+          "nameEn": "Read category groups",
+          "icon": "menu",
+          "sortOrder": 123
+        },
+        {
+          "kind": "ENDPOINT",
+          "target": "GET /api/v1/admin/categories",
+          "nameVi": "Đọc mục theo cha",
+          "nameEn": "Read category items by parent",
+          "icon": "menu",
+          "sortOrder": 124
+        },
+        {
+          "kind": "ENDPOINT",
+          "target": "GET /api/v1/admin/categories/{id}",
+          "nameVi": "Chi tiết danh mục",
+          "nameEn": "Category detail",
+          "icon": "menu",
+          "sortOrder": 125
+        },
+        {
+          "kind": "ENDPOINT",
+          "target": "POST /api/v1/admin/categories",
+          "nameVi": "Tạo danh mục",
+          "nameEn": "Create category",
+          "icon": "menu",
+          "sortOrder": 126
+        },
+        {
+          "kind": "ENDPOINT",
+          "target": "PUT /api/v1/admin/categories/{id}",
+          "nameVi": "Sửa danh mục",
+          "nameEn": "Update category",
+          "icon": "menu",
+          "sortOrder": 127
+        },
+        {
+          "kind": "ENDPOINT",
+          "target": "DELETE /api/v1/admin/categories/{id}",
+          "nameVi": "Ngừng dùng danh mục",
+          "nameEn": "Disable category",
+          "icon": "menu",
+          "sortOrder": 128
         }
       ]
     }

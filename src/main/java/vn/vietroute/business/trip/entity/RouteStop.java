@@ -10,8 +10,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietroute.common.base.BaseEntity;
-import vn.vietroute.common.jdbc.JdbcIndex;
-import vn.vietroute.common.jdbc.JdbcTable;
 
 /** Entity đầy đủ cột carrier_route_stops; migration giữ DDL/index, repo giữ query và transaction do service quản lý. */
 @Entity
@@ -24,21 +22,15 @@ import vn.vietroute.common.jdbc.JdbcTable;
         @Index(name = "idx_route_stops_updated_by", columnList = "updated_by"),
     }
 )
-@JdbcTable(
-    name = "carrier_route_stops",
-    primaryKey = { "id" },
-    indexes = {
-        @JdbcIndex(name = "carrier_route_stops_pkey", columns = { "id" }, unique = true),
-        @JdbcIndex(name = "idx_route_stops_location", columns = { "location_id", "route_id" }),
-        @JdbcIndex(name = "idx_route_stops_created_by", columns = { "created_by" }),
-        @JdbcIndex(name = "idx_route_stops_updated_by", columns = { "updated_by" }),
-    }
-)
 @Getter
 @Setter
 @NoArgsConstructor
 @SuperBuilder
 public class RouteStop extends BaseEntity {
+
+    // Nhóm danh mục cố định do DB sinh, bảo vệ FK không trỏ nhầm loại.
+    @Column(name = "category_location_ref", insertable = false, updatable = false, length = 64)
+    private String categoryLocationRef;
 
     // ID tuyến mẫu trong carrier_routes.
     @Column(name = "route_id", nullable = false)

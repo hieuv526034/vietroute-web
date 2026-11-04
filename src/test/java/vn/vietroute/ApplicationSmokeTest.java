@@ -72,8 +72,8 @@ class ApplicationSmokeTest {
             var document = context.getBean(ObjectMapper.class).readTree(spec);
             assertTrue(document.isObject(), "OpenAPI phải trả JSON object, không encode thành JSON string");
             assertTrue(document.get("paths").has("/api/v1/auth/change-password"));
-            assertTrue(document.get("components").get("schemas").has("CatalogItemResponse"));
-            assertTrue(document.at("/paths/~1api~1v1~1admin~1catalogs/post/responses").has("201"));
+            assertTrue(document.get("components").get("schemas").has("CategoryResponse"));
+            assertTrue(document.at("/paths/~1api~1v1~1admin~1categories/post/responses").has("201"));
             assertFalse(document.get("paths").has("/api/v1/admin/mail"));
             assertFalse(document.get("paths").has("/api/v1/media"));
             assertTrue(document.get("paths").has("/api/v1/admin/access/roles/{role}/functions"));
@@ -83,9 +83,9 @@ class ApplicationSmokeTest {
             assertFalse(errorExample.get("success").asBoolean());
             assertEquals("AUTH002", errorExample.get("code").asText());
             assertTrue(spec.contains("/api/v1/auth/login"));
-            assertTrue(spec.contains("/api/v1/admin/catalogs"));
+            assertTrue(spec.contains("/api/v1/admin/categories"));
             assertTrue(spec.contains("createdAt"));
-            assertTrue(spec.contains("PageResponseCatalogItemResponse"));
+            assertTrue(spec.contains("PageResponseCategoryLookupResponse"));
 
             assertEquals(200, mvc.perform(get("/docs")).andReturn().getResponse().getStatus());
             SecurityContextHolder.clearContext();

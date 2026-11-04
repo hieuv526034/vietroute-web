@@ -4,6 +4,7 @@ import java.util.Locale;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.dto.UserDTO;
 import vn.vietroute.auth.dto.request.UserRequest;
 import vn.vietroute.auth.security.UserPrincipal;
@@ -49,12 +50,12 @@ public class DriverService {
         UserPrincipal.requireCurrent(actor);
         String hash = provisioner.passwordHash(body.getPassword());
         return transactions.execute(connection -> {
-            Driver snapshot = carriers.driver(connection, id, false);
-            Carrier parent = carriers.carrier(connection, snapshot.getCarrierId(), true);
-            Driver current = carriers.driver(connection, id, true);
+            Driver snapshot = carriers.driver(id, false);
+            Carrier parent = carriers.carrier(snapshot.getCarrierId(), true);
+            Driver current = carriers.driver(id, true);
             BusinessRules.require(current.getVersion() == body.getVersion(), ErrorCode.STALE_VERSION);
             BusinessRules.require(parent.isActive() && current.getUserId() == null, ErrorCode.RESOURCE_IN_USE);
-            carriers.requireDriverUnassigned(connection, id);
+            carriers.requireDriverUnassigned(id);
             long user = provisioner.provisionDriver(
                 connection,
                 parent.getScopeId(),
@@ -63,7 +64,7 @@ public class DriverService {
                 hash,
                 actor
             );
-            carriers.linkProvisionedDriver(connection, current, user, actor.id());
+            carriers.linkProvisionedDriver(current, user, actor.id());
             UserDTO result = new UserDTO();
             result.setId(user);
             result.setUsername(body.getUsername().toLowerCase(Locale.ROOT));
@@ -86,39 +87,35 @@ public class DriverService {
         );
     }
 
+    @Transactional(readOnly = true)
     public DriverResponse find(long id) {
-        return transactions.execute(connection -> DriverResponse.from(carriers.driver(connection, id, false)));
+        return DriverResponse.from(carriers.driver(id, false));
     }
 
     /** Tạo hồ sơ chưa liên kết không cấp account hay bỏ bước xác minh email; scope lấy từ nhà xe server đã kiểm. */
+    @Transactional
     public DriverResponse create(DriverRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
-        return transactions.execute(connection -> {
-            Carrier parent = carriers.carrier(connection, body.getCarrierId(), true);
-            BusinessRules.require(parent.isActive(), ErrorCode.RESOURCE_IN_USE);
-            if (body.getUserId() != null) carriers.requireDriverUser(connection, body.getUserId(), parent.getScopeId());
-            long id = carriers.insertDriver(connection, parent, body, actor.id());
-            return DriverResponse.from(carriers.driver(connection, id, false));
-        });
+        Carrier parent = carriers.carrier(body.getCarrierId(), true);
+        BusinessRules.require(parent.isActive(), ErrorCode.RESOURCE_IN_USE);
+        if (body.getUserId() != null) carriers.requireDriverUser(body.getUserId(), parent.getScopeId());
+        long id = carriers.insertDriver(parent, body, actor.id());
+        return DriverResponse.from(carriers.driver(id, false));
     }
 
     /** Khóa cha trước con; không đổi carrier và không cấp role/membership qua form hồ sơ. */
+    @Transactional
     public DriverResponse update(long id, DriverRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
-        return transactions.execute(connection -> {
-            Driver snapshot = carriers.driver(connection, id, false);
-            Carrier parent = carriers.carrier(connection, snapshot.getCarrierId(), true);
-            Driver current = carriers.driver(connection, id, true);
-            if (!Objects.equals(current.getUserId(), body.getUserId())) carriers.requireDriverUnassigned(
-                connection,
-                id
-            );
-            BusinessRules.require(!body.isActive() || parent.isActive(), ErrorCode.RESOURCE_IN_USE);
-            if (
-                body.getUserId() != null && (body.isActive() || !Objects.equals(body.getUserId(), current.getUserId()))
-            ) carriers.requireDriverUser(connection, body.getUserId(), current.getScopeId());
-            carriers.updateDriver(connection, current, body, actor.id());
-            return DriverResponse.from(carriers.driver(connection, id, false));
-        });
+        Driver snapshot = carriers.driver(id, false);
+        Carrier parent = carriers.carrier(snapshot.getCarrierId(), true);
+        Driver current = carriers.driver(id, true);
+        if (!Objects.equals(current.getUserId(), body.getUserId())) carriers.requireDriverUnassigned(id);
+        BusinessRules.require(!body.isActive() || parent.isActive(), ErrorCode.RESOURCE_IN_USE);
+        if (
+            body.getUserId() != null && (body.isActive() || !Objects.equals(body.getUserId(), current.getUserId()))
+        ) carriers.requireDriverUser(body.getUserId(), current.getScopeId());
+        carriers.updateDriver(current, body, actor.id());
+        return DriverResponse.from(carriers.driver(id, false));
     }
 }

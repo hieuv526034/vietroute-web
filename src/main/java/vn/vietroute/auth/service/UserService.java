@@ -14,6 +14,9 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import vn.vietroute.auth.dto.RoleDTO;
 import vn.vietroute.auth.dto.UserDTO;
 import vn.vietroute.auth.dto.request.UserRequest;
@@ -24,6 +27,8 @@ import vn.vietroute.auth.repo.AccessChangeRepo;
 import vn.vietroute.auth.repo.AccountChallengeRepo;
 import vn.vietroute.auth.repo.UserRepo;
 import vn.vietroute.auth.repo.UserRoleRepo;
+import vn.vietroute.auth.repo.custom.AccessChangeCustomRepo;
+import vn.vietroute.auth.repo.custom.UserRoleCustomRepo;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.config.application.AppSettings;
@@ -40,6 +45,7 @@ public class UserService {
 
     private final UserRepo users;
     private final UserRoleRepo mappings;
+    private final UserRoleCustomRepo roleBatch;
     private final AccountChallengeRepo challenges;
     private final AccessChangeRepo changes;
     private final PasswordEncoder passwords;
@@ -49,6 +55,9 @@ public class UserService {
     private final AuthInitializer initializer;
     private final Clock clock;
     private String dummyHash;
+
+    private final AccessChangeCustomRepo changeBatch;
+    private final PlatformTransactionManager transactionManager;
 
     @PostConstruct
     public void initializePasswordTiming() {
@@ -62,8 +71,8 @@ public class UserService {
             ErrorCode.VALIDATION_FAILED
         );
         ErrorCode[] failure = new ErrorCode[1];
-        UserDTO result = transactions.execute(connection -> {
-            User user = users.findByUsername(connection, request.getUsername().toLowerCase(Locale.ROOT), true);
+        UserDTO result = new TransactionTemplate(transactionManager).execute(status -> {
+            User user = users.findByUsername(request.getUsername().toLowerCase(Locale.ROOT), true);
             Instant now = Instant.now(clock);
             if (user == null || user.getId() <= 0) {
                 passwords.matches(request.getPassword(), dummyHash);
@@ -79,12 +88,7 @@ public class UserService {
                 !passwords.matches(request.getPassword(), user.getPasswordHash())
             ) {
                 int count = user.getLockedUntil() != null ? 1 : user.getFailedLoginAttempts() + 1;
-                users.recordFailure(
-                    connection,
-                    user.getId(),
-                    count,
-                    count >= 5 ? now.plus(Duration.ofMinutes(15)) : null
-                );
+                users.recordFailure(user.getId(), count, count >= 5 ? now.plus(Duration.ofMinutes(15)) : null);
                 failure[0] = count >= 5 ? ErrorCode.ACCOUNT_LOCKED : ErrorCode.INVALID_CREDENTIALS;
                 return null;
             }
@@ -92,7 +96,7 @@ public class UserService {
                 failure[0] = ErrorCode.INVALID_CREDENTIALS;
                 return null;
             }
-            return jwt.issue(users.completeLogin(connection, user.getId()));
+            return jwt.issue(users.completeLogin(user.getId()));
         });
         if (failure[0] != null) throw new BusinessException(failure[0]);
         return result;
@@ -120,14 +124,13 @@ public class UserService {
         BusinessRules.require(body.getRoles() != null && !body.getRoles().isEmpty(), ErrorCode.INVALID_REQUEST);
         String hash = passwordHash(body.getPassword());
         return transactions.execute(connection -> {
-            mappings.lockRoleAssignments(connection);
-            mappings.validateMappings(connection, body.getRoles(), Set.of());
-            mappings.requireDelegableRoles(connection, body.getRoles());
+            mappings.lockRoleAssignments();
+            mappings.validateMappings(body.getRoles(), Set.of());
+            mappings.requireDelegableRoles(body.getRoles());
             User value = createModel(body, hash, actor.id());
             users.saveAndFlush(value);
-            mappings.replaceRoles(connection, value.getId(), body.getRoles(), value.getVersion(), actor.id());
+            roleBatch.replaceRoles(connection, value.getId(), body.getRoles(), value.getVersion(), actor.id());
             changes.append(
-                connection,
                 "ACCOUNT_CREATED",
                 "USER",
                 value.getId().toString(),
@@ -135,78 +138,69 @@ public class UserService {
                 Map.of(),
                 Map.of("roles", body.getRoles(), "active", true)
             );
-            return UserDTO.from(users.load(connection, value.getId(), false));
+            return UserDTO.from(users.load(value.getId(), false));
         });
     }
 
+    @Transactional
     public UserDTO update(long id, UserRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
-        return transactions.execute(connection -> {
-            mappings.lockRoleAssignments(connection);
-            User value = managed(connection, id, body.getVersion(), actor);
-            String name = value.getDisplayName();
-            BusinessRules.require(
-                body.getDisplayName() != null && !body.getDisplayName().isBlank(),
-                ErrorCode.INVALID_REQUEST
-            );
-            value.setDisplayName(body.getDisplayName().strip());
-            audit(value, actor.id());
-            users.saveAndFlush(value);
-            changes.append(
-                connection,
-                "ACCOUNT_UPDATED",
-                "USER",
-                Long.toString(id),
-                actor.id(),
-                Map.of("displayName", name),
-                Map.of("displayName", value.getDisplayName())
-            );
-            return UserDTO.from(users.load(connection, id, false));
-        });
+        mappings.lockRoleAssignments();
+        User value = managed(id, body.getVersion(), actor);
+        String name = value.getDisplayName();
+        BusinessRules.require(
+            body.getDisplayName() != null && !body.getDisplayName().isBlank(),
+            ErrorCode.INVALID_REQUEST
+        );
+        value.setDisplayName(body.getDisplayName().strip());
+        audit(value, actor.id());
+        users.saveAndFlush(value);
+        changes.append(
+            "ACCOUNT_UPDATED",
+            "USER",
+            Long.toString(id),
+            actor.id(),
+            Map.of("displayName", name),
+            Map.of("displayName", value.getDisplayName())
+        );
+        return UserDTO.from(users.load(id, false));
     }
 
+    @Transactional
     public UserDTO state(long id, UserRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         BusinessRules.require(body.getActive() != null, ErrorCode.INVALID_REQUEST);
-        return transactions.execute(connection -> {
-            mappings.lockRoleAssignments(connection);
-            User value = managed(connection, id, body.getVersion(), actor);
-            boolean before = value.isActive();
-            value.setActive(body.getActive());
-            value.setTokenVersion(value.getTokenVersion() + 1);
-            audit(value, actor.id());
-            users.saveAndFlush(value);
-            challenges.invalidate(connection, id);
-            changes.append(
-                connection,
-                "ACCOUNT_STATUS",
-                "USER",
-                Long.toString(id),
-                actor.id(),
-                Map.of("active", before),
-                Map.of("active", value.isActive())
-            );
-            return UserDTO.from(users.load(connection, id, false));
-        });
+        mappings.lockRoleAssignments();
+        User value = managed(id, body.getVersion(), actor);
+        boolean before = value.isActive();
+        value.setActive(body.getActive());
+        value.setTokenVersion(value.getTokenVersion() + 1);
+        audit(value, actor.id());
+        users.saveAndFlush(value);
+        challenges.invalidate(id);
+        changes.append(
+            "ACCOUNT_STATUS",
+            "USER",
+            Long.toString(id),
+            actor.id(),
+            Map.of("active", before),
+            Map.of("active", value.isActive())
+        );
+        return UserDTO.from(users.load(id, false));
     }
 
     public void delete(long id, long version, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         transactions.execute(connection -> {
-            mappings.lockRoleAssignments(connection);
-            User value = managed(connection, id, version, actor);
-            Set<String> before = mappings.assignedRoles(connection, id);
-            List<RoleDTO> scopedBefore = UserRoleRepo.memberships(connection, id);
-            mappings.replaceRoles(connection, id, Set.of(), value.getVersion(), actor.id());
-            changes.appendMemberships(connection, id, scopedBefore, List.of(), actor.id());
-            users.refresh(value);
-            value.setDeleted(true);
-            value.setActive(false);
-            audit(value, actor.id());
-            users.saveAndFlush(value);
-            challenges.invalidate(connection, id);
+            mappings.lockRoleAssignments();
+            User value = managed(id, version, actor);
+            Set<String> before = mappings.assignedRoles(id);
+            List<RoleDTO> scopedBefore = mappings.memberships(id);
+            roleBatch.replaceRoles(connection, id, Set.of(), value.getVersion(), actor.id());
+            changeBatch.appendMemberships(connection, id, scopedBefore, List.of(), actor.id());
+            BusinessRules.require(users.softDelete(id, actor.id()) == 1, ErrorCode.STALE_VERSION);
+            challenges.invalidate(id);
             changes.append(
-                connection,
                 "ACCOUNT_DELETED",
                 "USER",
                 Long.toString(id),
@@ -223,8 +217,8 @@ public class UserService {
         UserPrincipal.requireCurrent(actor);
         String hash = passwordHash(body.getNewPassword());
         ErrorCode[] failure = new ErrorCode[1];
-        transactions.execute(connection -> {
-            User value = BusinessRules.requireFound(users.load(connection, actor.id(), true));
+        new TransactionTemplate(transactionManager).execute(status -> {
+            User value = BusinessRules.requireFound(users.load(actor.id(), true));
             requireSession(value, actor);
             Instant now = Instant.now(clock);
             if (value.getLockedUntil() != null && value.getLockedUntil().isAfter(now)) {
@@ -237,43 +231,46 @@ public class UserService {
                 !passwords.matches(body.getCurrentPassword(), value.getPasswordHash())
             ) {
                 int count = value.getLockedUntil() != null ? 1 : value.getFailedLoginAttempts() + 1;
-                users.recordFailure(connection, actor.id(), count, count >= 5 ? now.plusSeconds(900) : null);
+                users.recordFailure(actor.id(), count, count >= 5 ? now.plusSeconds(900) : null);
                 failure[0] = count >= 5 ? ErrorCode.ACCOUNT_LOCKED : ErrorCode.PASSWORD_INCORRECT;
                 return null;
             }
-            users.requireNewPassword(connection, value, body.getNewPassword(), passwords);
-            users.changePassword(connection, actor.id(), hash);
-            challenges.invalidate(connection, actor.id());
+            BusinessRules.require(
+                !passwords.matches(body.getNewPassword(), value.getPasswordHash()),
+                ErrorCode.PASSWORD_REUSED
+            );
+            for (String previous : users.previousPasswords(value.getId())) {
+                BusinessRules.require(!passwords.matches(body.getNewPassword(), previous), ErrorCode.PASSWORD_REUSED);
+            }
+            users.changePassword(actor.id(), hash, actor.id());
+            challenges.invalidate(actor.id());
             return null;
         });
         if (failure[0] != null) throw new BusinessException(failure[0]);
     }
 
+    @Transactional
     public void logout(UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
-        transactions.execute(connection -> {
-            users.revokeTokens(connection, actor.id());
-            challenges.invalidate(connection, actor.id());
-            return null;
-        });
+        users.revokeTokens(actor.id());
+        challenges.invalidate(actor.id());
     }
 
     /** Ảnh khóa trước account, đúng owner và READY; profile không thay role/status/email. */
+    @Transactional
     public UserDTO profile(UserRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
-        return transactions.execute(connection -> {
-            User value = BusinessRules.requireFound(users.lock(actor.id()));
-            requireSession(value, actor);
-            version(value, body.getVersion());
-            BusinessRules.require(
-                body.getDisplayName() != null && !body.getDisplayName().isBlank(),
-                ErrorCode.INVALID_REQUEST
-            );
-            value.setDisplayName(body.getDisplayName().strip());
-            audit(value, actor.id());
-            users.saveAndFlush(value);
-            return UserDTO.from(users.load(connection, actor.id(), false));
-        });
+        User value = BusinessRules.requireFound(users.lock(actor.id()));
+        requireSession(value, actor);
+        version(value, body.getVersion());
+        BusinessRules.require(
+            body.getDisplayName() != null && !body.getDisplayName().isBlank(),
+            ErrorCode.INVALID_REQUEST
+        );
+        value.setDisplayName(body.getDisplayName().strip());
+        audit(value, actor.id());
+        users.saveAndFlush(value);
+        return UserDTO.from(users.load(actor.id(), false));
     }
 
     public String passwordHash(String value) {
@@ -291,22 +288,21 @@ public class UserService {
         UserPrincipal actor
     ) throws SQLException {
         UserPrincipal.requireCurrent(actor);
-        mappings.require(connection, scope);
-        mappings.lockRoleAssignments(connection);
+        mappings.require(scope);
+        mappings.lockRoleAssignments();
         String role = initializer.driverRole();
-        mappings.validateMappings(connection, Set.of(role), Set.of());
-        mappings.requireDelegableRoles(connection, Set.of(role));
+        mappings.validateMappings(Set.of(role), Set.of());
+        mappings.requireDelegableRoles(Set.of(role));
         body.setDisplayName(name);
         User value = createModel(body, hash, actor.id());
         users.saveAndFlush(value);
-        mappings.replaceRoles(connection, value.getId(), Set.of(role), 0, actor.id());
+        roleBatch.replaceRoles(connection, value.getId(), Set.of(role), 0, actor.id());
         UserRequest membership = new UserRequest();
         membership.setRoles(Set.of(role));
         membership.setActive(true);
         membership.setVersion(0L);
-        mappings.assign(connection, scope, value.getId(), membership, actor.id());
+        roleBatch.assign(connection, scope, value.getId(), membership, actor.id());
         changes.append(
-            connection,
             "SCOPE_MEMBERSHIP",
             "MEMBERSHIP",
             scope + ":" + value.getId(),
@@ -315,7 +311,6 @@ public class UserService {
             Map.of("roles", Set.of(role), "version", 1)
         );
         changes.append(
-            connection,
             "ACCOUNT_CREATED",
             "USER",
             value.getId().toString(),
@@ -359,11 +354,8 @@ public class UserService {
         return value;
     }
 
-    private User managed(Connection connection, long id, Long version, UserPrincipal actor) throws SQLException {
-        BusinessRules.require(
-            id > 0 && id != actor.id() && !mappings.protectedUser(connection, id),
-            ErrorCode.ACCESS_DENIED
-        );
+    private User managed(long id, Long version, UserPrincipal actor) {
+        BusinessRules.require(id > 0 && id != actor.id() && !mappings.protectedUser(id), ErrorCode.ACCESS_DENIED);
         User value = BusinessRules.requireFound(users.lock(id));
         BusinessRules.require(
             !value.isDeleted() && !value.getUsername().equalsIgnoreCase(settings.getBootstrapUsername()),

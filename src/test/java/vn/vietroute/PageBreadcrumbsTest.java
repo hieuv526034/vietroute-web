@@ -21,7 +21,7 @@ class PageBreadcrumbsTest {
         messages.addMessage("ui.nav.group.transport", Locale.ENGLISH, "Routes and trips");
         messages.addMessage("ui.nav.group.other", Locale.ENGLISH, "Other");
         FunctionDTO trip = menu("Trips", "/operations/trips", "clock", true, List.of());
-        FunctionDTO catalog = menu("Places", "/catalogs/locations", "catalog", false, List.of());
+        FunctionDTO catalog = menu("Places", "/operations/categories", "catalog", false, List.of());
         FunctionDTO custom = menu("Custom page", "/extension", "menu", false, List.of());
         List<FunctionDTO> result = PageModelAdvice.group(List.of(trip, custom, catalog), Locale.ENGLISH, messages);
         assertEquals(List.of("Catalogs", "Routes and trips", "Other"), result.stream().map(FunctionDTO::name).toList());
@@ -46,6 +46,50 @@ class PageBreadcrumbsTest {
         value.setActive(active);
         value.setChildren(children);
         return value;
+    }
+
+    @Test
+    void catalogMenuDropsLegacyOverviewLinkWithoutAddingOtherCatalogs() {
+        StaticMessageSource messages = new StaticMessageSource();
+        messages.addMessage("ui.nav.group.catalog", Locale.ENGLISH, "Catalogs");
+        messages.addMessage("ui.home", Locale.ENGLISH, "Home");
+        FunctionDTO legacy = menu("Catalogs", "/admin", "menu", true, List.of());
+        FunctionDTO locations = menu("Locations", "/operations/categories", "catalog", true, List.of());
+        FunctionDTO vehicles = menu("Vehicle types", "/operations/categories", "catalog", false, List.of());
+        List<FunctionDTO> result = PageModelAdvice.group(
+            List.of(legacy, locations, vehicles),
+            Locale.ENGLISH,
+            messages
+        );
+        assertEquals(1, result.size());
+        assertEquals(List.of(locations, vehicles), result.get(0).children());
+        assertTrue(result.get(0).active());
+        assertEquals(
+            List.of("/", "/operations/categories", "/operations/categories"),
+            PageModelAdvice.build(result, "/operations/categories", Locale.ENGLISH, messages)
+                .stream()
+                .map(FunctionDTO::path)
+                .toList()
+        );
+        assertEquals(List.of(), PageModelAdvice.group(List.of(legacy), Locale.ENGLISH, messages));
+        List<FunctionDTO> scoped = PageModelAdvice.group(List.of(legacy, vehicles), Locale.ENGLISH, messages);
+        assertEquals(List.of(vehicles), scoped.get(0).children());
+        assertFalse(scoped.get(0).active());
+    }
+
+    @Test
+    void categoryNavigationHasOneGrantedDestination() {
+        StaticMessageSource messages = new StaticMessageSource();
+        messages.addMessage("ui.nav.group.catalog", Locale.ENGLISH, "Catalogs");
+        messages.addMessage("ui.home", Locale.ENGLISH, "Home");
+        FunctionDTO category = menu("Categories", "/operations/categories", "catalog", true, List.of());
+        List<FunctionDTO> grouped = PageModelAdvice.group(List.of(category), Locale.ENGLISH, messages);
+        assertEquals(List.of(category), grouped.get(0).children());
+        assertEquals(
+            "/operations/categories",
+            PageModelAdvice.build(grouped, "/operations/categories", Locale.ENGLISH, messages).get(2).path()
+        );
+        assertEquals(List.of(), PageModelAdvice.build(List.of(), "/operations/locations", Locale.ENGLISH, messages));
     }
 
     @Test
@@ -74,10 +118,10 @@ class PageBreadcrumbsTest {
             "Find a trip",
             PageModelAdvice.build(List.of(), "/journeys", Locale.ENGLISH, messages).get(1).name()
         );
-        var places = menu("Places", "/catalogs/locations", "", true, List.of());
+        var places = menu("Places", "/operations/categories", "", true, List.of());
         assertEquals(
-            "/catalogs/locations",
-            PageModelAdvice.build(List.of(places), "/operations/locations", Locale.ENGLISH, messages).get(1).path()
+            "/operations/categories",
+            PageModelAdvice.build(List.of(places), "/operations/categories", Locale.ENGLISH, messages).get(1).path()
         );
         assertEquals(List.of(), PageModelAdvice.build(List.of(), "/", Locale.ENGLISH, messages));
     }

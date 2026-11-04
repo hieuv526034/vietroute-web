@@ -1,24 +1,35 @@
 package vn.vietroute.business.booking.repo;
 
+import static vn.vietroute.common.base.BaseRepository.booleanValue;
+import static vn.vietroute.common.base.BaseRepository.decimalValue;
+import static vn.vietroute.common.base.BaseRepository.instantValue;
+import static vn.vietroute.common.base.BaseRepository.intValue;
+import static vn.vietroute.common.base.BaseRepository.longValue;
+import static vn.vietroute.common.base.BaseRepository.stringValue;
+
 import java.math.BigDecimal;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.repo.UserRoleRepo;
+import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.booking.constant.BookingStatus;
+import vn.vietroute.business.booking.dto.projection.BookingEventProjection;
+import vn.vietroute.business.booking.dto.projection.BookingPassengerProjection;
+import vn.vietroute.business.booking.dto.projection.BookingTransitionProjection;
+import vn.vietroute.business.booking.dto.projection.BookingTripProjection;
 import vn.vietroute.business.booking.dto.request.BookingRequest;
 import vn.vietroute.business.booking.dto.response.BookingEventResponse;
 import vn.vietroute.business.booking.dto.response.BookingResponse;
@@ -26,21 +37,20 @@ import vn.vietroute.business.booking.dto.response.BookingTripChoiceResponse;
 import vn.vietroute.business.booking.dto.response.DriverPassengerResponse;
 import vn.vietroute.business.booking.dto.search.BookingSearch;
 import vn.vietroute.business.booking.dto.search.BookingTripSearch;
+import vn.vietroute.business.booking.entity.Booking;
 import vn.vietroute.business.trip.constant.TripStatus;
-import vn.vietroute.business.trip.repo.TripSegmentRepo;
-import vn.vietroute.common.base.BaseRepository;
+import vn.vietroute.business.trip.dto.projection.TripStopProjection;
 import vn.vietroute.common.base.PageRequest;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
-import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.validation.BusinessRules;
 
-/** SQL đơn luôn owner hoặc scope trong predicate; trường PII không dùng cho lookup công khai. */
-@Repository
-public class BookingRepo extends BaseRepository {
-
+/**
+ * SQL native và ánh xạ của BookingRepo; transaction ghi thuộc Service.
+ */
+public interface BookingRepo extends Repository<Booking, Long> {
     @Getter
     @Setter
     @NoArgsConstructor
@@ -99,381 +109,462 @@ public class BookingRepo extends BaseRepository {
         private UUID requestKey;
     }
 
-    private static final String FROM = """
-    FROM bookings b
-    JOIN carrier_trips t ON t.id = b.trip_id AND t.carrier_id = b.carrier_id
+    String FROM = """
+    FROM {h-schema}bookings b
+    JOIN {h-schema}carrier_trips t ON t.id = b.trip_id AND t.carrier_id = b.carrier_id
         AND t.scope_id = b.scope_id
-    JOIN carriers owner ON owner.id = b.carrier_id AND owner.scope_id = b.scope_id
-    JOIN trip_stops pick ON pick.id = b.pickup_stop_id AND pick.trip_id = b.trip_id
-    JOIN trip_stops dropoff ON dropoff.id = b.dropoff_stop_id AND dropoff.trip_id = b.trip_id
+    JOIN {h-schema}carriers owner ON owner.id = b.carrier_id AND owner.scope_id = b.scope_id
+    JOIN {h-schema}trip_stops pick ON pick.id = b.pickup_stop_id AND pick.trip_id = b.trip_id
+    JOIN {h-schema}trip_stops dropoff ON dropoff.id = b.dropoff_stop_id AND dropoff.trip_id = b.trip_id
     """;
-    private static final String COLUMNS = """
+
+    String COLUMNS = """
     b.*, t.code AS trip_code, owner.name AS carrier_name, owner.phone AS carrier_phone, pick.name_vi
-        AS pickup_vi, pick.name_en AS pickup_en, dropoff.name_vi AS dropoff_vi, dropoff.name_en AS dropoff_en,
-        pick.scheduled_departure_at AS pickup_at, dropoff.scheduled_arrival_at AS dropoff_at
+    AS pickup_vi, pick.name_en AS pickup_en, dropoff.name_vi AS dropoff_vi, dropoff.name_en AS dropoff_en,
+    pick.scheduled_departure_at AS pickup_at, dropoff.scheduled_arrival_at AS dropoff_at
     """;
 
-    private final TripSegmentRepo capacity;
+    String PERMISSION =
+        "((CAST(:customerId AS BIGINT) IS NULL AND " +
+        UserRoleRepo.VISIBLE +
+        ") OR (CAST(:customerId AS BIGINT) IS NOT NULL AND b.customer_id = :customerId)) ";
 
-    public BookingRepo(JdbcConnectionFactory connections, TripSegmentRepo capacity) {
-        super(connections);
-        this.capacity = capacity;
-    }
+    String CAN_UPDATE =
+        "CASE WHEN CAST(:customerId AS BIGINT) IS NULL THEN ( " +
+        UserRoleRepo.UPDATE_VISIBLE +
+        ") ELSE b.customer_id = :customerId END ";
 
-    /** Chỉ gọi sau trips.assigned trong cùng transaction; SQL không trả PENDING/PII không phục vụ chuyến. */
-    public PageResponse<DriverPassengerResponse> passengers(Connection connection, long tripId, PageRequest page)
-        throws SQLException {
-        String filter = """
-        %s
-        WHERE b.trip_id = ?
-            AND b.status IN ('CONFIRMED', 'COMPLETED')
-        """.formatted(FROM);
-        long total;
-        try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + filter)) {
-            query.setLong(1, tripId);
-            try (ResultSet row = query.executeQuery()) {
-                row.next();
-                total = row.getLong(1);
-            }
-        }
-        ArrayList<DriverPassengerResponse> result = new ArrayList<DriverPassengerResponse>();
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT b.code, b.pickup_order, b.dropoff_order, pick.name_vi, pick.name_en, dropoff.name_vi,
-                    dropoff.name_en, b.seats, b.contact_name, b.contact_phone, b.status
-                %s
-                ORDER BY b.pickup_order, b.dropoff_order, b.id
-                LIMIT ? OFFSET ?
-                """.formatted(filter)
-            )
-        ) {
-            query.setLong(1, tripId);
-            query.setInt(2, page.getSize());
-            query.setLong(3, page.offset());
-            try (ResultSet row = query.executeQuery()) {
-                while (row.next())
-                    result.add(
-                        new DriverPassengerResponse(
-                            row.getString(1),
-                            row.getInt(2),
-                            row.getInt(3),
-                            row.getString(4),
-                            row.getString(5),
-                            row.getString(6),
-                            row.getString(7),
-                            row.getInt(8),
-                            row.getString(9),
-                            row.getString(10),
-                            row.getString(11)
-                        )
-                    );
-            }
-        }
-        return PageResponse.of(result, page, total);
-    }
+    String PASSENGERS_FILTER = FROM + "WHERE b.trip_id = :tripId AND b.status IN ( 'CONFIRMED' , 'COMPLETED' ) ";
 
-    /** Picker PHONE chỉ hiện trip có CREATE trong scope, không cần grant GET danh sách chuyến riêng và không trả hồ sơ staff. */
-    public PageResponse<BookingTripChoiceResponse> choices(Connection connection, BookingTripSearch body)
-        throws SQLException {
-        String filter = """
-        FROM carrier_trips t
-        JOIN carriers owner ON owner.id = t.carrier_id AND owner.scope_id = t.scope_id
-        WHERE %s AND owner.active
-            AND (t.status = 'IN_PROGRESS' OR (t.status = 'OPEN' AND t.departure_at > CURRENT_TIMESTAMP))
-            AND strpos(lower(concat_ws(' ', t.code, t.name_vi, t.name_en, owner.name)), ?) > 0
-        """.formatted(UserRoleRepo.visibleSql());
-        String text = body.getQuery() == null ? "" : body.getQuery().strip().toLowerCase(Locale.ROOT);
-        long total;
-        try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + filter)) {
-            int at = UserRoleRepo.bindVisible(query, 1);
-            query.setString(at, text);
-            try (ResultSet row = query.executeQuery()) {
-                row.next();
-                total = row.getLong(1);
-            }
-        }
-        ArrayList<BookingTripChoiceResponse> result = new ArrayList<BookingTripChoiceResponse>();
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT t.id, t.code, owner.name, t.name_vi, t.name_en, t.departure_at
-                %s
-                ORDER BY t.departure_at, t.id
-                LIMIT ? OFFSET ?
-                """.formatted(filter)
-            )
-        ) {
-            int at = UserRoleRepo.bindVisible(query, 1);
-            query.setString(at++, text);
-            query.setInt(at++, body.getSize());
-            query.setLong(at, body.offset());
-            try (ResultSet row = query.executeQuery()) {
-                while (row.next())
-                    result.add(
-                        new BookingTripChoiceResponse(
-                            row.getLong(1),
-                            row.getString(2),
-                            row.getString(3),
-                            row.getString(4),
-                            row.getString(5),
-                            row.getTimestamp(6).toInstant()
-                        )
-                    );
-            }
-        }
+    @Query(value = "SELECT COUNT(*) " + PASSENGERS_FILTER, nativeQuery = true)
+    long passengersCount(long tripId);
+
+    @Query(
+        value = """
+        SELECT b.code AS "bookingCode", b.pickup_order AS "pickupOrder", b.dropoff_order AS "dropoffOrder",
+            pick.name_vi AS "pickupNameVi", pick.name_en AS "pickupNameEn",
+            dropoff.name_vi AS "dropoffNameVi", dropoff.name_en AS "dropoffNameEn", b.seats,
+            b.contact_name AS "contactName", b.contact_phone AS "contactPhone", b.status
+        """ +
+            PASSENGERS_FILTER +
+            "ORDER BY b.pickup_order, b.dropoff_order, b.id LIMIT :pageSize OFFSET :offset ",
+        nativeQuery = true
+    )
+    List<BookingPassengerProjection> passengersRows(long tripId, int pageSize, long offset);
+
+    @Transactional(readOnly = true)
+    default PageResponse<DriverPassengerResponse> passengers(long tripId, PageRequest body) {
+        long total = passengersCount(tripId);
+        List<DriverPassengerResponse> result = passengersRows(tripId, body.getSize(), body.offset())
+            .stream()
+            .map(row -> {
+                return new DriverPassengerResponse(
+                    row.getBookingCode(),
+                    row.getPickupOrder(),
+                    row.getDropoffOrder(),
+                    row.getPickupNameVi(),
+                    row.getPickupNameEn(),
+                    row.getDropoffNameVi(),
+                    row.getDropoffNameEn(),
+                    row.getSeats(),
+                    row.getContactName(),
+                    row.getContactPhone(),
+                    row.getStatus()
+                );
+            })
+            .toList();
         return PageResponse.of(result, body, total);
     }
 
-    /** Không có scope staff thay thế owner; actor đã được kiểm CUSTOMER/ready ở cùng connection. */
-    public void requireCustomer(Connection connection, long user, long tokenVersion, boolean lock) throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT u.id
-                FROM auth_users u
-                WHERE u.id = ? AND u.token_version = ? AND u.active AND NOT u.activation_pending
-                    AND NOT u.must_change_password
-                    AND u.email_verified_at IS NOT NULL
-                    AND NOT u.deleted
-                %s
-                """.formatted(lock ? " FOR UPDATE OF u" : "")
-            )
-        ) {
-            query.setLong(1, user);
-            query.setLong(2, tokenVersion);
-            try (ResultSet row = query.executeQuery()) {
-                if (!row.next()) throw new BusinessException(ErrorCode.ACCESS_DENIED);
-            }
-        }
-    }
+    String CHOICES_FILTER =
+        """
+        FROM {h-schema}carrier_trips t
+        JOIN {h-schema}carriers owner ON owner.id = t.carrier_id AND owner.scope_id = t.scope_id
+        WHERE
+        """ +
+        UserRoleRepo.VISIBLE +
+        """
+        AND owner.active
+        AND (t.status = 'IN_PROGRESS' OR (t.status = 'OPEN' AND t.departure_at > CURRENT_TIMESTAMP))
+        AND STRPOS(LOWER(CONCAT_WS(' ', t.code, t.name_vi, t.name_en, owner.name)), :keyword) > 0
+        """;
 
-    /** Trip là khóa đầu tiên ở mọi mutation booking/progress/cancel; scope/nhà xe lấy từ DB. */
-    public Trip trip(Connection connection, long id, boolean lock) throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT t.id, t.carrier_id, t.scope_id, t.status, t.departure_at, owner.active
-                    AND scope.active AS accepting
-                FROM carrier_trips t
-                JOIN carriers owner ON owner.id = t.carrier_id AND owner.scope_id = t.scope_id
-                JOIN (
-                    SELECT scope_id AS id, scope_code AS code, scope_name_vi AS name_vi, scope_name_en AS name_en,
-                        scope_active AS active, scope_version AS version, updated_at, updated_by
-                    FROM carriers
-                ) scope ON scope.id = t.scope_id
-                WHERE t.id = ?
-                %s
-                """.formatted(lock ? " FOR UPDATE OF t" : "")
-            )
-        ) {
-            query.setLong(1, id);
-            try (ResultSet row = query.executeQuery()) {
-                if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
-                return new Trip(
-                    row.getLong(1),
-                    row.getLong(2),
-                    row.getLong(3),
-                    TripStatus.valueOf(row.getString(4)),
-                    row.getTimestamp(5).toInstant(),
-                    row.getBoolean(6)
+    @Query(value = "SELECT COUNT(*) " + CHOICES_FILTER, nativeQuery = true)
+    long choicesCount(long viewerId, long viewerVersion, String viewTarget, String keyword);
+
+    @Query(
+        value = """
+        SELECT t.id, t.code, owner.name AS "carrierName", t.name_vi AS "nameVi",
+            t.name_en AS "nameEn", t.departure_at AS "departureAt"
+        """ +
+            CHOICES_FILTER +
+            "ORDER BY t.departure_at, t.id LIMIT :pageSize OFFSET :offset ",
+        nativeQuery = true
+    )
+    List<BookingTripProjection> choicesRows(
+        long viewerId,
+        long viewerVersion,
+        String viewTarget,
+        String keyword,
+        int pageSize,
+        long offset
+    );
+
+    @Transactional(readOnly = true)
+    default PageResponse<BookingTripChoiceResponse> choices(BookingTripSearch body) {
+        UserPrincipal actor = UserPrincipal.current();
+        String keyword = body.getQuery() == null ? "" : body.getQuery().strip().toLowerCase(Locale.ROOT);
+        long total = choicesCount(actor.id(), actor.tokenVersion(), actor.getTarget(), keyword);
+        List<BookingTripChoiceResponse> result = choicesRows(
+            actor.id(),
+            actor.tokenVersion(),
+            actor.getTarget(),
+            keyword,
+            body.getSize(),
+            body.offset()
+        )
+            .stream()
+            .map(row -> {
+                return new BookingTripChoiceResponse(
+                    row.getId(),
+                    row.getCode(),
+                    row.getCarrierName(),
+                    row.getNameVi(),
+                    row.getNameEn(),
+                    row.getDepartureAt()
                 );
-            }
-        }
+            })
+            .toList();
+        return PageResponse.of(result, body, total);
     }
 
-    /** Tra cặp điểm trên chính trip; thứ tự/giá/quyền đón-trả chỉ server quyết định. */
-    public Stop stop(Connection connection, long tripId, long id) throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT id, stop_order, cumulative_fare, pickup_allowed, dropoff_allowed, scheduled_departure_at,
-                    actual_departure_at
-                FROM trip_stops
-                WHERE id = ? AND trip_id = ?
-                """
-            )
-        ) {
-            query.setLong(1, id);
-            query.setLong(2, tripId);
-            try (ResultSet row = query.executeQuery()) {
-                if (!row.next()) throw new BusinessException(ErrorCode.BOOKING_INVALID);
-                Timestamp actual = row.getTimestamp(7);
-                return new Stop(
-                    row.getLong(1),
-                    row.getInt(2),
-                    row.getBigDecimal(3),
-                    row.getBoolean(4),
-                    row.getBoolean(5),
-                    row.getTimestamp(6).toInstant(),
-                    actual == null ? null : actual.toInstant()
-                );
-            }
-        }
+    @Query(
+        value = """
+        SELECT u.id
+        FROM {h-schema}auth_users u
+        WHERE u.id = :user AND u.token_version = :tokenVersion AND u.active AND NOT u.activation_pending
+            AND NOT u.must_change_password
+            AND u.email_verified_at IS NOT NULL
+            AND NOT u.deleted
+        """,
+        nativeQuery = true
+    )
+    List<Long> customerRows(long user, long tokenVersion);
+
+    @Query(
+        value = """
+        SELECT u.id
+        FROM {h-schema}auth_users u
+        WHERE u.id = :user AND u.token_version = :tokenVersion AND u.active AND NOT u.activation_pending
+            AND NOT u.must_change_password
+            AND u.email_verified_at IS NOT NULL
+            AND NOT u.deleted
+        FOR UPDATE OF u
+        """,
+        nativeQuery = true
+    )
+    List<Long> customerLockedRows(long user, long tokenVersion);
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default void requireCustomer(long user, long version, boolean lock) {
+        BusinessRules.require(
+            !(lock ? customerLockedRows(user, version) : customerRows(user, version)).isEmpty(),
+            ErrorCode.ACCESS_DENIED
+        );
     }
 
-    /** Minimal parent lookup trước khóa trip, không trả thông tin riêng tư ra caller HTTP. */
-    public long parent(Connection connection, long id, Long customerId) throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT b.trip_id
-                FROM bookings b
-                JOIN carriers owner ON owner.id = b.carrier_id AND owner.scope_id = b.scope_id
-                WHERE b.id = ?
-                    AND %s
-                """.formatted(customerId == null ? UserRoleRepo.visibleSql() : "b.customer_id=?")
-            )
-        ) {
-            query.setLong(1, id);
-            if (customerId == null) UserRoleRepo.bindVisible(query, 2);
-            else query.setLong(2, customerId);
-            try (ResultSet row = query.executeQuery()) {
-                if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
-                return row.getLong(1);
-            }
-        }
+    @Query(
+        value = """
+        SELECT t.id, t.carrier_id AS "carrierId", t.scope_id AS "scopeId", t.status,
+            t.departure_at AS "departureAt", owner.active AND scope.active AS "accepting"
+        FROM {h-schema}carrier_trips t
+        JOIN {h-schema}carriers owner ON owner.id = t.carrier_id AND owner.scope_id = t.scope_id
+        JOIN (
+            SELECT scope_id AS id, scope_code AS code, scope_name_vi AS name_vi, scope_name_en AS name_en,
+                scope_active AS active, scope_version AS version, updated_at, updated_by
+            FROM {h-schema}carriers
+        ) scope ON scope.id = t.scope_id
+        WHERE t.id = :id
+        """,
+        nativeQuery = true
+    )
+    List<BookingTripProjection> tripRows(long id);
+
+    @Query(
+        value = """
+        SELECT t.id, t.carrier_id AS "carrierId", t.scope_id AS "scopeId", t.status,
+            t.departure_at AS "departureAt", owner.active AND scope.active AS "accepting"
+        FROM {h-schema}carrier_trips t
+        JOIN {h-schema}carriers owner ON owner.id = t.carrier_id AND owner.scope_id = t.scope_id
+        JOIN (
+            SELECT scope_id AS id, scope_code AS code, scope_name_vi AS name_vi, scope_name_en AS name_en,
+                scope_active AS active, scope_version AS version, updated_at, updated_by
+            FROM {h-schema}carriers
+        ) scope ON scope.id = t.scope_id
+        WHERE t.id = :id
+        FOR UPDATE OF t
+        """,
+        nativeQuery = true
+    )
+    List<BookingTripProjection> tripLockedRows(long id);
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default Trip trip(long id, boolean lock) {
+        List<BookingTripProjection> rows = lock ? tripLockedRows(id) : tripRows(id);
+        BusinessRules.require(!rows.isEmpty(), ErrorCode.NOT_FOUND);
+        BookingTripProjection row = rows.get(0);
+        return new Trip(
+            row.getId(),
+            row.getCarrierId(),
+            row.getScopeId(),
+            TripStatus.valueOf(row.getStatus()),
+            row.getDepartureAt(),
+            row.getAccepting()
+        );
     }
 
-    public Row find(Connection connection, long id, Long customerId, boolean lock, boolean detail) throws SQLException {
-        String permission = customerId == null ? UserRoleRepo.visibleSql() : "b.customer_id=?";
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT %s, (%s) AS can_update
-                %s
-                WHERE b.id = ?
-                    AND %s
-                %s
-                """.formatted(
-                    COLUMNS,
-                    customerId == null ? UserRoleRepo.visibleSql() : "b.customer_id=?",
-                    FROM,
-                    permission,
-                    lock ? " FOR UPDATE OF b" : ""
-                )
-            )
-        ) {
-            int at =
-                customerId == null
-                    ? UserRoleRepo.bindVisible(query, 1, "PUT " + Routes.ADMIN_BOOKINGS + Routes.BOOKING_STATE)
-                    : bindScope(query, 1, customerId);
-            query.setLong(at++, id);
-            bindScope(query, at, customerId);
-            try (ResultSet row = query.executeQuery()) {
-                if (!row.next()) throw new BusinessException(ErrorCode.NOT_FOUND);
-                return map(row, detail ? events(connection, id) : List.of());
-            }
-        }
+    @Query(
+        value = """
+        SELECT id, stop_order AS "stopOrder", cumulative_fare AS "cumulativeFare",
+            pickup_allowed AS "pickupAllowed", dropoff_allowed AS "dropoffAllowed",
+            scheduled_departure_at AS "scheduledDepartureAt", actual_departure_at AS "actualDepartureAt"
+        FROM {h-schema}trip_stops
+        WHERE id = :id AND trip_id = :tripId
+        """,
+        nativeQuery = true
+    )
+    List<TripStopProjection> stopRows(long tripId, long id);
+
+    default Stop stop(long tripId, long id) {
+        List<TripStopProjection> rows = stopRows(tripId, id);
+        BusinessRules.require(!rows.isEmpty(), ErrorCode.BOOKING_INVALID);
+        TripStopProjection row = rows.get(0);
+        return new Stop(
+            row.getId(),
+            row.getStopOrder(),
+            row.getCumulativeFare(),
+            row.getPickupAllowed(),
+            row.getDropoffAllowed(),
+            row.getScheduledDepartureAt(),
+            row.getActualDepartureAt()
+        );
     }
 
-    private int bindScope(PreparedStatement query, int at, Long customerId) throws SQLException {
-        if (customerId == null) return UserRoleRepo.bindVisible(query, at);
-        query.setLong(at++, customerId);
-        return at;
+    @Query(
+        value = """
+        SELECT b.trip_id
+        FROM {h-schema}bookings b
+        JOIN {h-schema}carriers owner ON owner.id = b.carrier_id AND owner.scope_id = b.scope_id
+        WHERE b.id = :id
+            AND
+        """ + PERMISSION,
+        nativeQuery = true
+    )
+    Long parentRow(long viewerId, long viewerVersion, String viewTarget, Long customerId, long id);
+
+    default long parent(long id, Long customerId) {
+        UserPrincipal actor = UserPrincipal.current();
+        Long trip = parentRow(actor.id(), actor.tokenVersion(), actor.getTarget(), customerId, id);
+        return BusinessRules.requireFound(trip);
     }
 
-    /** Quyền owner/staff được áp dụng trước COUNT/LIMIT, tìm nguyên văn không dùng wildcard. */
-    public PageResponse<BookingResponse> page(Connection connection, BookingSearch search, Long customerId)
-        throws SQLException {
-        String where = """
-        %s
-        WHERE %s
-            AND (?::bigint IS NULL OR b.trip_id = ?)
-            AND (?::text IS NULL OR b.status = ?)
-            AND strpos(lower(concat_ws(' ', b.code, t.code, b.contact_name, b.contact_phone)), ?) > 0
-        """.formatted(FROM, customerId == null ? UserRoleRepo.visibleSql() : "b.customer_id=?");
-        long total;
-        try (PreparedStatement query = connection.prepareStatement("SELECT count(*)" + where)) {
-            bindSearch(query, 1, search, customerId);
-            try (ResultSet row = query.executeQuery()) {
-                row.next();
-                total = row.getLong(1);
-            }
-        }
-        ArrayList<BookingResponse> result = new ArrayList<BookingResponse>();
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT %s, (%s) AS can_update
-                %s
-                ORDER BY b.id DESC
-                LIMIT ? OFFSET ?
-                """.formatted(COLUMNS, customerId == null ? UserRoleRepo.visibleSql() : "b.customer_id=?", where)
-            )
-        ) {
-            int at =
-                customerId == null
-                    ? UserRoleRepo.bindVisible(query, 1, "PUT " + Routes.ADMIN_BOOKINGS + Routes.BOOKING_STATE)
-                    : bindScope(query, 1, customerId);
-            at = bindSearch(query, at, search, customerId);
-            query.setInt(at++, search.getSize());
-            query.setLong(at, search.offset());
-            try (ResultSet rows = query.executeQuery()) {
-                while (rows.next()) result.add(map(rows, List.of()).getResponse());
-            }
-        }
-        return PageResponse.of(result, search, total);
+    @Query(
+        value = "SELECT " +
+            COLUMNS +
+            ", ( " +
+            CAN_UPDATE +
+            ") AS can_update " +
+            FROM +
+            "WHERE b.id = :id AND " +
+            PERMISSION,
+        nativeQuery = true
+    )
+    Map<String, Object> detailRow(
+        long viewerId,
+        long viewerVersion,
+        String viewTarget,
+        String updateTarget,
+        Long customerId,
+        long id
+    );
+
+    @Query(
+        value = "SELECT " +
+            COLUMNS +
+            ", ( " +
+            CAN_UPDATE +
+            ") AS can_update " +
+            FROM +
+            "WHERE b.id = :id AND " +
+            PERMISSION +
+            "FOR UPDATE OF b ",
+        nativeQuery = true
+    )
+    Map<String, Object> lockedRow(
+        long viewerId,
+        long viewerVersion,
+        String viewTarget,
+        String updateTarget,
+        Long customerId,
+        long id
+    );
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default Row find(long id, Long customerId, boolean lock, boolean detail) {
+        UserPrincipal actor = UserPrincipal.current();
+        String update = "PUT " + Routes.ADMIN_BOOKINGS + Routes.BOOKING_STATE;
+        Map<String, Object> row = lock
+            ? lockedRow(actor.id(), actor.tokenVersion(), actor.getTarget(), update, customerId, id)
+            : detailRow(actor.id(), actor.tokenVersion(), actor.getTarget(), update, customerId, id);
+        if (row == null || row.isEmpty()) throw new BusinessException(ErrorCode.NOT_FOUND);
+        return map(row, detail ? events(id) : List.of());
     }
 
-    private int bindSearch(PreparedStatement query, int at, BookingSearch search, Long customerId) throws SQLException {
-        at = bindScope(query, at, customerId);
-        query.setObject(at++, search.getTripId());
-        query.setObject(at++, search.getTripId());
-        String status = search.getStatus() == null ? null : search.getStatus().name();
-        query.setString(at++, status);
-        query.setString(at++, status);
-        query.setString(at++, search.getQuery() == null ? "" : search.getQuery().strip().toLowerCase(Locale.ROOT));
-        return at;
+    String FILTER =
+        FROM +
+        "WHERE " +
+        PERMISSION +
+        """
+        AND (CAST(:tripId AS BIGINT) IS NULL OR b.trip_id = :tripId)
+        AND (CAST(:status AS TEXT) IS NULL OR b.status = :status)
+        AND STRPOS(LOWER(CONCAT_WS(' ', b.code, t.code, b.contact_name, b.contact_phone)), :keyword) > 0
+        """;
+
+    @Query(value = "SELECT COUNT(*) " + FILTER, nativeQuery = true)
+    long searchCount(
+        long viewerId,
+        long viewerVersion,
+        String viewTarget,
+        Long customerId,
+        Long tripId,
+        String status,
+        String keyword
+    );
+
+    @Query(
+        value = "SELECT " +
+            COLUMNS +
+            ", ( " +
+            CAN_UPDATE +
+            ") AS can_update " +
+            FILTER +
+            "ORDER BY b.id DESC LIMIT :pageSize OFFSET :offset ",
+        nativeQuery = true
+    )
+    List<Map<String, Object>> searchRows(
+        long viewerId,
+        long viewerVersion,
+        String viewTarget,
+        Long customerId,
+        Long tripId,
+        String status,
+        String keyword,
+        String updateTarget,
+        int pageSize,
+        long offset
+    );
+
+    @Transactional(readOnly = true)
+    default PageResponse<BookingResponse> page(BookingSearch body, Long customerId) {
+        UserPrincipal actor = UserPrincipal.current();
+        String status = body.getStatus() == null ? null : body.getStatus().name();
+        String keyword = body.getQuery() == null ? "" : body.getQuery().strip().toLowerCase(Locale.ROOT);
+        long total = searchCount(
+            actor.id(),
+            actor.tokenVersion(),
+            actor.getTarget(),
+            customerId,
+            body.getTripId(),
+            status,
+            keyword
+        );
+        List<BookingResponse> rows = searchRows(
+            actor.id(),
+            actor.tokenVersion(),
+            actor.getTarget(),
+            customerId,
+            body.getTripId(),
+            status,
+            keyword,
+            "PUT " + Routes.ADMIN_BOOKINGS + Routes.BOOKING_STATE,
+            body.getSize(),
+            body.offset()
+        )
+            .stream()
+            .map(row -> map(row, List.of()).getResponse())
+            .toList();
+        return PageResponse.of(rows, body, total);
     }
 
-    /** Customer row đã khóa sau trip để tuần tự hóa gửi yêu cầu sang nhiều trip; partial unique là rào cuối. */
-    public void requireNoActive(Connection connection, long customerId) throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT 1
-                FROM bookings
-                WHERE customer_id = ?
-                    AND source_code = 'WEB'
-                    AND status IN ('PENDING', 'CONFIRMED')
-                LIMIT 1
-                """
-            )
-        ) {
-            query.setLong(1, customerId);
-            try (ResultSet row = query.executeQuery()) {
-                if (row.next()) throw new BusinessException(ErrorCode.BOOKING_ACTIVE);
-            }
-        }
+    @Query(
+        value = """
+        SELECT EXISTS (
+            SELECT 1 FROM {h-schema}bookings
+            WHERE customer_id = :customerId AND source_code = 'WEB' AND status IN ('PENDING', 'CONFIRMED')
+        )
+        """,
+        nativeQuery = true
+    )
+    boolean hasActive(long customerId);
+
+    default void requireNoActive(long id) {
+        BusinessRules.require(!hasActive(id), ErrorCode.BOOKING_ACTIVE);
     }
 
-    public Long requestId(Connection connection, UUID key) throws SQLException {
-        try (PreparedStatement query = connection.prepareStatement("SELECT id FROM bookings WHERE request_key=?")) {
-            query.setObject(1, key);
-            try (ResultSet row = query.executeQuery()) {
-                return row.next() ? row.getLong(1) : null;
-            }
-        }
+    @Query(value = "SELECT id FROM {h-schema}bookings WHERE request_key = :key ", nativeQuery = true)
+    Long requestId(UUID key);
+
+    @Query(
+        value = """
+        SELECT id
+        FROM {h-schema}category
+        WHERE ref_type = 'BOOKING_SOURCE' AND type = 'VALUE' AND code = :code AND active
+        FOR SHARE
+        """,
+        nativeQuery = true
+    )
+    Long sourceRow(String code);
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default long source(String code) {
+        Long id = sourceRow(code);
+        BusinessRules.require(id != null, ErrorCode.BOOKING_INVALID);
+        return id;
     }
 
-    /** Danh mục source active được khóa chia sẻ, không tin source_id từ client. */
-    public long source(Connection connection, String code) throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                "SELECT id FROM catalog_items WHERE type='BOOKING_SOURCE' AND code=? AND active FOR SHARE"
-            )
-        ) {
-            query.setString(1, code);
-            try (ResultSet row = query.executeQuery()) {
-                if (!row.next()) throw new BusinessException(ErrorCode.BOOKING_INVALID);
-                return row.getLong(1);
-            }
-        }
-    }
+    @Query(
+        value = """
+        INSERT INTO {h-schema}bookings(trip_id, carrier_id, scope_id, customer_id, source_code, source_id,
+            pickup_stop_id, dropoff_stop_id, pickup_order, dropoff_order, seats, unit_price, total_price,
+            contact_name, contact_phone, request_key, created_by, updated_by)
+        VALUES (:tripId, :carrierId, :scopeId, :customerId, :source, :sourceId, :pickupId, :dropoffId, :pickupOrder,
+                :dropoffOrder, :seats, :price, :total, :contactName, :contactPhone, :requestKey, :actor, :actor)
+        RETURNING id
+        """,
+        nativeQuery = true
+    )
+    long insertRow(
+        long tripId,
+        long carrierId,
+        long scopeId,
+        Long customerId,
+        String source,
+        long sourceId,
+        long pickupId,
+        long dropoffId,
+        int pickupOrder,
+        int dropoffOrder,
+        int seats,
+        BigDecimal price,
+        BigDecimal total,
+        String contactName,
+        String contactPhone,
+        UUID requestKey,
+        long actor
+    );
 
-    public long insert(
-        Connection connection,
+    @Transactional(propagation = Propagation.MANDATORY)
+    default long insert(
         Trip trip,
         Stop pickup,
         Stop dropoff,
@@ -482,89 +573,114 @@ public class BookingRepo extends BaseRepository {
         String source,
         long sourceId,
         long actor
-    ) throws SQLException {
+    ) {
         BigDecimal price = dropoff.getFare().subtract(pickup.getFare());
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                INSERT INTO bookings(trip_id, carrier_id, scope_id, customer_id, source_code, source_id,
-                    pickup_stop_id, dropoff_stop_id, pickup_order, dropoff_order, seats, unit_price, total_price,
-                    contact_name, contact_phone, request_key, created_by, updated_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                RETURNING id
-                """
-            )
-        ) {
-            query.setLong(1, trip.getId());
-            query.setLong(2, trip.getCarrierId());
-            query.setLong(3, trip.getScopeId());
-            query.setObject(4, customerId);
-            query.setString(5, source);
-            query.setLong(6, sourceId);
-            query.setLong(7, pickup.getId());
-            query.setLong(8, dropoff.getId());
-            query.setInt(9, pickup.getOrder());
-            query.setInt(10, dropoff.getOrder());
-            query.setInt(11, body.getSeats());
-            query.setBigDecimal(12, price);
-            query.setBigDecimal(13, price.multiply(BigDecimal.valueOf(body.getSeats())));
-            query.setString(14, body.getContactName().strip());
-            query.setString(15, body.getContactPhone().strip());
-            query.setObject(16, body.getRequestKey());
-            query.setLong(17, actor);
-            query.setLong(18, actor);
-            try (ResultSet row = query.executeQuery()) {
-                row.next();
-                return row.getLong(1);
-            }
-        }
+        return insertRow(
+            trip.getId(),
+            trip.getCarrierId(),
+            trip.getScopeId(),
+            customerId,
+            source,
+            sourceId,
+            pickup.getId(),
+            dropoff.getId(),
+            pickup.getOrder(),
+            dropoff.getOrder(),
+            body.getSeats(),
+            price,
+            price.multiply(BigDecimal.valueOf(body.getSeats())),
+            body.getContactName().strip(),
+            body.getContactPhone().strip(),
+            body.getRequestKey(),
+            actor
+        );
     }
 
-    /** CAS đơn, không nhận trip/scope/source/giá mới; caller kiểm graph và chỗ trước cập nhật. */
-    public void state(Connection connection, BookingResponse row, BookingStatus state, long actor) throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                UPDATE bookings
-                SET status = ?, updated_at = CURRENT_TIMESTAMP, updated_by = ?, version = version + 1
-                WHERE id = ? AND trip_id = ? AND carrier_id = ? AND scope_id = ? AND version = ?
-                """
-            )
-        ) {
-            query.setString(1, state.name());
-            query.setLong(2, actor);
-            query.setLong(3, row.getId());
-            query.setLong(4, row.getTripId());
-            query.setLong(5, row.getCarrierId());
-            query.setLong(6, row.getScopeId());
-            query.setLong(7, row.getVersion());
-            if (query.executeUpdate() != 1) throw new BusinessException(ErrorCode.STALE_VERSION);
-        }
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+        value = """
+        UPDATE {h-schema}bookings
+        SET status = :state, updated_at = CURRENT_TIMESTAMP, updated_by = :actor, version = version + 1
+        WHERE id = :rowId AND trip_id = :tripId AND carrier_id = :carrierId AND scope_id = :scopeId AND version =
+            :rowVersion
+        """,
+        nativeQuery = true
+    )
+    int stateRow(String state, long actor, long rowId, long tripId, long carrierId, long scopeId, long rowVersion);
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default void state(BookingResponse row, BookingStatus state, long actor) {
+        BusinessRules.require(
+            stateRow(
+                state.name(),
+                actor,
+                row.getId(),
+                row.getTripId(),
+                row.getCarrierId(),
+                row.getScopeId(),
+                row.getVersion()
+            ) == 1,
+            ErrorCode.STALE_VERSION
+        );
     }
 
-    /** Caller đã khóa trip; lifecycle nội bộ lấy đơn active tăng ID và khóa trước segments. */
-    public void lockActiveForTrip(Connection connection, long tripId) throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT count(*)
-                FROM (
-                    SELECT id
-                    FROM bookings
-                    WHERE trip_id = ?
-                        AND status IN ('PENDING', 'CONFIRMED')
-                    ORDER BY id
-                    FOR UPDATE
-                ) locked
-                """
-            )
-        ) {
-            query.setLong(1, tripId);
-            try (ResultSet row = query.executeQuery()) {
-                row.next(); // count buộc PostgreSQL khóa hết tập, không tải DTO/PII của mọi đơn lên heap.
-            }
-        }
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+        value = """
+        UPDATE {h-schema}bookings
+        SET paid_amount = :paid, refunded_amount = :refunded, updated_by = :actor, updated_at = CURRENT_TIMESTAMP,
+            version = version + 1
+        WHERE id = :rowId AND trip_id = :tripId AND carrier_id = :carrierId AND scope_id = :scopeId AND version =
+            :rowVersion
+            AND :paid BETWEEN paid_amount AND total_price
+            AND :refunded BETWEEN refunded_amount AND :paid
+        """,
+        nativeQuery = true
+    )
+    int moneyRow(
+        BigDecimal paid,
+        BigDecimal refunded,
+        long actor,
+        long rowId,
+        long tripId,
+        long carrierId,
+        long scopeId,
+        long rowVersion
+    );
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default void money(BookingResponse row, BigDecimal paid, BigDecimal refunded, long actor) {
+        BusinessRules.require(
+            moneyRow(
+                paid,
+                refunded,
+                actor,
+                row.getId(),
+                row.getTripId(),
+                row.getCarrierId(),
+                row.getScopeId(),
+                row.getVersion()
+            ) == 1,
+            ErrorCode.STALE_VERSION
+        );
     }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    @Query(
+        value = """
+        SELECT COUNT(*)
+        FROM (
+            SELECT id
+            FROM {h-schema}bookings
+            WHERE trip_id = :tripId
+                AND status IN ('PENDING', 'CONFIRMED')
+            ORDER BY id
+            FOR UPDATE
+        ) LOCKED
+        """,
+        nativeQuery = true
+    )
+    long lockActiveForTrip(long tripId);
 
     @Getter
     @Setter
@@ -584,60 +700,48 @@ public class BookingRepo extends BaseRepository {
         private String note;
     }
 
-    /** Chỉ trả metadata nội bộ chống lặp, không có projection public hoặc lookup qua request key. */
-    public PaymentEvent paymentEvent(Connection connection, UUID key) throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT booking_id, created_by, event_type, amount, note
-                FROM booking_events
-                WHERE request_key = ?
-                """
-            )
-        ) {
-            query.setObject(1, key);
-            try (ResultSet row = query.executeQuery()) {
-                return row.next()
-                    ? new PaymentEvent(
-                          row.getLong(1),
-                          row.getLong(2),
-                          row.getString(3),
-                          row.getBigDecimal(4),
-                          row.getString(5)
-                      )
-                    : null;
-            }
-        }
+    @Query(
+        value = """
+        SELECT booking_id AS "bookingId", created_by AS "actor", event_type AS "eventType", amount, note
+        FROM {h-schema}booking_events
+        WHERE request_key = :key
+        """,
+        nativeQuery = true
+    )
+    List<BookingEventProjection> paymentRows(UUID key);
+
+    default PaymentEvent paymentEvent(UUID key) {
+        List<BookingEventProjection> rows = paymentRows(key);
+        if (rows.isEmpty()) return null;
+        BookingEventProjection row = rows.get(0);
+        return new PaymentEvent(row.getBookingId(), row.getActor(), row.getEventType(), row.getAmount(), row.getNote());
     }
 
-    /** Ghi nhận tiền thực tế, CAS độc lập trạng thái; không thể vượt tổng giá/đã thu qua CHECK DB. */
-    public void money(Connection connection, BookingResponse row, BigDecimal paid, BigDecimal refunded, long actor)
-        throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                UPDATE bookings
-                SET paid_amount = ?, refunded_amount = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP,
-                    version = version + 1
-                WHERE id = ? AND trip_id = ? AND carrier_id = ? AND scope_id = ? AND version = ?
-                """
-            )
-        ) {
-            query.setBigDecimal(1, paid);
-            query.setBigDecimal(2, refunded);
-            query.setLong(3, actor);
-            query.setLong(4, row.getId());
-            query.setLong(5, row.getTripId());
-            query.setLong(6, row.getCarrierId());
-            query.setLong(7, row.getScopeId());
-            query.setLong(8, row.getVersion());
-            if (query.executeUpdate() != 1) throw new BusinessException(ErrorCode.STALE_VERSION);
-        }
-    }
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+        value = """
+        INSERT INTO {h-schema}booking_events(booking_id, trip_id, carrier_id, scope_id, from_status, to_status,
+            event_type, note, amount, request_key, created_by)
+        VALUES (:rowId, :tripId, :carrierId, :scopeId, :status, :state, :type, :note, :amount, :requestKey, :actor)
+        """,
+        nativeQuery = true
+    )
+    int eventRow(
+        long rowId,
+        long tripId,
+        long carrierId,
+        long scopeId,
+        String status,
+        String state,
+        String type,
+        String note,
+        BigDecimal amount,
+        UUID requestKey,
+        long actor
+    );
 
-    /** History là một phần giao dịch; không nuốt lỗi để tránh đổi trạng thái không có lý do. */
-    public void event(
-        Connection connection,
+    @Transactional(propagation = Propagation.MANDATORY)
+    default void event(
         BookingResponse row,
         BookingStatus state,
         String type,
@@ -645,124 +749,150 @@ public class BookingRepo extends BaseRepository {
         BigDecimal amount,
         UUID requestKey,
         long actor
-    ) throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                INSERT INTO booking_events(booking_id, trip_id, carrier_id, scope_id, from_status, to_status,
-                    event_type, note, amount, request_key, created_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """
-            )
-        ) {
-            query.setLong(1, row.getId());
-            query.setLong(2, row.getTripId());
-            query.setLong(3, row.getCarrierId());
-            query.setLong(4, row.getScopeId());
-            query.setString(5, type.equals("CREATED") ? null : row.getStatus().name());
-            query.setString(6, state.name());
-            query.setString(7, type);
-            query.setString(8, note);
-            query.setBigDecimal(9, amount);
-            query.setObject(10, requestKey);
-            query.setLong(11, actor);
-            query.executeUpdate();
-        }
+    ) {
+        BusinessRules.require(
+            eventRow(
+                row.getId(),
+                row.getTripId(),
+                row.getCarrierId(),
+                row.getScopeId(),
+                type.equals("CREATED") ? null : row.getStatus().name(),
+                state.name(),
+                type,
+                note,
+                amount,
+                requestKey,
+                actor
+            ) == 1,
+            ErrorCode.DATABASE_UNAVAILABLE
+        );
     }
 
-    private List<BookingEventResponse> events(Connection connection, long id) throws SQLException {
-        ArrayList<BookingEventResponse> result = new ArrayList<BookingEventResponse>();
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                SELECT id, event_type, from_status, to_status, amount, note, created_at
-                FROM (
-                    SELECT id, event_type, from_status, to_status, amount, note, created_at
-                    FROM booking_events
-                    WHERE booking_id = ?
-                    ORDER BY id DESC
-                    LIMIT 100
-                ) e
-                ORDER BY id
-                """
+    @Query(
+        value = """
+        SELECT id, event_type AS "eventType", from_status AS "fromStatus", to_status AS "toStatus",
+            amount, note, created_at AS "createdAt"
+        FROM (
+            SELECT id, event_type, from_status, to_status, amount, note, created_at
+            FROM {h-schema}booking_events
+            WHERE booking_id = :id
+            ORDER BY id DESC
+            LIMIT 100
+        ) e
+        ORDER BY id
+        """,
+        nativeQuery = true
+    )
+    List<BookingEventProjection> eventRows(long id);
+
+    private List<BookingEventResponse> events(long id) {
+        return eventRows(id)
+            .stream()
+            .map(row ->
+                new BookingEventResponse(
+                    row.getId(),
+                    row.getEventType(),
+                    row.getFromStatus(),
+                    row.getToStatus(),
+                    row.getAmount(),
+                    row.getNote(),
+                    row.getCreatedAt()
+                )
             )
-        ) {
-            query.setLong(1, id);
-            try (ResultSet row = query.executeQuery()) {
-                while (row.next())
-                    result.add(
-                        new BookingEventResponse(
-                            row.getLong(1),
-                            row.getString(2),
-                            row.getString(3),
-                            row.getString(4),
-                            row.getBigDecimal(5),
-                            row.getString(6),
-                            row.getTimestamp(7).toInstant()
-                        )
-                    );
-            }
-        }
-        return List.copyOf(result);
+            .toList();
     }
 
-    private Row map(ResultSet r, List<BookingEventResponse> events) throws SQLException {
-        BookingStatus status = BookingStatus.valueOf(r.getString("status"));
-        BigDecimal paid = r.getBigDecimal("paid_amount"),
-            refunded = r.getBigDecimal("refunded_amount");
+    private static Row map(Map<String, Object> r, List<BookingEventResponse> events) {
+        BookingStatus status = BookingStatus.valueOf(stringValue(r.get("status")));
+        BigDecimal paid = decimalValue(r.get("paid_amount")),
+            refunded = decimalValue(r.get("refunded_amount"));
         BookingResponse response = new BookingResponse(
-            r.getLong("id"),
-            r.getString("code"),
-            r.getLong("trip_id"),
-            r.getString("trip_code"),
-            r.getLong("carrier_id"),
-            r.getLong("scope_id"),
-            r.getString("carrier_name"),
-            r.getString("carrier_phone"),
-            r.getString("source_code"),
-            r.getLong("pickup_stop_id"),
-            r.getLong("dropoff_stop_id"),
-            r.getInt("pickup_order"),
-            r.getInt("dropoff_order"),
-            r.getString("pickup_vi"),
-            r.getString("pickup_en"),
-            r.getString("dropoff_vi"),
-            r.getString("dropoff_en"),
-            r.getTimestamp("pickup_at").toInstant(),
-            r.getTimestamp("dropoff_at").toInstant(),
-            r.getInt("seats"),
-            r.getBigDecimal("unit_price"),
-            r.getBigDecimal("total_price"),
-            r.getString("contact_name"),
-            r.getString("contact_phone"),
+            longValue(r.get("id")),
+            stringValue(r.get("code")),
+            longValue(r.get("trip_id")),
+            stringValue(r.get("trip_code")),
+            longValue(r.get("carrier_id")),
+            longValue(r.get("scope_id")),
+            stringValue(r.get("carrier_name")),
+            stringValue(r.get("carrier_phone")),
+            stringValue(r.get("source_code")),
+            longValue(r.get("pickup_stop_id")),
+            longValue(r.get("dropoff_stop_id")),
+            intValue(r.get("pickup_order")),
+            intValue(r.get("dropoff_order")),
+            stringValue(r.get("pickup_vi")),
+            stringValue(r.get("pickup_en")),
+            stringValue(r.get("dropoff_vi")),
+            stringValue(r.get("dropoff_en")),
+            instantValue(r.get("pickup_at")),
+            instantValue(r.get("dropoff_at")),
+            intValue(r.get("seats")),
+            decimalValue(r.get("unit_price")),
+            decimalValue(r.get("total_price")),
+            stringValue(r.get("contact_name")),
+            stringValue(r.get("contact_phone")),
             status,
             paid,
             refunded,
             status == BookingStatus.CANCELLED && paid.compareTo(refunded) > 0,
-            r.getLong("version"),
-            r.getBoolean("can_update"),
-            r.getTimestamp("created_at").toInstant(),
+            longValue(r.get("version")),
+            booleanValue(r.get("can_update")),
+            instantValue(r.get("created_at")),
             events
         );
         return new Row(
             response,
-            r.getObject("customer_id", Long.class),
-            r.getLong("created_by"),
-            r.getObject("request_key", UUID.class)
+            (Long) r.get("customer_id"),
+            longValue(r.get("created_by")),
+            (UUID) r.get("request_key")
         );
     }
 
-    /** Trip → booking tăng ID → segments tăng dần; cộng chỗ theo đoạn, không query/save theo từng đơn. */
-    public void cancelTrip(Connection connection, long tripId, String reason, long actor) throws SQLException {
-        this.lockActiveForTrip(connection, tripId);
-        capacity.releaseTrip(connection, tripId, actor);
-        transition(connection, tripId, 0, BookingStatus.CANCELLED, reason, actor);
+    @Query(
+        value = """
+        WITH parameters AS (
+            SELECT CAST(:state AS TEXT) AS state, CAST(:note AS TEXT) AS note, CAST(:actor AS BIGINT) AS actor
+        ), targets AS MATERIALIZED (
+            SELECT b.id, b.trip_id, b.carrier_id, b.scope_id, b.status, b.version
+            FROM {h-schema}bookings b
+            WHERE b.trip_id = :tripId
+                AND ((:state = 'CANCELLED' AND b.status IN ('PENDING', 'CONFIRMED'))
+                    OR (:state = 'REJECTED' AND b.status = 'PENDING' AND b.pickup_order <= :stopOrder)
+                    OR (:state = 'COMPLETED' AND b.status = 'CONFIRMED' AND b.dropoff_order <= :stopOrder))
+            ORDER BY b.id
+            FOR UPDATE OF b
+        ), changed AS (
+            UPDATE {h-schema}bookings b
+            SET status = p.state, updated_at = CURRENT_TIMESTAMP, updated_by = p.actor, version = b.version + 1
+            FROM targets old, parameters p
+            WHERE b.id = old.id AND b.trip_id = old.trip_id AND b.carrier_id = old.carrier_id
+                AND b.scope_id = old.scope_id
+                AND b.version = old.version
+            RETURNING b.id, b.trip_id, b.carrier_id, b.scope_id, old.status AS from_status
+        ), logged AS (
+            INSERT INTO {h-schema}booking_events(booking_id, trip_id, carrier_id, scope_id, from_status, to_status,
+                event_type, note, amount, created_by)
+            SELECT c.id, c.trip_id, c.carrier_id, c.scope_id, c.from_status, p.state, p.state, p.note, 0, p.actor
+            FROM changed c
+            CROSS JOIN parameters p
+            ORDER BY c.id
+            RETURNING booking_id
+        )
+        SELECT (SELECT COUNT(*) FROM targets) AS "targetCount", (SELECT COUNT(*) FROM changed) AS "changedCount",
+            (SELECT COUNT(*) FROM logged) AS "loggedCount"
+        """,
+        nativeQuery = true
+    )
+    List<BookingTransitionProjection> transitionRows(String state, String note, long actor, long tripId, int stopOrder);
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default void cancelled(long tripId, String reason, long actor) {
+        transition(tripId, 0, BookingStatus.CANCELLED, reason, actor);
     }
 
-    /** Chỉ đóng PENDING đã lỡ điểm đón; tập còn lại và số chỗ không thay đổi. */
-    public void departed(Connection connection, long tripId, int order, long actor) throws SQLException {
+    @Transactional(propagation = Propagation.MANDATORY)
+    default void departed(long tripId, int order, long actor) {
         transition(
-            connection,
             tripId,
             order,
             BookingStatus.REJECTED,
@@ -771,10 +901,9 @@ public class BookingRepo extends BaseRepository {
         );
     }
 
-    /** Đến điểm trả chỉ hoàn thành CONFIRMED; giữ nguyên số chỗ lịch sử. */
-    public void arrived(Connection connection, long tripId, int order, long actor) throws SQLException {
+    @Transactional(propagation = Propagation.MANDATORY)
+    default void arrived(long tripId, int order, long actor) {
         transition(
-            connection,
             tripId,
             order,
             BookingStatus.COMPLETED,
@@ -783,67 +912,11 @@ public class BookingRepo extends BaseRepository {
         );
     }
 
-    /** SELECT khóa theo ID, CAS và ghi đủ history trong một statement; mismatch/history lỗi làm caller rollback cả trip/chỗ. */
-    private void transition(Connection connection, long tripId, int order, BookingStatus state, String note, long actor)
-        throws SQLException {
-        String predicate = switch (state) {
-            case CANCELLED -> "b.status IN('PENDING','CONFIRMED')";
-            case REJECTED -> "b.status='PENDING' AND b.pickup_order<=?";
-            case COMPLETED -> "b.status='CONFIRMED' AND b.dropoff_order<=?";
-            default -> throw new IllegalArgumentException("Lifecycle không hỗ trợ trạng thái này");
-        };
-        String sql = """
-        WITH parameters AS (
-            SELECT ?::text AS state, ?::text AS note, ?::bigint AS actor
-        ), targets AS MATERIALIZED (
-            SELECT b.id, b.trip_id, b.carrier_id, b.scope_id, b.status, b.version
-            FROM bookings b
-            WHERE b.trip_id = ?
-                AND %s
-            ORDER BY b.id
-            FOR UPDATE OF b
-        ), changed AS (
-            UPDATE bookings b
-            SET status = p.state, updated_at = CURRENT_TIMESTAMP, updated_by = p.actor, version = b.version + 1
-            FROM targets old, parameters p
-            WHERE b.id = old.id AND b.trip_id = old.trip_id AND b.carrier_id = old.carrier_id
-                AND b.scope_id = old.scope_id
-                AND b.version = old.version
-            RETURNING b.id, b.trip_id, b.carrier_id, b.scope_id, old.status AS from_status
-        ), logged AS (
-            INSERT INTO booking_events(booking_id, trip_id, carrier_id, scope_id, from_status, to_status,
-                event_type, note, amount, created_by)
-            SELECT c.id, c.trip_id, c.carrier_id, c.scope_id, c.from_status, p.state, p.state, p.note, 0,
-                p.actor
-            FROM changed c
-            CROSS JOIN parameters p
-            ORDER BY c.id
-            RETURNING booking_id
-        )
-        SELECT (
-            SELECT count(*)
-            FROM targets
-        ), (
-            SELECT count(*)
-            FROM changed
-        ), (
-            SELECT count(*)
-            FROM logged
-        )
-        """.formatted(predicate);
-        try (PreparedStatement query = connection.prepareStatement(sql)) {
-            query.setString(1, state.name());
-            query.setString(2, note);
-            query.setLong(3, actor);
-            query.setLong(4, tripId);
-            if (state != BookingStatus.CANCELLED) query.setInt(5, order);
-            try (ResultSet row = query.executeQuery()) {
-                row.next();
-                BusinessRules.require(
-                    row.getLong(1) == row.getLong(2) && row.getLong(1) == row.getLong(3),
-                    ErrorCode.STALE_VERSION
-                );
-            }
-        }
+    private void transition(long tripId, int order, BookingStatus state, String note, long actor) {
+        BookingTransitionProjection row = transitionRows(state.name(), note, actor, tripId, order).get(0);
+        BusinessRules.require(
+            row.getTargetCount() == row.getChangedCount() && row.getTargetCount() == row.getLoggedCount(),
+            ErrorCode.STALE_VERSION
+        );
     }
 }

@@ -36,9 +36,15 @@ CRUD/gán dùng modal; nhiều nhóm nội dung dùng tab. Mở modal xóa dữ 
 | /operations/reports | Ngày/nhà xe, hai tab số liệu; chỉ nút xem báo cáo mới áp tiêu chí, picker nhà xe không gọi tổng hợp |
 | /operations/api-journal | Lọc metadata, mở chi tiết mới lấy snapshot; copy cURL/Postman đã che dữ liệu |
 
-Source gồm UI02/PR154 và UI03; trạng thái tích hợp/phát hành xem tiến độ/PR. Menu gom theo Danh mục/Nhà xe/Tuyến–chuyến/Đặt chỗ/Báo cáo/Quản trị từ chính các link DB đã cấp, không sinh quyền mới; khoảng cách link6px. Select đọc đủ danh mục qua API100 dòng/trang, không có nút tìm/pager riêng: tỉnh → địa điểm, nhà xe → tuyến/xe/tài xế. Đổi cha xóa lựa chọn con trước khi tải lại; lỗi không cho lưu khi thiếu danh sách. Báo cáo chọn nhà xe trực tiếp, chỉ Xem báo cáo mới áp ID mới.
+Menu gom theo Danh mục/Nhà xe/Tuyến–chuyến/Đặt chỗ/Báo cáo/Quản trị từ chính các link DB đã cấp, không sinh quyền mới; khoảng cách link6px. Select đọc đủ danh mục qua API100 dòng/trang, không có nút tìm/pager riêng: tỉnh → xã/phường → địa điểm, nhà xe → tuyến/xe/tài xế. Đổi cha xóa lựa chọn con trước khi tải lại; lỗi không cho lưu khi thiếu danh sách. Báo cáo chọn nhà xe trực tiếp, chỉ Xem báo cáo mới áp ID mới.
 
-Phân trang chỉ ở bảng kết quả: ẩn khi rỗng, một trang ẩn điều hướng/nhảy trang, nhiều trang giữ paging server. Bản đang chạy cần đúng source và khởi động lại Java mới có nhóm menu. Tra [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md), không coi preview/API giả là bằng chứng production.
+Danh mục chung có tab cho từng nhóm. Tab Tỉnh/thành và xã/phường hiển thị 34 tỉnh/thành ở cấp đầu. Bấm mũi tên mới tải toàn bộ con trực tiếp của cha đó. Bảng cây không phân trang. Tab Địa điểm đi theo tỉnh → xã/phường → điểm đón trả. Các nhóm phẳng như loại xe hiển thị trực tiếp các giá trị.
+
+Ô tìm kiếm áp dụng trong tab đang chọn. Người dùng có thể nhập mã hoặc tên có dấu/không dấu rồi nhấn Enter hoặc nút tìm. SQL recursive trả mục khớp và toàn bộ tổ tiên, giao diện tự mở đường dẫn và tô nổi mục khớp. Thu gọn/mở lại trong kết quả giữ phạm vi kết quả đó. Xóa tìm kiếm trở về các nút gốc. Mỗi lần mở nhánh chỉ đọc con của cha, không tải toàn bộ danh mục hành chính. Modal tạo/sửa nhận đúng nhóm và cha, giữ draft khi API báo lỗi. Tab hỗ trợ phím trái/phải, Home/End và aria-selected.
+
+Menu dùng mục Danh mục chung khi người dùng đã được cấp link này. Các đường dẫn quản trị riêng vẫn dùng được theo grant. `/admin` là link tổng quan cũ và được lọc khỏi nhóm Danh mục.
+
+Phân trang chỉ ở bảng kết quả: ẩn khi rỗng, một trang ẩn điều hướng/nhảy trang, nhiều trang giữ paging server. Trạng thái phát hành được đối chiếu tại [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
 
 ## Lỗi, credential và khả năng truy cập
 
@@ -47,3 +53,7 @@ Phân trang chỉ ở bảng kết quả: ẩn khi rỗng, một trang ẩn đi�
 Validation quan hệ như minPrice≤maxPrice gắn lỗi đúng field; sửa một cận bỏ lỗi quan hệ cũ. Unknown enum/code từ DB không làm client tự cấp grant. Bảng rỗng có thông báo, pager không hiện0/0; không suy tổng từ số option client đang giữ.
 
 Kiểm desktop và 320/390/768px; Tab/Shift+Tab, Escape, focus modal, locale vi/en, trường hợp không quyền/401/409/lỗi tải, lựa chọn phụ thuộc và không gửi mutation trùng. Không cần viết test chỉ lặp lại CSS; dùng browser để kiểm bố cục và regression có ý nghĩa khi sửa logic.
+
+Mẫu tuyến chọn tỉnh riêng cho từng điểm dừng, sau đó tải xã/phường; chọn xã/phường mới tải điểm đón/trả. Chuyển tỉnh xóa lựa chọn địa điểm trước khi đọc API. Modal Category có mô tả riêng, thuộc tính khác nằm trong props.
+
+Địa điểm chọn tọa độ bằng Leaflet 1.9.4 đóng trong WebJar. Chỉ mở bản đồ mới tải tile OpenStreetMap, có attribution; bấm hoặc kéo ghim tự điền tọa độ sáu số lẻ. Phím mũi tên di chuyển bản đồ và nút Chọn vị trí ở tâm hỗ trợ bàn phím. Không đọc vị trí thiết bị, không tải trước tile hoặc tự gọi geocoding. Nền bản đồ cần mạng; không tự xác nhận ghim đúng ranh giới xã nếu chưa có dữ liệu polygon.

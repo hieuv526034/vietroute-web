@@ -13,7 +13,7 @@ groups = {
     'data-scope': ['DataScopeSecurityTest', 'BusinessIntegrationTest'],
     'access-history': ['AccessChangeHistoryTest', 'BusinessIntegrationTest'],
     'access-definitions': ['AccessResourceDiscoveryTest', 'AccessRegistrySecurityTest'],
-    'locations': ['LocationSecurityTest', 'BusinessIntegrationTest'],
+    'categories': ['CategorySecurityTest', 'BusinessIntegrationTest'],
     'access-registry': ['AccessRegistrySecurityTest', 'BusinessIntegrationTest'],
     'access-cost': ['BusinessIntegrationTest'],
     'business-load': ['BusinessIntegrationTest'],
@@ -43,5 +43,12 @@ for name in groups[sys.argv[1]]:
                          'completeInitializationIsIdempotentAndKeepsUserChangesAndRevokedScope'})
         required.update({'duyLongTimetableKeepsFourDailyLegsSixteenSeatsAndStableAnchor',
                          'duyLongAccountsCanSearchBookConfirmAndPayWithoutCrossCarrierAccess'})
+        required.update({'categoryTreeLoadsDirectChildrenAndDeniesRemovedEndpoints',
+                         'categoryUpgradeRetiresOnlyOldResourcesAndKeepsRevokedRolesInactive'})
+        required.update({'migrationsCreateExpectedPrimaryKeysAndJpaIndexes',
+                         'schemaRegressionDetectsMissingIndexesWrongColumnsAndPrimaryKeys'})
+        required.add('nativeQueryRepositoriesKeepConfiguredSchemaPagingAndTransactionRollback')
+        required.update({'nestedTransactionFailureCannotCommitJpaOrJdbcEvenWhenCallerCatchesIt',
+                         'repositoryLockAndTripProgressRequireServiceTransactionBeforeExecutingQuery'})
         assert required <= cases, 'Thiếu regression endpoint/JPA/batch/scope bắt buộc'
 print('Regression ' + sys.argv[1] + ': đủ ca kiểm, không fail/error/skip')

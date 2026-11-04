@@ -2,6 +2,7 @@ package vn.vietroute.auth.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import java.time.Instant;
@@ -16,27 +17,23 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import vn.vietroute.common.base.BaseEntity;
-import vn.vietroute.common.jdbc.JdbcIndex;
-import vn.vietroute.common.jdbc.JdbcTable;
 
 /** Tài khoản nội bộ; hash, lần đăng nhập sai và tokenVersion không được map ra API. */
 @Entity
-@Table(name = "auth_users")
+@Table(
+    name = "auth_users",
+    indexes = {
+        @Index(name = "auth_users_pkey", columnList = "id", unique = true),
+        @Index(name = "auth_users_username_key", columnList = "username", unique = true),
+        @Index(name = "uq_auth_users_email", columnList = "email", unique = true),
+        @Index(name = "idx_auth_users_created_by", columnList = "created_by"),
+        @Index(name = "idx_auth_users_updated_by", columnList = "updated_by"),
+    }
+)
 @Getter
 @Setter
 @SuperBuilder
 @NoArgsConstructor
-@JdbcTable(
-    name = "auth_users",
-    primaryKey = { "id" },
-    indexes = {
-        @JdbcIndex(name = "auth_users_pkey", columns = { "id" }, unique = true),
-        @JdbcIndex(name = "auth_users_username_key", columns = { "username" }, unique = true),
-        @JdbcIndex(name = "uq_auth_users_email", columns = { "email" }, unique = true),
-        @JdbcIndex(name = "idx_auth_users_created_by", columns = { "created_by" }),
-        @JdbcIndex(name = "idx_auth_users_updated_by", columns = { "updated_by" }),
-    }
-)
 public class User extends BaseEntity {
 
     // Tên đăng nhập duy nhất; không đăng nhập bằng email.

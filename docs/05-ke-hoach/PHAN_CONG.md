@@ -21,7 +21,7 @@ Không suy email từ nhánh hoặc sửa author lịch sử. Username Git khôn
 
 | Phần việc | Source và đầu ra |
 |---|---|
-| Auth | [auth](../../src/main/java/vn/vietroute/auth):40 lớp/8 bảng; tài khoản, role/function/menu/API, lifecycle và bootstrap |
+| Auth | [auth](../../src/main/java/vn/vietroute/auth):46 lớp/8 bảng; tài khoản, role/function/menu/API, lifecycle và bootstrap |
 | Common | [common](../../src/main/java/vn/vietroute/common): config, transaction JPA/JDBC, API response/lỗi/locale, validation và journal |
 | Database | [migration](../../src/main/resources/db/migration/postgresql): schema/history/index, review bước mới và backup/restore; giữ checksum8 baseline |
 | Khởi tạo | DatabaseInitializer/AuthInitializer/BusinessDataInitializer; cờ init, account/quyền, idempotence và audit system |
@@ -51,7 +51,7 @@ flowchart LR
 
 | Khối | Source, bảng và công việc |
 |---|---|
-| catalog | [catalog](../../src/main/java/vn/vietroute/business/catalog): catalog_items/location_provinces/location_places; CRUD, lookup và select phụ thuộc |
+| catalog | [catalog](../../src/main/java/vn/vietroute/business/catalog): một bảng category, CRUD, lookup theo nhóm và bảng cây tải theo cha |
 | carrier | [carrier](../../src/main/java/vn/vietroute/business/carrier): carriers/carrier_vehicles/carrier_drivers; scope, xe/sức chứa, tài xế/account và tra cứu công khai |
 | trip | [trip](../../src/main/java/vn/vietroute/business/trip):6 bảng tuyến/điểm/chuyến/snapshot/segment/event; tìm chặng, phân công, lịch và tiến độ tài xế |
 | booking | [booking](../../src/main/java/vn/vietroute/business/booking): bookings/booking_events; WEB/PHONE, xác nhận/hủy, thu–hoàn thủ công và owner |

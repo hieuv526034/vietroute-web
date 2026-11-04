@@ -36,6 +36,14 @@ public class JourneySearch extends PageRequest {
     @Schema(description = "ID tỉnh trả nếu không chọn địa điểm cụ thể")
     private Long toProvinceId;
 
+    @Min(value = 1, message = "{validation.invalid}")
+    @Schema(description = "ID xã/phường đón; lọc thêm trong tỉnh đã chọn")
+    private Long fromWardId;
+
+    @Min(value = 1, message = "{validation.invalid}")
+    @Schema(description = "ID xã/phường trả; lọc thêm trong tỉnh đã chọn")
+    private Long toWardId;
+
     @NotNull(message = "{validation.required}")
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     @Schema(description = "Ngày đón Việt Nam yyyy-MM-dd")

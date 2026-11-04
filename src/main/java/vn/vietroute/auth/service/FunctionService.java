@@ -8,6 +8,7 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.dto.FunctionDTO;
 import vn.vietroute.auth.dto.request.FunctionRequest;
 import vn.vietroute.auth.dto.search.FunctionSearch;
@@ -17,6 +18,8 @@ import vn.vietroute.auth.repo.FunctionRepo;
 import vn.vietroute.auth.repo.FunctionResourceRepo;
 import vn.vietroute.auth.repo.RoleFunctionRepo;
 import vn.vietroute.auth.repo.UserRoleRepo;
+import vn.vietroute.auth.repo.custom.FunctionResourceCustomRepo;
+import vn.vietroute.auth.repo.custom.RoleFunctionCustomRepo;
 import vn.vietroute.auth.security.EndpointAccess;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.common.base.PageResponse;
@@ -39,33 +42,34 @@ public class FunctionService {
     private final JdbcTransactions transactions;
     private final AppSettings settings;
 
+    private final FunctionResourceCustomRepo resourceBatch;
+
+    private final RoleFunctionCustomRepo roleBatch;
+
+    @Transactional(readOnly = true)
     public PageResponse<FunctionDTO> search(FunctionSearch search) {
         UserPrincipal.current();
-        return transactions.execute(connection -> {
-            Page<Function> page = functions.search(search);
-            Map<String, Set<String>> targets = resources.targetsFor(
-                connection,
-                page.getContent().stream().map(Function::getCode).toList()
-            );
-            return PageResponse.of(
-                page
-                    .getContent()
-                    .stream()
-                    .map(value -> FunctionDTO.from(value, targets.getOrDefault(value.getCode(), Set.of())))
-                    .toList(),
-                search,
-                page.getTotalElements()
-            );
-        });
+        Page<Function> page = functions.search(search);
+        Map<String, Set<String>> targets = resources.targetsFor(
+            page.getContent().stream().map(Function::getCode).toList()
+        );
+        return PageResponse.of(
+            page
+                .getContent()
+                .stream()
+                .map(value -> FunctionDTO.from(value, targets.getOrDefault(value.getCode(), Set.of())))
+                .toList(),
+            search,
+            page.getTotalElements()
+        );
     }
 
+    @Transactional(readOnly = true)
     public FunctionDTO get(String code) {
         UserPrincipal.current();
-        return transactions.execute(connection -> {
-            Function value = BusinessRules.requireFound(functions.findById(code).orElse(null));
-            BusinessRules.require(!value.isDeleted(), ErrorCode.NOT_FOUND);
-            return FunctionDTO.from(value, resources.targets(connection, code));
-        });
+        Function value = BusinessRules.requireFound(functions.findById(code).orElse(null));
+        BusinessRules.require(!value.isDeleted(), ErrorCode.NOT_FOUND);
+        return FunctionDTO.from(value, resources.targets(code));
     }
 
     /** Khóa/CAS/batch binding/history chung một transaction; endpoint chưa khai báo hoặc ngoài trần đều bị từ chối. */
@@ -91,7 +95,7 @@ public class FunctionService {
         BusinessRules.require(selected.size() == body.getTargets().size(), ErrorCode.INVALID_REQUEST);
         UserPrincipal.requireDelegable(body.getTargets());
         return transactions.execute(connection -> {
-            mappings.lockRoleAssignments(connection);
+            mappings.lockRoleAssignments();
             Function value;
             Set<String> before = Set.of();
             if (create) {
@@ -109,9 +113,9 @@ public class FunctionService {
                     !value.isDeleted() && body.getVersion() != null && value.getVersion() == body.getVersion(),
                     ErrorCode.STALE_VERSION
                 );
-                before = resources.targets(connection, value.getCode());
+                before = resources.targets(value.getCode());
                 UserPrincipal.requireDelegable(before);
-                if (roles.hasAllScopesRole(connection, value.getCode())) {
+                if (roles.hasAllScopesRole(value.getCode())) {
                     BusinessRules.require(
                         UserPrincipal.current().getGlobalTargets().containsAll(body.getTargets()) &&
                             UserPrincipal.current().getGlobalTargets().containsAll(before),
@@ -133,10 +137,9 @@ public class FunctionService {
             value.setUpdatedAt(Instant.now());
             value.setUpdatedBy(actor.id());
             functions.saveAndFlush(value);
-            resources.replace(connection, value.getCode(), selected, actor.id());
-            if (!create) roles.touchRoles(connection, value.getCode(), actor.id());
+            resourceBatch.replace(connection, value.getCode(), selected, actor.id());
+            if (!create) roleBatch.touchRoles(connection, value.getCode(), actor.id());
             changes.append(
-                connection,
                 create ? "FUNCTION_CREATED" : "FUNCTION_UPDATED",
                 "FUNCTION",
                 value.getCode(),
@@ -148,31 +151,28 @@ public class FunctionService {
         });
     }
 
+    @Transactional
     public void delete(String code, long version, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
-        transactions.execute(connection -> {
-            mappings.lockRoleAssignments(connection);
-            Function value = BusinessRules.requireFound(functions.lock(code));
-            BusinessRules.require(!value.isDeleted() && value.getVersion() == version, ErrorCode.STALE_VERSION);
-            Set<String> before = resources.targets(connection, code);
-            UserPrincipal.requireDelegable(before);
-            BusinessRules.require(!roles.usesFunction(connection, code), ErrorCode.CONFLICT);
-            value.setActive(false);
-            value.setDeleted(true);
-            value.setUpdatedAt(Instant.now());
-            value.setUpdatedBy(actor.id());
-            functions.saveAndFlush(value);
-            changes.append(
-                connection,
-                "FUNCTION_DELETED",
-                "FUNCTION",
-                code,
-                actor.id(),
-                Map.of("resources", before),
-                Map.of("deleted", true)
-            );
-            return null;
-        });
+        mappings.lockRoleAssignments();
+        Function value = BusinessRules.requireFound(functions.lock(code));
+        BusinessRules.require(!value.isDeleted() && value.getVersion() == version, ErrorCode.STALE_VERSION);
+        Set<String> before = resources.targets(code);
+        UserPrincipal.requireDelegable(before);
+        BusinessRules.require(!roles.usesFunction(code), ErrorCode.CONFLICT);
+        value.setActive(false);
+        value.setDeleted(true);
+        value.setUpdatedAt(Instant.now());
+        value.setUpdatedBy(actor.id());
+        functions.saveAndFlush(value);
+        changes.append(
+            "FUNCTION_DELETED",
+            "FUNCTION",
+            code,
+            actor.id(),
+            Map.of("resources", before),
+            Map.of("deleted", true)
+        );
     }
 
     public List<FunctionDTO> capabilities(long user) {

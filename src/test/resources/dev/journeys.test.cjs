@@ -43,13 +43,15 @@ function fixture(access = null) {
         async get(path, { params }) {
             state.calls.push({ path, params });
             if (path === '/api/v1/trips/1') return { data: { data: { id: 1, code: 'TRIP01', status: 'OPEN', stops: [] } } };
-            if (path === '/api/v1/locations' && state.failLocation) throw new Error('Unavailable');
-            const content = path === '/api/v1/provinces'
+            if (path === '/api/v1/categories' && params.refType === 'LOCATION' && state.failLocation) throw new Error('Unavailable');
+            const content = path === '/api/v1/categories' && params.refType === 'PROVINCE'
                 ? [{ id: params.page + 1, name: 'Province ' + (params.page + 1) }]
-                : path === '/api/v1/locations'
-                    ? [{ id: params.provinceId * 10, name: 'Location ' + params.provinceId }]
+                : path === '/api/v1/categories' && params.refType === 'WARD'
+                    ? [{ id: params.parentId * 10, name: 'Ward ' + params.parentId }]
+                : path === '/api/v1/categories' && params.refType === 'LOCATION'
+                    ? [{ id: params.parentId * 10, name: 'Location ' + params.parentId }]
                     : path === '/api/v1/trips' ? [] : [{ id: 1, name: 'Choice' }];
-            return { data: { data: { content, hasNext: path === '/api/v1/provinces' && params.page === 0, page: params.page, totalPages: 1, totalElements: content.length } } };
+            return { data: { data: { content, hasNext: path === '/api/v1/categories' && params.refType === 'PROVINCE' && params.page === 0, page: params.page, totalPages: 1, totalElements: content.length } } };
         },
     };
     vm.runInNewContext(fs.readFileSync('src/main/webapp/assets/js/journeys.js', 'utf8'), {
@@ -72,7 +74,9 @@ function fixture(access = null) {
     const province = (side) => node(side + '[data-place-province]');
     const place = (side) => node(side + '[data-place-select]');
     const change = async (side, value) => { province(side).value = value; province(side).handlers.change(); await idle(); };
-    return { state, node, form, province, place, change, idle };
+    const ward = (side) => node(side + '[data-place-ward]');
+    const chooseWard = async (side,value) => { ward(side).value=value; ward(side).handlers.change(); await idle(); };
+    return { state, node, form, province, ward, place, change, chooseWard, idle };
 }
 
 test('Chọn tỉnh tải đúng địa điểm, đổi tỉnh xóa địa điểm cũ; chỉ submit mới tìm chuyến', async () => {
@@ -80,21 +84,28 @@ test('Chọn tỉnh tải đúng địa điểm, đổi tỉnh xóa địa đi�
     await ui.idle();
     assert.equal(ui.province('from').children.length, 3); // placeholder và đủ hai trang tỉnh
     assert.equal(ui.place('from').disabled, true);
-    assert.equal(ui.state.calls.some((call) => call.path === '/api/v1/locations'), false);
+    assert.equal(ui.state.calls.some((call) => call.path === '/api/v1/categories' && call.params.refType === 'LOCATION'), false);
     await ui.change('from', '1');
-    assert.equal(ui.place('from').children[1].value, '10');
-    ui.place('from').value = '10';
+    assert.equal(ui.ward('from').children[1].value, '10');
+    assert.equal(ui.place('from').disabled, true);
+    await ui.chooseWard('from','10');
+    assert.equal(ui.place('from').children[1].value,'100');
+    ui.place('from').value = '100';
     await ui.change('from', '2');
     assert.equal(ui.place('from').value, '');
-    assert.equal(ui.place('from').children[1].value, '20');
+    assert.equal(ui.ward('from').value,'');
+    assert.equal(ui.ward('from').children[1].value,'20');
+    assert.equal(ui.place('from').disabled,true);
     await ui.change('to', '1');
-    ui.place('to').value = '10';
+    await ui.chooseWard('to','10');
+    ui.place('to').value = '100';
     assert.equal(ui.state.calls.some((call) => call.path === '/api/v1/trips'), false);
     ui.form.handlers.submit({ preventDefault() {} });
     await ui.idle();
     const search = ui.state.calls.find((call) => call.path === '/api/v1/trips').params;
     assert.equal(search.fromProvinceId, '2');
-    assert.equal(search.toLocationId, '10');
+    assert.equal(search.toLocationId, '100');
+    assert.equal(search.toWardId,'10');
     assert.equal(search.fromLocationId, undefined);
     assert.equal(ui.state.errors.length, 0);
 });
@@ -120,15 +131,18 @@ test('Lỗi tải địa điểm giữ tỉnh, xóa lựa chọn lỗi thời v�
     const ui = fixture();
     await ui.idle();
     await ui.change('from', '1');
-    ui.place('from').value = '10';
+    await ui.chooseWard('from','10');
+    ui.place('from').value = '100';
     ui.state.failLocation = true;
     await ui.change('from', '2');
+    await ui.chooseWard('from','20');
     assert.equal(ui.province('from').value, '2');
     assert.equal(ui.place('from').value, '');
     assert.equal(ui.place('from').disabled, true);
     assert.equal(ui.state.errors.length, 1);
-    assert.equal(ui.state.calls.filter((call) => call.path === '/api/v1/locations').length, 2);
+    assert.equal(ui.state.calls.filter((call) => call.path === '/api/v1/categories' && call.params.refType === 'LOCATION').length, 2);
     ui.state.failLocation = false;
     await ui.change('from', '1');
+    await ui.chooseWard('from','10');
     assert.equal(ui.place('from').disabled, false);
 });
