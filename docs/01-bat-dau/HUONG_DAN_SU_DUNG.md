@@ -89,7 +89,7 @@ Ví dụ đơn hai chỗ, 150.000 đồng/chỗ có tổng 300.000 đồng. Thu 
 4. Với Địa điểm, mở tỉnh rồi xã/phường và các điểm thuộc xã đó. Bấm biểu tượng dấu cộng ở đúng dòng cha. Các nút thêm, sửa và ngừng sử dụng có nhãn khi rê chuột. Điền mã, tên, mô tả, địa chỉ và các trường form yêu cầu.
 5. Bấm **Chọn trên bản đồ**. Nhập tên địa điểm hoặc địa chỉ công cộng, ví dụ `Bến xe Gia Lâm, Hà Nội`, rồi bấm **Tìm kiếm** hoặc Enter. Chọn kết quả để bản đồ phóng tới đó và điền tọa độ. Bấm hoặc kéo ghim để chỉnh đúng điểm đón/trả. Có thể di chuyển bằng bàn phím rồi chọn vị trí ở tâm. Kiểm lại địa chỉ và tọa độ trước khi lưu. Nếu tra cứu lỗi, vẫn có thể ghim trực tiếp.
 6. Với Loại xe, nhập số chỗ gợi ý phù hợp. Xe cụ thể vẫn có trường sức chứa riêng, ví dụ loại Limousine có thể gợi ý một giá trị nhưng xe thực tế phải khai đúng số chỗ của xe.
-7. Để sửa, mở bút ở đúng mục, chỉnh rồi lưu. Khi ngừng sử dụng, kiểm các dữ liệu con và nghiệp vụ liên quan trước xác nhận. Danh mục đã dùng trong lịch sử vẫn được lưu để đối chiếu.
+7. Để sửa, bấm biểu tượng bút ở đúng mục, chỉnh rồi lưu. Nút thùng rác màu đỏ dùng để ngừng sử dụng. Kiểm dữ liệu con và nghiệp vụ liên quan trước khi xác nhận. Danh mục đã dùng trong lịch sử vẫn được lưu để đối chiếu.
 8. Thao tác Tạo nhóm/Sửa nhóm dành cho người được giao quản lý cấu trúc danh mục. Code nhóm xác định tập dữ liệu, các thuộc tính và nhóm cha cần đúng cấu hình. Người mới nên thao tác giá trị trong nhóm có sẵn và trao đổi quản trị trước khi đổi cấu trúc.
 
 Đổi tỉnh trong form làm xóa xã/phường và địa điểm đã chọn trước đó. Danh sách con rỗng có thể do chưa chọn cha, mục ngừng sử dụng hoặc không có dữ liệu. Khi chưa tải được danh sách hay bản đồ, kiểm mạng và giữ lại nội dung form để bổ sung sau.

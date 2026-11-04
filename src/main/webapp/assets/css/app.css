@@ -3575,9 +3575,28 @@ fieldset:disabled .button[type='submit']::before,
     padding: 8px;
 }
 
+.category-toolbar .icon-button,
+.category-search #category-clear-search {
+    color: white;
+    background-color: var(--green);
+    border-color: var(--green);
+}
+
+.category-toolbar .icon-button:hover:not(:disabled),
+.category-search #category-clear-search:hover:not(:disabled),
+#category-rows .button-danger:hover:not(:disabled) {
+    filter: brightness(0.88);
+}
+
 .category-toolbar .icon-button svg {
     width: 18px;
     height: 18px;
+}
+
+#category-rows .button-danger {
+    color: white;
+    background-color: #a33131;
+    border-color: #a33131;
 }
 
 #category-rows tr.category-match > td {
