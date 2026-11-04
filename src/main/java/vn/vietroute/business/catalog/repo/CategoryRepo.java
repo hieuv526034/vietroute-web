@@ -8,173 +8,277 @@ import static vn.vietroute.common.base.BaseRepository.stringValue;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.LockModeType;
-import jakarta.persistence.Query;
-import jakarta.persistence.Tuple;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.text.Normalizer;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.business.catalog.dto.search.CategorySearch;
 import vn.vietroute.business.catalog.entity.Category;
-import vn.vietroute.common.base.JpaRepositorySupport;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 import vn.vietroute.common.validation.BusinessRules;
 
 /**
- * CRUD JPA và query lookup/cha theo tập; JDBC và JPA tham gia cùng transaction.
+ * SQL native và ánh xạ của CategoryRepo; transaction ghi thuộc Service.
  */
-@Repository
-public class CategoryRepo extends JpaRepositorySupport<Category, Long> {
+public interface CategoryRepo extends JpaRepository<Category, Long> {
+    ObjectMapper JSON = new ObjectMapper();
 
-    private final ObjectMapper json;
-
-    private static final String COLUMNS = """
-    c.*, p.name AS parent_name, p.props->>'nameEn' AS parent_name_en,
-    COALESCE(p.active,FALSE) AS parent_active
+    String TREE_GROUPS = """
+    WITH RECURSIVE branch_types(code, parent_code) AS (
+        SELECT g.code, g.props->>'parentRefType'
+        FROM {h-schema}category g
+        WHERE g.group_code = :refType
+        UNION
+        SELECT g.code, g.props->>'parentRefType'
+        FROM {h-schema}category g
+        JOIN branch_types t ON g.group_code = t.parent_code
+    )
     """;
 
-    private static final String FROM = """
-    FROM {h-schema}category c
-    LEFT JOIN {h-schema}category g ON g.group_code=c.ref_type
-    LEFT JOIN {h-schema}category p ON p.id=c.parent_id
+    String TREE_CHILDREN = """
+    EXISTS (
+        SELECT 1
+        FROM {h-schema}category child
+        JOIN branch_types t ON t.code = child.ref_type
+        WHERE child.type = 'VALUE' AND child.parent_id = c.id
+    ) AS has_children
     """;
 
-    public CategoryRepo(EntityManager manager, ObjectMapper json) {
-        super(Category.class, manager);
-        this.json = json;
+    @Query(
+        value = TREE_GROUPS +
+            "SELECT c.*, FALSE AS search_match, " +
+            TREE_CHILDREN +
+            """
+            FROM {h-schema}category c
+            JOIN branch_types t ON t.code = c.ref_type
+            WHERE c.type = 'VALUE'
+                AND ((CAST(:parentId AS BIGINT) IS NULL AND c.parent_id IS NULL) OR c.parent_id = :parentId)
+            AND (CAST(:active AS BOOLEAN) IS NULL OR c.active = :active)
+            ORDER BY c.sort_order, c.id
+            """,
+        nativeQuery = true
+    )
+    List<Map<String, Object>> branchRows(String refType, Long parentId, Boolean active);
+
+    @Query(
+        value = TREE_GROUPS +
+            """
+            , matches AS (
+                SELECT c.id, c.parent_id
+                FROM {h-schema}category c
+                JOIN branch_types t ON t.code = c.ref_type
+                WHERE c.type = 'VALUE' AND (:matchAncestors OR c.ref_type = :refType)
+                    AND (CAST(:active AS BOOLEAN) IS NULL OR c.active = :active)
+                    AND TRANSLATE(LOWER(CONCAT_WS(' ', c.code, c.name, c.props->>'nameEn',
+                        c.props->>'address', c.props->>'administrativeCode')),
+                        'àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ',
+                        'aaaaaaaaaaaaaaaaaeeeeeeeeeeeiiiiiooooooooooooooooouuuuuuuuuuuyyyyyd')
+                        LIKE :keyword ESCAPE '!'
+            ), lineage(id, parent_id) AS (
+                SELECT id, parent_id FROM matches
+                UNION
+                SELECT p.id, p.parent_id
+                FROM lineage l
+                JOIN {h-schema}category p ON p.id = l.parent_id AND p.type = 'VALUE'
+                JOIN branch_types t ON t.code = p.ref_type
+            )
+            SELECT c.*, EXISTS (SELECT 1 FROM matches m WHERE m.id = c.id) AS search_match,
+            """ +
+            TREE_CHILDREN +
+            """
+            FROM lineage l
+            JOIN {h-schema}category c ON c.id = l.id
+            ORDER BY c.sort_order, c.id
+            """,
+        nativeQuery = true
+    )
+    List<Map<String, Object>> treeSearchRows(String refType, boolean matchAncestors, Boolean active, String keyword);
+
+    @Query(value = "SELECT * FROM {h-schema}category WHERE type = 'GROUP' ORDER BY sort_order, id", nativeQuery = true)
+    List<Category> allGroups();
+
+    /** Đọc một cấp của tab hoặc lấy mục khớp và tổ tiên trong một câu SQL. */
+    default List<Category> tree(CategorySearch search, boolean matchAncestors) {
+        String query = search.getQuery() == null ? "" : search.getQuery().strip();
+        List<Map<String, Object>> rows = query.isEmpty()
+            ? branchRows(search.getRefType(), search.getParentId(), search.getActive())
+            : treeSearchRows(search.getRefType(), matchAncestors, search.getActive(), keyword(fold(query)));
+        return rows.stream().map(CategoryRepo::map).toList();
     }
 
-    /**
-     * Danh sách có filter cố định, count/page cùng predicate và thứ tự; không query từng dòng.
-     */
-    public PageResponse<Category> search(CategorySearch page, String refType, String type, boolean publicOnly) {
-        String filter = """
+    private static String keyword(String query) {
+        return "%" + query.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
+    }
+
+    private static String fold(String query) {
+        return Normalizer.normalize(query.toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
+            .replaceAll("\\p{M}", "")
+            .replace('đ', 'd');
+    }
+
+    @Query(
+        value = """
+        SELECT c.*, p.name AS parent_name, p.props->> 'nameEn' AS parent_name_en,
+            COALESCE(p.active, FALSE) AS parent_active
+        FROM {h-schema}category c
+        LEFT JOIN {h-schema}category g ON g.group_code=c.ref_type
+        LEFT JOIN {h-schema}category p ON p.id=c.parent_id
         WHERE c.type=:type AND (CAST(:refType AS TEXT) IS NULL OR c.ref_type=:refType)
             AND ((CAST(:parentId AS BIGINT) IS NULL AND c.parent_id IS NULL) OR c.parent_id=:parentId)
             AND (CAST(:active AS BOOLEAN) IS NULL OR c.active=:active)
-                AND (NOT :publicOnly OR (c.active AND g.active AND NOT EXISTS (
+            AND (NOT :publicOnly OR (c.active AND g.active AND NOT EXISTS (
                     WITH RECURSIVE ancestors AS (
-                        SELECT a.id,a.parent_id,a.active,a.ref_type FROM {h-schema}category a WHERE a.id=c.parent_id
+                        SELECT a.id, a.parent_id, a.active, a.ref_type FROM {h-schema}category a WHERE a.id=c.parent_id
                         UNION ALL
-                        SELECT a.id,a.parent_id,a.active,a.ref_type FROM {h-schema}category a
+                        SELECT a.id, a.parent_id, a.active, a.ref_type FROM {h-schema}category a
                         JOIN ancestors previous ON a.id=previous.parent_id
-                    )
+        )
                     SELECT 1 FROM ancestors a JOIN {h-schema}category ag ON ag.group_code=a.ref_type
                     WHERE NOT a.active OR NOT ag.active
-                )))
-            AND LOWER(c.code || ' ' || c.name || ' ' || COALESCE(c.props->>'nameEn','') ||
-                ' ' || COALESCE(c.props->>'address','')) LIKE LOWER(:keyword) ESCAPE '!'
-        """;
-        long count;
-        {
-            Query query = entityManager.createNativeQuery("SELECT COUNT(*) " + FROM + filter, Tuple.class);
+        )))
+            AND LOWER(c.code || ' ' || c.name || ' ' || COALESCE(c.props->> 'nameEn', '') ||
+            ' ' || COALESCE(c.props->> 'address', '')) LIKE LOWER(:keyword) ESCAPE '!'
+        ORDER BY c.sort_order, c.id
+        LIMIT :size OFFSET :offset
+        """,
+        nativeQuery = true
+    )
+    List<Map<String, Object>> searchRows(
+        String type,
+        String refType,
+        Long parentId,
+        Boolean active,
+        boolean publicOnly,
+        String keyword,
+        int size,
+        long offset
+    );
 
-            bind(query, page, refType, type, publicOnly);
-            {
-                Tuple row = (Tuple) query.getSingleResult();
-                count = longValue(row.get(0));
-            }
-        }
-        List<Category> content = new ArrayList<>();
-        {
-            Query query = entityManager.createNativeQuery(
-                "SELECT " + COLUMNS + FROM + filter + " ORDER BY c.sort_order,c.id LIMIT :size OFFSET :offset",
-                Tuple.class
-            );
+    @Query(
+        value = """
+        SELECT COUNT(*)
+        FROM {h-schema}category c
+        LEFT JOIN {h-schema}category g ON g.group_code=c.ref_type
+        LEFT JOIN {h-schema}category p ON p.id=c.parent_id
+        WHERE c.type=:type AND (CAST(:refType AS TEXT) IS NULL OR c.ref_type=:refType)
+            AND ((CAST(:parentId AS BIGINT) IS NULL AND c.parent_id IS NULL) OR c.parent_id=:parentId)
+            AND (CAST(:active AS BOOLEAN) IS NULL OR c.active=:active)
+            AND (NOT :publicOnly OR (c.active AND g.active AND NOT EXISTS (
+                    WITH RECURSIVE ancestors AS (
+                        SELECT a.id, a.parent_id, a.active, a.ref_type FROM {h-schema}category a WHERE a.id=c.parent_id
+                        UNION ALL
+                        SELECT a.id, a.parent_id, a.active, a.ref_type FROM {h-schema}category a
+                        JOIN ancestors previous ON a.id=previous.parent_id
+        )
+                    SELECT 1 FROM ancestors a JOIN {h-schema}category ag ON ag.group_code=a.ref_type
+                    WHERE NOT a.active OR NOT ag.active
+        )))
+            AND LOWER(c.code || ' ' || c.name || ' ' || COALESCE(c.props->> 'nameEn', '') ||
+            ' ' || COALESCE(c.props->> 'address', '')) LIKE LOWER(:keyword) ESCAPE '!'
+        """,
+        nativeQuery = true
+    )
+    long searchCount(String type, String refType, Long parentId, Boolean active, boolean publicOnly, String keyword);
 
-            bind(query, page, refType, type, publicOnly);
-            query.setParameter("size", page.getSize());
-            query.setParameter("offset", page.offset());
-            {
-                for (Object rowsValue : query.getResultList()) {
-                    Tuple rows = (Tuple) rowsValue;
-                    content.add(map(rows));
-                }
-            }
-        }
-        return PageResponse.of(content, page, count);
-    }
-
-    private void bind(Query query, CategorySearch page, String refType, String type, boolean publicOnly) {
-        query.setParameter("type", type);
-        query.setParameter("refType", refType);
-        query.setParameter("parentId", page.parent());
-        query.setParameter("active", publicOnly ? Boolean.TRUE : page.getActive());
-        query.setParameter("publicOnly", publicOnly);
+    @Transactional(readOnly = true)
+    default PageResponse<Category> search(CategorySearch page, String refType, String type, boolean publicOnly) {
         String value = page.getQuery() == null ? "" : page.getQuery();
-        query.setParameter("keyword", "%" + value.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%");
+        String keyword = keyword(value);
+        Boolean active = publicOnly ? Boolean.TRUE : page.getActive();
+        long total = searchCount(type, refType, page.parent(), active, publicOnly, keyword);
+        List<Category> rows = searchRows(
+            type,
+            refType,
+            page.parent(),
+            active,
+            publicOnly,
+            keyword,
+            page.getSize(),
+            page.offset()
+        )
+            .stream()
+            .map(CategoryRepo::map)
+            .toList();
+        return PageResponse.of(rows, page, total);
     }
 
-    /** Đọc mục và thông tin cha trong cùng truy vấn. */
-    public Category item(long id) {
-        {
-            Query query = entityManager.createNativeQuery("SELECT " + COLUMNS + FROM + " WHERE c.id=:id", Tuple.class);
+    @Query(
+        value = """
+        SELECT c.*, p.name AS parent_name, p.props->> 'nameEn' AS parent_name_en,
+            COALESCE(p.active, FALSE) AS parent_active
+        FROM {h-schema}category c
+        LEFT JOIN {h-schema}category g ON g.group_code=c.ref_type
+        LEFT JOIN {h-schema}category p ON p.id=c.parent_id
+        WHERE c.id = :id
+        """,
+        nativeQuery = true
+    )
+    Map<String, Object> itemRow(long id);
 
-            query.setParameter("id", id);
-            {
-                List<?> rowsValues = query.getResultList();
-                Tuple rows = rowsValues.isEmpty() ? null : (Tuple) rowsValues.get(0);
-
-                return BusinessRules.requireFound(rows != null ? map(rows) : null);
-            }
-        }
+    @Transactional(readOnly = true)
+    default Category item(long id) {
+        Map<String, Object> row = itemRow(id);
+        return BusinessRules.requireFound(row == null || row.isEmpty() ? null : map(row));
     }
 
-    /**
-     * Khóa GROUP/cha trước mutation VALUE để không lọt hợp đồng/trạng thái khi cập nhật đồng thời.
-     */
-    public Category group(String code) {
-        return BusinessRules.requireFound(
-            (Category) entityManager
-                .createNativeQuery(
-                    "SELECT * FROM {h-schema}category WHERE type = 'GROUP' AND code = :code FOR SHARE",
-                    Category.class
-                )
-                .setParameter("code", code)
-                .getResultStream()
-                .findFirst()
-                .orElse(null)
-        );
+    @Query(
+        value = "SELECT * FROM {h-schema}category WHERE type = 'GROUP' AND code = :code FOR SHARE ",
+        nativeQuery = true
+    )
+    Category groupRow(String code);
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default Category group(String code) {
+        return BusinessRules.requireFound(groupRow(code));
     }
 
-    public Category locked(long id) {
-        return BusinessRules.requireFound(entityManager.find(Category.class, id, LockModeType.PESSIMISTIC_WRITE));
+    @Query(value = "SELECT * FROM {h-schema}category WHERE id = :id FOR UPDATE ", nativeQuery = true)
+    Category lockedRow(long id);
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default Category locked(long id) {
+        return BusinessRules.requireFound(lockedRow(id));
     }
 
-    public Category parent(long id) {
-        return BusinessRules.requireFound(entityManager.find(Category.class, id, LockModeType.PESSIMISTIC_READ));
+    @Query(value = "SELECT * FROM {h-schema}category WHERE id = :id FOR SHARE ", nativeQuery = true)
+    Category parentRow(long id);
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default Category parent(long id) {
+        return BusinessRules.requireFound(parentRow(id));
     }
 
-    /**
-     * Dùng cùng hợp đồng DB với trigger; dữ liệu bind JSON, không sinh SQL từ props.
-     */
-    public void requireProps(Map<String, Object> props, Map<String, Object> group) {
+    @Query(
+        value = "SELECT {h-schema}category_props_valid(CAST(:props AS JSONB), CAST(:fields AS JSONB)) ",
+        nativeQuery = true
+    )
+    boolean propsValid(String props, String fields);
+
+    default void requireProps(Map<String, Object> props, Map<String, Object> group) {
         try {
-            Query query = entityManager.createNativeQuery(
-                "SELECT category_props_valid(CAST(:props AS JSONB),CAST(:fields AS JSONB))",
-                Tuple.class
+            BusinessRules.require(
+                propsValid(
+                    JSON.writeValueAsString(props),
+                    JSON.writeValueAsString(group.getOrDefault("fields", List.of()))
+                ),
+                ErrorCode.INVALID_REQUEST
             );
-
-            query.setParameter("props", json.writeValueAsString(props));
-            query.setParameter("fields", json.writeValueAsString(group.getOrDefault("fields", List.of())));
-            {
-                Tuple row = (Tuple) query.getSingleResult();
-                BusinessRules.require(booleanValue(row.get(0)), ErrorCode.INVALID_REQUEST);
-            }
-        } catch (IOException exception) {
+        } catch (IOException error) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
     }
 
-    private Category map(Tuple row) {
+    private static Category map(Map<String, Object> row) {
         try {
-            Map<String, Object> props = json.readValue(
+            Map<String, Object> props = JSON.readValue(
                 stringValue(row.get("props")),
                 new TypeReference<LinkedHashMap<String, Object>>() {}
             );
@@ -185,7 +289,7 @@ public class CategoryRepo extends JpaRepositorySupport<Category, Long> {
                 .name(stringValue(row.get("name")))
                 .description(stringValue(row.get("description")))
                 .refType(stringValue(row.get("ref_type")))
-                .parentId(row.get("parent_id", Long.class))
+                .parentId((Long) row.get("parent_id"))
                 .props(props)
                 .groupCode(stringValue(row.get("group_code")))
                 .valueRef(stringValue(row.get("value_ref")))
@@ -199,6 +303,8 @@ public class CategoryRepo extends JpaRepositorySupport<Category, Long> {
                 .parentName(stringValue(row.get("parent_name")))
                 .parentNameEn(stringValue(row.get("parent_name_en")))
                 .parentActive(booleanValue(row.get("parent_active")))
+                .hasChildren(booleanValue(row.get("has_children")))
+                .searchMatch(booleanValue(row.get("search_match")))
                 .build();
         } catch (IOException exception) {
             throw new BusinessException(ErrorCode.DATABASE_UNAVAILABLE);

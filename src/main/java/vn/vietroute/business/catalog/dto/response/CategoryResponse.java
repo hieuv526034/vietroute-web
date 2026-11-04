@@ -52,6 +52,12 @@ public class CategoryResponse extends BaseDTO {
     @Schema(description = "Thứ tự hiển thị")
     private int sortOrder;
 
+    @Schema(description = "Có con thuộc cây của tab đang chọn")
+    private boolean hasChildren;
+
+    @Schema(description = "Mục khớp từ khóa trong kết quả tìm kiếm cây")
+    private boolean searchMatch;
+
     public static CategoryResponse from(Category item, Locale locale) {
         CategoryResponse value = new CategoryResponse();
         value.setId(item.getId());
@@ -71,6 +77,8 @@ public class CategoryResponse extends BaseDTO {
         value.setName("en".equals(locale.getLanguage()) ? value.getNameEn() : value.getNameVi());
         value.setActive(item.isActive());
         value.setSortOrder(item.getSortOrder());
+        value.setHasChildren(item.isHasChildren());
+        value.setSearchMatch(item.isSearchMatch());
         return value;
     }
 }

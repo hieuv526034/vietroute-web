@@ -37,27 +37,117 @@ def closing_parenthesis(source, start):
     raise ValueError('Annotation @Query chưa đóng')
 
 
+def java_tokens(source):
+    """Tách literal trước delimiter để không cắt nhầm dấu +, phẩy hoặc chấm phẩy trong SQL."""
+    return list(re.finditer(r'"""[\s\S]*?"""|"(?:\\.|[^"\\])*"|[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*|\s+|.', source))
+
+
+def java_literal(token):
+    if token.startswith('"""'):
+        value = token[3:-3]
+        # Java bỏ dòng đầu sau delimiter và incidental indentation kể cả dòng delimiter đóng.
+        value = value.removeprefix('\r\n').removeprefix('\n')
+        value = textwrap.dedent(value)
+    else:
+        value = token[1:-1]
+    escapes = {'n': '\n', 'r': '\r', 't': '\t', 'b': '\b', 'f': '\f', 's': ' ',
+               '\\': '\\', '"': '"', "'": "'"}
+    def decode(match):
+        code = match[0][1:]
+        if code in escapes:
+            return escapes[code]
+        if code.startswith('u'):
+            return chr(int(code.lstrip('u'), 16))
+        if code in ('\n', '\r\n'):
+            return ''
+        raise ValueError('Java escape chưa hỗ trợ: ' + match[0])
+    return re.sub(r'\\(?:u+[0-9a-fA-F]{4}|\r?\n|.)', decode, value)
+
+
+def expressions(annotation):
+    parts = []
+    current = []
+    depth = 0
+    for token in java_tokens(annotation):
+        value = token[0]
+        if value == ',' and depth == 0:
+            parts.append(''.join(current))
+            current = []
+        else:
+            current.append(value)
+            if value in ('(', '[', '{'):
+                depth += 1
+            elif value in (')', ']', '}'):
+                depth -= 1
+    parts.append(''.join(current))
+    result = {}
+    for part in parts:
+        match = re.fullmatch(r'\s*(\w+)\s*=([\s\S]*)', part)
+        if match:
+            result[match[1]] = match[2].strip()
+    return result
+
+
 def queries(source_root):
-    for path in sorted(source_root.rglob('*Repo.java')):
-        source = without_comments(path.read_text(encoding='utf-8'))
+    sources = {path: without_comments(path.read_text(encoding='utf-8'))
+               for path in sorted(source_root.rglob('*Repo.java'))}
+    constants = {}
+    for path, source in sources.items():
+        tokens = java_tokens(source)
+        for marker in re.finditer(r'(?m)^    (?:(?:public|static|final) +)*String (\w+)\s*=', source):
+            value = []
+            for token in tokens:
+                if token.start() < marker.end():
+                    continue
+                if token[0] == ';':
+                    break
+                value.append(token[0])
+            constants[(path.stem, marker[1])] = ''.join(value)
+
+    def resolve(expression, owner, pending=()):
+        result = []
+        expect_value = True
+        for token in java_tokens(expression):
+            value = token[0]
+            if value.isspace():
+                continue
+            if expect_value:
+                if value.startswith('"'):
+                    result.append(java_literal(value))
+                elif re.fullmatch(r'[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)?', value):
+                    reference = tuple(value.split('.')) if '.' in value else (owner, value)
+                    if reference in pending or reference not in constants:
+                        raise ValueError('Hằng SQL không xác định hoặc tham chiếu vòng: ' + value)
+                    result.append(resolve(constants[reference], reference[0], pending + (reference,)))
+                else:
+                    raise ValueError('Biểu thức SQL chỉ hỗ trợ literal/hằng compile time: ' + value)
+            elif value != '+':
+                raise ValueError('Biểu thức SQL không hỗ trợ: ' + value)
+            expect_value = not expect_value
+        if expect_value:
+            raise ValueError('Biểu thức SQL rỗng hoặc thiếu toán hạng')
+        return ''.join(result)
+
+    for path, source in sources.items():
         for marker in re.finditer(r'(?m)^\s*@Query\s*\(', source):
             end = closing_parenthesis(source, marker.end())
-            annotation = source[marker.end():end]
-            if not re.search(r'\bnativeQuery\s*=\s*true\b', annotation):
+            annotation = expressions(source[marker.end():end])
+            if annotation.get('nativeQuery') != 'true':
                 continue
             prefix = source[end + 1:].split('(', 1)[0].strip()
             method = re.search(r'\b(\w+)\s*$', prefix)
             if method is None or '@' in prefix:
                 raise ValueError(str(path) + ': không xác định method sau @Query')
-            blocks = list(re.finditer(r'\b(value|countQuery)\s*=\s*"""([\s\S]*?)"""', annotation))
-            if not blocks or not any(block[1] == 'value' for block in blocks):
-                raise ValueError(str(path) + ': native @Query phải viết value bằng text block đầy đủ')
-            for block in blocks:
-                sql = textwrap.dedent(block[2]).strip()
+            if 'value' not in annotation:
+                raise ValueError(str(path) + ': thiếu SQL value')
+            for kind in ('value', 'countQuery'):
+                if kind not in annotation:
+                    continue
+                sql = resolve(annotation[kind], path.stem).strip()
                 if not sql:
                     raise ValueError(str(path) + ': SQL rỗng')
                 declaration = source[end + 1:].split(';', 1)[0]
-                yield path, method[1], block[1], sql, bool(re.search(r'\bPageable\b', declaration))
+                yield path, method[1], kind, sql, bool(re.search(r'\bPageable\b', declaration))
 
 
 def parameters(sql, transform):
@@ -107,6 +197,18 @@ def export(source_root, schema, example=False, user_id=1, page_size=20, page=0):
         'viewerVersion': 0, 'tokenVersion': 0, 'scope': 1, 'scopeId': 1, 'systemId': 0,
         'username': 'admin', 'name': 'admin', 'usernamePrefix': '%', 'email': 'example@example.invalid',
         'names': ('admin',), 'viewTarget': 'GET /operations/access',
+        'updateTarget': 'PUT /api/operations/trips/{id}', 'assignTarget': 'PUT /api/operations/access/users/{id}/roles',
+        'carrierId': None, 'status': None, 'fromAt': None, 'toAt': None, 'driverUserId': None,
+        'type': None, 'refType': None, 'parentId': 0, 'publicOnly': False, 'customerId': None,
+        'tripId': 1, 'pickup': 1, 'dropoff': 2, 'routeId': 1, 'seats': 1,
+        'originId': None, 'destinationId': None, 'provinceId': None,
+        'fromProvinceId': None, 'toProvinceId': None, 'fromLocationId': None, 'toLocationId': None,
+        'vehicleTypeId': None, 'departureFrom': None, 'departureTo': None, 'day': None,
+        'date': None, 'requestKey': '00000000-0000-0000-0000-000000000000',
+        'key': '00000000-0000-0000-0000-000000000000', 'carriers': '[]', 'fields': '[]', 'props': '{}',
+        'fromWardId': None, 'toWardId': None, 'minPrice': None, 'maxPrice': None,
+        'exceptId': 0, 'driverId': 1, 'vehicleId': 1, 'rangeStart': '2027-01-01T00:00:00Z',
+        'rangeEnd': '2027-01-02T00:00:00Z', 'starting': False,
     }
     if example:
         result.extend([

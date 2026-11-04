@@ -235,37 +235,32 @@ class CategorySecurityTest {
         @Bean
         @Primary
         CategoryRepo isolatedLocations() {
-            return new CategoryRepo(TestJpa.MANAGER, new ObjectMapper()) {
-                @Override
-                public PageResponse<Category> search(
-                    CategorySearch page,
-                    String refType,
-                    String type,
-                    boolean publicOnly
-                ) {
-                    boolean location = "LOCATION".equals(refType);
-                    return PageResponse.of(
-                        List.of(
-                            Category.builder()
-                                .id(location ? 2L : 1L)
-                                .code("DEMO01")
-                                .type("VALUE")
-                                .refType(refType)
-                                .name(location ? "Điểm demo" : "Tỉnh demo")
-                                .parentId(location ? 1L : null)
-                                .props(Map.of("nameEn", location ? "Demo place" : "Demo province"))
-                                .active(true)
-                                .createdAt(Instant.EPOCH)
-                                .updatedAt(Instant.EPOCH)
-                                .createdBy(9L)
-                                .updatedBy(9L)
-                                .build()
-                        ),
-                        page,
-                        1
-                    );
-                }
-            };
+            return TestJpa.stub(CategoryRepo.class, (method, args) -> {
+                if (!method.getName().equals("search")) throw new AssertionError(method);
+                CategorySearch page = (CategorySearch) args[0];
+                String refType = (String) args[1];
+                boolean location = "LOCATION".equals(refType);
+                return PageResponse.of(
+                    List.of(
+                        Category.builder()
+                            .id(location ? 2L : 1L)
+                            .code("DEMO01")
+                            .type("VALUE")
+                            .refType(refType)
+                            .name(location ? "Điểm demo" : "Tỉnh demo")
+                            .parentId(location ? 1L : null)
+                            .props(Map.of("nameEn", location ? "Demo place" : "Demo province"))
+                            .active(true)
+                            .createdAt(Instant.EPOCH)
+                            .updatedAt(Instant.EPOCH)
+                            .createdBy(9L)
+                            .updatedBy(9L)
+                            .build()
+                    ),
+                    page,
+                    1
+                );
+            });
         }
     }
 }

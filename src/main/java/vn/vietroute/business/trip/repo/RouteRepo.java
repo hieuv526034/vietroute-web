@@ -1,277 +1,300 @@
 package vn.vietroute.business.trip.repo;
 
 import static vn.vietroute.common.base.BaseRepository.booleanValue;
-import static vn.vietroute.common.base.BaseRepository.decimalValue;
 import static vn.vietroute.common.base.BaseRepository.instantValue;
 import static vn.vietroute.common.base.BaseRepository.intValue;
 import static vn.vietroute.common.base.BaseRepository.longValue;
 import static vn.vietroute.common.base.BaseRepository.stringValue;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
-import jakarta.persistence.Tuple;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import org.springframework.stereotype.Repository;
+import java.util.Map;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.Repository;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.repo.UserRoleRepo;
+import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.business.carrier.dto.search.CarrierSearch;
+import vn.vietroute.business.trip.dto.projection.RouteStopProjection;
 import vn.vietroute.business.trip.dto.request.RouteRequest;
 import vn.vietroute.business.trip.dto.response.RouteResponse;
 import vn.vietroute.business.trip.dto.response.RouteStopResponse;
-import vn.vietroute.common.base.BaseRepository;
+import vn.vietroute.business.trip.entity.Route;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.Routes;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
+import vn.vietroute.common.validation.BusinessRules;
 
-/** SQL tuyến luôn ràng ID + nhà xe/scope và cùng predicate cho count/trang/chi tiết. */
-@Repository
-public class RouteRepo extends BaseRepository {
-
-    private static final String FROM = """
+/**
+ * SQL native và ánh xạ của RouteRepo; transaction ghi thuộc Service.
+ */
+public interface RouteRepo extends Repository<Route, Long> {
+    String FROM = """
     FROM {h-schema}carrier_routes r
     JOIN {h-schema}carriers owner ON owner.id = r.carrier_id AND owner.scope_id = r.scope_id
     """;
-    private static final String COLUMNS = """
-    r.id, r.carrier_id, r.scope_id, owner.name AS carrier_name, r.code, r.name_vi, r.name_en, r.description,
+
+    String COLUMNS =
+        """
+        r.id, r.carrier_id, r.scope_id, owner.name AS carrier_name, r.code, r.name_vi, r.name_en, r.description,
         r.active, r.version, r.created_at, r.updated_at, r.created_by, r.updated_by, (
             SELECT COUNT(*)
             FROM {h-schema}carrier_route_stops s
             WHERE s.route_id = r.id
-        ) AS stop_count, (%s) AS can_update
-    """.formatted(UserRoleRepo.visibleSql("updateTarget"));
+        ) AS stop_count, (
+        """ +
+        UserRoleRepo.UPDATE_VISIBLE +
+        ") AS can_update ";
 
-    public RouteRepo(EntityManager manager) {
-        super(manager);
-    }
+    String FILTER =
+        FROM +
+        "WHERE " +
+        UserRoleRepo.VISIBLE +
+        """
+        AND (CAST(:active AS BOOLEAN) IS NULL OR r.active = :active)
+        AND (CAST(:carrierId AS BIGINT) IS NULL OR owner.id = :carrierId)
+        AND LOWER(CONCAT_WS(' ', r.code, r.name_vi, r.name_en, owner.name)) LIKE :keyword ESCAPE '\\'
+        """;
 
-    /** Tìm nguyên văn với SQL parameters; dữ liệu ngoài quyền không tham gia tổng số. */
+    @Query(value = "SELECT COUNT(*) " + FILTER, nativeQuery = true)
+    long countRows(
+        long viewerId,
+        long viewerVersion,
+        String viewTarget,
+        Boolean active,
+        Long carrierId,
+        String keyword
+    );
+
+    @Query(
+        value = "SELECT " + COLUMNS + FILTER + "ORDER BY r.id DESC LIMIT :pageSize OFFSET :offset ",
+        nativeQuery = true
+    )
+    List<Map<String, Object>> pageRows(
+        long viewerId,
+        long viewerVersion,
+        String viewTarget,
+        Boolean active,
+        Long carrierId,
+        String keyword,
+        String updateTarget,
+        int pageSize,
+        long offset
+    );
+
     @Transactional(readOnly = true)
-    public PageResponse<RouteResponse> page(CarrierSearch search) {
-        String filter = """
-        %s
-        WHERE %s
-            AND (CAST(:active AS BOOLEAN) IS NULL OR r.active = :active)
-            AND (CAST(:carrierId AS BIGINT) IS NULL OR owner.id = :carrierId)
-            AND LOWER(CONCAT_WS(' ', r.code, r.name_vi, r.name_en, owner.name)) LIKE :keyword ESCAPE '\\'
-        """.formatted(FROM, UserRoleRepo.visibleSql());
-        long count;
-        {
-            Query query = entityManager.createNativeQuery("SELECT COUNT(*)" + filter, Tuple.class);
-
-            bind(query, search);
-            {
-                Tuple rows = (Tuple) query.getSingleResult();
-                count = longValue(rows.get(0));
-            }
-        }
-        ArrayList<RouteResponse> items = new ArrayList<RouteResponse>();
-        {
-            Query query = entityManager.createNativeQuery(
-                """
-                SELECT %s
-                %s
-                ORDER BY r.id DESC
-                LIMIT :pageSize OFFSET :offset
-                """.formatted(COLUMNS, filter),
-                Tuple.class
-            );
-
-            UserRoleRepo.bindVisible(query::setParameter, "PUT " + Routes.ADMIN_ROUTES + Routes.BY_ID);
-            bind(query, search);
-            query.setParameter("pageSize", search.getSize());
-            query.setParameter("offset", search.offset());
-            {
-                for (Object rowsValue : query.getResultList()) {
-                    Tuple rows = (Tuple) rowsValue;
-                    items.add(map(rows, List.of()));
-                }
-            }
-        }
-        return PageResponse.of(items, search, count);
-    }
-
-    private void bind(Query query, CarrierSearch search) {
-        UserRoleRepo.bindVisible(query::setParameter);
-        query.setParameter("active", search.getActive());
-        query.setParameter("carrierId", search.getCarrierId());
+    default PageResponse<RouteResponse> page(CarrierSearch search) {
+        UserPrincipal actor = UserPrincipal.current();
         String text = search.getQuery() == null ? "" : search.getQuery().strip().toLowerCase(Locale.ROOT);
-        query.setParameter("keyword", "%" + text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%");
+        String keyword = "%" + text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+        long total = countRows(
+            actor.id(),
+            actor.tokenVersion(),
+            actor.getTarget(),
+            search.getActive(),
+            search.getCarrierId(),
+            keyword
+        );
+        List<RouteResponse> result = pageRows(
+            actor.id(),
+            actor.tokenVersion(),
+            actor.getTarget(),
+            search.getActive(),
+            search.getCarrierId(),
+            keyword,
+            "PUT " + Routes.ADMIN_ROUTES + Routes.BY_ID,
+            search.getSize(),
+            search.offset()
+        )
+            .stream()
+            .map(row -> map(row, List.of()))
+            .toList();
+        return PageResponse.of(result, search, total);
     }
 
-    /** Action do service truyền; đọc lại guard scoped khi khóa dòng, không tin carrierId từ body. */
-    public RouteResponse find(long id, boolean lock, boolean detail) {
-        {
-            Query query = entityManager.createNativeQuery(
-                """
-                SELECT %s
-                %s
-                WHERE r.id = :routeId
-                    AND %s
-                %s
-                """.formatted(COLUMNS, FROM, UserRoleRepo.visibleSql(), lock ? " FOR UPDATE OF r" : ""),
-                Tuple.class
-            );
+    @Query(value = "SELECT " + COLUMNS + FROM + "WHERE r.id = :routeId AND " + UserRoleRepo.VISIBLE, nativeQuery = true)
+    Map<String, Object> detailRow(
+        long viewerId,
+        long viewerVersion,
+        String viewTarget,
+        String updateTarget,
+        long routeId
+    );
 
-            UserRoleRepo.bindVisible(query::setParameter, "PUT " + Routes.ADMIN_ROUTES + Routes.BY_ID);
-            query.setParameter("routeId", id);
-            UserRoleRepo.bindVisible(query::setParameter);
-            {
-                List<?> rowValues = query.getResultList();
+    @Query(
+        value = "SELECT " + COLUMNS + FROM + "WHERE r.id = :routeId AND " + UserRoleRepo.VISIBLE + "FOR UPDATE OF r ",
+        nativeQuery = true
+    )
+    Map<String, Object> lockedRow(
+        long viewerId,
+        long viewerVersion,
+        String viewTarget,
+        String updateTarget,
+        long routeId
+    );
 
-                if (rowValues.isEmpty()) throw new BusinessException(ErrorCode.NOT_FOUND);
-                Tuple row = (Tuple) rowValues.get(0);
-
-                return map(row, detail ? stops(id) : List.of());
-            }
-        }
+    @Transactional(propagation = Propagation.MANDATORY)
+    default RouteResponse find(long id, boolean lock, boolean detail) {
+        UserPrincipal actor = UserPrincipal.current();
+        String update = "PUT " + Routes.ADMIN_ROUTES + Routes.BY_ID;
+        Map<String, Object> row = lock
+            ? lockedRow(actor.id(), actor.tokenVersion(), actor.getTarget(), update, id)
+            : detailRow(actor.id(), actor.tokenVersion(), actor.getTarget(), update, id);
+        if (row == null || row.isEmpty()) throw new BusinessException(ErrorCode.NOT_FOUND);
+        return map(row, detail ? stops(id) : List.of());
     }
 
-    /** Caller đã kiểm và khóa tuyến; các điểm chỉ được truy cập qua parent server. */
-    public List<RouteStopResponse> stops(long routeId) {
-        ArrayList<RouteStopResponse> result = new ArrayList<RouteStopResponse>();
-        {
-            Query query = entityManager.createNativeQuery(
-                """
-                SELECT s.stop_order, s.location_id, l.name AS name_vi, l.props->>'nameEn' AS name_en, l.props->>'address' AS address, (l.props->>'latitude')::NUMERIC AS latitude, (l.props->>'longitude')::NUMERIC AS longitude,
-                    s.arrival_offset_minutes,
-                    s.departure_offset_minutes, s.cumulative_fare, s.pickup_allowed, s.dropoff_allowed,
-                    p.id, p.name, w.id, w.name
-                FROM {h-schema}carrier_route_stops s
-                JOIN {h-schema}category l ON l.type='VALUE' AND l.ref_type='LOCATION' AND l.id = s.location_id
-                JOIN {h-schema}category w ON w.id=l.parent_id AND w.ref_type='WARD'
-                JOIN {h-schema}category p ON p.id=w.parent_id AND p.ref_type='PROVINCE'
-                WHERE s.route_id = :routeId
-                ORDER BY s.stop_order
-                """,
-                Tuple.class
-            );
+    @Query(
+        value = """
+        SELECT s.stop_order AS "stopOrder", s.location_id AS "locationId", l.name AS "nameVi",
+            l.props->> 'nameEn' AS "nameEn", l.props->> 'address' AS "address",
+            (l.props->> 'latitude')::NUMERIC AS "latitude", (l.props->> 'longitude')::NUMERIC AS "longitude",
+            s.arrival_offset_minutes AS "arrivalOffsetMinutes",
+            s.departure_offset_minutes AS "departureOffsetMinutes", s.cumulative_fare AS "cumulativeFare",
+            s.pickup_allowed AS "pickupAllowed", s.dropoff_allowed AS "dropoffAllowed", p.id AS "provinceId",
+            p.name AS "provinceName", w.id AS "wardId", w.name AS "wardName"
+        FROM {h-schema}carrier_route_stops s
+        JOIN {h-schema}category l ON l.type= 'VALUE' AND l.ref_type= 'LOCATION' AND l.id = s.location_id
+        JOIN {h-schema}category w ON w.id=l.parent_id AND w.ref_type= 'WARD'
+        JOIN {h-schema}category p ON p.id=w.parent_id AND p.ref_type= 'PROVINCE'
+        WHERE s.route_id = :routeId
+        ORDER BY s.stop_order
+        """,
+        nativeQuery = true
+    )
+    List<RouteStopProjection> stopRows(long routeId);
 
-            query.setParameter("routeId", routeId);
-            {
-                for (Object rowsValue : query.getResultList()) {
-                    Tuple rows = (Tuple) rowsValue;
-                    result.add(
-                        new RouteStopResponse(
-                            intValue(rows.get(0)),
-                            longValue(rows.get(1)),
-                            stringValue(rows.get(2)),
-                            stringValue(rows.get(3)),
-                            stringValue(rows.get(4)),
-                            decimalValue(rows.get(5)),
-                            decimalValue(rows.get(6)),
-                            intValue(rows.get(7)),
-                            intValue(rows.get(8)),
-                            decimalValue(rows.get(9)),
-                            booleanValue(rows.get(10)),
-                            booleanValue(rows.get(11)),
-                            longValue(rows.get(12)),
-                            stringValue(rows.get(13)),
-                            longValue(rows.get(14)),
-                            stringValue(rows.get(15))
-                        )
-                    );
-                }
-            }
-        }
-        return List.copyOf(result);
+    default List<RouteStopResponse> stops(long routeId) {
+        return stopRows(routeId)
+            .stream()
+            .map(rows -> {
+                return new RouteStopResponse(
+                    rows.getStopOrder(),
+                    rows.getLocationId(),
+                    rows.getNameVi(),
+                    rows.getNameEn(),
+                    rows.getAddress(),
+                    rows.getLatitude(),
+                    rows.getLongitude(),
+                    rows.getArrivalOffsetMinutes(),
+                    rows.getDepartureOffsetMinutes(),
+                    rows.getCumulativeFare(),
+                    rows.getPickupAllowed(),
+                    rows.getDropoffAllowed(),
+                    rows.getProvinceId(),
+                    rows.getProvinceName(),
+                    rows.getWardId(),
+                    rows.getWardName()
+                );
+            })
+            .toList();
     }
 
-    /** Khóa chia sẻ địa điểm/tỉnh trong cùng transaction để không chốt tuyến active với danh mục vừa bị tắt. */
-    public void validateLocations(RouteRequest body) {
+    @Query(
+        value = """
+        SELECT l.id AS "locationId", l.active AND w.active AND p.active AS "usable"
+        FROM {h-schema}category l
+        JOIN {h-schema}category w ON w.type= 'VALUE' AND w.ref_type= 'WARD' AND w.id=l.parent_id
+        JOIN {h-schema}category p ON p.type= 'VALUE' AND p.ref_type= 'PROVINCE' AND p.id=w.parent_id
+        WHERE l.id = ANY(:ids)
+        ORDER BY l.id
+        FOR SHARE OF p, w, l
+        """,
+        nativeQuery = true
+    )
+    List<RouteStopProjection> locationRows(Long[] ids);
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default void validateLocations(RouteRequest body) {
         Long[] ids = body
             .getStops()
             .stream()
             .map(stop -> stop.getLocationId())
             .sorted()
             .toArray(Long[]::new);
-
-        {
-            Query query = entityManager.createNativeQuery(
-                """
-                SELECT l.id, l.active
-                    AND w.active AND p.active AS usable
-                FROM {h-schema}category l
-                JOIN {h-schema}category w ON w.type='VALUE' AND w.ref_type='WARD' AND w.id=l.parent_id
-                JOIN {h-schema}category p ON p.type='VALUE' AND p.ref_type='PROVINCE' AND p.id=w.parent_id
-                WHERE l.id = ANY(:ids)
-                ORDER BY l.id
-                FOR SHARE OF p, w, l
-                """,
-                Tuple.class
-            );
-
-            query.setParameter("ids", ids);
-            int count = 0;
-            {
-                for (Object rowsValue : query.getResultList()) {
-                    Tuple rows = (Tuple) rowsValue;
-
-                    count++;
-                    if (body.isActive() && !booleanValue(rows.get(1))) throw new BusinessException(ErrorCode.CONFLICT);
-                }
-            }
-            if (count != ids.length) throw new BusinessException(ErrorCode.ROUTE_INVALID);
-        }
+        List<RouteStopProjection> rows = locationRows(ids);
+        BusinessRules.require(rows.size() == ids.length, ErrorCode.ROUTE_INVALID);
+        if (body.isActive()) BusinessRules.require(rows.stream().allMatch(row -> row.getUsable()), ErrorCode.CONFLICT);
     }
 
-    /** INSERT parent và các điểm dùng một connection; lỗi ràng buộc rollback toàn bộ. */
-    public long insert(long scopeId, RouteRequest body, long actor) {
-        {
-            Query query = entityManager.createNativeQuery(
-                """
-                INSERT INTO {h-schema}carrier_routes(carrier_id, scope_id, code, name_vi, name_en, description, active,
-                    created_by, updated_by)
-                VALUES (:carrierId, :scopeId, :code, :nameVi, :nameEn, :description, :active, :actor, :actor)
-                RETURNING id
-                """,
-                Tuple.class
-            );
+    @Query(
+        value = """
+        INSERT INTO {h-schema}carrier_routes(carrier_id, scope_id, code, name_vi, name_en, description, active,
+            created_by, updated_by)
+        VALUES (:carrierId, :scopeId, :code, :nameVi, :nameEn, :description, :active, :actor, :actor)
+        RETURNING id
+        """,
+        nativeQuery = true
+    )
+    long insertRow(
+        Long carrierId,
+        long scopeId,
+        String code,
+        String nameVi,
+        String nameEn,
+        String description,
+        boolean active,
+        long actor
+    );
 
-            query.setParameter("carrierId", body.getCarrierId());
-            query.setParameter("scopeId", scopeId);
-            query.setParameter("code", body.getCode());
-            query.setParameter("nameVi", body.getNameVi().strip());
-            query.setParameter("nameEn", body.getNameEn().strip());
-            query.setParameter("description", body.getDescription().strip());
-            query.setParameter("active", body.isActive());
-            query.setParameter("actor", actor);
-            {
-                Tuple row = (Tuple) query.getSingleResult();
-                return longValue(row.get(0));
-            }
-        }
+    @Transactional(propagation = Propagation.MANDATORY)
+    default long insert(long scope, RouteRequest body, long actor) {
+        return insertRow(
+            body.getCarrierId(),
+            scope,
+            body.getCode(),
+            body.getNameVi().strip(),
+            body.getNameEn().strip(),
+            body.getDescription().strip(),
+            body.isActive(),
+            actor
+        );
     }
 
-    /** CAS không tự lấy version mới để ghi đè; carrier/code/scope giữ nguyên. */
-    public void update(long id, RouteRequest body, long actor) {
-        {
-            Query query = entityManager.createNativeQuery(
-                """
-                UPDATE {h-schema}carrier_routes
-                SET name_vi = :nameVi, name_en = :nameEn, description = :description, active = :active, updated_by = :actor,
-                    updated_at = CURRENT_TIMESTAMP,
-                    version = version + 1
-                WHERE id = :id AND carrier_id = :carrierId AND code = :code AND version = :version
-                """
-            );
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+        value = """
+        UPDATE {h-schema}carrier_routes
+        SET name_vi = :nameVi, name_en = :nameEn, description = :description, active = :active, updated_by = :actor,
+            updated_at = CURRENT_TIMESTAMP, version = version + 1
+        WHERE id = :id AND carrier_id = :carrierId AND code = :code AND version = :version
+        """,
+        nativeQuery = true
+    )
+    int updateRow(
+        long id,
+        Long carrierId,
+        String code,
+        String nameVi,
+        String nameEn,
+        String description,
+        boolean active,
+        Long version,
+        long actor
+    );
 
-            query.setParameter("nameVi", body.getNameVi().strip());
-            query.setParameter("nameEn", body.getNameEn().strip());
-            query.setParameter("description", body.getDescription().strip());
-            query.setParameter("active", body.isActive());
-            query.setParameter("actor", actor);
-            query.setParameter("id", id);
-            query.setParameter("carrierId", body.getCarrierId());
-            query.setParameter("code", body.getCode());
-            query.setParameter("version", body.getVersion());
-            if (query.executeUpdate() != 1) throw new BusinessException(ErrorCode.STALE_VERSION);
-        }
+    @Transactional(propagation = Propagation.MANDATORY)
+    default void update(long id, RouteRequest body, long actor) {
+        BusinessRules.require(
+            updateRow(
+                id,
+                body.getCarrierId(),
+                body.getCode(),
+                body.getNameVi().strip(),
+                body.getNameEn().strip(),
+                body.getDescription().strip(),
+                body.isActive(),
+                body.getVersion(),
+                actor
+            ) == 1,
+            ErrorCode.STALE_VERSION
+        );
     }
 
-    private RouteResponse map(Tuple row, List<RouteStopResponse> stops) {
+    private static RouteResponse map(Map<String, Object> row, List<RouteStopResponse> stops) {
         return new RouteResponse(
             longValue(row.get("id")),
             longValue(row.get("carrier_id")),

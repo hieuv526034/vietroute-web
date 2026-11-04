@@ -32,6 +32,7 @@ import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 import vn.vietroute.common.jdbc.JdbcSchema;
 import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.validation.BusinessRules;
+import vn.vietroute.support.TestJpa;
 
 /** H2 kiểm CRUD JPA và rollback JDBC chung; dialect/index/scope thực vẫn được kiểm bằng PostgreSQL cô lập. */
 class BusinessJpaH2Test {
@@ -67,7 +68,7 @@ class BusinessJpaH2Test {
             new JdbcConnectionFactory(new TransactionAwareDataSourceProxy(source), new JdbcSchema("h2_business")),
             beans.getBeanProvider(PlatformTransactionManager.class)
         );
-        catalogs = new CategoryRepo(shared, new ObjectMapper());
+        catalogs = TestJpa.repository(CategoryRepo.class, shared);
     }
 
     @AfterEach

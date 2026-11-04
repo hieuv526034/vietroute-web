@@ -1,22 +1,57 @@
 package vn.vietroute.business.trip.repo.custom;
 
 import java.sql.Array;
-import java.sql.Array;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import vn.vietroute.business.trip.dto.projection.TripSegmentProjection;
+import vn.vietroute.business.trip.repo.TripSegmentRepo;
 import vn.vietroute.common.constant.ErrorCode;
-import vn.vietroute.common.constant.ErrorCode;
-import vn.vietroute.common.validation.BusinessRules;
 import vn.vietroute.common.validation.BusinessRules;
 
-/** SQL ghi batch theo tập; caller sở hữu transaction/connection và quyền nghiệp vụ. */
+/**
+ * SQL ghi batch theo tập; caller sở hữu transaction/connection và quyền nghiệp vụ.
+ */
 @Repository
+@RequiredArgsConstructor
 public class TripSegmentCustomRepo {
 
-    /** Khởi tạo toàn bộ chặng bằng một batch, caller đã tạo và khóa chuyến. */
+    private final TripSegmentRepo queries;
+
+    /**
+     * Caller đã khóa trip và booking; khóa chặng tăng dần trước cập nhật batch.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void releaseTrip(Connection connection, long tripId, long actor) throws SQLException {
+        List<TripSegmentProjection> needed = queries.cancellationRows(tripId);
+        if (needed.isEmpty()) return;
+        List<Integer> orders = new ArrayList<>();
+        List<Long> seats = new ArrayList<>();
+        List<Long> changes = new ArrayList<>();
+        for (TripSegmentProjection row : needed) {
+            orders.add(row.getSegmentOrder());
+            seats.add(row.getSeatsToRelease());
+            changes.add(row.getVersionChanges());
+        }
+        List<TripSegmentProjection> locked = queries.releaseRows(tripId, orders.toArray(Integer[]::new));
+        BusinessRules.require(locked.size() == orders.size(), ErrorCode.BOOKING_INVALID);
+        for (int index = 0; index < locked.size(); index++) {
+            TripSegmentProjection row = locked.get(index);
+            BusinessRules.require(row.getSegmentOrder() == orders.get(index), ErrorCode.BOOKING_INVALID);
+            BusinessRules.require(row.getReservedSeats() >= seats.get(index), ErrorCode.BOOKING_CAPACITY);
+        }
+        writeRelease(connection, tripId, actor, orders, seats, changes);
+    }
+
+    /**
+     * Khởi tạo toàn bộ chặng bằng một batch, caller đã tạo và khóa chuyến.
+     */
     public void insertBatch(
         Connection connection,
         long id,
@@ -47,7 +82,9 @@ public class TripSegmentCustomRepo {
         }
     }
 
-    /** Cập nhật sức chứa theo tập sau khi caller kiểm mức giữ chỗ và khóa đủ chặng. */
+    /**
+     * Cập nhật sức chứa theo tập sau khi caller kiểm mức giữ chỗ và khóa đủ chặng.
+     */
     public void updateCapacity(Connection connection, long id, int capacity, long actor) throws SQLException {
         try (
             PreparedStatement query = connection.prepareStatement(
@@ -65,28 +102,7 @@ public class TripSegmentCustomRepo {
         }
     }
 
-    public void change(Connection connection, long tripId, int pickup, int dropoff, int delta, long actor, int expected)
-        throws SQLException {
-        try (
-            PreparedStatement query = connection.prepareStatement(
-                """
-                UPDATE trip_segments
-                SET reserved_seats = reserved_seats + ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP,
-                    version = version + 1
-                WHERE trip_id = ? AND segment_order >= ? AND segment_order < ?
-                """
-            )
-        ) {
-            query.setInt(1, delta);
-            query.setLong(2, actor);
-            query.setLong(3, tripId);
-            query.setInt(4, pickup);
-            query.setInt(5, dropoff);
-            BusinessRules.require(query.executeUpdate() == expected, ErrorCode.BOOKING_INVALID);
-        }
-    }
-
-    public void releaseTrip(
+    private void writeRelease(
         Connection connection,
         long tripId,
         long actor,

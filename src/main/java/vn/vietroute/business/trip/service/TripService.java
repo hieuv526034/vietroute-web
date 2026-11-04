@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.security.UserPrincipal;
-import vn.vietroute.business.booking.repo.BookingRepo;
+import vn.vietroute.business.booking.service.BookingService;
 import vn.vietroute.business.carrier.entity.Carrier;
 import vn.vietroute.business.carrier.repo.CarrierRepo;
 import vn.vietroute.business.trip.constant.TripStatus;
@@ -21,6 +21,8 @@ import vn.vietroute.business.trip.repo.TripRepo.Assets;
 import vn.vietroute.business.trip.repo.TripRepo.SourceStop;
 import vn.vietroute.business.trip.repo.TripRepo.Template;
 import vn.vietroute.business.trip.repo.TripSegmentRepo;
+import vn.vietroute.business.trip.repo.custom.TripSegmentCustomRepo;
+import vn.vietroute.business.trip.repo.custom.TripStopCustomRepo;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.jdbc.JdbcTransactions;
@@ -35,7 +37,9 @@ public class TripService {
     private final TripSegmentRepo segments;
     private final CarrierRepo carriers;
     private final JdbcTransactions transactions;
-    private final BookingRepo bookings;
+    private final BookingService bookings;
+    private final TripStopCustomRepo stopBatch;
+    private final TripSegmentCustomRepo segmentBatch;
 
     /** Danh sách staff lọc tại DB trước count/phân trang. */
     public PageResponse<TripResponse> page(TripSearch search) {
@@ -86,7 +90,18 @@ public class TripService {
                     .get(template.getStops().size() - 1)
                     .getArrival() * 60L
             );
-            long id = trips.insert(connection, body, template, assets, end, actor.id());
+            long id = trips.insert(body, template, assets, end, actor.id());
+            stopBatch.insertBatch(connection, id, template, body.getDepartureAt(), actor.id());
+            segmentBatch.insertBatch(
+                connection,
+                id,
+                template.getCarrierId(),
+                template.getScopeId(),
+                template.getStops().size(),
+                body.getCapacity(),
+                actor.id()
+            );
+            trips.event(id, template.getCarrierId(), template.getScopeId(), "CREATED", null, "", actor.id());
             return trips.find(id, false, true);
         });
     }
@@ -187,11 +202,18 @@ public class TripService {
             BusinessRules.require(
                 body.getCapacity() > 0 &&
                     body.getCapacity() <= assets.getCapacity() &&
-                    body.getCapacity() >= segments.peakReserved(connection, id),
+                    body.getCapacity() >= segments.peakReserved(id),
                 ErrorCode.TRIP_INVALID
             );
             if (trip.getStatus() == TripStatus.OPEN) trips.requireAvailable(id, assets, start, end, false);
-            trips.assignment(connection, trip, assets, body.getCapacity(), start, end, actor.id());
+            trips.assignment(trip, assets, body.getCapacity(), start, end, actor.id());
+            stopBatch.shiftSchedules(
+                connection,
+                id,
+                start.getEpochSecond() - trip.getDepartureAt().getEpochSecond(),
+                actor.id()
+            );
+            segmentBatch.updateCapacity(connection, id, body.getCapacity(), actor.id());
             trips.event(
                 id,
                 trip.getCarrierId(),

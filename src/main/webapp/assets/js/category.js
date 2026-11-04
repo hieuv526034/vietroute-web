@@ -1,4 +1,4 @@
-/* Chỉ đọc một trang của nhóm/cha đang mở; không tải con khi dựng nhóm hoặc khi rê chuột. */
+/* Tab chọn nhóm danh mục. Cây tải từng nhánh, tìm kiếm dựng lại đường dẫn tổ tiên. */
 (() => {
     'use strict';
     const root = document.getElementById('category-workspace');
@@ -11,8 +11,9 @@
     const form = node('form');
     const labels = root.dataset;
     let groups = [];
-    let groupPage = 0;
-    let moreGroups = false;
+    let tab = null;
+    let roots = [];
+    let query = '';
     let targets = [];
     let draft = null;
     let busy = false;
@@ -60,30 +61,12 @@
             node('status').textContent = '';
         }
     };
-    const pageSize = 20;
-    const rowState = (item, parent = null) => ({
-        item,
-        parent,
-        children: [],
-        expanded: false,
-        page: 0,
-        more: false,
-        query: '',
-    });
-    const groupFor = (code) => groups.find((entry) => entry.item.code === code)?.item;
+    const rowState = (item, parent = null) => ({ item, parent, children: [], expanded: false, loaded: false });
+    const groupFor = (code) => groups.find((group) => group.code === code);
     const response = async (suffix, params) => (await api.get(base + suffix, { params, timeout: 10000 })).data.data;
-    const childGroups = (item) =>
-        item.type === 'GROUP'
-            ? item.props.parentRefType
-                ? []
-                : [item]
-            : groups
-                  .map((entry) => entry.item)
-                  .filter(
-                      (group) =>
-                          group.props.parentRefType === item.refType ||
-                          (group.code === item.refType && group.props.hierarchical),
-                  );
+    const canEdit = (item) => item.refType === tab.code || (tab.code === 'WARD' && item.refType === 'PROVINCE');
+    const childGroup = (item) =>
+        tab.props.parentRefType === item.refType || (tab.code === item.refType && tab.props.hierarchical) ? tab : null;
     const button = (label, action, className = 'button button-outline') => {
         const element = document.createElement('button');
         element.type = 'button';
@@ -99,77 +82,57 @@
         return cell;
     };
     const focusRow = (item) =>
-        requestAnimationFrame(() => document.getElementById(`category-expand-${item.id}`)?.focus());
-    // Chỉ đọc đúng một trang con trực tiếp; refType chỉ dùng ở cấp nhóm, parentId dùng ở nút giá trị.
-    const readChildren = async (entry, page = 0) => {
-        const item = entry.item;
-        const result = await response('', {
-            ...(item.type === 'GROUP' ? { refType: item.code } : { parentId: item.id }),
-            page,
-            size: pageSize,
-            query: entry.query,
+        requestAnimationFrame(() => {
+            const row = node('rows').querySelector(`[data-category-id="${item.id}"]`);
+            row?.querySelector('button')?.focus();
         });
-        const children = result.content.map((child) => rowState(child, entry));
-        entry.children = page ? [...entry.children, ...children] : children;
-        entry.page = result.page;
-        entry.more = result.hasNext;
+    const readChildren = async (entry) => {
+        const result = await response('', { tree: true, refType: tab.code, parentId: entry.item.id });
+        entry.children = result.content.map((item) => rowState(item, entry));
+        entry.loaded = true;
         entry.expanded = true;
     };
     const toggle = async (entry) => {
-        if (entry.expanded) {
-            entry.expanded = false;
-            entry.children = [];
-            entry.query = '';
-        } else {
-            await readChildren(entry);
-        }
+        if (entry.expanded) entry.expanded = false;
+        else if (entry.loaded) entry.expanded = true;
+        else await readChildren(entry);
         render();
         focusRow(entry.item);
     };
-    const toolsRow = (depth) => {
+    const emptyRow = (depth) => {
         const row = document.createElement('tr');
-        const cell = appendCell(row, '');
+        const cell = appendCell(row, labels.empty);
         cell.colSpan = 5;
-        cell.style.paddingInlineStart = `${depth * 1.3 + 1}rem`;
+        cell.className = 'category-empty';
+        cell.style.paddingInlineStart = depth * 1.3 + 1 + 'rem';
         node('rows').append(row);
-        return cell;
     };
-    const filterBranch = (entry, depth) => {
-        const filter = document.createElement('form');
-        filter.className = 'category-branch-filter';
-        const query = document.createElement('input');
-        query.type = 'search';
-        query.className = 'form-control';
-        query.maxLength = 160;
-        query.value = entry.query;
-        query.placeholder = labels.search;
-        query.setAttribute('aria-label', `${labels.search} · ${entry.item.name}`);
-        const submit = document.createElement('button');
-        submit.type = 'submit';
-        submit.className = 'button button-outline';
-        submit.textContent = labels.filter;
-        filter.append(query, submit);
-        filter.addEventListener('submit', (event) => {
-            event.preventDefault();
-            void run(async () => {
-                entry.query = query.value.trim();
-                await readChildren(entry);
-                render();
-                focusRow(entry.item);
-            });
-        });
-        toolsRow(depth).append(filter);
+    const buildTree = (items) => {
+        const entries = new Map(items.map((item) => [item.id, rowState(item)]));
+        const top = [];
+        for (const entry of entries.values()) {
+            const parent = entries.get(entry.item.parentId);
+            if (parent) {
+                entry.parent = parent;
+                parent.children.push(entry);
+                parent.expanded = true;
+                parent.loaded = true;
+            } else top.push(entry);
+        }
+        return top;
     };
     const draw = (entry, depth) => {
         const item = entry.item;
-        const children = childGroups(item);
+        const child = childGroup(item);
         const row = document.createElement('tr');
         row.dataset.categoryId = item.id;
         row.dataset.depth = depth;
+        row.classList.toggle('category-match', Boolean(item.searchMatch));
+        row.classList.toggle('category-context', Boolean(query && !item.searchMatch));
         appendCell(row, item.props.administrativeCode || item.code);
         const name = appendCell(row, '');
         name.style.paddingInlineStart = `${depth * 1.3 + 0.65}rem`;
-        if (children.length) {
+        if (item.hasChildren || entry.children.length) {
             const expand = button(
                 `${entry.expanded ? '▾' : '▸'} ${item.name}`,
                 () => toggle(entry),
@@ -195,14 +158,12 @@
         cell.className = 'table-actions';
         const actions = document.createElement('div');
         actions.className = 'row-actions';
-        if (item.active && can('POST'))
-            for (const group of children.filter((group) => group.active)) {
-                const create = button(`+ ${group.name}`, (trigger) => openEditor('VALUE', null, group, entry, trigger));
-                create.title = `${labels.create}: ${group.name}`;
-                create.setAttribute('aria-label', create.title);
-                actions.append(create);
-            }
-        if (can('PUT', '/{id}') && can('GET', '/{id}'))
+        if (item.active && child?.active && can('POST')) {
+            const create = button('+ ' + child.name, (trigger) => openEditor('VALUE', null, child, entry, trigger));
+            create.setAttribute('aria-label', labels.create + ': ' + child.name + ' · ' + item.name);
+            actions.append(create);
+        }
+        if (canEdit(item) && can('PUT', '/{id}') && can('GET', '/{id}'))
             actions.append(
                 table.actionButton(
                     `${labels.edit}: ${item.name}`,
@@ -215,7 +176,7 @@
                     false,
                 ),
             );
-        if (can('DELETE', '/{id}') && item.active)
+        if (canEdit(item) && can('DELETE', '/{id}') && item.active)
             actions.append(
                 table.actionButton(
                     `${labels.stop}: ${item.name}`,
@@ -223,9 +184,9 @@
                     () =>
                         run(async () => {
                             if (!window.confirm(`${labels.stop}: ${item.name}?`)) return;
-                            entry.item = (
-                                await mutate(`${base}/${item.id}`, { version: item.version }, 'delete')
-                            ).data.data;
+                            const updated = (await mutate(`${base}/${item.id}`, { version: item.version }, 'delete'))
+                                .data.data;
+                            entry.item = { ...updated, hasChildren: item.hasChildren, searchMatch: item.searchMatch };
                             render();
                             focusRow(entry.item);
                         }),
@@ -235,29 +196,90 @@
         cell.append(actions);
         node('rows').append(row);
         if (!entry.expanded) return;
-        if (entry.more || entry.query || entry.page > 0) filterBranch(entry, depth + 1);
-        if (!entry.children.length) toolsRow(depth + 1).textContent = labels.empty;
+        if (!entry.children.length) emptyRow(depth + 1);
         for (const child of entry.children) draw(child, depth + 1);
-        if (entry.more)
-            toolsRow(depth + 1).append(
-                button(labels.more, async () => {
-                    const previous = entry.children.length;
-                    await readChildren(entry, entry.page + 1);
-                    render();
-                    const first = entry.children[previous];
-                    if (first) {
-                        const row = node('rows').querySelector(`[data-category-id="${first.item.id}"]`);
-                        row?.querySelector('button')?.focus();
-                    }
-                }),
-            );
     };
     const render = () => {
         node('rows').replaceChildren();
-        for (const entry of groups) draw(entry, 0);
-        if (moreGroups) toolsRow(0).append(button(labels.more, () => loadGroups(groupPage + 1)));
-        if (!groups.length) toolsRow(0).textContent = labels.empty;
+        for (const entry of roots) draw(entry, 0);
+        if (!roots.length) emptyRow(0);
     };
+    const tabLabel = (group) => (group.code === 'WARD' && groupFor('PROVINCE') ? labels.geography : group.name);
+    const rootGroup = () => (tab?.code === 'WARD' ? groupFor('PROVINCE') || tab : tab);
+    const renderTabs = () => {
+        const tabs = node('tabs');
+        tabs.replaceChildren();
+        for (const group of groups) {
+            if (group.code === 'PROVINCE' && groupFor('WARD')?.props.parentRefType === 'PROVINCE') continue;
+            const entry = button(tabLabel(group), async () => {
+                await loadTree(group, '');
+                document.getElementById('category-tab-' + group.id)?.focus();
+            });
+            const selected = group.id === tab?.id;
+            entry.id = 'category-tab-' + group.id;
+            entry.setAttribute('role', 'tab');
+            entry.setAttribute('aria-controls', 'category-panel');
+            entry.setAttribute('aria-selected', String(selected));
+            entry.tabIndex = selected ? 0 : -1;
+            tabs.append(entry);
+        }
+        if (tab) node('panel').setAttribute('aria-labelledby', 'category-tab-' + tab.id);
+        const group = rootGroup();
+        node('add-value').hidden = !(group?.active && !group.props.parentRefType && can('POST'));
+        node('edit-group').hidden = !(tab && can('GET', '/{id}') && can('PUT', '/{id}'));
+        node('add-group').hidden = !can('POST');
+        node('search').hidden = !tab;
+        node('clear-search').hidden = !query;
+        node('tree-title').textContent = tab ? tabLabel(tab) : labels.group;
+        node('tree-help').textContent = tab?.props.parentRefType ? labels.branchHelp : labels.searchHelp;
+    };
+    const loadTree = async (group, text) => {
+        const result = await response('', { tree: true, refType: group.code, ...(text ? { query: text } : {}) });
+        tab = group;
+        query = text;
+        roots = buildTree(result.content);
+        node('keyword').value = text;
+        node('result-summary').textContent = text
+            ? labels.matches.replace('{0}', String(result.content.filter((item) => item.searchMatch).length))
+            : '';
+        renderTabs();
+        render();
+    };
+    node('tabs').addEventListener('keydown', (event) => {
+        const entries = Array.from(node('tabs').querySelectorAll('[role="tab"]'));
+        const index = entries.indexOf(event.target);
+        if (index < 0 || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const next =
+            event.key === 'Home'
+                ? 0
+                : event.key === 'End'
+                  ? entries.length - 1
+                  : (index + (event.key === 'ArrowRight' ? 1 : -1) + entries.length) % entries.length;
+        entries[next].click();
+    });
+    node('search').addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (tab) void run(() => loadTree(tab, node('keyword').value.trim()));
+    });
+    node('clear-search').addEventListener(
+        'click',
+        () =>
+            void run(async () => {
+                await loadTree(tab, '');
+                requestAnimationFrame(() => node('keyword').focus());
+            }),
+    );
+    node('add-value').addEventListener('click', (event) =>
+        openEditor('VALUE', null, rootGroup(), null, event.currentTarget),
+    );
+    node('edit-group').addEventListener('click', (event) => {
+        const trigger = event.currentTarget;
+        void run(async () => {
+            const detail = await response('/' + tab.id);
+            openEditor('GROUP', { detail }, tab, null, trigger);
+        });
+    });
     // Bản đồ chỉ khởi tạo khi người dùng mở; không theo dõi thiết bị hoặc tự gửi tọa độ.
     const mapPicker = (container) => {
         const latitude = node('prop-latitude'),
@@ -393,18 +415,21 @@
         editor.open(trigger);
         requestAnimationFrame(() => form.elements.name.focus());
     };
-    const loadGroups = async (page = 0) => {
+    const loadGroups = async () => {
         if (!can('GET', '/groups') || !can('GET')) {
             feedback(labels.noRead, false, 'category-feedback');
             return;
         }
-        const result = await response('/groups', { page, size: 100 });
-        const entries = result.content.map((item) => rowState(item));
-        groups = page ? [...groups, ...entries] : entries;
-        groupPage = result.page;
-        moreGroups = result.hasNext;
-        render();
-        node('add-group').hidden = !can('POST');
+        const result = await response('/groups', { tree: true });
+        groups = result.content;
+        const selected = groupFor(tab?.code) || groupFor('WARD') || groups[0];
+        if (selected) await loadTree(selected, '');
+        else {
+            tab = null;
+            roots = [];
+            renderTabs();
+            render();
+        }
     };
     form.addEventListener('submit', (event) => {
         event.preventDefault();
@@ -456,17 +481,18 @@
             const result = await mutate(item ? `${base}/${item.id}` : base, body, item ? 'put' : 'post');
             node('dialog').close();
             feedback(result.data.message, true, 'category-feedback');
-            if (entry) {
-                entry.item = result.data.data;
+            if (type === 'GROUP') await loadGroups();
+            else if (query) await loadTree(tab, query);
+            else if (entry) {
+                entry.item = { ...result.data.data, hasChildren: entry.item.hasChildren };
                 render();
                 focusRow(entry.item);
-            } else if (type === 'GROUP') {
-                await loadGroups();
-            } else {
+            } else if (parent) {
+                parent.item.hasChildren = true;
                 await readChildren(parent);
                 render();
                 focusRow(parent.item);
-            }
+            } else await loadTree(tab, '');
         });
     });
     node('add-group').addEventListener('click', (event) => openEditor('GROUP', null, null, null, event.currentTarget));

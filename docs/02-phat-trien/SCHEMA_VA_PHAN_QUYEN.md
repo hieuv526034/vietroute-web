@@ -43,6 +43,14 @@ flowchart LR
 
 Tổng 8 auth + 12 business + 1 journal + 1 history = 22. Các cột scope nằm trong carriers. Xe/tài xế thuộc nhà xe; trip_stops lưu snapshot độc lập mẫu tuyến, segment là đoạn giữa hai stop liền kề. Booking có pickup_order/dropoff_order để giữ chỗ trên đúng đoạn.
 
+## Booking đồng thời và ghi nhận tiền
+
+PENDING chỉ tiếp nhận yêu cầu, chưa giữ chỗ. Xác nhận khóa trip → booking → các segment tăng dần, kiểm đủ chặng và cập nhật trong cùng transaction. UPDATE chặng chỉ nhận giá trị `reserved_seats + delta` trong0..capacity; cập nhật thiếu dòng phải lỗi và rollback. CHECK ở DB giữ0 ≤ reserved_seats ≤ capacity. Hủy CONFIRMED trả chỗ một lần theo state/version; hủy PENDING không trả chỗ chưa từng giữ. Khóa PostgreSQL bảo vệ cả các node ứng dụng, không dùng synchronized hoặc bộ đếm RAM làm tồn chỗ.
+
+Tạo đơn và ghi thu/hoàn có UUID requestKey. Replay chỉ hợp lệ với cùng actor/nội dung/đơn; key khác nội dung hoặc dùng cho đơn khác nhận409. Thao tác mới kiểm version, khóa booking trước cộng tiền và ghi history cùng transaction. UPDATE tiền giữ tổng đã thu/hoàn tăng dần, đã thu không vượt giá đơn và đã hoàn không vượt đã thu; CHECK và unique request_key vẫn là lớp bảo vệ DB. History lỗi rollback cả tiền/version/key, nên có thể gửi lại cùng requestKey sau lỗi.
+
+Tiền hiện là ghi nhận thu/hoàn thủ công đã thực hiện bên ngoài. Hủy không tự chuyển tiền cho khách. Chưa có ví, trừ tiền ngân hàng hoặc payment gateway; các phần đó cần hợp đồng giao dịch và đối soát riêng. Ca đồng thời ở BusinessIntegrationTest kiểm8 request tại barrier và hai đơn ở hai chuyến dùng chung key; đây là regression DB local, không là bằng chứng năng lực tải production.
+
 ## Xác thực và grant endpoint
 
 Login chỉ username/password. UserService khóa dòng account, so BCrypt12, ghi bộ đếm sai trước trả lỗi;5 lần sai khóa 15 phút. Không ném lỗi password trong callback để rollback bộ đếm. Thành công cấp JWT30 phút; cookie HttpOnly/SameSite=Lax, Secure ở production. Không lưu token/password vào localStorage.
@@ -111,7 +119,7 @@ AuthInitializer/UserRepo lấy account/scope/link từ [default-access.json](../
 
 ## Danh mục chung và cây hành chính
 
-`category` dùng một bảng vật lý và 10 file Java. `CategoryRequest` dùng cho tạo và sửa. `CategorySearch` nhận bộ lọc phân trang. `CategoryResponse` có audit và version. `CategoryLookupResponse` chỉ trả các trường công khai.
+`category` dùng một bảng vật lý và 11 file Java. `CategoryRequest` dùng cho tạo và sửa. `CategorySearch` nhận bộ lọc phân trang. `CategoryResponse` có audit và version. `CategoryLookupResponse` chỉ trả các trường công khai.
 
 | Cột | Ý nghĩa |
 |---|---|
@@ -137,7 +145,9 @@ Năm nhóm có sẵn gồm `VEHICLE_TYPE`, `BOOKING_SOURCE`, `PROVINCE`, `WARD` 
 
 Bộ [đơn vị hành chính](../../src/main/resources/bootstrap/administrative-divisions.json) ghi nguồn, ngày tải và checksum. Dữ liệu gồm 34 tỉnh/thành và 3.321 đơn vị cấp xã từ bộ sau sáp nhập 2025. Mã và tỉnh cha đối chiếu với bảng chuyển đổi Cục Thống kê. Tên tỉnh lấy theo trang Cục Thống kê lúc thu thập. Mã hành chính lưu chuỗi trong `props.administrativeCode`, giữ số 0 đầu. Các mã nghiệp vụ như `HAIPHONG` tiếp tục nối với tuyến đã có. Khi bật DB_INIT, repo nhập theo tập và bỏ qua mục đã có. [Nguồn JSON](https://provinces.open-api.vn/) · [Cục Thống kê](https://danhmuchanhchinh.nso.gov.vn/).
 
-Trang `/operations/categories` hiện bảng cây. Ban đầu chỉ đọc `/api/v1/admin/categories/groups`. Mở nhóm gốc gọi `GET /api/v1/admin/categories?refType=PROVINCE&size=20`. Mở một tỉnh gọi `GET /api/v1/admin/categories?parentId=<id>&size=20`. **Xem thêm** tải trang tiếp theo trong nhánh. API công khai `GET /api/v1/categories?refType=WARD&parentId=<id>` trả xã/phường của một tỉnh. Thiếu cha thì danh sách xã/phường và địa điểm rỗng. Các endpoint danh mục cũ đã bỏ khỏi source. API quản trị chung có grant riêng trong DB.
+Trang `/operations/categories` chọn nhóm bằng tab. Đọc metadata nhóm qua `GET /api/v1/admin/categories/groups?tree=true`. Cây quản trị dùng `GET /api/v1/admin/categories?tree=true&refType=WARD` để lấy tỉnh gốc; thêm `parentId=<id>` chỉ lấy con trực tiếp. `refType=LOCATION` mở đường đi tỉnh → xã/phường → địa điểm. Nhánh trả đủ con, không dùng page/size để cắt dữ liệu. `hasChildren` điều khiển nút mở. Tìm `query` qua CTE `WITH RECURSIVE` trả các mục khớp cùng tổ tiên, có `searchMatch` phân biệt kết quả và đường dẫn. Tên hỗ trợ tìm không dấu, ký tự `%`/`_` được escape thành ký tự tìm literal. Không gửi đồng thời parentId và query trong chế độ cây.
+
+API lookup công khai `GET /api/v1/categories?refType=WARD&parentId=<id>` vẫn phân trang và trả whitelist. Thiếu cha thì xã/phường và địa điểm rỗng. Quyền page và từng API quản trị được kiểm riêng bằng grant DB; tree không tạo endpoint hoặc cấp quyền mới.
 
 Migration `catalog/002_category.sql` giữ ID của loại xe và nguồn đặt chỗ. Tỉnh và địa điểm được cấp ID không trùng qua bảng tạm. Bước này chuyển sáu FK nghiệp vụ, giữ nội dung snapshot và audit, rồi bỏ ba bảng cũ. Kiểm tra áp dụng theo môi trường ở [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
 

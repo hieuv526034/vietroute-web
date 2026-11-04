@@ -36,13 +36,15 @@ CRUD/gán dùng modal; nhiều nhóm nội dung dùng tab. Mở modal xóa dữ 
 | /operations/reports | Ngày/nhà xe, hai tab số liệu; chỉ nút xem báo cáo mới áp tiêu chí, picker nhà xe không gọi tổng hợp |
 | /operations/api-journal | Lọc metadata, mở chi tiết mới lấy snapshot; copy cURL/Postman đã che dữ liệu |
 
-Source gồm UI02/PR154 và UI03; trạng thái tích hợp/phát hành xem tiến độ/PR. Menu gom theo Danh mục/Nhà xe/Tuyến–chuyến/Đặt chỗ/Báo cáo/Quản trị từ chính các link DB đã cấp, không sinh quyền mới; khoảng cách link6px. Select đọc đủ danh mục qua API100 dòng/trang, không có nút tìm/pager riêng: tỉnh → xã/phường → địa điểm, nhà xe → tuyến/xe/tài xế. Đổi cha xóa lựa chọn con trước khi tải lại; lỗi không cho lưu khi thiếu danh sách. Báo cáo chọn nhà xe trực tiếp, chỉ Xem báo cáo mới áp ID mới.
+Menu gom theo Danh mục/Nhà xe/Tuyến–chuyến/Đặt chỗ/Báo cáo/Quản trị từ chính các link DB đã cấp, không sinh quyền mới; khoảng cách link6px. Select đọc đủ danh mục qua API100 dòng/trang, không có nút tìm/pager riêng: tỉnh → xã/phường → địa điểm, nhà xe → tuyến/xe/tài xế. Đổi cha xóa lựa chọn con trước khi tải lại; lỗi không cho lưu khi thiếu danh sách. Báo cáo chọn nhà xe trực tiếp, chỉ Xem báo cáo mới áp ID mới.
 
-Danh mục chung hiển thị bảng cây. Lần mở trang chỉ tải dòng nhóm. Nút ở dòng cha dùng `aria-expanded` và mở dòng con ngay bên dưới. Mỗi nhánh lấy tối đa 20 dòng mỗi lần. Tìm kiếm và **Xem thêm** áp dụng vào nhánh đang mở. Thu gọn bỏ các dòng con khỏi bảng. Modal lấy trường riêng theo cấu hình nhóm và giữ bản nháp khi lưu lỗi.
+Danh mục chung có tab cho từng nhóm. Tab Tỉnh/thành và xã/phường hiển thị 34 tỉnh/thành ở cấp đầu. Bấm mũi tên mới tải toàn bộ con trực tiếp của cha đó. Bảng cây không phân trang. Tab Địa điểm đi theo tỉnh → xã/phường → điểm đón trả. Các nhóm phẳng như loại xe hiển thị trực tiếp các giá trị.
+
+Ô tìm kiếm áp dụng trong tab đang chọn. Người dùng có thể nhập mã hoặc tên có dấu/không dấu rồi nhấn Enter hoặc nút tìm. SQL recursive trả mục khớp và toàn bộ tổ tiên, giao diện tự mở đường dẫn và tô nổi mục khớp. Thu gọn/mở lại trong kết quả giữ phạm vi kết quả đó. Xóa tìm kiếm trở về các nút gốc. Mỗi lần mở nhánh chỉ đọc con của cha, không tải toàn bộ danh mục hành chính. Modal tạo/sửa nhận đúng nhóm và cha, giữ draft khi API báo lỗi. Tab hỗ trợ phím trái/phải, Home/End và aria-selected.
 
 Menu dùng mục Danh mục chung khi người dùng đã được cấp link này. Các đường dẫn quản trị riêng vẫn dùng được theo grant. `/admin` là link tổng quan cũ và được lọc khỏi nhóm Danh mục.
 
-Phân trang chỉ ở bảng kết quả: ẩn khi rỗng, một trang ẩn điều hướng/nhảy trang, nhiều trang giữ paging server. Bản đang chạy cần đúng source và khởi động lại Java mới có nhóm menu. Tra [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md), không coi preview/API giả là bằng chứng production.
+Phân trang chỉ ở bảng kết quả: ẩn khi rỗng, một trang ẩn điều hướng/nhảy trang, nhiều trang giữ paging server. Trạng thái phát hành được đối chiếu tại [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
 
 ## Lỗi, credential và khả năng truy cập
 

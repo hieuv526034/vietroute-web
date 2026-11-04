@@ -13,6 +13,10 @@ import vn.vietroute.business.carrier.dto.search.CarrierSearch;
 import vn.vietroute.business.carrier.entity.Carrier;
 import vn.vietroute.business.carrier.repo.CarrierRepo;
 import vn.vietroute.common.base.PageResponse;
+import vn.vietroute.common.config.application.AppSettings;
+import vn.vietroute.common.constant.ErrorCode;
+import vn.vietroute.common.jdbc.JdbcSchema;
+import vn.vietroute.common.validation.BusinessRules;
 
 /** Nhà xe sở hữu scope duy nhất; scope active khác trạng thái nhận chuyến/đặt của doanh nghiệp. */
 @Service
@@ -21,6 +25,8 @@ import vn.vietroute.common.base.PageResponse;
 public class CarrierService {
 
     private final CarrierRepo carriers;
+    private final AppSettings settings;
+    private final JdbcSchema schema;
 
     private final UserRoleRepo mappings;
 
@@ -48,7 +54,14 @@ public class CarrierService {
     public CarrierResponse create(CarrierRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
         mappings.requireGlobal(actor);
-        long id = carriers.insertCarrier(body, actor.id());
+        mappings.lockRoleAssignments();
+        BusinessRules.require(
+            mappings.scopeCount() < settings.getScopeCapacity(),
+            ErrorCode.ACCESS_CAPACITY_REACHED,
+            settings.getScopeCapacity()
+        );
+        long scope = mappings.nextScopeId(schema.quoted() + ".carrier_scope_ids");
+        long id = carriers.insertCarrier(scope, body, actor.id());
         Carrier value = carriers.carrier(id, false);
         changes.append(
             "SCOPE_CREATED",

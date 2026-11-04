@@ -58,8 +58,9 @@ public class CategoryAPI extends BaseController {
 
     @GetMapping(Routes.ADMIN_CATEGORIES)
     @Operation(
-        summary = "Danh sách con của một danh mục",
-        description = "Chỉ đọc mục gốc của một refType hoặc con trực tiếp của một parentId. Không trả cả cây; phân trang tại DB."
+        summary = "Nhánh danh mục và tìm kiếm cây",
+        description = "tree=true đọc một cấp theo refType/parentId hoặc tìm mục khớp cùng tổ tiên theo query. " +
+            "Kết quả cây không chia trang. Yêu cầu thường vẫn phân trang theo cha."
     )
     public ApiResult<PageResponse<CategoryResponse>> searchCategories(
         @Valid @ModelAttribute CategorySearch search,

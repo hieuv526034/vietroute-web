@@ -1,193 +1,127 @@
 package vn.vietroute.business.trip.repo;
 
-import static vn.vietroute.common.base.BaseRepository.intValue;
-import static vn.vietroute.common.base.BaseRepository.longValue;
-
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
-import jakarta.persistence.Tuple;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Repository;
+import java.util.List;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.Repository;
+import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import vn.vietroute.business.trip.repo.custom.TripSegmentCustomRepo;
+import vn.vietroute.business.trip.dto.projection.TripSegmentProjection;
+import vn.vietroute.business.trip.entity.TripSegment;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.validation.BusinessRules;
 
-/** Một thuật toán tồn chỗ dùng cho WEB/PHONE/xác nhận/hủy; caller bắt buộc khóa trip trước. */
-@Repository
-@Transactional(propagation = Propagation.MANDATORY)
-@RequiredArgsConstructor
-public class TripSegmentRepo {
+/**
+ * SQL native và ánh xạ của TripSegmentRepo; transaction ghi thuộc Service.
+ */
+public interface TripSegmentRepo extends Repository<TripSegment, Long> {
+    @Query(
+        value = """
+        SELECT segment_order AS "segmentOrder", capacity, reserved_seats AS "reservedSeats"
+        FROM {h-schema}trip_segments
+        WHERE trip_id = :tripId AND segment_order >= :pickup AND segment_order < :dropoff
+        ORDER BY segment_order
+        FOR UPDATE
+        """,
+        nativeQuery = true
+    )
+    List<TripSegmentProjection> lockedRows(long tripId, int pickup, int dropoff);
 
-    private final EntityManager entityManager;
-    private final TripSegmentCustomRepo batch;
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+        value = """
+        UPDATE {h-schema}trip_segments
+        SET reserved_seats = reserved_seats + :delta, updated_by = :actor, updated_at = CURRENT_TIMESTAMP,
+            version = version + 1
+        WHERE trip_id = :tripId AND segment_order >= :pickup AND segment_order < :dropoff
+            AND reserved_seats + :delta BETWEEN 0 AND capacity
+        """,
+        nativeQuery = true
+    )
+    int changeRows(long tripId, int pickup, int dropoff, int delta, long actor);
 
-    /** Khóa đủ đoạn tăng dần; không tăng khi PENDING. Lỗi đoạn bất kỳ rollback toàn bộ giao dịch caller. */
-    public void change(
-        Connection connection,
-        long tripId,
-        int pickup,
-        int dropoff,
-        int seats,
-        boolean reserve,
-        long actor
-    ) throws SQLException {
-        ArrayList<Integer> orders = new ArrayList<Integer>();
-        {
-            Query query = entityManager.createNativeQuery(
-                """
-                SELECT segment_order, capacity, reserved_seats
-                FROM {h-schema}trip_segments
-                WHERE trip_id = :tripId AND segment_order >= :pickup AND segment_order < :dropoff
-                ORDER BY segment_order
-                FOR UPDATE
-                """,
-                Tuple.class
-            );
-
-            query.setParameter("tripId", tripId);
-            query.setParameter("pickup", pickup);
-            query.setParameter("dropoff", dropoff);
-            {
-                for (Object rowValue : query.getResultList()) {
-                    Tuple row = (Tuple) rowValue;
-
-                    BusinessRules.require(intValue(row.get(0)) == pickup + orders.size(), ErrorCode.BOOKING_INVALID);
-                    BusinessRules.require(
-                        reserve ? intValue(row.get(1)) - intValue(row.get(2)) >= seats : intValue(row.get(2)) >= seats,
-                        ErrorCode.BOOKING_CAPACITY
-                    );
-                    orders.add(intValue(row.get(0)));
-                }
-            }
-        }
+    @Transactional(propagation = Propagation.MANDATORY)
+    default void change(long tripId, int pickup, int dropoff, int seats, boolean reserve, long actor) {
+        List<TripSegmentProjection> rows = lockedRows(tripId, pickup, dropoff);
         BusinessRules.require(
-            seats > 0 && orders.size() == dropoff - pickup && !orders.isEmpty(),
+            seats > 0 && rows.size() == dropoff - pickup && !rows.isEmpty(),
             ErrorCode.BOOKING_INVALID
         );
-        batch.change(connection, tripId, pickup, dropoff, reserve ? seats : -seats, actor, orders.size());
+        int order = pickup;
+        for (TripSegmentProjection row : rows) {
+            BusinessRules.require(row.getSegmentOrder() == order++, ErrorCode.BOOKING_INVALID);
+            BusinessRules.require(
+                reserve ? row.getCapacity() - row.getReservedSeats() >= seats : row.getReservedSeats() >= seats,
+                ErrorCode.BOOKING_CAPACITY
+            );
+        }
+        BusinessRules.require(
+            changeRows(tripId, pickup, dropoff, reserve ? seats : -seats, actor) == rows.size(),
+            ErrorCode.BOOKING_INVALID
+        );
     }
 
-    /** Hủy trip đã khóa booking: cộng chỗ cần trả theo đoạn trước, khóa đoạn tăng dần và cập nhật một lần. */
-    public void releaseTrip(Connection connection, long tripId, long actor) throws SQLException {
-        ArrayList<Integer> orders = new ArrayList<Integer>();
-        ArrayList<Long> seats = new ArrayList<Long>();
-        ArrayList<Long> changes = new ArrayList<Long>();
-        {
-            Query query = entityManager.createNativeQuery(
-                """
-                SELECT part.segment_order, SUM(b.seats), COUNT(*)
-                FROM {h-schema}bookings b
-                CROSS JOIN LATERAL GENERATE_SERIES(b.pickup_order, b.dropoff_order - 1) part(segment_order)
-                WHERE b.trip_id = :tripId
-                    AND b.status = 'CONFIRMED'
-                GROUP BY part.segment_order
-                ORDER BY part.segment_order
-                """,
-                Tuple.class
-            );
+    @Query(
+        value = """
+        SELECT part.segment_order AS "segmentOrder", SUM(b.seats) AS "seatsToRelease", COUNT(*) AS "versionChanges"
+        FROM {h-schema}bookings b
+        CROSS JOIN LATERAL GENERATE_SERIES(b.pickup_order, b.dropoff_order - 1) part(segment_order)
+        WHERE b.trip_id = :tripId
+            AND b.status = 'CONFIRMED'
+        GROUP BY part.segment_order
+        ORDER BY part.segment_order
+        """,
+        nativeQuery = true
+    )
+    List<TripSegmentProjection> cancellationRows(long tripId);
 
-            query.setParameter("tripId", tripId);
-            {
-                for (Object rowsValue : query.getResultList()) {
-                    Tuple rows = (Tuple) rowsValue;
+    @Transactional(propagation = Propagation.MANDATORY)
+    @Query(
+        value = """
+        SELECT segment_order AS "segmentOrder", reserved_seats AS "reservedSeats"
+        FROM {h-schema}trip_segments
+        WHERE trip_id = :tripId
+            AND segment_order = ANY(:orderArray)
+        ORDER BY segment_order
+        FOR UPDATE
+        """,
+        nativeQuery = true
+    )
+    List<TripSegmentProjection> releaseRows(long tripId, @Param("orderArray") Integer[] orders);
 
-                    orders.add(intValue(rows.get(0)));
-                    seats.add(longValue(rows.get(1)));
-                    changes.add(longValue(rows.get(2)));
-                }
-            }
+    @Query(
+        value = """
+        SELECT segment_order AS "segmentOrder", capacity - reserved_seats AS "remainingSeats"
+        FROM {h-schema}trip_segments
+        WHERE trip_id = :tripId AND segment_order >= :pickup AND segment_order < :dropoff
+        ORDER BY segment_order
+        """,
+        nativeQuery = true
+    )
+    List<TripSegmentProjection> availableRows(long tripId, int pickup, int dropoff);
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    default int available(long tripId, int pickup, int dropoff) {
+        List<TripSegmentProjection> rows = availableRows(tripId, pickup, dropoff);
+        BusinessRules.require(rows.size() == dropoff - pickup && !rows.isEmpty(), ErrorCode.BOOKING_INVALID);
+        int remaining = 200;
+        int order = pickup;
+        for (TripSegmentProjection row : rows) {
+            BusinessRules.require(row.getSegmentOrder() == order++, ErrorCode.BOOKING_INVALID);
+            remaining = Math.min(remaining, row.getRemainingSeats());
         }
-        if (orders.isEmpty()) return;
-        {
-            Query query = entityManager.createNativeQuery(
-                """
-                SELECT segment_order, reserved_seats
-                FROM {h-schema}trip_segments
-                WHERE trip_id = :tripId
-                    AND segment_order = ANY(:orderArray)
-                ORDER BY segment_order
-                FOR UPDATE
-                """,
-                Tuple.class
-            );
-
-            query.setParameter("tripId", tripId);
-            query.setParameter("orderArray", orders.toArray(Integer[]::new));
-            int count = 0;
-            {
-                for (Object rowsValue : query.getResultList()) {
-                    Tuple rows = (Tuple) rowsValue;
-
-                    BusinessRules.require(intValue(rows.get(0)) == orders.get(count), ErrorCode.BOOKING_INVALID);
-                    BusinessRules.require(longValue(rows.get(1)) >= seats.get(count), ErrorCode.BOOKING_CAPACITY);
-                    count++;
-                }
-            }
-            BusinessRules.require(count == orders.size(), ErrorCode.BOOKING_INVALID);
-        }
-        batch.releaseTrip(connection, tripId, actor, orders, seats, changes);
+        return remaining;
     }
 
-    /** Caller đã khóa trip; kiểm mỗi đoạn và trả chỗ nhỏ nhất cho cặp điểm, không tính toàn chuyến. */
-    public int available(long tripId, int pickup, int dropoff) {
-        int result = 200,
-            count = 0;
-        {
-            Query query = entityManager.createNativeQuery(
-                """
-                SELECT segment_order, capacity - reserved_seats
-                FROM {h-schema}trip_segments
-                WHERE trip_id = :tripId AND segment_order >= :pickup AND segment_order < :dropoff
-                ORDER BY segment_order
-                """,
-                Tuple.class
-            );
+    @Query(
+        value = "SELECT reserved_seats FROM {h-schema}trip_segments WHERE trip_id = :id ORDER BY segment_order FOR UPDATE ",
+        nativeQuery = true
+    )
+    List<Integer> reservedRows(long id);
 
-            query.setParameter("tripId", tripId);
-            query.setParameter("pickup", pickup);
-            query.setParameter("dropoff", dropoff);
-            {
-                for (Object rowsValue : query.getResultList()) {
-                    Tuple rows = (Tuple) rowsValue;
-
-                    BusinessRules.require(intValue(rows.get(0)) == pickup + count, ErrorCode.BOOKING_INVALID);
-                    result = Math.min(result, intValue(rows.get(1)));
-                    count++;
-                }
-            }
-        }
-        BusinessRules.require(count == dropoff - pickup && count > 0, ErrorCode.BOOKING_INVALID);
-        return result;
-    }
-
-    /** Trip đã khóa; khóa segment theo thứ tự tăng và lấy mức đặt cao nhất trước khi đổi capacity. */
-    public int peakReserved(Connection connection, long id) throws SQLException {
-        int peak = 0;
-        {
-            Query query = entityManager.createNativeQuery(
-                """
-                SELECT reserved_seats
-                FROM {h-schema}trip_segments
-                WHERE trip_id = :id
-                ORDER BY segment_order
-                FOR UPDATE
-                """,
-                Tuple.class
-            );
-
-            query.setParameter("id", id);
-            {
-                for (Object rowValue : query.getResultList()) {
-                    Tuple row = (Tuple) rowValue;
-                    peak = Math.max(peak, intValue(row.get(0)));
-                }
-            }
-        }
-        return peak;
+    @Transactional(propagation = Propagation.MANDATORY)
+    default int peakReserved(long id) {
+        return reservedRows(id).stream().mapToInt(Integer::intValue).max().orElse(0);
     }
 }

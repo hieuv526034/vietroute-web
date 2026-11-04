@@ -22,7 +22,7 @@ import vn.vietroute.common.jdbc.JdbcSchema;
 
 /** Spring MVC thuần: JPA CRUD và JDBC batch/SQL dùng cùng connection và ranh giới commit/rollback. */
 @Configuration
-@EnableJpaRepositories(basePackages = { "vn.vietroute.auth.repo", "vn.vietroute.business.trip.repo" })
+@EnableJpaRepositories(basePackages = { "vn.vietroute.auth.repo", "vn.vietroute.business" })
 @EnableTransactionManagement(proxyTargetClass = true)
 public class JpaConfig {
 

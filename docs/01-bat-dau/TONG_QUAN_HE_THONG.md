@@ -51,7 +51,7 @@ Phiên bản chính xác đọc [pom.xml](../../pom.xml) và [package.json](../.
 | common | 58 | 1 | Nền MVC/DB, response/lỗi và api_request_journal |
 | History migration | — | 1 | vietroute_schema_history |
 
-Source có 215 file Java trong ba khối chính và 22 bảng sau migration Category, gồm history. Xem tên bảng và quan hệ tại [schema](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md). Số file là mốc source, không phải bằng chứng một thành viên đã viết toàn bộ khối được phân công.
+Source có 229 file Java trong ba khối chính, gồm14 interface projection được chấp thuận bổ sung và 22 bảng sau migration Category, gồm history. Xem tên bảng và quan hệ tại [schema](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md). Số file là mốc source, không phải bằng chứng một thành viên đã viết toàn bộ khối được phân công.
 
 ## Một request đi qua đâu
 
@@ -80,3 +80,7 @@ Menu giúp điều hướng; backend kiểm lại endpoint và SQL kiểm dữ l
 | hiencoi250404-design | [Test thủ công, ảnh chức năng và báo cáo Word](../05-ke-hoach/PHAN_CONG.md#hiencoi250404-design) |
 
 Hai dev chịu source và test của thay đổi mình viết; Anh chủ trì báo cáo Word/sơ đồ, Hien test thủ công/chụp ảnh chức năng; cả hai cùng hoàn thiện bản nộp. Test tự động do hai dev phụ trách. Học luồng trước/sau phần mình để bàn giao được bằng ID, trạng thái, testcase và bằng chứng. Phân công mới từ02/11/2026 không thay tác giả code đã có; đóng góp thực đối chiếu commit/PR.
+
+## Sử dụng danh mục chung
+
+Một menu mở workspace với các tab nhóm. Tỉnh/thành và xã/phường dùng bảng cây, mở cha mới tải con. Địa điểm có đường dẫn tỉnh → xã/phường → điểm đón trả. Tìm mã/tên có dấu hoặc không dấu lấy cả tổ tiên và mở đường dẫn đến kết quả. Loại xe có số chỗ trong props; tọa độ địa điểm chọn bằng ghim bản đồ.

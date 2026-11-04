@@ -30,10 +30,8 @@ import vn.vietroute.common.exception.BusinessException;
 public interface UserRepo extends JpaRepository<User, Long> {
     @Query(
         value = """
-        SELECT u.id, u.username, u.display_name, u.email, u.email_verified_at,
-            u.activation_pending,
-            u.active, u.must_change_password, u.token_version, u.version, u.created_at, u.updated_at,
-                u.created_by,
+        SELECT u.id, u.username, u.display_name, u.email, u.email_verified_at, u.activation_pending,
+            u.active, u.must_change_password, u.token_version, u.version, u.created_at, u.updated_at, u.created_by,
             u.updated_by
         , ARRAY(
             SELECT r.code
@@ -240,8 +238,8 @@ public interface UserRepo extends JpaRepository<User, Long> {
     @Query(
         value = """
         UPDATE {h-schema}auth_users
-        SET failed_login_attempts = :attempts, locked_until = :lockedUntil, updated_at = CURRENT_TIMESTAMP, updated_by = :systemActor,
-            version = version + 1
+        SET failed_login_attempts = :attempts, locked_until = :lockedUntil, updated_at = CURRENT_TIMESTAMP, updated_by =
+            :systemActor, version = version + 1
         WHERE id = :id
         """,
         nativeQuery = true
@@ -260,40 +258,40 @@ public interface UserRepo extends JpaRepository<User, Long> {
 
     @Query(
         value = """
-            UPDATE {h-schema}auth_users u
-            SET failed_login_attempts = 0, locked_until = NULL, updated_at = CURRENT_TIMESTAMP, updated_by = :systemActor,
-                version = version + 1
-            WHERE u.id = :id AND NOT u.deleted
-            RETURNING
+        UPDATE {h-schema}auth_users u
+        SET failed_login_attempts = 0, locked_until = NULL, updated_at = CURRENT_TIMESTAMP, updated_by = :systemActor,
+            version = version + 1
+        WHERE u.id = :id AND NOT u.deleted
+        RETURNING
             u.id, u.username, u.display_name, u.email, u.email_verified_at, u.activation_pending,
-                u.password_hash, u.active, u.must_change_password, u.failed_login_attempts, u.locked_until,
-                u.token_version, u.version, u.created_at, u.updated_at, u.created_by, u.updated_by
-            , ARRAY(
-                SELECT r.code
-                FROM {h-schema}auth_user_roles ur
-                JOIN {h-schema}auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
-                WHERE ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
-                ORDER BY r.code
-            ) AS role_codes, ARRAY(
-                SELECT DISTINCT fr.target
-                FROM {h-schema}auth_user_roles ur
-                JOIN {h-schema}auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
-                JOIN {h-schema}auth_role_functions rf ON rf.role_code = r.code
-                JOIN {h-schema}auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
-                JOIN {h-schema}auth_function_resources fr ON fr.function_code = f.code
-                WHERE ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
-                ORDER BY fr.target
-            ) AS resource_targets, ARRAY(
-                SELECT DISTINCT fr.target
-                FROM {h-schema}auth_user_roles ur
-                JOIN {h-schema}auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted AND r.all_scopes
-                JOIN {h-schema}auth_role_functions rf ON rf.role_code = r.code
-                JOIN {h-schema}auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
-                JOIN {h-schema}auth_function_resources fr ON fr.function_code = f.code
-                WHERE ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
-                ORDER BY fr.target
-            ) AS global_targets
-            """,
+            u.password_hash, u.active, u.must_change_password, u.failed_login_attempts, u.locked_until,
+            u.token_version, u.version, u.created_at, u.updated_at, u.created_by, u.updated_by
+        , ARRAY(
+            SELECT r.code
+            FROM {h-schema}auth_user_roles ur
+            JOIN {h-schema}auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
+            WHERE ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
+            ORDER BY r.code
+        ) AS role_codes, ARRAY(
+            SELECT DISTINCT fr.target
+            FROM {h-schema}auth_user_roles ur
+            JOIN {h-schema}auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted
+            JOIN {h-schema}auth_role_functions rf ON rf.role_code = r.code
+            JOIN {h-schema}auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
+            JOIN {h-schema}auth_function_resources fr ON fr.function_code = f.code
+            WHERE ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
+            ORDER BY fr.target
+        ) AS resource_targets, ARRAY(
+            SELECT DISTINCT fr.target
+            FROM {h-schema}auth_user_roles ur
+            JOIN {h-schema}auth_roles r ON r.code = ur.role_code AND r.active AND NOT r.deleted AND r.all_scopes
+            JOIN {h-schema}auth_role_functions rf ON rf.role_code = r.code
+            JOIN {h-schema}auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
+            JOIN {h-schema}auth_function_resources fr ON fr.function_code = f.code
+            WHERE ur.user_id = u.id AND ur.scope_id = 0 AND ur.active
+            ORDER BY fr.target
+        ) AS global_targets
+        """,
         nativeQuery = true
     )
     Map<String, Object> completeLoginRow(@Param("id") long id, @Param("systemActor") long actor);
@@ -341,8 +339,7 @@ public interface UserRepo extends JpaRepository<User, Long> {
     @Query(
         value = """
         UPDATE {h-schema}auth_users
-        SET token_version = token_version + 1, updated_by = :id, updated_at = CURRENT_TIMESTAMP,
-            version = version + 1
+        SET token_version = token_version + 1, updated_by = :id, updated_at = CURRENT_TIMESTAMP, version = version + 1
         WHERE id = :id
         """,
         nativeQuery = true
@@ -353,14 +350,13 @@ public interface UserRepo extends JpaRepository<User, Long> {
         value = """
         SELECT u.id, u.username, u.display_name, u.email, u.email_verified_at, u.updated_by, u.active,
             u.activation_pending,
-            u.must_change_password, (u.email_verified_at IS NULL) AS email_verification_required,
-                u.locked_until,
+            u.must_change_password, (u.email_verified_at IS NULL) AS email_verification_required, u.locked_until,
             u.version, u.created_at, u.updated_at, COALESCE((
                 SELECT STRING_AGG(role_code, ','
-                ORDER BY role_code)
+                    ORDER BY role_code)
                 FROM {h-schema}auth_user_roles
                 WHERE user_id = u.id AND scope_id = 0
-            ), '') AS roles
+        ), '') AS roles
         FROM {h-schema}auth_users u
         WHERE NOT u.deleted AND u.id <> :systemId
             AND LOWER(u.username) LIKE :usernamePrefix ESCAPE '!'
@@ -368,7 +364,7 @@ public interface UserRepo extends JpaRepository<User, Long> {
                 SELECT 1
                 FROM {h-schema}auth_user_roles ur
                 WHERE ur.user_id = u.id AND ur.scope_id = 0 AND ur.role_code = :roleCode
-            ))
+        ))
             AND (CAST(:active AS BOOLEAN) IS NULL OR u.active = :active)
         ORDER BY u.username, u.id
         LIMIT :pageSize OFFSET :offset
@@ -394,7 +390,7 @@ public interface UserRepo extends JpaRepository<User, Long> {
                 SELECT 1
                 FROM {h-schema}auth_user_roles ur
                 WHERE ur.user_id = u.id AND ur.scope_id = 0 AND ur.role_code = :roleCode
-            ))
+        ))
             AND (CAST(:active AS BOOLEAN) IS NULL OR u.active = :active)
         """,
         nativeQuery = true
@@ -428,55 +424,24 @@ public interface UserRepo extends JpaRepository<User, Long> {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
-    @Query(
-        value = """
-        SELECT u.*
-        FROM {h-schema}auth_users u
-        WHERE u.id = :id
-        FOR UPDATE
-        """,
-        nativeQuery = true
-    )
+    @Query(value = "SELECT u.* FROM {h-schema}auth_users u WHERE u.id = :id FOR UPDATE ", nativeQuery = true)
     User lock(@Param("id") long id);
 
-    @Query(
-        value = """
-        SELECT COUNT(*) > 0
-        FROM {h-schema}auth_users
-        WHERE username = :name
-        """,
-        nativeQuery = true
-    )
+    @Query(value = "SELECT COUNT(*) > 0 FROM {h-schema}auth_users WHERE username = :name ", nativeQuery = true)
     boolean existsUsername(@Param("name") String username);
 
     @Query(
-        value = """
-        SELECT COUNT(*) > 0
-        FROM {h-schema}auth_users
-        WHERE email = :email AND NOT deleted
-        """,
+        value = "SELECT COUNT(*) > 0 FROM {h-schema}auth_users WHERE email = :email AND NOT deleted ",
         nativeQuery = true
     )
     boolean existsEmail(@Param("email") String email);
 
     @Transactional(propagation = Propagation.MANDATORY)
-    @Query(
-        value = """
-        SELECT CAST(PG_ADVISORY_XACT_LOCK(781205611) AS TEXT)
-        """,
-        nativeQuery = true
-    )
+    @Query(value = "SELECT CAST(PG_ADVISORY_XACT_LOCK(781205611) AS TEXT) ", nativeQuery = true)
     String lockBootstrap();
 
     @Transactional(propagation = Propagation.MANDATORY)
-    @Query(
-        value = """
-        SELECT id FROM {h-schema}auth_users
-        WHERE username = :username
-        FOR UPDATE
-        """,
-        nativeQuery = true
-    )
+    @Query(value = "SELECT id FROM {h-schema}auth_users WHERE username = :username FOR UPDATE ", nativeQuery = true)
     Long bootstrapId(@Param("username") String username);
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -484,8 +449,7 @@ public interface UserRepo extends JpaRepository<User, Long> {
         value = """
         INSERT INTO {h-schema}auth_users(username, password_hash, display_name, created_by, updated_by,
             email, email_verified_at, active, activation_pending, must_change_password)
-        VALUES (:username, :hash, 'Quản trị viên', :actor, :actor, :email,
-            CURRENT_TIMESTAMP, TRUE, FALSE, FALSE)
+        VALUES (:username, :hash, 'Quản trị viên', :actor, :actor, :email, CURRENT_TIMESTAMP, TRUE, FALSE, FALSE)
         RETURNING id
         """,
         nativeQuery = true
@@ -502,12 +466,10 @@ public interface UserRepo extends JpaRepository<User, Long> {
     @Query(
         value = """
         UPDATE {h-schema}auth_users
-        SET email = :email,
-            email_verified_at = CASE
-                WHEN email IS DISTINCT FROM :email OR email_verified_at IS NULL THEN CURRENT_TIMESTAMP
-                ELSE email_verified_at
-            END,
-            active = TRUE, deleted = FALSE, activation_pending = FALSE, must_change_password = FALSE,
+        SET email = :email, email_verified_at = CASE
+            WHEN email IS DISTINCT FROM :email OR email_verified_at IS NULL THEN CURRENT_TIMESTAMP
+            ELSE email_verified_at
+        END, active = TRUE, deleted = FALSE, activation_pending = FALSE, must_change_password = FALSE,
             token_version = token_version + 1, version = version + 1,
             updated_at = CURRENT_TIMESTAMP, updated_by = :actor
         WHERE id = :id
@@ -524,7 +486,7 @@ public interface UserRepo extends JpaRepository<User, Long> {
         value = """
         INSERT INTO {h-schema}auth_user_roles(user_id, role_code, created_by, updated_by)
         VALUES (:id, :role, :actor, :actor)
-        ON CONFLICT DO NOTHING
+            ON CONFLICT DO NOTHING
         """,
         nativeQuery = true
     )
@@ -543,14 +505,7 @@ public interface UserRepo extends JpaRepository<User, Long> {
     )
     int revokeBootstrapTokens(@Param("id") long id, @Param("actor") long actor);
 
-    @Query(
-        value = """
-        SELECT username
-        FROM {h-schema}auth_users
-        WHERE username IN (:names)
-        """,
-        nativeQuery = true
-    )
+    @Query(value = "SELECT username FROM {h-schema}auth_users WHERE username IN (:names) ", nativeQuery = true)
     Set<String> existingUsernames(@Param("names") Set<String> names);
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -558,8 +513,7 @@ public interface UserRepo extends JpaRepository<User, Long> {
     @Query(
         value = """
         UPDATE {h-schema}auth_users
-        SET deleted = TRUE, active = FALSE, updated_by = :actor,
-            updated_at = CURRENT_TIMESTAMP, version = version + 1
+        SET deleted = TRUE, active = FALSE, updated_by = :actor, updated_at = CURRENT_TIMESTAMP, version = version + 1
         WHERE id = :id
         """,
         nativeQuery = true

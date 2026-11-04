@@ -117,3 +117,52 @@ test('SQL export từ chối schema có SQL injection trước khi tạo file', 
         assert.match(result.stderr, /Schema/);
     });
 });
+
+test('SQL ngắn viết một dòng và nối chuỗi vẫn xuất đủ native query', () => {
+    fixture('interface SampleRepo {\n'
+        + '    @Query(value = "SELECT id FROM {h-schema}category " + "WHERE code = :code", nativeQuery = true)\n'
+        + '    List<Long> ids(String code);\n'
+        + '}', (invoke, output) => {
+        const result = invoke('schema_test');
+        assert.equal(result.status, 0, result.stderr);
+        assert.match(result.stdout, /^1 SQL/);
+        assert.match(readFileSync(output, 'utf8'), /SELECT id FROM "schema_test"\.category WHERE code = :code;/);
+    });
+});
+
+test('SQL export ghép hằng native đầy đủ và giải mã Java escape mà giữ nguyên tiếng Việt', () => {
+    fixture(String.raw`interface SampleRepo {
+    String SOURCE = """
+        FROM {h-schema}category
+        """;
+    String FILTER = SOURCE + """
+        WHERE name LIKE :keyword ESCAPE '\\'
+        """;
+        @Query(value = """
+            SELECT name, 'Hải Phòng' AS label
+            """ + SampleRepo.FILTER, nativeQuery = true)
+        List<String> search();
+    }`, (invoke, output) => {
+        const result = invoke('schema_test');
+        assert.equal(result.status, 0, result.stderr);
+        const sql = readFileSync(output, 'utf8');
+        assert.match(sql, /SELECT name, 'Hải Phòng' AS label/);
+        assert.match(sql, /FROM "schema_test"\.category/);
+        assert.ok(sql.includes(String.raw`ESCAPE '\'`));
+        assert.doesNotMatch(sql, /SampleRepo.FILTER|\{h-schema\}/);
+    });
+});
+
+test('SQL export từ chối lời gọi Java hoặc hằng không xác định thay vì xuất thiếu điều kiện', () => {
+    for (const expression of ['FILTER_MISSING', '"""SELECT 1""".formatted(name)']) {
+        fixture(`interface SampleRepo {
+            @Query(value = ${expression}, nativeQuery = true)
+            List<String> search();
+        }`, (invoke, output) => {
+            const result = invoke('schema_test');
+            assert.notEqual(result.status, 0);
+            assert.equal(existsSync(output), false);
+            assert.match(result.stderr, /không xác định|không hỗ trợ/);
+        });
+    }
+});

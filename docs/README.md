@@ -30,6 +30,6 @@ Mỗi nội dung có một nơi chính. Thành viên không cần đọc hết d
 | 05 — Làm nhóm/demo | Phân công, demo–hỏi đáp và tiến độ ở bước3–5; [yêu cầu báo cáo Word](05-ke-hoach/DEMO_VA_HOI_DAP.md#báo-cáo-sản-phẩm-theo-mẫu-công-nghệ-java) |
 | 06 — AI/bàn giao | [Cách tiếp tục khi đổi máy/người](06-ai-va-ban-giao/AI_VA_BAN_GIAO.md), [AGENTS](../AGENTS.md), [Git/PR](../CONTRIBUTING.md) |
 
-Bản nộp: [Báo cáo Word VietRoute Nhóm10](05-ke-hoach/bao-cao/Bao_cao_VietRoute_Nhom_10.docx), kèm [sơ đồ SVG và ảnh gốc](05-ke-hoach/bao-cao/Tu_lieu_VietRoute_Nhom_10.zip). Điền các ô [[GIANG_VIEN]], [[LOP]], [[KHOA_HOC]], [[HO_TEN_1]]… và [[MSSV_1]]… trên hai trang bìa; cập nhật field khi sửa nội dung. Trạng thái bản cập nhật Category ở CATEGORY01 trong tiến độ; WORD01 ghi bản dựng ban đầu.
+Bản nộp: [Báo cáo Word VietRoute Nhóm10](05-ke-hoach/bao-cao/Bao_cao_VietRoute_Nhom_10.docx), kèm [sơ đồ SVG và ảnh gốc](05-ke-hoach/bao-cao/Tu_lieu_VietRoute_Nhom_10.zip). Điền các ô [[GIANG_VIEN]], [[LOP]], [[KHOA_HOC]], [[HO_TEN_1]]… và [[MSSV_1]]… trên hai trang bìa; cập nhật field khi sửa nội dung. Phạm vi sản phẩm, kết quả kiểm và trạng thái phát hành xem tiến độ.
 
 Bộ gọn giữ 12 file Markdown trong sáu cụm. Version thư viện tra pom.xml, payload tra controller/Swagger đúng bản, account/key theo CHAY_LOCAL và ngoại lệ .env.example; bằng chứng ở tiến độ/PR. Mẫu Word gốc trong05-ke-hoach/mau giữ nguyên byte; báo cáo sản phẩm ở thư mục bao-cao. Khi chuyển/gộp/xóa phải sửa link/prompt/điểm đọc AI và chạy check:docs sau khi stage file mới.

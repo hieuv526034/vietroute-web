@@ -17,23 +17,18 @@ import vn.vietroute.auth.entity.FunctionResource;
 public interface FunctionResourceRepo extends JpaRepository<FunctionResource, Long> {
     @Transactional(readOnly = true)
     @Query(
-        value = """
-        SELECT target
-        FROM {h-schema}auth_function_resources
-        WHERE function_code = :code
-        ORDER BY target
-        """,
+        value = "SELECT target FROM {h-schema}auth_function_resources WHERE function_code = :code ORDER BY target ",
         nativeQuery = true
     )
     Set<String> targets(@Param("code") String code);
 
     @Query(
         value = """
-            SELECT function_code, target
-            FROM {h-schema}auth_function_resources
-            WHERE function_code IN (:codes)
-            ORDER BY function_code, target
-            """,
+        SELECT function_code, target
+        FROM {h-schema}auth_function_resources
+        WHERE function_code IN (:codes)
+        ORDER BY function_code, target
+        """,
         nativeQuery = true
     )
     List<Map<String, Object>> targetsRows(@Param("codes") List<String> codes);

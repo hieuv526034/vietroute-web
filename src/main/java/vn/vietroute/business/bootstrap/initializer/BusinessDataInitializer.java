@@ -5,7 +5,7 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;
 import vn.vietroute.auth.initializer.AuthInitializer;
 import vn.vietroute.auth.repo.custom.UserCustomRepo;
-import vn.vietroute.business.bootstrap.repo.BusinessDataRepo;
+import vn.vietroute.business.bootstrap.repo.custom.BusinessDataCustomRepo;
 import vn.vietroute.common.config.application.AppSettings;
 import vn.vietroute.common.config.application.ConfigValues;
 import vn.vietroute.common.config.application.ConfigurationEnvironment;
@@ -22,7 +22,7 @@ public class BusinessDataInitializer implements InitializingBean {
     private final DatabaseInitializer database;
     private final AppSettings settings;
     private final ConfigurationEnvironment environment;
-    private final BusinessDataRepo seeds;
+    private final BusinessDataCustomRepo seeds;
     private final UserCustomRepo accounts;
     private final AuthInitializer auth;
     private final JdbcTransactions transactions;

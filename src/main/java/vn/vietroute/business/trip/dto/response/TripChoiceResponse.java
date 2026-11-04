@@ -6,6 +6,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import vn.vietroute.business.trip.dto.projection.TripChoiceProjection;
 
 /** Projection tối thiểu, không lộ email/credential hay dữ liệu từ nhà xe ngoài quyền. */
 @Getter
@@ -26,4 +27,9 @@ public class TripChoiceResponse {
 
     @Schema(description = "Số chỗ xe, null với lựa chọn khác")
     private Integer capacity;
+
+    /** Projection picker sau lọc scope; không đưa entity hoặc thuộc tính riêng tư ra API. */
+    public static TripChoiceResponse from(TripChoiceProjection row) {
+        return new TripChoiceResponse(row.getId(), row.getCode(), row.getName(), row.getCapacity());
+    }
 }

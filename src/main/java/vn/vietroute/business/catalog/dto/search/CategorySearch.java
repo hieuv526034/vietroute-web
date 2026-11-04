@@ -36,6 +36,9 @@ public class CategorySearch extends PageRequest {
     @Schema(description = "Trạng thái; lookup công khai luôn ép đang sử dụng")
     private Boolean active;
 
+    @Schema(description = "Quản trị: trả một nhánh hoặc cây kết quả tìm kiếm, không phân trang")
+    private boolean tree;
+
     public Long parent() {
         return parentId;
     }

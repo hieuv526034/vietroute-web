@@ -59,12 +59,32 @@ public class CategoryService {
     @Transactional(readOnly = true)
     public PageResponse<CategoryResponse> search(CategorySearch search, Locale locale) {
         BusinessRules.require(search.getRefType() != null || search.parent() != null, ErrorCode.INVALID_REQUEST);
+        if (search.isTree()) {
+            BusinessRules.require(
+                search.getRefType() != null && !search.getRefType().isBlank(),
+                ErrorCode.INVALID_REQUEST
+            );
+            BusinessRules.require(
+                search.parent() == null || search.getQuery() == null || search.getQuery().isBlank(),
+                ErrorCode.INVALID_REQUEST
+            );
+            return treeResponse(categories.tree(search, CategoryRefType.WARD.equals(search.getRefType())), locale);
+        }
         return list(search.getRefType(), search, locale);
     }
 
     @Transactional(readOnly = true)
     public PageResponse<CategoryResponse> groups(CategorySearch search, Locale locale) {
+        if (search.isTree()) return treeResponse(categories.allGroups(), locale);
         return map(categories.search(search, null, "GROUP", false), item -> CategoryResponse.from(item, locale));
+    }
+
+    private static PageResponse<CategoryResponse> treeResponse(List<Category> items, Locale locale) {
+        List<CategoryResponse> rows = items
+            .stream()
+            .map(item -> CategoryResponse.from(item, locale))
+            .toList();
+        return new PageResponse<>(rows, 0, rows.size(), rows.size(), rows.isEmpty() ? 0 : 1, false, false);
     }
 
     private PageResponse<CategoryResponse> list(String refType, CategorySearch search, Locale locale) {

@@ -15,10 +15,10 @@ public interface AccountChallengeRepo extends JpaRepository<AccountChallenge, Lo
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(
         value = """
-            DELETE FROM {h-schema}auth_account_challenges
-            WHERE user_id = :userId AND purpose = :purpose AND token_hash = :hash AND token_version = :version
-                AND expires_at > CURRENT_TIMESTAMP
-            """,
+        DELETE FROM {h-schema}auth_account_challenges
+        WHERE user_id = :userId AND purpose = :purpose AND token_hash = :hash AND token_version = :version
+            AND expires_at > CURRENT_TIMESTAMP
+        """,
         nativeQuery = true
     )
     int consumeRow(
@@ -35,12 +35,6 @@ public interface AccountChallengeRepo extends JpaRepository<AccountChallenge, Lo
 
     @Transactional(propagation = Propagation.MANDATORY)
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query(
-        value = """
-            DELETE FROM {h-schema}auth_account_challenges
-            WHERE user_id = :userId
-            """,
-        nativeQuery = true
-    )
+    @Query(value = "DELETE FROM {h-schema}auth_account_challenges WHERE user_id = :userId ", nativeQuery = true)
     int invalidate(@Param("userId") long user);
 }

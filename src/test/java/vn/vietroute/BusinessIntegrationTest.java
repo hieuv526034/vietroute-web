@@ -2,6 +2,7 @@ package vn.vietroute;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -22,6 +23,7 @@ import jakarta.persistence.metamodel.EntityType;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -47,8 +49,10 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -63,6 +67,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.FileSystemResourceLoader;
 import org.springframework.dao.DataAccessException;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.Repository;
 import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockServletContext;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -104,12 +110,15 @@ import vn.vietroute.auth.repo.custom.UserCustomRepo;
 import vn.vietroute.auth.security.EndpointAccess;
 import vn.vietroute.auth.security.UserPrincipal;
 import vn.vietroute.auth.service.UserService;
+import vn.vietroute.business.booking.dto.projection.BookingTripProjection;
 import vn.vietroute.business.booking.repo.BookingRepo;
+import vn.vietroute.business.booking.service.BookingService;
 import vn.vietroute.business.bootstrap.initializer.BusinessDataInitializer;
 import vn.vietroute.business.bootstrap.repo.BusinessDataRepo;
 import vn.vietroute.business.bootstrap.repo.custom.BusinessDataCustomRepo;
 import vn.vietroute.business.carrier.dto.search.CarrierSearch;
 import vn.vietroute.business.carrier.dto.search.PublicCarrierSearch;
+import vn.vietroute.business.carrier.entity.Carrier;
 import vn.vietroute.business.carrier.repo.CarrierRepo;
 import vn.vietroute.business.carrier.service.DriverService;
 import vn.vietroute.business.carrier.service.VehicleService;
@@ -119,7 +128,11 @@ import vn.vietroute.business.report.dto.search.ReportCarrierSearch;
 import vn.vietroute.business.report.dto.search.ReportSearch;
 import vn.vietroute.business.report.repo.ReportRepo;
 import vn.vietroute.business.report.service.ReportService;
+import vn.vietroute.business.trip.dto.projection.TripChoiceProjection;
 import vn.vietroute.business.trip.dto.response.TripResponse;
+import vn.vietroute.business.trip.repo.RouteRepo;
+import vn.vietroute.business.trip.repo.TripRepo;
+import vn.vietroute.business.trip.repo.TripSegmentRepo;
 import vn.vietroute.business.trip.repo.TripStopRepo;
 import vn.vietroute.common.api_journal.dto.response.ApiJournalDetail;
 import vn.vietroute.common.api_journal.dto.response.ApiJournalEntry;
@@ -358,14 +371,8 @@ class BusinessIntegrationTest {
             schema,
             admin,
             (nodeManager, nodeTransactions) -> {
-                var nodeReports = new ReportRepo(nodeManager);
-                var nodeScopes = TestJpa.repository(UserRoleRepo.class, nodeManager);
-                var nodeCarriers = new CarrierRepo(
-                    nodeManager,
-                    nodeScopes,
-                    root.getBean(AppSettings.class),
-                    root.getBean(JdbcSchema.class)
-                );
+                var nodeReports = TestJpa.repository(ReportRepo.class, nodeManager);
+                var nodeCarriers = TestJpa.repository(CarrierRepo.class, nodeManager);
                 return connection -> {
                     assertTrue(nodeReports.summary(report).getTripCount() > 0);
                     assertEquals(20, nodeCarriers.page(search).getTotalElements());
@@ -425,7 +432,7 @@ class BusinessIntegrationTest {
                         attempted.countDown();
                         lockTrip(connection, trip);
                         acquired[0] = System.nanoTime();
-                        root.getBean(BookingRepo.class).cancelTrip(
+                        root.getBean(BookingService.class).cancelTrip(
                             counted(connection, statements),
                             trip,
                             "Load cancellation",
@@ -482,7 +489,7 @@ class BusinessIntegrationTest {
             sql("SELECT sum(paid_amount)||':'||sum(refunded_amount) FROM bookings WHERE trip_id=" + trip)
         );
         root.getBean(JdbcTransactions.class).execute(connection -> {
-            root.getBean(BookingRepo.class).cancelTrip(connection, trip, "Repeated", 1);
+            root.getBean(BookingService.class).cancelTrip(connection, trip, "Repeated", 1);
             return null;
         });
         assertEquals(
@@ -713,7 +720,7 @@ class BusinessIntegrationTest {
                                 rows.next();
                             }
                         }
-                        bookings.cancelTrip(connection, trip, "Suppressed event", 1);
+                        root.getBean(BookingService.class).cancelTrip(connection, trip, "Suppressed event", 1);
                         return null;
                     })
                 );
@@ -732,7 +739,12 @@ class BusinessIntegrationTest {
             measuredSql(4, () ->
                 root.getBean(JdbcTransactions.class).execute(connection -> {
                     lockTrip(connection, trip);
-                    bookings.cancelTrip(counted(connection, statements), trip, "Bulk cancel", 1);
+                    root.getBean(BookingService.class).cancelTrip(
+                        counted(connection, statements),
+                        trip,
+                        "Bulk cancel",
+                        1
+                    );
                     return null;
                 })
             );
@@ -762,7 +774,7 @@ class BusinessIntegrationTest {
                 sql("SELECT sum(paid_amount)||':'||sum(refunded_amount) FROM bookings WHERE trip_id=" + trip)
             );
             root.getBean(JdbcTransactions.class).execute(connection -> {
-                bookings.cancelTrip(connection, trip, "Repeat", 1);
+                root.getBean(BookingService.class).cancelTrip(connection, trip, "Repeat", 1);
                 return null;
             });
             assertEquals(
@@ -926,6 +938,23 @@ class BusinessIntegrationTest {
         );
         assertThrows(IllegalTransactionStateException.class, () ->
             root.getBean(TripStopRepo.class).mark(new TripResponse(), 1, true, Instant.now(), 0)
+        );
+        assertThrows(IllegalTransactionStateException.class, () -> root.getBean(CarrierRepo.class).carrier(1, true));
+        assertThrows(IllegalTransactionStateException.class, () -> root.getBean(RouteRepo.class).find(1, true, true));
+        assertThrows(IllegalTransactionStateException.class, () -> root.getBean(TripRepo.class).find(1, true, true));
+        assertThrows(IllegalTransactionStateException.class, () -> root.getBean(BookingRepo.class).trip(1, true));
+        assertThrows(IllegalTransactionStateException.class, () ->
+            root.getBean(TripSegmentRepo.class).available(1, 1, 2)
+        );
+        assertThrows(IllegalTransactionStateException.class, () -> root.getBean(CategoryRepo.class).locked(1));
+        assertThrows(IllegalTransactionStateException.class, () ->
+            root.getBean(BookingService.class).cancelTrip(null, 1, "", 0)
+        );
+        assertThrows(IllegalTransactionStateException.class, () ->
+            root.getBean(BusinessDataCustomRepo.class).seed(null, 0)
+        );
+        assertThrows(IllegalTransactionStateException.class, () ->
+            root.getBean(TripSegmentRepo.class).releaseRows(1, new Integer[] { 1 })
         );
         var search = new FunctionSearch();
         assertTrue(root.getBean(FunctionRepo.class).search(search).getTotalElements() > 0);
@@ -1188,8 +1217,8 @@ class BusinessIntegrationTest {
         var tx = root.getBean(JdbcTransactions.class);
         tx.execute(connection -> {
             defaults.initialize(connection);
-            root.getBean(BusinessDataRepo.class).seed(connection, 0);
-            root.getBean(BusinessDataRepo.class).seedRoutes(connection);
+            root.getBean(BusinessDataCustomRepo.class).seed(connection, 0);
+            root.getBean(BusinessDataCustomRepo.class).seedRoutes(connection);
             root.getBean(UserCustomRepo.class).assignInitialScopes(
                 connection,
                 root.getBean(AuthInitializer.class).getData().path("accounts")
@@ -1230,8 +1259,8 @@ class BusinessIntegrationTest {
         );
         tx.execute(connection -> {
             defaults.initialize(connection);
-            root.getBean(BusinessDataRepo.class).seed(connection, 0);
-            root.getBean(BusinessDataRepo.class).seedRoutes(connection);
+            root.getBean(BusinessDataCustomRepo.class).seed(connection, 0);
+            root.getBean(BusinessDataCustomRepo.class).seedRoutes(connection);
             root.getBean(UserCustomRepo.class).assignInitialScopes(
                 connection,
                 root.getBean(AuthInitializer.class).getData().path("accounts")
@@ -1656,7 +1685,7 @@ class BusinessIntegrationTest {
             try (Statement query = connection.createStatement()) {
                 query.execute("SET LOCAL TIME ZONE 'Pacific/Auckland'");
             }
-            root.getBean(BusinessDataRepo.class).seedOperations(connection);
+            root.getBean(BusinessDataCustomRepo.class).seedOperations(connection);
             return null;
         });
         assertEquals(
@@ -1808,12 +1837,7 @@ class BusinessIntegrationTest {
             root.getBean(AccountChallengeRepo.class),
             root.getBean(FunctionResourceCustomRepo.class)
         );
-        BusinessDataRepo repo = new BusinessDataRepo(
-            root.getBean(EntityManager.class),
-            json,
-            settings,
-            root.getBean(BusinessDataCustomRepo.class)
-        );
+        BusinessDataCustomRepo repo = new BusinessDataCustomRepo(json, settings, root.getBean(BusinessDataRepo.class));
         transactions.execute(connection -> {
             auth.initialize(connection);
             new BusinessDataInitializer(
@@ -2073,6 +2097,55 @@ class BusinessIntegrationTest {
         for (JsonNode value : json.readTree(direct.getContentAsString()).at("/data/content")) {
             assertEquals(haiPhong, value.path("parentId").asLong());
         }
+        String treeUrl = Routes.ADMIN_CATEGORIES + "?tree=true&refType=WARD";
+        JsonNode tree = call(200, "GET", treeUrl + "&size=1", null, admin);
+        assertEquals(34, tree.path("content").size());
+        assertFalse(tree.path("hasNext").asBoolean());
+        for (JsonNode province : tree.path("content")) {
+            assertTrue(province.path("parentId").isNull());
+            assertTrue(province.path("hasChildren").asBoolean());
+            assertFalse(province.path("searchMatch").asBoolean());
+        }
+        JsonNode branch = call(200, "GET", treeUrl + "&parentId=" + haiPhong + "&size=1", null, admin);
+        assertTrue(branch.path("content").size() > 1);
+        assertFalse(branch.path("hasNext").asBoolean());
+        for (JsonNode value : branch.path("content")) {
+            assertEquals("WARD", value.path("refType").asText());
+            assertEquals(haiPhong, value.path("parentId").asLong());
+            assertFalse(value.path("hasChildren").asBoolean());
+        }
+        JsonNode wardMatch = call(200, "GET", treeUrl + "&query=26824", null, admin).path("content");
+        assertEquals(2, wardMatch.size());
+        long wardParent = categoryId("PROVINCE", "HCM");
+        for (JsonNode value : wardMatch) {
+            if (value.path("searchMatch").asBoolean()) {
+                assertEquals("26824", value.path("code").asText());
+                assertEquals(wardParent, value.path("parentId").asLong());
+            } else {
+                assertEquals(wardParent, value.path("id").asLong());
+            }
+        }
+        String unaccented = mvc
+            .perform(
+                get(Routes.ADMIN_CATEGORIES)
+                    .param("tree", "true")
+                    .param("refType", "WARD")
+                    .param("query", "Hai Phong")
+                    .with(authentication(admin))
+            )
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+        assertTrue(unaccented.contains("\"code\":\"HAIPHONG\""));
+        assertEquals(
+            0,
+            call(200, "GET", treeUrl + "&query=%25", null, admin)
+                .path("content")
+                .size()
+        );
+        call(400, "GET", treeUrl + "&query=26824&parentId=" + haiPhong, null, admin);
+        JsonNode groups = call(200, "GET", Routes.ADMIN_CATEGORY_GROUPS + "?tree=true&size=1", null, admin);
+        assertTrue(groups.path("content").size() > 1);
         call(400, "GET", Routes.ADMIN_CATEGORIES, null, admin);
         long group = Long.parseLong(sql("SELECT id FROM category WHERE group_code='VEHICLE_TYPE'"));
         call(404, "GET", "/api/v1/admin/catalogs" + "/" + group, null, admin);
@@ -2104,6 +2177,20 @@ class BusinessIntegrationTest {
         assertEquals("Xe phục vụ liên tỉnh", updated.path("description").asText());
         seed();
         long ward = categoryId("WARD", "26824");
+        JsonNode locationPath = call(
+            200,
+            "GET",
+            Routes.ADMIN_CATEGORIES + "?tree=true&refType=LOCATION&query=VRTHUDUC",
+            null,
+            admin
+        ).path("content");
+        assertEquals(3, locationPath.size());
+        for (JsonNode value : locationPath) {
+            if (value.path("searchMatch").asBoolean()) {
+                assertEquals("VRTHUDUC", value.path("code").asText());
+                assertEquals(ward, value.path("parentId").asLong());
+            }
+        }
         String url = Routes.CATEGORIES + "?refType=LOCATION&parentId=" + ward;
         assertTrue(call(200, "GET", url, null, admin).path("totalElements").asInt() > 0);
         sql("UPDATE category SET active=false WHERE id=" + categoryId("PROVINCE", "HCM"));
@@ -4127,6 +4214,363 @@ class BusinessIntegrationTest {
             "{\"status\":\"CONFIRMED\",\"version\":1,\"note\":\"\"}",
             admin
         );
+    }
+
+    @Test
+    void nativeProjectionsUseAliasesInsteadOfColumnPositionsAndConvertTemporalValues() throws Exception {
+        seed();
+        long carrier = id("carriers", "VRMIENNAM");
+        root.getBean(JdbcTransactions.class).execute(connection -> {
+            ProjectionFixtureRepo repo = TestJpa.repository(
+                ProjectionFixtureRepo.class,
+                root.getBean(EntityManager.class)
+            );
+            TripChoiceProjection choice = repo.reordered(carrier);
+            assertEquals(carrier, choice.getId());
+            assertEquals("VRMIENNAM", choice.getCode());
+            assertEquals("Projection theo alias", choice.getName());
+            assertNull(choice.getCapacity());
+            BookingTripProjection instant = repo.temporal(carrier);
+            assertEquals(carrier, instant.getId());
+            assertEquals(Instant.parse("2026-11-04T00:00:00Z"), instant.getDepartureAt());
+            return null;
+        });
+    }
+
+    /** Fixture đảo thứ tự SELECT có chủ đích; chỉ chạy trên PostgreSQL test cùng schema ngẫu nhiên. */
+    public interface ProjectionFixtureRepo extends Repository<Carrier, Long> {
+        @Query(
+            value = """
+            SELECT NULL::INTEGER AS capacity, 'Projection theo alias' AS name, code, id
+            FROM {h-schema}carriers
+            WHERE id = :id
+            """,
+            nativeQuery = true
+        )
+        TripChoiceProjection reordered(long id);
+
+        @Query(
+            value = """
+            SELECT CAST('2026-11-04 00:00:00+00' AS TIMESTAMPTZ) AS "departureAt", id
+            FROM {h-schema}carriers
+            WHERE id = :id
+            """,
+            nativeQuery = true
+        )
+        BookingTripProjection temporal(long id);
+    }
+
+    @Test
+    void concurrentBookingCreationRetriesCreateOnePendingWithoutReservingSeats() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        long trip = openBookingTrip(fixture, "RETRYBOOKING", Instant.now().plus(2, ChronoUnit.DAYS));
+        UUID key = UUID.randomUUID();
+        String body = bookingBody(trip, 1, 3, 2, key);
+        List<Callable<Integer>> attempts = new ArrayList<>();
+        for (int index = 0; index < 8; index++) {
+            attempts.add(() -> mutationStatus(HttpMethod.POST, "/api/v1/admin/bookings", body, admin));
+        }
+        assertEquals(List.of(201, 201, 201, 201, 201, 201, 201, 201), simultaneousBookings(attempts));
+        assertEquals("1", sql("SELECT COUNT(*) FROM bookings WHERE request_key='" + key + "'"));
+        assertEquals(
+            "1",
+            sql("SELECT COUNT(*) FROM booking_events WHERE trip_id=" + trip + " AND event_type='CREATED'")
+        );
+        assertEquals("0", sql("SELECT SUM(reserved_seats) FROM trip_segments WHERE trip_id=" + trip));
+    }
+
+    @Test
+    void manyConcurrentConfirmationsAndRepeatedCancellationsNeverOversellOrReleaseTwice() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        long trip = openBookingTrip(fixture, "EIGHTCONFIRMS", Instant.now().plus(2, ChronoUnit.DAYS));
+        List<Callable<Integer>> attempts = new ArrayList<>();
+        String confirm = concurrentBookingState("CONFIRMED", 0);
+        for (int index = 0; index < 8; index++) {
+            long id = call(201, "POST", "/api/v1/admin/bookings", bookingBody(trip, 1, 2, 2, UUID.randomUUID()), admin)
+                .path("id")
+                .asLong();
+            attempts.add(() ->
+                mutationStatus(HttpMethod.PUT, "/api/v1/admin/bookings/" + id + "/state", confirm, admin)
+            );
+        }
+        List<Integer> statuses = simultaneousBookings(attempts);
+        assertEquals(
+            5,
+            statuses
+                .stream()
+                .filter(status -> status == 200)
+                .count()
+        );
+        assertEquals(
+            3,
+            statuses
+                .stream()
+                .filter(status -> status == 409)
+                .count()
+        );
+        assertEquals(
+            "10",
+            sql("SELECT reserved_seats FROM trip_segments WHERE trip_id=" + trip + " AND segment_order=1")
+        );
+        long winner = Long.parseLong(
+            sql("SELECT MIN(id) FROM bookings WHERE trip_id=" + trip + " AND status='CONFIRMED'")
+        );
+        attempts.clear();
+        String cancel = concurrentBookingState("CANCELLED", 1);
+        for (int index = 0; index < 8; index++) {
+            attempts.add(() ->
+                mutationStatus(HttpMethod.PUT, "/api/v1/admin/bookings/" + winner + "/state", cancel, admin)
+            );
+        }
+        statuses = simultaneousBookings(attempts);
+        assertEquals(
+            1,
+            statuses
+                .stream()
+                .filter(status -> status == 200)
+                .count()
+        );
+        assertEquals(
+            7,
+            statuses
+                .stream()
+                .filter(status -> status == 409)
+                .count()
+        );
+        assertEquals(
+            "8",
+            sql("SELECT reserved_seats FROM trip_segments WHERE trip_id=" + trip + " AND segment_order=1")
+        );
+        assertEquals(
+            "1",
+            sql("SELECT COUNT(*) FROM booking_events WHERE booking_id=" + winner + " AND event_type='CANCELLED'")
+        );
+        assertEquals(
+            "0",
+            sql("SELECT COUNT(*) FROM trip_segments WHERE reserved_seats < 0 OR reserved_seats > capacity")
+        );
+    }
+
+    @Test
+    void concurrentMoneyRetriesAndCompetingRequestsKeepAmountsBoundedAndHistoryAtomic() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        long trip = openBookingTrip(fixture, "MONEYRACES", Instant.now().plus(2, ChronoUnit.DAYS));
+        long id = call(201, "POST", "/api/v1/admin/bookings", bookingBody(trip, 1, 2, 1, UUID.randomUUID()), admin)
+            .path("id")
+            .asLong();
+        call(200, "PUT", "/api/v1/admin/bookings/" + id + "/state", concurrentBookingState("CONFIRMED", 0), admin);
+        String path = "/api/v1/admin/bookings/" + id + "/payment";
+        UUID key = UUID.randomUUID();
+        String payment = concurrentBookingMoney("PAYMENT", 60000, 1, key);
+        sql(
+            "CREATE FUNCTION reject_money_history() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.event_type='PAYMENT' THEN RAISE EXCEPTION 'money history fixture'; END IF; RETURN NEW; END $$; CREATE TRIGGER reject_money_history BEFORE INSERT ON booking_events FOR EACH ROW EXECUTE FUNCTION reject_money_history()"
+        );
+        call(503, "PUT", path, payment, admin);
+        assertEquals("0.00:1", sql("SELECT paid_amount || ':' || version FROM bookings WHERE id=" + id));
+        assertEquals("0", sql("SELECT COUNT(*) FROM booking_events WHERE request_key='" + key + "'"));
+        sql("DROP TRIGGER reject_money_history ON booking_events; DROP FUNCTION reject_money_history()");
+        List<Callable<Integer>> attempts = new ArrayList<>();
+        for (int index = 0; index < 8; index++) {
+            attempts.add(() -> mutationStatus(HttpMethod.PUT, path, payment, admin));
+        }
+        assertEquals(List.of(200, 200, 200, 200, 200, 200, 200, 200), simultaneousBookings(attempts));
+        assertEquals("60000.00:2", sql("SELECT paid_amount || ':' || version FROM bookings WHERE id=" + id));
+        assertEquals("1", sql("SELECT COUNT(*) FROM booking_events WHERE request_key='" + key + "'"));
+        attempts.clear();
+        for (int index = 0; index < 2; index++) {
+            String competing = concurrentBookingMoney("PAYMENT", 40000, 2, UUID.randomUUID());
+            attempts.add(() -> mutationStatus(HttpMethod.PUT, path, competing, admin));
+        }
+        List<Integer> statuses = simultaneousBookings(attempts);
+        assertEquals(
+            1,
+            statuses
+                .stream()
+                .filter(status -> status == 200)
+                .count()
+        );
+        assertEquals(
+            1,
+            statuses
+                .stream()
+                .filter(status -> status == 409)
+                .count()
+        );
+        call(200, "PUT", "/api/v1/admin/bookings/" + id + "/state", concurrentBookingState("CANCELLED", 3), admin);
+        String refund = concurrentBookingMoney("REFUND", 60000, 4, UUID.randomUUID());
+        attempts.clear();
+        for (int index = 0; index < 8; index++) {
+            attempts.add(() -> mutationStatus(HttpMethod.PUT, path, refund, admin));
+        }
+        assertEquals(List.of(200, 200, 200, 200, 200, 200, 200, 200), simultaneousBookings(attempts));
+        attempts.clear();
+        for (int index = 0; index < 2; index++) {
+            String competing = concurrentBookingMoney("REFUND", 40000, 5, UUID.randomUUID());
+            attempts.add(() -> mutationStatus(HttpMethod.PUT, path, competing, admin));
+        }
+        statuses = simultaneousBookings(attempts);
+        assertEquals(
+            1,
+            statuses
+                .stream()
+                .filter(status -> status == 200)
+                .count()
+        );
+        assertEquals(
+            1,
+            statuses
+                .stream()
+                .filter(status -> status == 409)
+                .count()
+        );
+        assertEquals(
+            "100000.00:100000.00:6",
+            sql("SELECT paid_amount || ':' || refunded_amount || ':' || version FROM bookings WHERE id=" + id)
+        );
+        assertEquals(
+            "4",
+            sql(
+                "SELECT COUNT(*) FROM booking_events WHERE booking_id=" + id + " AND event_type IN ('PAYMENT','REFUND')"
+            )
+        );
+        assertEquals("0", sql("SELECT SUM(reserved_seats) FROM trip_segments WHERE trip_id=" + trip));
+        long scope = Long.parseLong(sql("SELECT scope_id FROM bookings WHERE id=" + id));
+        root.getBean(JdbcTransactions.class).execute(connection -> {
+            var repo = root.getBean(BookingRepo.class);
+            repo.trip(trip, true);
+            assertEquals(
+                0,
+                repo.moneyRow(
+                    new BigDecimal("100001"),
+                    new BigDecimal("100000"),
+                    1,
+                    id,
+                    trip,
+                    fixture.carrier(),
+                    scope,
+                    6
+                )
+            );
+            assertEquals(
+                0,
+                repo.moneyRow(
+                    new BigDecimal("99999"),
+                    new BigDecimal("99999"),
+                    1,
+                    id,
+                    trip,
+                    fixture.carrier(),
+                    scope,
+                    6
+                )
+            );
+            assertEquals(
+                0,
+                repo.moneyRow(
+                    new BigDecimal("100000"),
+                    new BigDecimal("99999"),
+                    1,
+                    id,
+                    trip,
+                    fixture.carrier(),
+                    scope,
+                    6
+                )
+            );
+            assertEquals(0, root.getBean(TripSegmentRepo.class).changeRows(trip, 1, 2, -1, 1));
+            assertEquals(0, root.getBean(TripSegmentRepo.class).changeRows(trip, 1, 2, 11, 1));
+            return null;
+        });
+        assertEquals("6", sql("SELECT version FROM bookings WHERE id=" + id));
+    }
+
+    @Test
+    void concurrentPaymentKeyReuseAcrossTripsCannotChargeBothBookings() throws Exception {
+        seed();
+        var fixture = tripFixture(false);
+        UUID key = UUID.randomUUID();
+        String payment = concurrentBookingMoney("PAYMENT", 100000, 1, key);
+        List<Callable<Integer>> attempts = new ArrayList<>();
+        for (int index = 0; index < 2; index++) {
+            long trip = openBookingTrip(fixture, "KEYRACE" + index, Instant.now().plus(2 + 7 * index, ChronoUnit.DAYS));
+            long id = call(201, "POST", "/api/v1/admin/bookings", bookingBody(trip, 1, 2, 1, UUID.randomUUID()), admin)
+                .path("id")
+                .asLong();
+            call(200, "PUT", "/api/v1/admin/bookings/" + id + "/state", concurrentBookingState("CONFIRMED", 0), admin);
+            attempts.add(() ->
+                mutationStatus(HttpMethod.PUT, "/api/v1/admin/bookings/" + id + "/payment", payment, admin)
+            );
+        }
+        List<Integer> statuses = simultaneousBookings(attempts);
+        assertEquals(
+            1,
+            statuses
+                .stream()
+                .filter(status -> status == 200)
+                .count()
+        );
+        assertEquals(
+            1,
+            statuses
+                .stream()
+                .filter(status -> status == 409)
+                .count()
+        );
+        assertEquals("100000.00", sql("SELECT SUM(paid_amount) FROM bookings"));
+        assertEquals("1", sql("SELECT COUNT(*) FROM booking_events WHERE request_key='" + key + "'"));
+        assertEquals("1", sql("SELECT COUNT(*) FROM bookings WHERE version=1 AND paid_amount=0"));
+    }
+
+    /** Barrier buộc các request bắt đầu cùng lúc; mỗi request dùng transaction/connection riêng của Spring. */
+    private List<Integer> simultaneousBookings(List<Callable<Integer>> attempts) throws Exception {
+        CountDownLatch ready = new CountDownLatch(attempts.size());
+        CountDownLatch start = new CountDownLatch(1);
+        var workers = Executors.newFixedThreadPool(attempts.size());
+        List<Future<Integer>> futures = new ArrayList<>();
+        try {
+            for (Callable<Integer> attempt : attempts) {
+                futures.add(
+                    workers.submit(() -> {
+                        ready.countDown();
+                        if (!start.await(10, TimeUnit.SECONDS)) throw new IllegalStateException(
+                            "Request test chưa được mở barrier"
+                        );
+                        return attempt.call();
+                    })
+                );
+            }
+            assertTrue(ready.await(10, TimeUnit.SECONDS), "Tất cả request test phải sẵn sàng");
+            start.countDown();
+            List<Integer> statuses = new ArrayList<>();
+            for (Future<Integer> future : futures) statuses.add(future.get(30, TimeUnit.SECONDS));
+            return statuses;
+        } finally {
+            start.countDown();
+            workers.shutdownNow();
+        }
+    }
+
+    private String concurrentBookingState(String status, long version) {
+        return json
+            .createObjectNode()
+            .put("status", status)
+            .put("version", version)
+            .put("note", "Kiểm đồng thời local")
+            .toString();
+    }
+
+    private String concurrentBookingMoney(String kind, long amount, long version, UUID key) {
+        return json
+            .createObjectNode()
+            .put("kind", kind)
+            .put("amount", amount)
+            .put("version", version)
+            .put("requestKey", key.toString())
+            .put("note", "Thu hoàn kiểm thử local")
+            .toString();
     }
 
     @Test

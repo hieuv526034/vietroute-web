@@ -89,6 +89,12 @@ public class Category extends BaseEntity {
     @Transient
     private boolean parentActive;
 
+    @Transient
+    private boolean hasChildren;
+
+    @Transient
+    private boolean searchMatch;
+
     public Map<String, Object> getProps() {
         if (props == null) props = new LinkedHashMap<>();
         return props;

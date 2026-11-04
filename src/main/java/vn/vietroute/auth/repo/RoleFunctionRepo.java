@@ -13,12 +13,7 @@ import vn.vietroute.auth.entity.RoleFunction;
 public interface RoleFunctionRepo extends JpaRepository<RoleFunction, Long> {
     @Transactional(readOnly = true)
     @Query(
-        value = """
-        SELECT function_code
-        FROM {h-schema}auth_role_functions
-        WHERE role_code = :role
-        ORDER BY function_code
-        """,
+        value = "SELECT function_code FROM {h-schema}auth_role_functions WHERE role_code = :role ORDER BY function_code ",
         nativeQuery = true
     )
     Set<String> functions(@Param("role") String role);
@@ -38,13 +33,7 @@ public interface RoleFunctionRepo extends JpaRepository<RoleFunction, Long> {
 
     @Transactional(readOnly = true)
     @Query(
-        value = """
-            SELECT EXISTS (
-                SELECT 1
-                FROM {h-schema}auth_role_functions
-                WHERE function_code = :code
-            )
-            """,
+        value = "SELECT EXISTS ( SELECT 1 FROM {h-schema}auth_role_functions WHERE function_code = :code ) ",
         nativeQuery = true
     )
     boolean usesFunction(@Param("code") String code);
@@ -67,11 +56,7 @@ public interface RoleFunctionRepo extends JpaRepository<RoleFunction, Long> {
     boolean hasAllScopesRole(@Param("code") String code);
 
     @Query(
-        value = """
-        SELECT DISTINCT target
-        FROM {h-schema}auth_function_resources
-        WHERE function_code IN (:codes)
-        """,
+        value = "SELECT DISTINCT target FROM {h-schema}auth_function_resources WHERE function_code IN (:codes) ",
         nativeQuery = true
     )
     Set<String> assignedTargets(@Param("codes") Set<String> codes);
@@ -80,11 +65,7 @@ public interface RoleFunctionRepo extends JpaRepository<RoleFunction, Long> {
      * Kiểm cả tập trước batch mapping, giữ nguyên điều kiện tồn tại của function.
      */
     @Query(
-        value = """
-        SELECT COUNT(*)
-        FROM {h-schema}auth_functions
-        WHERE code IN (:codes) AND NOT deleted
-        """,
+        value = "SELECT COUNT(*) FROM {h-schema}auth_functions WHERE code IN (:codes) AND NOT deleted ",
         nativeQuery = true
     )
     long availableFunctions(@Param("codes") Set<String> codes);

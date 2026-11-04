@@ -3531,19 +3531,39 @@ fieldset:disabled .button[type='submit']::before,
     margin-bottom: 16px;
 }
 
-.category-branch-filter {
+.category-search {
     display: flex;
-    align-items: center;
+    flex-wrap: wrap;
+    align-items: end;
     gap: 8px;
+    margin-block: 12px;
 }
 
-.category-branch-filter input {
-    flex: 1 1 14rem;
+.category-search[hidden] {
+    display: none;
+}
+
+.category-search > div {
+    flex: 1 1 16rem;
+    max-width: 32rem;
     min-width: 0;
 }
 
-.category-branch-filter button {
-    flex: 0 0 auto;
+.category-search label {
+    display: block;
+    margin-bottom: 4px;
+}
+
+#category-rows tr.category-match > td {
+    background: #e6f5ed;
+}
+
+.category-context .category-expand {
+    font-weight: 600;
+}
+
+.category-empty {
+    color: var(--text-muted, #586760);
 }
 
 .category-expand {

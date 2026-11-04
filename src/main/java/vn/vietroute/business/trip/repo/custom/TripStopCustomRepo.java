@@ -9,7 +9,9 @@ import org.springframework.stereotype.Repository;
 import vn.vietroute.business.trip.repo.TripRepo.SourceStop;
 import vn.vietroute.business.trip.repo.TripRepo.Template;
 
-/** Ghi dữ liệu theo lô trên connection của giao dịch nghiệp vụ. */
+/**
+ * Ghi dữ liệu theo lô trên connection của giao dịch nghiệp vụ.
+ */
 @Repository
 public class TripStopCustomRepo {
 

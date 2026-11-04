@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietroute.auth.repo.UserRoleRepo;
 import vn.vietroute.auth.security.UserPrincipal;
@@ -23,11 +24,11 @@ import vn.vietroute.business.booking.repo.BookingRepo.Stop;
 import vn.vietroute.business.booking.repo.BookingRepo.Trip;
 import vn.vietroute.business.trip.constant.TripStatus;
 import vn.vietroute.business.trip.repo.TripSegmentRepo;
+import vn.vietroute.business.trip.repo.custom.TripSegmentCustomRepo;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.constant.ApplicationConstants.Regex;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
-import vn.vietroute.common.jdbc.JdbcTransactions;
 import vn.vietroute.common.validation.BusinessRules;
 
 /** Service đơn đặt chỗ: luồng khách/staff giữ guard riêng, transaction/thu tiền/tồn chỗ dùng một triển khai. */
@@ -35,7 +36,7 @@ import vn.vietroute.common.validation.BusinessRules;
 @RequiredArgsConstructor
 public class BookingService {
 
-    private final JdbcTransactions transactions;
+    private final TripSegmentCustomRepo segmentBatch;
     private final BookingRepo bookings;
     private final TripSegmentRepo capacity;
     private final UserRoleRepo scopes;
@@ -97,13 +98,7 @@ public class BookingService {
     }
 
     /** Xác nhận/hủy dùng cùng mutex trip, CAS booking và segment tăng dần, history lỗi rollback. */
-    private BookingResponse state(
-        Connection connection,
-        long id,
-        BookingRequest body,
-        UserPrincipal actor,
-        boolean staff
-    ) throws SQLException {
+    private BookingResponse state(long id, BookingRequest body, UserPrincipal actor, boolean staff) {
         BusinessRules.require(body.getNote() != null && body.getNote().length() <= 2000, ErrorCode.BOOKING_INVALID);
         Long owner = staff ? null : actor.id();
         if (!staff) bookings.requireCustomer(actor.id(), actor.tokenVersion(), false);
@@ -125,15 +120,7 @@ public class BookingService {
             case CONFIRMED -> {
                 BusinessRules.require(staff && current == BookingStatus.PENDING, ErrorCode.BOOKING_STATE_CONFLICT);
                 requireBookable(trip, pickup);
-                capacity.change(
-                    connection,
-                    parent,
-                    row.getPickupOrder(),
-                    row.getDropoffOrder(),
-                    row.getSeats(),
-                    true,
-                    actor.id()
-                );
+                capacity.change(parent, row.getPickupOrder(), row.getDropoffOrder(), row.getSeats(), true, actor.id());
             }
             case REJECTED -> BusinessRules.require(
                 staff && current == BookingStatus.PENDING && body.getNote() != null && !body.getNote().isBlank(),
@@ -148,7 +135,6 @@ public class BookingService {
                     ErrorCode.BOOKING_STATE_CONFLICT
                 );
                 if (current == BookingStatus.CONFIRMED) capacity.change(
-                    connection,
                     parent,
                     row.getPickupOrder(),
                     row.getDropoffOrder(),
@@ -261,9 +247,10 @@ public class BookingService {
     }
 
     /** Facade có guard; workflow khóa trip/booking/chặng và ghi lịch sử cùng transaction. */
+    @Transactional
     public BookingResponse state(long id, BookingRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
-        return transactions.execute(connection -> state(connection, id, body, actor, true));
+        return state(id, body, actor, true);
     }
 
     /** Chỉ ghi nhận thu/hoàn thực tế ngoài hệ thống; history/amount/version là một giao dịch. */
@@ -297,8 +284,17 @@ public class BookingService {
     }
 
     /** Khách chỉ hủy đơn của chính mình trước rời điểm đón, không tự xác nhận hoặc ghi tiền. */
+    @Transactional
     public BookingResponse customerState(long id, BookingRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);
-        return transactions.execute(connection -> state(connection, id, body, actor, false));
+        return state(id, body, actor, false);
+    }
+
+    /** Khóa trip đã được caller giữ; booking → chặng → lịch sử cùng một transaction. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void cancelTrip(Connection connection, long tripId, String reason, long actor) throws SQLException {
+        bookings.lockActiveForTrip(tripId);
+        segmentBatch.releaseTrip(connection, tripId, actor);
+        bookings.cancelled(tripId, reason, actor);
     }
 }

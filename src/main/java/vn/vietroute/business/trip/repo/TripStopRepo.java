@@ -12,14 +12,15 @@ import vn.vietroute.business.trip.entity.TripStop;
 import vn.vietroute.common.constant.ErrorCode;
 import vn.vietroute.common.exception.BusinessException;
 
-/** Actual timestamp do server ghi trên cùng transaction sau khi service đã khóa trip/kiểm phân công. */
+/**
+ * Actual timestamp do server ghi trên cùng transaction sau khi service đã khóa trip/kiểm phân công.
+ */
 public interface TripStopRepo extends Repository<TripStop, Long> {
     @Modifying
     @Query(
         value = """
         UPDATE {h-schema}trip_stops
-        SET actual_arrival_at = :now, updated_at = CURRENT_TIMESTAMP, updated_by = :actor,
-            version = version + 1
+        SET actual_arrival_at = :now, updated_at = CURRENT_TIMESTAMP, updated_by = :actor, version = version + 1
         WHERE trip_id = :tripId AND carrier_id = :carrierId AND scope_id = :scopeId
             AND stop_order = :stopOrder AND actual_arrival_at IS NULL
         """,
@@ -38,8 +39,7 @@ public interface TripStopRepo extends Repository<TripStop, Long> {
     @Query(
         value = """
         UPDATE {h-schema}trip_stops
-        SET actual_departure_at = :now, updated_at = CURRENT_TIMESTAMP, updated_by = :actor,
-            version = version + 1
+        SET actual_departure_at = :now, updated_at = CURRENT_TIMESTAMP, updated_by = :actor, version = version + 1
         WHERE trip_id = :tripId AND carrier_id = :carrierId AND scope_id = :scopeId
             AND stop_order = :stopOrder AND actual_departure_at IS NULL
         """,

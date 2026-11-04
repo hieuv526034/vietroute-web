@@ -20,7 +20,9 @@ import vn.vietroute.common.base.BaseRepository;
 import vn.vietroute.common.base.PageResponse;
 import vn.vietroute.common.jdbc.JdbcConnectionFactory;
 
-/** JDBC thuần, chỉ lưu projection đã lọc; mọi giá trị bind, SQL không gắn schema cố định. */
+/**
+ * JDBC thuần, chỉ lưu projection đã lọc; mọi giá trị bind, SQL không gắn schema cố định.
+ */
 @Repository
 public class ApiJournalRepo {
 
@@ -51,7 +53,9 @@ public class ApiJournalRepo {
     ) AS request_username
     """;
 
-    /** Insert và schema cùng transaction; chỉ báo thành công khi PostgreSQL xác nhận commit, không queue RAM. */
+    /**
+     * Insert và schema cùng transaction; chỉ báo thành công khi PostgreSQL xác nhận commit, không queue RAM.
+     */
     public void append(ApiJournalDetail detail) {
         try (
             Connection connection = database.open();
@@ -94,7 +98,9 @@ public class ApiJournalRepo {
         }
     }
 
-    /** Chỉ đọc metadata của trang hiện tại, không tải tất cả snapshot JSON vào RAM để lọc. */
+    /**
+     * Chỉ đọc metadata của trang hiện tại, không tải tất cả snapshot JSON vào RAM để lọc.
+     */
     public PageResponse<ApiJournalEntry> page(ApiJournalSearch search, int minutes) {
         try (Connection connection = database.open()) {
             long total;
@@ -169,7 +175,9 @@ public class ApiJournalRepo {
         }
     }
 
-    /** Khóa advisory dùng chung toàn DB/schema, mỗi lượt xóa tối đa 500 hết hạn + 500 vượt mục tiêu. */
+    /**
+     * Khóa advisory dùng chung toàn DB/schema, mỗi lượt xóa tối đa 500 hết hạn + 500 vượt mục tiêu.
+     */
     public void cleanup(int minutes, int capacity) {
         try (Connection connection = database.open()) {
             connection.setAutoCommit(false);

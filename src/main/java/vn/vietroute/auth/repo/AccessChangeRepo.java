@@ -1,9 +1,7 @@
 package vn.vietroute.auth.repo;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.util.Map;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -26,15 +24,15 @@ public interface AccessChangeRepo extends JpaRepository<AccessChange, Long> {
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(
         value = """
-            INSERT INTO {h-schema}auth_access_changes(
-                event_type, target_kind, target_key, actor_id, trace_id, before_state, after_state,
-                created_at, updated_at, created_by, updated_by
-            )
-            VALUES (
+        INSERT INTO {h-schema}auth_access_changes(
+            event_type, target_kind, target_key, actor_id, trace_id, before_state, after_state,
+            created_at, updated_at, created_by, updated_by
+        )
+        VALUES (
                 :event, :kind, :targetKey, :actor, :traceId, CAST(:beforeState AS JSONB), CAST(:afterState AS JSONB),
                 CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, :actor, :actor
-            )
-            """,
+        )
+        """,
         nativeQuery = true
     )
     int appendRow(
