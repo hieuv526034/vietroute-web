@@ -159,9 +159,11 @@
         const actions = document.createElement('div');
         actions.className = 'row-actions';
         if (item.active && child?.active && can('POST')) {
-            const create = button('+ ' + child.name, (trigger) => openEditor('VALUE', null, child, entry, trigger));
-            create.setAttribute('aria-label', labels.create + ': ' + child.name + ' · ' + item.name);
-            actions.append(create);
+            actions.append(
+                table.actionButton(`${labels.create}: ${child.name} · ${item.name}`, 'add', (trigger) =>
+                    openEditor('VALUE', null, child, entry, trigger),
+                ),
+            );
         }
         if (canEdit(item) && can('PUT', '/{id}') && can('GET', '/{id}'))
             actions.append(
@@ -270,16 +272,89 @@
                 requestAnimationFrame(() => node('keyword').focus());
             }),
     );
-    node('add-value').addEventListener('click', (event) =>
-        openEditor('VALUE', null, rootGroup(), null, event.currentTarget),
-    );
-    node('edit-group').addEventListener('click', (event) => {
-        const trigger = event.currentTarget;
-        void run(async () => {
-            const detail = await response('/' + tab.id);
-            openEditor('GROUP', { detail }, tab, null, trigger);
+    // Chỉ tra cứu chuỗi người dùng gửi, giữ nguyên địa chỉ nhập tay và ghim khi truy vấn lỗi.
+    const mapSearch = (map, choose) => {
+        const search = node('map-search').content.firstElementChild.cloneNode(true);
+        const input = search.querySelector('input');
+        const submit = search.querySelector('[data-map-submit]');
+        const status = search.querySelector('[data-map-status]');
+        const results = search.querySelector('[data-map-results]');
+        let request = null;
+        map.on('unload', () => request?.abort());
+        const find = async () => {
+            if (busy || request) return;
+            const keyword = input.value.trim();
+            results.replaceChildren();
+            results.hidden = true;
+            if (keyword.length < 3) {
+                status.textContent = labels.mapSearchShort;
+                return;
+            }
+            request = new AbortController();
+            const timer = setTimeout(() => request.abort(), 6000);
+            submit.disabled = true;
+            input.readOnly = true;
+            status.textContent = labels.loading;
+            try {
+                const url = new URL('https://photon.komoot.io/api/');
+                url.search = new URLSearchParams({ q: keyword, countrycode: 'VN', limit: '5' });
+                const response = await fetch(url, {
+                    credentials: 'omit',
+                    referrerPolicy: 'no-referrer',
+                    signal: request.signal,
+                });
+                if (!response.ok) throw new Error();
+                const { features } = await response.json();
+                if (placeMap !== map) return;
+                for (const feature of features.slice(0, 5)) {
+                    const coordinates = feature?.geometry?.coordinates;
+                    if (!Array.isArray(coordinates)) continue;
+                    const [lng, lat] = coordinates;
+                    if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180)
+                        continue;
+                    const { name, housenumber, street, locality, district, city, state } = feature.properties || {};
+                    const address = [housenumber, street].filter(Boolean).join(' ');
+                    const title = [...new Set([name, address, locality, district, city, state].filter(Boolean))].join(
+                        ', ',
+                    );
+                    if (!title) continue;
+                    const item = document.createElement('li');
+                    const option = document.createElement('button');
+                    option.type = 'button';
+                    option.className = 'button button-outline';
+                    option.textContent = title;
+                    option.addEventListener('click', () => {
+                        if (busy) return;
+                        map.setView([lat, lng], 17);
+                        choose({ lat, lng });
+                    });
+                    item.append(option);
+                    results.append(item);
+                }
+                results.hidden = results.childElementCount === 0;
+                status.textContent = results.hidden ? labels.mapSearchEmpty : labels.mapSearchResults;
+            } catch {
+                if (placeMap === map) status.textContent = labels.mapSearchError;
+            } finally {
+                clearTimeout(timer);
+                request = null;
+                input.readOnly = false;
+                submit.disabled = false;
+            }
+        };
+        input.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' || event.isComposing) return;
+            event.preventDefault();
+            void find();
         });
-    });
+        input.addEventListener('input', () => {
+            results.hidden = true;
+            results.replaceChildren();
+            status.textContent = '';
+        });
+        submit.addEventListener('click', () => void find());
+        return search;
+    };
     // Bản đồ chỉ khởi tạo khi người dùng mở; không theo dõi thiết bị hoặc tự gửi tọa độ.
     const mapPicker = (container) => {
         const latitude = node('prop-latitude'),
@@ -336,13 +411,21 @@
                 marker.on('dragend', () => choose(marker.getLatLng()));
             }
             placeMap.on('click', (event) => choose(event.latlng));
+            const map = placeMap;
+            const search = mapSearch(map, choose);
+            canvas.before(search);
+            open.hidden = true;
             const center = document.createElement('button');
             center.type = 'button';
             center.className = 'button button-outline';
             center.textContent = labels.mapCenter;
             center.addEventListener('click', () => choose(placeMap.getCenter()));
             section.append(center);
-            requestAnimationFrame(() => placeMap.invalidateSize());
+            requestAnimationFrame(() => {
+                if (placeMap !== map) return;
+                map.invalidateSize();
+                search.querySelector('input').focus();
+            });
         });
         open.setAttribute('aria-controls', canvas.id);
         open.setAttribute('aria-expanded', 'false');
@@ -495,7 +578,24 @@
             } else await loadTree(tab, '');
         });
     });
-    node('add-group').addEventListener('click', (event) => openEditor('GROUP', null, null, null, event.currentTarget));
+    const toolbarAction = (id, label, icon, action) => {
+        const control = table.actionButton(label, icon, action);
+        control.id = `category-${id}`;
+        control.hidden = true;
+        node('actions').append(control);
+    };
+    toolbarAction('add-value', labels.create, 'add', (trigger) =>
+        openEditor('VALUE', null, rootGroup(), null, trigger),
+    );
+    toolbarAction('edit-group', labels.editGroup, 'edit', (trigger) =>
+        run(async () => {
+            const detail = await response('/' + tab.id);
+            openEditor('GROUP', { detail }, tab, null, trigger);
+        }),
+    );
+    toolbarAction('add-group', labels.addGroup, 'addGroup', (trigger) =>
+        openEditor('GROUP', null, null, null, trigger),
+    );
     void run(async () => {
         targets = (await window.VietRouteAccess.load()).targets;
         await loadGroups();
