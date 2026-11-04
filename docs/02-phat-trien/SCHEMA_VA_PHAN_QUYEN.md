@@ -158,3 +158,570 @@ Migration `catalog/002_category.sql` giữ ID của loại xe và nguồn đặt
 Địa điểm thuộc một xã/phường; query tạo tuyến/chuyến JOIN địa điểm → xã/phường → tỉnh để kiểm trạng thái và lấy tỉnh cho snapshot. Bộ chọn tìm chuyến có xã/phường tùy chọn; backend lọc thêm bằng fromWardId/toWardId. Đổi tỉnh xóa xã và địa điểm; đổi xã xóa địa điểm.
 
 Nguồn hành chính giữ trong `bootstrap/administrative-divisions.json`, không có tác vụ chạy ngầm hoặc đồng bộ định kỳ. Khi bật DB_INIT, CategoryRepo đọc JSON và nạp tỉnh/xã bằng hai INSERT theo tập: lần đầu tạo dữ liệu thiếu, lần sau mã đã tồn tại được bỏ qua, giữ trạng thái và nội dung đã sửa. Không gọi API ngoài lúc startup/request. Khi có thay đổi địa giới thì cập nhật JSON có review. Với DB cũ, bước 003 chỉ nhận map mã/cha của bộ giả lập; địa điểm khác làm migration dừng để bổ sung map, không tự đoán xã theo tọa độ.
+
+## Từ điển bảng và cột
+
+Schema vật lý có 22 bảng và 338 cột. Tên tiếng Việt diễn giải nghiệp vụ, tên kỹ thuật giữ nguyên để đối chiếu SQL. Phần này mô tả cấu trúc sau 10 bước migration. Các thuộc tính @Transient chỉ phục vụ projection và không phải cột vật lý.
+
+PK là khóa chính, FK là khóa ngoại. Khóa ghép cần đủ các thành phần. NULL là chưa có giá trị; dữ liệu rỗng và số 0 có ý nghĩa khác. TIMESTAMPTZ lưu mốc thời gian, giao diện hiển thị theo giờ Việt Nam. Giá và tiền dùng VND. Cột do DB sinh chỉ đọc, cột audit do server xác định với system ID 0 cho tác vụ hệ thống.
+
+| Bảng | Tên tiếng Việt | Entity hoặc thành phần quản lý |
+|---|---|---|
+| `api_request_journal` | Nhật ký yêu cầu API | ApiJournal |
+| `auth_access_changes` | Lịch sử thay đổi tài khoản và phân quyền | AccessChange |
+| `auth_account_challenges` | Thử thách xác minh tài khoản nội bộ | AccountChallenge |
+| `auth_function_resources` | Tài nguyên menu và API của chức năng | FunctionResource |
+| `auth_functions` | Chức năng hệ thống | Function |
+| `auth_role_functions` | Gán chức năng cho vai trò | RoleFunction |
+| `auth_roles` | Vai trò người dùng | Role |
+| `auth_user_roles` | Gán vai trò và phạm vi cho người dùng | UserRole |
+| `auth_users` | Tài khoản người dùng | User |
+| `booking_events` | Lịch sử trạng thái và thu hoàn của đơn | BookingEvent |
+| `bookings` | Đơn đặt chỗ theo chặng | Booking |
+| `carrier_drivers` | Hồ sơ tài xế nhà xe | Driver |
+| `carrier_route_stops` | Các điểm dừng của mẫu tuyến | RouteStop |
+| `carrier_routes` | Mẫu tuyến vận tải | Route |
+| `carrier_trips` | Chuyến xe cụ thể | Trip |
+| `carrier_vehicles` | Phương tiện của nhà xe | Vehicle |
+| `carriers` | Nhà xe và phạm vi dữ liệu | Carrier |
+| `category` | Danh mục dùng chung | Category |
+| `trip_events` | Lịch sử vận hành chuyến | TripEvent |
+| `trip_segments` | Tồn chỗ theo đoạn chuyến | TripSegment |
+| `trip_stops` | Điểm dừng và tiến độ thực tế của chuyến | TripStop |
+| `vietroute_schema_history` | Lịch sử áp dụng cấu trúc cơ sở dữ liệu | DatabaseInitializer |
+
+### 1. Nhật ký yêu cầu API
+
+Bảng `api_request_journal`. Lưu dấu vết xử lý request và các snapshot đã lọc để quản trị đối chiếu lỗi, thời gian và xuất mẫu cURL/Postman. Bản ghi có retention, không thay thế sổ giao dịch đặt chỗ hoặc lưu toàn bộ dữ liệu nhạy cảm.
+
+Ánh xạ tại [ApiJournal](../../src/main/java/vn/vietroute/common/api_journal/entity/ApiJournal.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| id<br>Định danh bản ghi | uuid<br>Bắt buộc<br>PK | UUID định danh dòng nhật ký. |
+| recorded_at<br>Thời điểm ghi nhật ký | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm DB nhận log, dùng phân trang và retention. |
+| started_at<br>Thời điểm bắt đầu request | timestamp with time zone<br>Bắt buộc | Thời điểm request bắt đầu tại ứng dụng. |
+| instance_id<br>Định danh node ứng dụng | character varying(36)<br>Bắt buộc | ID node ghi log để phân biệt các tiến trình. |
+| trace_id<br>Mã theo dõi request | character varying(64)<br>Bắt buộc | Mã đối chiếu request với nhật ký và phản hồi HTTP. |
+| method<br>Phương thức HTTP đã ghi nhận | character varying(12)<br>Bắt buộc | HTTP method đã chuẩn hóa. |
+| endpoint<br>Mẫu đường dẫn API | character varying(180)<br>Bắt buộc | Mẫu endpoint đã được nhận diện, không lấy URI tùy ý. |
+| controller<br>Hàm xử lý MVC | character varying(200)<br>Bắt buộc | Handler MVC đã nhận request. |
+| http_status<br>Mã trạng thái HTTP | integer<br>Bắt buộc | HTTP status cuối cùng của phản hồi. |
+| duration_ms<br>Thời gian xử lý mili giây | bigint<br>Bắt buộc | Thời gian xử lý request, đơn vị mili giây. |
+| code<br>Mã nghiệp vụ | character varying(16)<br>Bắt buộc | Mã kết quả trong envelope API. |
+| message_key<br>Khóa thông báo đa ngôn ngữ | character varying(120)<br>Bắt buộc | Key thông báo để tra bundle vi/en. |
+| diagnostic<br>Mã chẩn đoán lỗi | character varying(40)<br>Bắt buộc | Mã chẩn đoán đã lọc, không giữ exception thô. |
+| sql_state<br>Mã lỗi SQL đã lọc | character varying(5)<br>Bắt buộc | SQLSTATE đã lọc, không chứa SQL hoặc tham số truy vấn. |
+| replay_path<br>Đường dẫn dùng tạo mẫu gọi API | character varying(240)<br>Bắt buộc | Đường dẫn an toàn dùng tạo bản cURL/Postman. |
+| query_json<br>Tham số truy vấn đã lọc | jsonb<br>Bắt buộc | Query đã qua whitelist, loại bỏ field nhạy cảm. |
+| request_body<br>Snapshot dữ liệu yêu cầu đã lọc | text<br>Bắt buộc | Snapshot request đã lọc, không phải body thô. |
+| response_body<br>Snapshot dữ liệu phản hồi đã lọc | text<br>Bắt buộc | Snapshot response đã lọc, không phải body thô. |
+| content_kind<br>Loại snapshot nhật ký | character varying(12)<br>Bắt buộc | Loại nội dung snapshot để hiển thị/export. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | Actor hệ thống ghi nhật ký, luôn là system (0). |
+| updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | Actor hệ thống của nhật ký, luôn là system (0). |
+| request_user_id<br>Người gọi đã xác thực | bigint<br>Cho phép NULL<br>FK → auth_users(id) | ID người gọi đã được server xác thực, null nếu chưa xác thực. |
+
+### 2. Lịch sử thay đổi tài khoản và phân quyền
+
+Bảng `auth_access_changes`. Ghi trạng thái trước/sau của thao tác tài khoản, vai trò, chức năng và gán quyền trong cùng transaction. Lỗi ghi lịch sử làm rollback thao tác liên quan.
+
+Ánh xạ tại [AccessChange](../../src/main/java/vn/vietroute/auth/entity/AccessChange.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| id<br>Định danh bản ghi | bigint<br>Bắt buộc<br>PK | Khóa định danh bản ghi. |
+| event_type<br>Loại sự kiện | character varying(64)<br>Bắt buộc | Loại sự kiện nghiệp vụ. |
+| target_kind<br>Loại đối tượng thay đổi | character varying(20)<br>Bắt buộc | Loại đối tượng bị thay đổi quyền. |
+| target_key<br>Khóa đối tượng thay đổi | character varying(240)<br>Bắt buộc | Khóa đối tượng bị thay đổi quyền. |
+| actor_id<br>Người thực hiện | bigint<br>Bắt buộc<br>FK → auth_users(id) | ID người thực hiện thay đổi quyền. |
+| trace_id<br>Mã theo dõi request | character varying(64)<br>Cho phép NULL | Mã đối chiếu request với nhật ký và phản hồi HTTP. |
+| before_state<br>Trạng thái trước thay đổi | jsonb<br>Bắt buộc | Trạng thái trước thay đổi, chỉ giữ field được phép. |
+| after_state<br>Trạng thái sau thay đổi | jsonb<br>Bắt buộc | Trạng thái sau thay đổi, chỉ giữ field được phép. |
+| created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
+| updated_at<br>Thời điểm sửa gần nhất | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm cập nhật gần nhất, lưu theo UTC. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người tạo, tác vụ hệ thống dùng tài khoản system (0). |
+| updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người sửa gần nhất, tác vụ hệ thống dùng system (0). |
+| version<br>Phiên bản bản ghi | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản khóa lạc quan, từ chối cập nhật từ dữ liệu đã cũ. |
+
+### 3. Thử thách xác minh tài khoản nội bộ
+
+Bảng `auth_account_challenges`. Lưu hash và thời hạn challenge gắn với phiên bản tài khoản để phục vụ cơ chế vô hiệu hóa nội bộ. Sản phẩm hiện không cung cấp luồng tự đăng ký hoặc khôi phục mật khẩu bằng email.
+
+Ánh xạ tại [AccountChallenge](../../src/main/java/vn/vietroute/auth/entity/AccountChallenge.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| user_id<br>Tài khoản liên kết | bigint<br>Bắt buộc<br>Thành phần PK ghép<br>FK → auth_users(id) | ID tài khoản liên kết trong auth_users. |
+| purpose<br>Mục đích challenge nội bộ | character varying(16)<br>Bắt buộc<br>Thành phần PK ghép | Mục đích challenge nội bộ, hiện không mở API đăng ký/reset. |
+| token_hash<br>Hash token challenge | character varying(64)<br>Bắt buộc | Hash của token challenge, không lưu token thô. |
+| token_version<br>Phiên bản phiên tài khoản | bigint<br>Bắt buộc | Phiên bản tài khoản tại lúc cấp challenge. |
+| expires_at<br>Thời điểm hết hạn | timestamp with time zone<br>Bắt buộc | Thời điểm challenge hết hạn. |
+| created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
+| updated_at<br>Thời điểm sửa gần nhất | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm cập nhật gần nhất, lưu theo UTC. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người tạo, tác vụ hệ thống dùng tài khoản system (0). |
+| updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người sửa gần nhất, tác vụ hệ thống dùng system (0). |
+| id<br>Định danh bản ghi | bigint<br>Bắt buộc<br>Duy nhất | Khóa định danh bản ghi. |
+
+### 4. Tài nguyên menu và API của chức năng
+
+Bảng `auth_function_resources`. Gán từng menu hoặc cặp HTTP method/route template vào một chức năng. Đây là dữ liệu cấp quyền thực thi, khác với danh sách endpoint chỉ được thu thập từ MVC.
+
+Ánh xạ tại [FunctionResource](../../src/main/java/vn/vietroute/auth/entity/FunctionResource.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| function_code<br>Mã chức năng | character varying(80)<br>Bắt buộc<br>FK → auth_functions(code)<br>Thành phần PK ghép | Mã chức năng trong auth_functions. |
+| kind<br>Loại tài nguyên | character varying(12)<br>Bắt buộc<br>Thành phần PK ghép | Loại tài nguyên MENU hoặc ENDPOINT (API). |
+| target<br>Định danh tài nguyên được cấp | character varying(240)<br>Bắt buộc<br>Thành phần PK ghép | Định danh đích được cấp quyền theo loại tài nguyên. |
+| handler<br>Tên handler MVC | character varying(240)<br>Bắt buộc | Controller/method thu thập từ MVC để tra cứu endpoint. |
+| description<br>Mô tả | character varying(500)<br>Bắt buộc | Mô tả bổ sung. |
+| created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
+| updated_at<br>Thời điểm sửa gần nhất | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm cập nhật gần nhất, lưu theo UTC. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người tạo, tác vụ hệ thống dùng tài khoản system (0). |
+| updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người sửa gần nhất, tác vụ hệ thống dùng system (0). |
+| version<br>Phiên bản bản ghi | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản khóa lạc quan, từ chối cập nhật từ dữ liệu đã cũ. |
+| http_method<br>Phương thức HTTP | character varying(10)<br>Bắt buộc | HTTP method của endpoint API. |
+| path_template<br>Mẫu đường dẫn được cấp quyền | character varying(240)<br>Bắt buộc | Mẫu đường dẫn MVC, giữ biến như {id}. |
+| name_vi<br>Tên tiếng Việt | character varying(500)<br>Bắt buộc<br>Có mặc định tại DB | Tên hiển thị tiếng Việt. |
+| name_en<br>Tên tiếng Anh | character varying(500)<br>Bắt buộc<br>Có mặc định tại DB | Tên hiển thị tiếng Anh. |
+| icon<br>Biểu tượng | character varying(50)<br>Bắt buộc<br>Có mặc định tại DB | Biểu tượng của mục menu. |
+| sort_order<br>Thứ tự hiển thị | integer<br>Bắt buộc<br>Có mặc định tại DB | Thứ tự hiển thị tăng dần. |
+| id<br>Định danh bản ghi | bigint<br>Bắt buộc<br>Duy nhất | Khóa định danh bản ghi. |
+
+### 5. Chức năng hệ thống
+
+Bảng `auth_functions`. Định nghĩa chức năng có tên, trạng thái và quan hệ cha/con. Vai trò nhận chức năng qua bảng nối, mỗi chức năng nhận menu/API qua tài nguyên được gán.
+
+Ánh xạ tại [Function](../../src/main/java/vn/vietroute/auth/entity/Function.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| code<br>Mã nghiệp vụ | character varying(80)<br>Bắt buộc<br>PK | Mã chức năng, đồng thời là khóa chính. |
+| name_vi<br>Tên tiếng Việt | character varying(500)<br>Bắt buộc | Tên hiển thị tiếng Việt. |
+| name_en<br>Tên tiếng Anh | character varying(500)<br>Bắt buộc | Tên hiển thị tiếng Anh. |
+| active<br>Đang sử dụng | boolean<br>Bắt buộc<br>Có mặc định tại DB | Trạng thái cho phép sử dụng bản ghi. |
+| deleted<br>Đã xóa mềm | boolean<br>Bắt buộc<br>Có mặc định tại DB | Đánh dấu xóa mềm, không xóa lịch sử liên quan. |
+| version<br>Phiên bản bản ghi | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản khóa lạc quan, từ chối cập nhật từ dữ liệu đã cũ. |
+| created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
+| updated_at<br>Thời điểm sửa gần nhất | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm cập nhật gần nhất, lưu theo UTC. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người tạo, tác vụ hệ thống dùng tài khoản system (0). |
+| updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người sửa gần nhất, tác vụ hệ thống dùng system (0). |
+| description<br>Mô tả | character varying(1000)<br>Bắt buộc<br>Có mặc định tại DB | Mô tả bổ sung. |
+| parent_code<br>Mã chức năng cha | character varying(80)<br>Cho phép NULL<br>FK → auth_functions(code) | Mã chức năng cha để tổ chức cây menu. |
+| icon<br>Biểu tượng | character varying(50)<br>Bắt buộc<br>Có mặc định tại DB | Tên biểu tượng giao diện. |
+| sort_order<br>Thứ tự hiển thị | integer<br>Bắt buộc<br>Có mặc định tại DB | Thứ tự hiển thị tăng dần. |
+| resources_initialized<br>Đã khởi tạo gán tài nguyên | boolean<br>Bắt buộc<br>Có mặc định tại DB | Đã khởi tạo tài nguyên, restart không tự phục hồi gán đã thu hồi. |
+
+### 6. Gán chức năng cho vai trò
+
+Bảng `auth_role_functions`. Bảng nối xác định vai trò được sử dụng những chức năng nào. Xóa liên kết làm mất quyền do liên kết đó cung cấp ở lần kiểm tiếp theo.
+
+Ánh xạ tại [RoleFunction](../../src/main/java/vn/vietroute/auth/entity/RoleFunction.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| role_code<br>Mã vai trò | character varying(24)<br>Bắt buộc<br>Thành phần PK ghép<br>FK → auth_roles(code) | Mã vai trò trong auth_roles. |
+| function_code<br>Mã chức năng | character varying(80)<br>Bắt buộc<br>FK → auth_functions(code)<br>Thành phần PK ghép | Mã chức năng trong auth_functions. |
+| created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
+| updated_at<br>Thời điểm sửa gần nhất | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm cập nhật gần nhất, lưu theo UTC. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người tạo, tác vụ hệ thống dùng tài khoản system (0). |
+| updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người sửa gần nhất, tác vụ hệ thống dùng system (0). |
+| version<br>Phiên bản bản ghi | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản khóa lạc quan, từ chối cập nhật từ dữ liệu đã cũ. |
+| id<br>Định danh bản ghi | bigint<br>Bắt buộc<br>Duy nhất | Khóa định danh bản ghi. |
+
+### 7. Vai trò người dùng
+
+Bảng `auth_roles`. Định nghĩa nhóm vai trò và khả năng truy cập toàn bộ phạm vi khi chính vai trò đó có quyền endpoint. Vai trò bảo vệ và cờ khởi tạo phục vụ quản trị bộ quyền nền.
+
+Ánh xạ tại [Role](../../src/main/java/vn/vietroute/auth/entity/Role.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| code<br>Mã nghiệp vụ | character varying(24)<br>Bắt buộc<br>PK | Mã vai trò, đồng thời là khóa chính. |
+| name_vi<br>Tên tiếng Việt | character varying(120)<br>Bắt buộc | Tên hiển thị tiếng Việt. |
+| name_en<br>Tên tiếng Anh | character varying(120)<br>Bắt buộc | Tên hiển thị tiếng Anh. |
+| updated_at<br>Thời điểm sửa gần nhất | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm cập nhật gần nhất, lưu theo UTC. |
+| updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người sửa gần nhất, tác vụ hệ thống dùng system (0). |
+| created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người tạo, tác vụ hệ thống dùng tài khoản system (0). |
+| active<br>Đang sử dụng | boolean<br>Bắt buộc<br>Có mặc định tại DB | Trạng thái cho phép sử dụng bản ghi. |
+| deleted<br>Đã xóa mềm | boolean<br>Bắt buộc<br>Có mặc định tại DB | Đánh dấu xóa mềm, không xóa lịch sử liên quan. |
+| functions_initialized<br>Đã khởi tạo gán chức năng | boolean<br>Bắt buộc<br>Có mặc định tại DB | Đã khởi tạo gán chức năng, restart không tự cấp lại quyền đã thu hồi. |
+| all_scopes<br>Cho phép mọi phạm vi | boolean<br>Bắt buộc<br>Có mặc định tại DB | Chính vai trò có endpoint được cấp có thể truy cập mọi scope khi cờ bật, không cộng dồn cờ này từ vai trò khác để mở rộng quyền. |
+| protected_role<br>Vai trò được bảo vệ | boolean<br>Bắt buộc<br>Có mặc định tại DB | Đánh dấu vai trò nền được bảo vệ khỏi các thay đổi không được quy tắc quản trị cho phép. |
+| version<br>Phiên bản bản ghi | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản khóa lạc quan, từ chối cập nhật từ dữ liệu đã cũ. |
+
+### 8. Gán vai trò và phạm vi cho người dùng
+
+Bảng `auth_user_roles`. Gắn tài khoản với vai trò ở mức toàn cục hoặc một nhà xe. Ràng buộc yêu cầu gán scoped phải có gán global tương ứng của cùng tài khoản/vai trò.
+
+Ánh xạ tại [UserRole](../../src/main/java/vn/vietroute/auth/entity/UserRole.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| user_id<br>Tài khoản liên kết | bigint<br>Bắt buộc<br>Thành phần PK ghép<br>FK → auth_users(id)<br>FK → auth_user_roles(user_id, role_code, scope_id) | ID tài khoản liên kết trong auth_users. |
+| role_code<br>Mã vai trò | character varying(24)<br>Bắt buộc<br>Thành phần PK ghép<br>FK → auth_roles(code)<br>FK → auth_user_roles(user_id, role_code, scope_id) | Mã vai trò trong auth_roles. |
+| scope_id<br>Định danh phạm vi dữ liệu | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>Thành phần PK ghép | Phạm vi gán vai trò, 0 là gán global, số dương là phạm vi nhà xe. |
+| active<br>Đang sử dụng | boolean<br>Bắt buộc<br>Có mặc định tại DB | Trạng thái cho phép sử dụng bản ghi. |
+| version<br>Phiên bản bản ghi | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản khóa lạc quan, từ chối cập nhật từ dữ liệu đã cũ. |
+| created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
+| updated_at<br>Thời điểm sửa gần nhất | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm cập nhật gần nhất, lưu theo UTC. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người tạo, tác vụ hệ thống dùng tài khoản system (0). |
+| updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người sửa gần nhất, tác vụ hệ thống dùng system (0). |
+| global_scope_id<br>Khóa phụ thuộc gán toàn cục | bigint<br>Cho phép NULL<br>DB sinh, chỉ đọc<br>FK → auth_user_roles(user_id, role_code, scope_id) | DB sinh 0 cho gán scoped, null cho gán global, ràng buộc scoped phải có global. |
+| carrier_scope_id<br>Khóa phạm vi nhà xe | bigint<br>Cho phép NULL<br>DB sinh, chỉ đọc<br>FK → carriers(scope_id) | Cột DB sinh từ scope dương để ràng buộc khóa ngoại nhà xe. |
+| id<br>Định danh bản ghi | bigint<br>Bắt buộc<br>Duy nhất | Khóa định danh bản ghi. |
+
+### 9. Tài khoản người dùng
+
+Bảng `auth_users`. Lưu định danh đăng nhập username, hồ sơ liên hệ, hash mật khẩu, khóa sai và vòng đời JWT. Tài khoản system có ID 0 chỉ dùng ghi audit và không đăng nhập.
+
+Ánh xạ tại [User](../../src/main/java/vn/vietroute/auth/entity/User.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| id<br>Định danh bản ghi | bigint<br>Bắt buộc<br>PK | Khóa định danh bản ghi. |
+| username<br>Tên đăng nhập | character varying(32)<br>Bắt buộc<br>Duy nhất | Tên đăng nhập duy nhất, không đăng nhập bằng email. |
+| password_hash<br>Hash mật khẩu hiện tại | character varying(100)<br>Bắt buộc | Hash BCrypt của mật khẩu, không trả qua API hoặc log. |
+| display_name<br>Tên hiển thị người dùng | character varying(120)<br>Bắt buộc | Tên người dùng hiển thị trên giao diện. |
+| active<br>Đang sử dụng | boolean<br>Bắt buộc<br>Có mặc định tại DB | Trạng thái cho phép sử dụng bản ghi. |
+| must_change_password<br>Bắt buộc đổi mật khẩu | boolean<br>Bắt buộc<br>Có mặc định tại DB | Buộc đổi mật khẩu trước khi dùng các chức năng khác. |
+| failed_login_attempts<br>Số lần đăng nhập sai | integer<br>Bắt buộc<br>Có mặc định tại DB | Số lần nhập sai liên tiếp để áp dụng khóa tạm thời. |
+| locked_until<br>Khóa đăng nhập đến | timestamp with time zone<br>Cho phép NULL | Hạn khóa đăng nhập, null khi không bị khóa. |
+| token_version<br>Phiên bản phiên tài khoản | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản phiên đăng nhập, tăng để vô hiệu hóa JWT đã cấp. |
+| created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
+| updated_at<br>Thời điểm sửa gần nhất | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm cập nhật gần nhất, lưu theo UTC. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người tạo, tác vụ hệ thống dùng tài khoản system (0). |
+| updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người sửa gần nhất, tác vụ hệ thống dùng system (0). |
+| version<br>Phiên bản bản ghi | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản khóa lạc quan, từ chối cập nhật từ dữ liệu đã cũ. |
+| email<br>Email liên hệ | character varying(254)<br>Cho phép NULL | Email liên hệ, không dùng làm định danh đăng nhập. |
+| email_verified_at<br>Thời điểm xác minh email | timestamp with time zone<br>Cho phép NULL | Mốc ghi nhận đã xác minh của tài khoản. Tài khoản khởi tạo/quản trị được gán theo quy trình hiện hành, không hàm ý có chức năng gửi email. |
+| activation_pending<br>Chờ kích hoạt | boolean<br>Bắt buộc<br>Có mặc định tại DB | Tài khoản đang chờ kích hoạt, chưa được đăng nhập. |
+| deleted<br>Đã xóa mềm | boolean<br>Bắt buộc<br>Có mặc định tại DB | Đánh dấu xóa mềm, không xóa lịch sử liên quan. |
+| previous_password_hash_1<br>Hash mật khẩu trước gần nhất | character varying(100)<br>Cho phép NULL | Hash mật khẩu trước gần nhất để chống sử dụng lại. |
+| previous_password_hash_2<br>Hash mật khẩu cũ thứ hai | character varying(100)<br>Cho phép NULL | Hash mật khẩu cũ thứ hai để chống sử dụng lại. |
+| bootstrap_scope_pending<br>Chờ khởi tạo phạm vi bootstrap | boolean<br>Bắt buộc<br>Có mặc định tại DB | Cờ khởi tạo phạm vi bootstrap chưa hoàn tất. |
+| scope_membership_versions<br>Phiên bản thành viên theo phạm vi | jsonb<br>Bắt buộc<br>Có mặc định tại DB | JSONB lưu phiên bản gán thành viên theo từng phạm vi. Dùng kiểm đồng thời khi thay đổi mapping scope, không nhận giá trị từ client. |
+
+### 10. Lịch sử trạng thái và thu hoàn của đơn
+
+Bảng `booking_events`. Ghi diễn biến xác nhận/hủy/hoàn tất và các khoản thu hoặc hoàn của một đơn. request_key ngăn ghi lại cùng một yêu cầu, sự kiện cùng rollback với thay đổi đơn.
+
+Ánh xạ tại [BookingEvent](../../src/main/java/vn/vietroute/business/booking/entity/BookingEvent.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| id<br>Định danh bản ghi | bigint<br>Bắt buộc<br>PK | Khóa định danh bản ghi. |
+| booking_id<br>Đơn đặt chỗ | bigint<br>Bắt buộc<br>FK → bookings(id, trip_id, carrier_id, scope_id) | ID đơn phát sinh sự kiện. |
+| trip_id<br>Chuyến xe liên quan | bigint<br>Bắt buộc<br>FK → bookings(id, trip_id, carrier_id, scope_id) | ID chuyến trong carrier_trips. |
+| carrier_id<br>Nhà xe sở hữu | bigint<br>Bắt buộc<br>FK → bookings(id, trip_id, carrier_id, scope_id) | ID nhà xe sở hữu dữ liệu. |
+| scope_id<br>Định danh phạm vi dữ liệu | bigint<br>Bắt buộc<br>FK → bookings(id, trip_id, carrier_id, scope_id) | ID phạm vi nhà xe để kiểm quyền trên dữ liệu. |
+| from_status<br>Trạng thái trước sự kiện | character varying(20)<br>Cho phép NULL | Trạng thái đơn trước thao tác. |
+| to_status<br>Trạng thái sau sự kiện | character varying(20)<br>Bắt buộc | Trạng thái đơn sau thao tác. |
+| event_type<br>Loại sự kiện | character varying(30)<br>Bắt buộc | Loại sự kiện nghiệp vụ. |
+| amount<br>Số tiền sự kiện | numeric(15,2)<br>Bắt buộc<br>Có mặc định tại DB | Số tiền VND của sự kiện thu hoặc hoàn, sự kiện chuyển trạng thái không mang khoản tiền mới. Tổng thu/hoàn nằm trên bookings. |
+| note<br>Ghi chú sự kiện | character varying(2000)<br>Bắt buộc<br>Có mặc định tại DB | Ghi chú hoặc lý do thao tác. |
+| request_key<br>Khóa chống gửi lặp | uuid<br>Cho phép NULL<br>Duy nhất | UUID của thao tác chuyển trạng thái hoặc thu/hoàn, dùng phát hiện và xử lý gửi lặp theo ràng buộc trong DB. |
+| created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người tạo, tác vụ hệ thống dùng tài khoản system (0). |
+
+### 11. Đơn đặt chỗ theo chặng
+
+Bảng `bookings`. Lưu yêu cầu của khách hoặc đơn do nhân viên nhập, hai điểm đón/trả, số chỗ, đơn giá, tổng tiền và trạng thái. PENDING chưa giữ chỗ, CONFIRMED giữ chỗ trên mọi đoạn khách sử dụng.
+
+Ánh xạ tại [Booking](../../src/main/java/vn/vietroute/business/booking/entity/Booking.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| id<br>Định danh bản ghi | bigint<br>Bắt buộc<br>Duy nhất theo tổ hợp<br>PK | Khóa định danh bản ghi. |
+| code<br>Mã nghiệp vụ | text<br>Cho phép NULL<br>DB sinh, chỉ đọc<br>Duy nhất | Mã đơn do DB sinh, ứng dụng chỉ đọc. |
+| trip_id<br>Chuyến xe liên quan | bigint<br>Bắt buộc<br>FK → trip_stops(id, trip_id, carrier_id, scope_id)<br>Duy nhất theo tổ hợp<br>FK → carrier_trips(id, carrier_id, scope_id) | ID chuyến trong carrier_trips. |
+| carrier_id<br>Nhà xe sở hữu | bigint<br>Bắt buộc<br>FK → trip_stops(id, trip_id, carrier_id, scope_id)<br>Duy nhất theo tổ hợp<br>FK → carrier_trips(id, carrier_id, scope_id) | ID nhà xe sở hữu dữ liệu. |
+| scope_id<br>Định danh phạm vi dữ liệu | bigint<br>Bắt buộc<br>FK → trip_stops(id, trip_id, carrier_id, scope_id)<br>Duy nhất theo tổ hợp<br>FK → carrier_trips(id, carrier_id, scope_id) | ID phạm vi nhà xe để kiểm quyền trên dữ liệu. |
+| customer_id<br>Khách sở hữu đơn | bigint<br>Cho phép NULL<br>FK → auth_users(id) | ID khách sở hữu đơn WEB, đơn PHONE có thể null. |
+| source_code<br>Mã nguồn đặt chỗ | character varying(20)<br>Bắt buộc | WEB cho khách tự đặt hoặc PHONE cho nhân viên nhận đặt. Được ràng buộc cùng giá trị nguồn đặt trong category. |
+| source_id<br>Giá trị nguồn đặt trong danh mục | bigint<br>Bắt buộc<br>FK → category(id, value_ref) | ID giá trị nguồn đặt trong category. |
+| source_type<br>Nhóm danh mục nguồn đặt | character varying(40)<br>Bắt buộc<br>Có mặc định tại DB<br>FK → category(id, value_ref) | Nhóm danh mục ràng buộc giá trị nguồn đặt. |
+| pickup_stop_id<br>Điểm đón trên chuyến | bigint<br>Bắt buộc<br>FK → trip_stops(id, trip_id, carrier_id, scope_id) | ID điểm đón trong snapshot trip_stops. |
+| dropoff_stop_id<br>Điểm trả trên chuyến | bigint<br>Bắt buộc<br>FK → trip_stops(id, trip_id, carrier_id, scope_id) | ID điểm trả trong snapshot trip_stops. |
+| pickup_order<br>Thứ tự điểm đón | integer<br>Bắt buộc | Thứ tự điểm đón trên chuyến. |
+| dropoff_order<br>Thứ tự điểm trả | integer<br>Bắt buộc | Thứ tự điểm trả, phải lớn hơn điểm đón. |
+| seats<br>Số chỗ khách đặt | integer<br>Bắt buộc | Số chỗ khách đặt trên toàn bộ chặng. |
+| unit_price<br>Giá một chỗ trên chặng | numeric(12,2)<br>Bắt buộc | Giá một chỗ của chặng tại lúc đặt. Đơn vị VND. |
+| total_price<br>Tổng giá trị đơn | numeric(15,2)<br>Bắt buộc | Tổng giá trị đơn bằng đơn giá chặng nhân số chỗ, đơn vị VND, do server tính, khác tổng tiền thực thu. |
+| contact_name<br>Tên người liên hệ | character varying(120)<br>Bắt buộc | Tên người liên hệ của đơn, dữ liệu riêng tư. |
+| contact_phone<br>Điện thoại người liên hệ | character varying(30)<br>Bắt buộc | Điện thoại người liên hệ, dữ liệu riêng tư. |
+| status<br>Trạng thái nghiệp vụ | character varying(20)<br>Bắt buộc<br>Có mặc định tại DB | PENDING chờ xử lý và chưa giữ chỗ, CONFIRMED đã giữ chỗ, REJECTED bị từ chối, CANCELLED đã hủy, COMPLETED đã hoàn tất chặng. |
+| request_key<br>Khóa chống gửi lặp | uuid<br>Bắt buộc<br>Duy nhất | UUID do thao tác tạo đơn gửi kèm. Gửi lại cùng một yêu cầu phải sử dụng cùng khóa để tránh tạo đơn trùng. |
+| paid_amount<br>Tổng tiền đã thu | numeric(15,2)<br>Bắt buộc<br>Có mặc định tại DB | Tổng tiền đã ghi nhận thu thủ công, đơn vị VND, không vượt total_price. Giá trị chỉ tăng qua sự kiện PAYMENT hợp lệ. |
+| refunded_amount<br>Tổng tiền đã hoàn | numeric(15,2)<br>Bắt buộc<br>Có mặc định tại DB | Tổng tiền đã ghi nhận hoàn thủ công, đơn vị VND, không vượt paid_amount. Hủy đơn không tự tạo khoản hoàn. |
+| created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
+| updated_at<br>Thời điểm sửa gần nhất | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm cập nhật gần nhất, lưu theo UTC. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người tạo, tác vụ hệ thống dùng tài khoản system (0). |
+| updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người sửa gần nhất, tác vụ hệ thống dùng system (0). |
+| version<br>Phiên bản bản ghi | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản khóa lạc quan, từ chối cập nhật từ dữ liệu đã cũ. |
+
+### 12. Hồ sơ tài xế nhà xe
+
+Bảng `carrier_drivers`. Lưu tài xế thuộc nhà xe và liên kết tài khoản để xem đúng chuyến được phân công. Hồ sơ tài xế và tài khoản đăng nhập là hai bản ghi có mục đích khác nhau.
+
+Ánh xạ tại [Driver](../../src/main/java/vn/vietroute/business/carrier/entity/Driver.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| id<br>Định danh bản ghi | bigint<br>Bắt buộc<br>Duy nhất theo tổ hợp<br>PK | Khóa định danh bản ghi. |
+| carrier_id<br>Nhà xe sở hữu | bigint<br>Bắt buộc<br>Duy nhất theo tổ hợp<br>FK → carriers(id, scope_id) | ID nhà xe sở hữu dữ liệu. |
+| scope_id<br>Định danh phạm vi dữ liệu | bigint<br>Bắt buộc<br>FK → carriers(id, scope_id)<br>Duy nhất theo tổ hợp | ID phạm vi nhà xe để kiểm quyền trên dữ liệu. |
+| code<br>Mã nghiệp vụ | character varying(40)<br>Bắt buộc<br>Duy nhất theo tổ hợp | Mã nghiệp vụ dùng để tra cứu và đối chiếu. |
+| name<br>Tên hiển thị | character varying(120)<br>Bắt buộc | Tên hiển thị. |
+| phone<br>Điện thoại liên hệ | character varying(30)<br>Bắt buộc | Số điện thoại liên hệ. |
+| user_id<br>Tài khoản liên kết | bigint<br>Cho phép NULL<br>FK → auth_users(id)<br>Duy nhất | ID tài khoản đăng nhập của tài xế, có thể chưa liên kết. |
+| active<br>Đang sử dụng | boolean<br>Bắt buộc<br>Có mặc định tại DB | Trạng thái cho phép sử dụng bản ghi. |
+| created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
+| updated_at<br>Thời điểm sửa gần nhất | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm cập nhật gần nhất, lưu theo UTC. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người tạo, tác vụ hệ thống dùng tài khoản system (0). |
+| updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người sửa gần nhất, tác vụ hệ thống dùng system (0). |
+| version<br>Phiên bản bản ghi | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản khóa lạc quan, từ chối cập nhật từ dữ liệu đã cũ. |
+
+### 13. Các điểm dừng của mẫu tuyến
+
+Bảng `carrier_route_stops`. Xác định thứ tự điểm trên tuyến một chiều, thời gian tương đối và giá cộng dồn. Các giá trị này là cơ sở dựng snapshot điểm dừng khi tạo chuyến.
+
+Ánh xạ tại [RouteStop](../../src/main/java/vn/vietroute/business/trip/entity/RouteStop.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| id<br>Định danh bản ghi | bigint<br>Bắt buộc<br>PK | Khóa định danh bản ghi. |
+| route_id<br>Mẫu tuyến sử dụng | bigint<br>Bắt buộc<br>FK → carrier_routes(id, carrier_id, scope_id)<br>Duy nhất theo tổ hợp | ID tuyến mẫu trong carrier_routes. |
+| carrier_id<br>Nhà xe sở hữu | bigint<br>Bắt buộc<br>FK → carrier_routes(id, carrier_id, scope_id) | ID nhà xe sở hữu dữ liệu. |
+| scope_id<br>Định danh phạm vi dữ liệu | bigint<br>Bắt buộc<br>FK → carrier_routes(id, carrier_id, scope_id) | ID phạm vi nhà xe để kiểm quyền trên dữ liệu. |
+| location_id<br>Giá trị địa điểm danh mục | bigint<br>Bắt buộc<br>FK → category(id, value_ref)<br>Duy nhất theo tổ hợp | ID địa điểm trong location_places. |
+| stop_order<br>Thứ tự điểm dừng | integer<br>Bắt buộc<br>Duy nhất theo tổ hợp | Số thứ tự điểm dừng trên hành trình. Dùng xác định thứ tự thực hiện trên hành trình. |
+| arrival_offset_minutes<br>Số phút đến so với đầu chuyến | integer<br>Bắt buộc | Số phút đến điểm này tính từ giờ khởi hành tuyến. |
+| departure_offset_minutes<br>Số phút rời so với đầu chuyến | integer<br>Bắt buộc | Số phút rời điểm này tính từ giờ khởi hành tuyến. |
+| cumulative_fare<br>Giá cộng dồn từ đầu tuyến | numeric(12,2)<br>Bắt buộc | Giá lũy kế từ đầu tuyến, giá chặng là hiệu giá hai điểm. Đơn vị VND. |
+| pickup_allowed<br>Cho phép đón khách | boolean<br>Bắt buộc<br>Có mặc định tại DB | Cho phép đón khách tại điểm này. |
+| dropoff_allowed<br>Cho phép trả khách | boolean<br>Bắt buộc<br>Có mặc định tại DB | Cho phép trả khách tại điểm này. |
+| created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
+| updated_at<br>Thời điểm sửa gần nhất | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm cập nhật gần nhất, lưu theo UTC. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người tạo, tác vụ hệ thống dùng tài khoản system (0). |
+| updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người sửa gần nhất, tác vụ hệ thống dùng system (0). |
+| version<br>Phiên bản bản ghi | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản khóa lạc quan, từ chối cập nhật từ dữ liệu đã cũ. |
+| category_location_ref<br>Nhóm khóa ngoại địa điểm | character varying(64)<br>Cho phép NULL<br>DB sinh, chỉ đọc<br>FK → category(id, value_ref) | Nhóm danh mục cố định do DB sinh, bảo vệ FK không trỏ nhầm loại. |
+
+### 14. Mẫu tuyến vận tải
+
+Bảng `carrier_routes`. Lưu mẫu hành trình một chiều thuộc nhà xe để tái sử dụng cho nhiều ngày chạy. Tuyến chiều về là một mẫu tuyến riêng với thứ tự điểm tương ứng.
+
+Ánh xạ tại [Route](../../src/main/java/vn/vietroute/business/trip/entity/Route.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| id<br>Định danh bản ghi | bigint<br>Bắt buộc<br>Duy nhất theo tổ hợp<br>PK | Khóa định danh bản ghi. |
+| carrier_id<br>Nhà xe sở hữu | bigint<br>Bắt buộc<br>Duy nhất theo tổ hợp<br>FK → carriers(id, scope_id) | ID nhà xe sở hữu dữ liệu. |
+| scope_id<br>Định danh phạm vi dữ liệu | bigint<br>Bắt buộc<br>FK → carriers(id, scope_id)<br>Duy nhất theo tổ hợp | ID phạm vi nhà xe để kiểm quyền trên dữ liệu. |
+| code<br>Mã nghiệp vụ | character varying(40)<br>Bắt buộc<br>Duy nhất theo tổ hợp | Mã nghiệp vụ dùng để tra cứu và đối chiếu. |
+| name_vi<br>Tên tiếng Việt | character varying(160)<br>Bắt buộc | Tên hiển thị tiếng Việt. |
+| name_en<br>Tên tiếng Anh | character varying(160)<br>Bắt buộc | Tên hiển thị tiếng Anh. |
+| description<br>Mô tả | character varying(2000)<br>Bắt buộc<br>Có mặc định tại DB | Mô tả bổ sung. |
+| active<br>Đang sử dụng | boolean<br>Bắt buộc<br>Có mặc định tại DB | Trạng thái cho phép sử dụng bản ghi. |
+| created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
+| updated_at<br>Thời điểm sửa gần nhất | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm cập nhật gần nhất, lưu theo UTC. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người tạo, tác vụ hệ thống dùng tài khoản system (0). |
+| updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người sửa gần nhất, tác vụ hệ thống dùng system (0). |
+| version<br>Phiên bản bản ghi | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản khóa lạc quan, từ chối cập nhật từ dữ liệu đã cũ. |
+
+### 15. Chuyến xe cụ thể
+
+Bảng `carrier_trips`. Lưu một lần chạy theo thời gian, xe, tài xế, sức chứa và vòng đời. Tên, biển số, loại xe và thông tin tài xế được chụp lại khi tạo chuyến để giữ lịch sử.
+
+Ánh xạ tại [Trip](../../src/main/java/vn/vietroute/business/trip/entity/Trip.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| id<br>Định danh bản ghi | bigint<br>Bắt buộc<br>Duy nhất theo tổ hợp<br>PK | Khóa định danh bản ghi. |
+| carrier_id<br>Nhà xe sở hữu | bigint<br>Bắt buộc<br>Duy nhất theo tổ hợp<br>FK → carriers(id, scope_id)<br>FK → carrier_drivers(id, carrier_id, scope_id)<br>FK → carrier_routes(id, carrier_id, scope_id)<br>FK → carrier_vehicles(id, carrier_id, scope_id) | ID nhà xe sở hữu dữ liệu. |
+| scope_id<br>Định danh phạm vi dữ liệu | bigint<br>Bắt buộc<br>FK → carriers(id, scope_id)<br>FK → carrier_drivers(id, carrier_id, scope_id)<br>Duy nhất theo tổ hợp<br>FK → carrier_routes(id, carrier_id, scope_id)<br>FK → carrier_vehicles(id, carrier_id, scope_id) | ID phạm vi nhà xe để kiểm quyền trên dữ liệu. |
+| route_id<br>Mẫu tuyến sử dụng | bigint<br>Bắt buộc<br>FK → carrier_routes(id, carrier_id, scope_id) | ID tuyến mẫu trong carrier_routes. |
+| vehicle_id<br>Xe được phân công | bigint<br>Bắt buộc<br>FK → carrier_vehicles(id, carrier_id, scope_id) | ID xe được phân công cho chuyến. |
+| driver_id<br>Hồ sơ tài xế | bigint<br>Bắt buộc<br>FK → carrier_drivers(id, carrier_id, scope_id) | ID hồ sơ tài xế được phân công. |
+| driver_user_id<br>Tài khoản tài xế được giao chuyến | bigint<br>Bắt buộc<br>FK → auth_users(id) | Snapshot ID tài khoản tài xế, dùng kiểm quyền chuyến được giao. |
+| code<br>Mã nghiệp vụ | character varying(40)<br>Bắt buộc<br>Duy nhất theo tổ hợp | Mã nghiệp vụ dùng để tra cứu và đối chiếu. |
+| name_vi<br>Tên tiếng Việt | character varying(160)<br>Bắt buộc | Snapshot tên tuyến tiếng Việt lúc tạo chuyến. |
+| name_en<br>Tên tiếng Anh | character varying(160)<br>Bắt buộc | Snapshot tên tuyến tiếng Anh lúc tạo chuyến. |
+| plate_number<br>Biển số xe | character varying(20)<br>Bắt buộc | Snapshot biển số xe của chuyến. |
+| vehicle_type_id<br>Giá trị loại xe trong danh mục | bigint<br>Bắt buộc<br>FK → category(id, value_ref) | Snapshot ID loại xe. |
+| vehicle_type_name_vi<br>Tên loại xe tiếng Việt lưu trên chuyến | character varying(120)<br>Bắt buộc | Snapshot tên loại xe tiếng Việt. |
+| vehicle_type_name_en<br>Tên loại xe tiếng Anh lưu trên chuyến | character varying(120)<br>Bắt buộc | Snapshot tên loại xe tiếng Anh. |
+| driver_name<br>Tên tài xế lưu trên chuyến | character varying(120)<br>Bắt buộc | Snapshot tên tài xế của chuyến. |
+| driver_phone<br>Điện thoại tài xế lưu trên chuyến | character varying(30)<br>Bắt buộc | Snapshot số điện thoại tài xế. |
+| departure_at<br>Giờ khởi hành | timestamp with time zone<br>Bắt buộc | Giờ khởi hành dự kiến ở điểm đầu, lưu UTC. |
+| end_at<br>Giờ kết thúc dự kiến | timestamp with time zone<br>Bắt buộc | Giờ kết thúc dự kiến ở điểm cuối, lưu UTC. |
+| capacity<br>Sức chứa thực tế | integer<br>Bắt buộc | Snapshot số chỗ của chuyến, không đổi theo xe sau đó. |
+| status<br>Trạng thái nghiệp vụ | character varying(20)<br>Bắt buộc<br>Có mặc định tại DB | Vòng đời DRAFT, OPEN, IN_PROGRESS, COMPLETED hoặc CANCELLED. |
+| operation_note<br>Ghi chú vận hành | character varying(2000)<br>Bắt buộc<br>Có mặc định tại DB | Ghi chú điều hành hoặc lý do thay đổi trạng thái chuyến. |
+| created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
+| updated_at<br>Thời điểm sửa gần nhất | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm cập nhật gần nhất, lưu theo UTC. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người tạo, tác vụ hệ thống dùng tài khoản system (0). |
+| updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người sửa gần nhất, tác vụ hệ thống dùng system (0). |
+| version<br>Phiên bản bản ghi | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản khóa lạc quan, từ chối cập nhật từ dữ liệu đã cũ. |
+| category_vehicle_ref<br>Nhóm khóa ngoại loại xe | character varying(64)<br>Cho phép NULL<br>DB sinh, chỉ đọc<br>FK → category(id, value_ref) | Nhóm danh mục cố định do DB sinh, bảo vệ FK không trỏ nhầm loại. |
+
+### 16. Phương tiện của nhà xe
+
+Bảng `carrier_vehicles`. Lưu xe theo biển số, loại xe và sức chứa thực tế. Số chỗ trên xe quyết định sức chứa chuyến, số chỗ trong danh mục loại xe chỉ là gợi ý.
+
+Ánh xạ tại [Vehicle](../../src/main/java/vn/vietroute/business/carrier/entity/Vehicle.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| id<br>Định danh bản ghi | bigint<br>Bắt buộc<br>Duy nhất theo tổ hợp<br>PK | Khóa định danh bản ghi. |
+| carrier_id<br>Nhà xe sở hữu | bigint<br>Bắt buộc<br>Duy nhất theo tổ hợp<br>FK → carriers(id, scope_id) | ID nhà xe sở hữu dữ liệu. |
+| scope_id<br>Định danh phạm vi dữ liệu | bigint<br>Bắt buộc<br>FK → carriers(id, scope_id)<br>Duy nhất theo tổ hợp | ID phạm vi nhà xe để kiểm quyền trên dữ liệu. |
+| code<br>Mã nghiệp vụ | character varying(40)<br>Bắt buộc<br>Duy nhất theo tổ hợp | Mã nghiệp vụ dùng để tra cứu và đối chiếu. |
+| plate_number<br>Biển số xe | character varying(20)<br>Bắt buộc | Biển số hiển thị. |
+| plate_key<br>Khóa biển số chuẩn hóa | character varying(20)<br>Bắt buộc<br>DB sinh, chỉ đọc<br>Duy nhất | Biển số chuẩn hóa do DB sinh, dùng kiểm trùng. |
+| vehicle_type_id<br>Giá trị loại xe trong danh mục | bigint<br>Bắt buộc<br>FK → category(id, value_ref) | ID loại xe trong category. |
+| vehicle_type<br>Nhóm khóa ngoại loại xe | character varying(40)<br>Bắt buộc<br>Có mặc định tại DB<br>FK → category(id, value_ref) | Nhóm danh mục cố định để ràng buộc đúng loại xe. |
+| capacity<br>Sức chứa thực tế | integer<br>Bắt buộc | Số chỗ tối đa cho phép. |
+| active<br>Đang sử dụng | boolean<br>Bắt buộc<br>Có mặc định tại DB | Trạng thái cho phép sử dụng bản ghi. |
+| created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
+| updated_at<br>Thời điểm sửa gần nhất | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm cập nhật gần nhất, lưu theo UTC. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người tạo, tác vụ hệ thống dùng tài khoản system (0). |
+| updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người sửa gần nhất, tác vụ hệ thống dùng system (0). |
+| version<br>Phiên bản bản ghi | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản khóa lạc quan, từ chối cập nhật từ dữ liệu đã cũ. |
+
+### 17. Nhà xe và phạm vi dữ liệu
+
+Bảng `carriers`. Lưu đơn vị vận tải cùng cấu hình scope dùng cho điều hành/phân quyền. Mỗi xe, tài xế, tuyến, chuyến và đơn thuộc nhà xe được đối chiếu phạm vi ở backend.
+
+Ánh xạ tại [Carrier](../../src/main/java/vn/vietroute/business/carrier/entity/Carrier.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| id<br>Định danh bản ghi | bigint<br>Bắt buộc<br>Duy nhất theo tổ hợp<br>PK | Khóa định danh bản ghi. |
+| scope_id<br>Định danh phạm vi dữ liệu | bigint<br>Bắt buộc<br>Duy nhất theo tổ hợp<br>Duy nhất | ID phạm vi nhà xe để kiểm quyền trên dữ liệu. |
+| code<br>Mã nghiệp vụ | character varying(40)<br>Bắt buộc<br>Duy nhất | Mã nghiệp vụ dùng để tra cứu và đối chiếu. |
+| name<br>Tên hiển thị | character varying(120)<br>Bắt buộc | Tên hiển thị. |
+| phone<br>Điện thoại liên hệ | character varying(30)<br>Bắt buộc | Số điện thoại liên hệ. |
+| description<br>Mô tả | character varying(2000)<br>Bắt buộc<br>Có mặc định tại DB | Mô tả bổ sung. |
+| active<br>Đang sử dụng | boolean<br>Bắt buộc<br>Có mặc định tại DB | Trạng thái cho phép sử dụng bản ghi. |
+| created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
+| updated_at<br>Thời điểm sửa gần nhất | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm cập nhật gần nhất, lưu theo UTC. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người tạo, tác vụ hệ thống dùng tài khoản system (0). |
+| updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người sửa gần nhất, tác vụ hệ thống dùng system (0). |
+| version<br>Phiên bản bản ghi | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản khóa lạc quan, từ chối cập nhật từ dữ liệu đã cũ. |
+| scope_code<br>Mã phạm vi | character varying(50)<br>Bắt buộc<br>Duy nhất | Mã phạm vi quản trị riêng của nhà xe. |
+| scope_name_vi<br>Tên phạm vi tiếng Việt | character varying(120)<br>Bắt buộc | Tên phạm vi tiếng Việt. |
+| scope_name_en<br>Tên phạm vi tiếng Anh | character varying(120)<br>Bắt buộc | Tên phạm vi tiếng Anh. |
+| scope_active<br>Phạm vi đang hoạt động | boolean<br>Bắt buộc<br>Có mặc định tại DB | Trạng thái bật/tắt phạm vi của nhà xe. |
+| scope_version<br>Phiên bản phạm vi | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản phạm vi để tránh ghi đè thay đổi gán quyền. |
+
+### 18. Danh mục dùng chung
+
+Bảng `category`. Lưu định nghĩa nhóm GROUP và các giá trị VALUE trong một bảng. ref_type bắt buộc xác định nhóm, parent_id tạo cây; props chứa thuộc tính riêng, description chứa diễn giải cho người sử dụng.
+
+Ánh xạ tại [Category](../../src/main/java/vn/vietroute/business/catalog/entity/Category.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| id<br>Định danh bản ghi | bigint<br>Bắt buộc<br>Duy nhất theo tổ hợp<br>PK | Khóa định danh bản ghi. |
+| code<br>Mã nghiệp vụ | character varying(64)<br>Bắt buộc<br>Duy nhất theo tổ hợp | Mã ổn định, GROUP dùng làm định danh nhóm, VALUE duy nhất trong ref_type. |
+| type<br>Loại bản ghi danh mục | character varying(8)<br>Bắt buộc | GROUP định nghĩa một nhóm, VALUE là mục thuộc nhóm. Cột ref_type của GROUP bằng code, của VALUE trỏ tới nhóm đã định nghĩa. |
+| name<br>Tên hiển thị | character varying(120)<br>Bắt buộc | Tên tiếng Việt, tên Anh được giữ trong props.nameEn. |
+| description<br>Mô tả | character varying(1000)<br>Bắt buộc<br>Có mặc định tại DB | Mô tả mục đích hoặc hướng dẫn sử dụng danh mục. |
+| ref_type<br>Mã nhóm danh mục | character varying(64)<br>Bắt buộc<br>FK → category(group_code)<br>Duy nhất theo tổ hợp | Bắt buộc ở mọi dòng. Ví dụ PROVINCE, WARD, LOCATION, VEHICLE_TYPE hoặc BOOKING_SOURCE, xác định tập danh mục mà VALUE thuộc về. |
+| parent_id<br>Định danh giá trị cha | bigint<br>Cho phép NULL<br>FK → category(id) | ID giá trị cha trong chính category. Tỉnh/thành ở gốc, xã/phường thuộc tỉnh và địa điểm thuộc xã/phường, nhóm cây khác dùng cùng quan hệ này. |
+| props<br>Thuộc tính riêng dạng JSON | jsonb<br>Bắt buộc<br>Có mặc định tại DB | JSONB chứa thuộc tính theo nhóm, ví dụ seatCount cho loại xe, address/latitude/longitude cho địa điểm, administrativeCode/divisionType cho hành chính, GROUP giữ hợp đồng fields và parentRefType. |
+| active<br>Đang sử dụng | boolean<br>Bắt buộc<br>Có mặc định tại DB | Ngừng dùng không xóa khóa đã được lịch sử nghiệp vụ tham chiếu. |
+| sort_order<br>Thứ tự hiển thị | integer<br>Bắt buộc<br>Có mặc định tại DB | Thứ tự dùng chung, được index cùng nhóm/cha/trạng thái. |
+| created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
+| updated_at<br>Thời điểm sửa gần nhất | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm cập nhật gần nhất, lưu theo UTC. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người tạo, tác vụ hệ thống dùng tài khoản system (0). |
+| updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người sửa gần nhất, tác vụ hệ thống dùng system (0). |
+| version<br>Phiên bản bản ghi | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản khóa lạc quan, từ chối cập nhật từ dữ liệu đã cũ. |
+| group_code<br>Mã định nghĩa nhóm | character varying(64)<br>Cho phép NULL<br>DB sinh, chỉ đọc<br>Duy nhất | Cột sinh chỉ đọc làm đích FK của ref_type. |
+| value_ref<br>Nhóm của giá trị danh mục | character varying(64)<br>Cho phép NULL<br>DB sinh, chỉ đọc<br>Duy nhất theo tổ hợp | Khóa sinh chỉ cho VALUE, FK nghiệp vụ không thể trỏ nhầm bản ghi định nghĩa GROUP. |
+
+### 19. Lịch sử vận hành chuyến
+
+Bảng `trip_events`. Ghi sự kiện khởi hành, đến/rời điểm, hoàn tất hoặc hủy chuyến theo thao tác được phép. Đây là tiến độ do tài xế/điều hành xác nhận.
+
+Ánh xạ tại [TripEvent](../../src/main/java/vn/vietroute/business/trip/entity/TripEvent.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| id<br>Định danh bản ghi | bigint<br>Bắt buộc<br>PK | Khóa định danh bản ghi. |
+| trip_id<br>Chuyến xe liên quan | bigint<br>Bắt buộc<br>FK → carrier_trips(id, carrier_id, scope_id)<br>FK → trip_stops(trip_id, stop_order) | ID chuyến trong carrier_trips. |
+| carrier_id<br>Nhà xe sở hữu | bigint<br>Bắt buộc<br>FK → carrier_trips(id, carrier_id, scope_id) | ID nhà xe sở hữu dữ liệu. |
+| scope_id<br>Định danh phạm vi dữ liệu | bigint<br>Bắt buộc<br>FK → carrier_trips(id, carrier_id, scope_id) | ID phạm vi nhà xe để kiểm quyền trên dữ liệu. |
+| stop_order<br>Thứ tự điểm dừng | integer<br>Cho phép NULL<br>FK → trip_stops(trip_id, stop_order) | Số thứ tự điểm dừng trên hành trình. Dùng xác định thứ tự thực hiện trên hành trình. |
+| event_type<br>Loại sự kiện | character varying(30)<br>Bắt buộc | Loại sự kiện nghiệp vụ. |
+| note<br>Ghi chú sự kiện | character varying(2000)<br>Bắt buộc<br>Có mặc định tại DB | Ghi chú hoặc lý do thao tác. |
+| created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người tạo, tác vụ hệ thống dùng tài khoản system (0). |
+
+### 20. Tồn chỗ theo đoạn chuyến
+
+Bảng `trip_segments`. Mỗi dòng giữ sức chứa và số chỗ đã đặt của một đoạn giữa hai điểm liên tiếp. Xác nhận hoặc hủy đơn cập nhật toàn bộ đoạn liên quan dưới khóa trong cùng transaction.
+
+Ánh xạ tại [TripSegment](../../src/main/java/vn/vietroute/business/trip/entity/TripSegment.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| trip_id<br>Chuyến xe liên quan | bigint<br>Bắt buộc<br>Thành phần PK ghép<br>FK → carrier_trips(id, carrier_id, scope_id) | ID chuyến trong carrier_trips. |
+| carrier_id<br>Nhà xe sở hữu | bigint<br>Bắt buộc<br>FK → carrier_trips(id, carrier_id, scope_id) | ID nhà xe sở hữu dữ liệu. |
+| scope_id<br>Định danh phạm vi dữ liệu | bigint<br>Bắt buộc<br>FK → carrier_trips(id, carrier_id, scope_id) | ID phạm vi nhà xe để kiểm quyền trên dữ liệu. |
+| segment_order<br>Thứ tự đoạn chuyến | integer<br>Bắt buộc<br>Thành phần PK ghép | Thứ tự đoạn nối hai điểm dừng liên tiếp. Khóa chính ghép với trip_id để mỗi đoạn của chuyến có đúng một dòng tồn chỗ. |
+| capacity<br>Sức chứa thực tế | integer<br>Bắt buộc | Số chỗ tối đa cho phép. |
+| reserved_seats<br>Số chỗ đang được giữ | integer<br>Bắt buộc<br>Có mặc định tại DB | Số chỗ của các đơn đã được xác nhận trên đoạn này. Cập nhật nguyên tử khi xác nhận/trả chỗ, luôn từ 0 đến capacity. |
+| updated_at<br>Thời điểm sửa gần nhất | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm cập nhật gần nhất, lưu theo UTC. |
+| updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người sửa gần nhất, tác vụ hệ thống dùng system (0). |
+| version<br>Phiên bản bản ghi | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản khóa lạc quan, từ chối cập nhật từ dữ liệu đã cũ. |
+
+### 21. Điểm dừng và tiến độ thực tế của chuyến
+
+Bảng `trip_stops`. Lưu snapshot địa điểm, giá cộng dồn, giờ dự kiến và các mốc đến/rời thực tế. Đơn đặt chỗ tham chiếu các ID điểm của chuyến để xác định chặng.
+
+Ánh xạ tại [TripStop](../../src/main/java/vn/vietroute/business/trip/entity/TripStop.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| id<br>Định danh bản ghi | bigint<br>Bắt buộc<br>Duy nhất theo tổ hợp<br>PK | Khóa định danh bản ghi. |
+| trip_id<br>Chuyến xe liên quan | bigint<br>Bắt buộc<br>Duy nhất theo tổ hợp<br>FK → carrier_trips(id, carrier_id, scope_id) | ID chuyến trong carrier_trips. |
+| carrier_id<br>Nhà xe sở hữu | bigint<br>Bắt buộc<br>Duy nhất theo tổ hợp<br>FK → carrier_trips(id, carrier_id, scope_id) | ID nhà xe sở hữu dữ liệu. |
+| scope_id<br>Định danh phạm vi dữ liệu | bigint<br>Bắt buộc<br>Duy nhất theo tổ hợp<br>FK → carrier_trips(id, carrier_id, scope_id) | ID phạm vi nhà xe để kiểm quyền trên dữ liệu. |
+| location_id<br>Giá trị địa điểm danh mục | bigint<br>Bắt buộc<br>FK → category(id, value_ref)<br>Duy nhất theo tổ hợp | ID địa điểm trong location_places. |
+| province_id<br>Giá trị tỉnh thành danh mục | bigint<br>Bắt buộc<br>FK → category(id, value_ref) | ID tỉnh/thành trong location_provinces. |
+| stop_order<br>Thứ tự điểm dừng | integer<br>Bắt buộc<br>Duy nhất theo tổ hợp | Số thứ tự điểm dừng trên hành trình. Dùng xác định thứ tự thực hiện trên hành trình. |
+| name_vi<br>Tên tiếng Việt | character varying(120)<br>Bắt buộc | Snapshot tên địa điểm tiếng Việt. |
+| name_en<br>Tên tiếng Anh | character varying(120)<br>Bắt buộc | Snapshot tên địa điểm tiếng Anh. |
+| address<br>Địa chỉ | character varying(300)<br>Bắt buộc | Snapshot địa chỉ điểm dừng. |
+| latitude<br>Vĩ độ | numeric(9,6)<br>Bắt buộc | Snapshot vĩ độ địa điểm tĩnh. |
+| longitude<br>Kinh độ | numeric(9,6)<br>Bắt buộc | Snapshot kinh độ địa điểm tĩnh. |
+| scheduled_arrival_at<br>Giờ đến dự kiến | timestamp with time zone<br>Bắt buộc | Giờ đến dự kiến tại điểm dừng, lưu UTC. |
+| scheduled_departure_at<br>Giờ rời dự kiến | timestamp with time zone<br>Bắt buộc | Giờ rời dự kiến tại điểm dừng, lưu UTC. |
+| actual_arrival_at<br>Giờ đến thực tế | timestamp with time zone<br>Cho phép NULL | Giờ tài xế xác nhận đã đến, null khi chưa đến. |
+| actual_departure_at<br>Giờ rời thực tế | timestamp with time zone<br>Cho phép NULL | Giờ tài xế xác nhận đã rời, null khi chưa rời. |
+| cumulative_fare<br>Giá cộng dồn từ đầu tuyến | numeric(12,2)<br>Bắt buộc | Giá lũy kế từ đầu tuyến, giá chặng là hiệu giá hai điểm. Đơn vị VND. |
+| pickup_allowed<br>Cho phép đón khách | boolean<br>Bắt buộc | Cho phép đón khách tại điểm này. |
+| dropoff_allowed<br>Cho phép trả khách | boolean<br>Bắt buộc | Cho phép trả khách tại điểm này. |
+| created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
+| updated_at<br>Thời điểm sửa gần nhất | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm cập nhật gần nhất, lưu theo UTC. |
+| created_by<br>Người tạo | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người tạo, tác vụ hệ thống dùng tài khoản system (0). |
+| updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người sửa gần nhất, tác vụ hệ thống dùng system (0). |
+| version<br>Phiên bản bản ghi | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản khóa lạc quan, từ chối cập nhật từ dữ liệu đã cũ. |
+| category_location_ref<br>Nhóm khóa ngoại địa điểm | character varying(64)<br>Cho phép NULL<br>DB sinh, chỉ đọc<br>FK → category(id, value_ref) | Nhóm danh mục cố định do DB sinh, bảo vệ FK không trỏ nhầm loại. |
+| category_province_ref<br>Nhóm khóa ngoại tỉnh thành | character varying(64)<br>Cho phép NULL<br>DB sinh, chỉ đọc<br>FK → category(id, value_ref) | Nhóm danh mục cố định do DB sinh, bảo vệ FK không trỏ nhầm loại. |
+
+### 22. Lịch sử áp dụng cấu trúc cơ sở dữ liệu
+
+Bảng `vietroute_schema_history`. Bảng hạ tầng do DatabaseInitializer quản lý, lưu từng bước SQL và checksum sau khi áp dụng thành công. Bảng này không có entity JPA riêng và không phải dữ liệu cho người dùng sửa trên giao diện.
+
+Ánh xạ tại [DatabaseInitializer](../../src/main/java/vn/vietroute/common/initializer/DatabaseInitializer.java).
+
+| Cột và tên tiếng Việt | Kiểu và ràng buộc | Ý nghĩa nghiệp vụ |
+|---|---|---|
+| version<br>Tên bước migration | character varying(40)<br>Bắt buộc<br>PK | Tên bước SQL theo manifest, ví dụ catalog/002_category.sql. Là khóa phiên bản migration, khác version khóa lạc quan của entity. |
+| checksum<br>Mã kiểm tra nội dung SQL | character varying(64)<br>Bắt buộc | SHA-256 nội dung SQL để phát hiện sửa file đã áp dụng. |
+| installed_at<br>Thời điểm áp dụng SQL | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm áp dụng migration thành công. |
