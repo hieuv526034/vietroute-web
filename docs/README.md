@@ -5,7 +5,7 @@ Mỗi nội dung có một nơi chính. Thành viên không cần đọc hết d
 | Bước | Mở tài liệu | Kết quả cần đạt |
 |---|---|---|
 | 1 | [Tổng quan](01-bat-dau/TONG_QUAN_HE_THONG.md) | Hiểu bài toán, tác nhân, công nghệ, khối/bảng và luồng chung |
-| 2 | [Chạy local và account](01-bat-dau/CHAY_LOCAL.md), [formatter](01-bat-dau/FORMAT_INTELLIJ.md) | Chạy đúng DB demo, có tài khoản, biết quy tắc format |
+| 2 | [Hướng dẫn sử dụng A–Z](01-bat-dau/HUONG_DAN_SU_DUNG.md), [chạy local và account](01-bat-dau/CHAY_LOCAL.md), [formatter](01-bat-dau/FORMAT_INTELLIJ.md) | Đăng nhập, thao tác theo vai trò, thực hành trọn luồng và xử lý lỗi |
 | 3 | [Phần của từng thành viên](05-ke-hoach/PHAN_CONG.md) | Đi từ màn/API → service → repo/bảng, biết ca lỗi và đầu ra bàn giao |
 | 4 | [Lời thoại demo và 55 hỏi–đáp](05-ke-hoach/DEMO_VA_HOI_DAP.md) | Hai dev có lời thoại theo màn, bản rút gọn, ví dụ số và câu trả lời có source |
 | 5 | [Tiến độ](05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md) | Chốt phần đã main/Render, phần PR chưa tích hợp và giới hạn trước demo |
@@ -32,4 +32,6 @@ Mỗi nội dung có một nơi chính. Thành viên không cần đọc hết d
 
 Bản nộp: [Báo cáo Word VietRoute Nhóm10](05-ke-hoach/bao-cao/Bao_cao_VietRoute_Nhom_10.docx), kèm [sơ đồ SVG và ảnh gốc](05-ke-hoach/bao-cao/Tu_lieu_VietRoute_Nhom_10.zip). Điền các ô [[GIANG_VIEN]], [[LOP]], [[KHOA_HOC]], [[HO_TEN_1]]… và [[MSSV_1]]… trên hai trang bìa; cập nhật field khi sửa nội dung. Phạm vi sản phẩm, kết quả kiểm và trạng thái phát hành xem tiến độ.
 
-Bộ gọn giữ 12 file Markdown trong sáu cụm. Version thư viện tra pom.xml, payload tra controller/Swagger đúng bản, account/key theo CHAY_LOCAL và ngoại lệ .env.example; bằng chứng ở tiến độ/PR. Mẫu Word gốc trong05-ke-hoach/mau giữ nguyên byte; báo cáo sản phẩm ở thư mục bao-cao. Khi chuyển/gộp/xóa phải sửa link/prompt/điểm đọc AI và chạy check:docs sau khi stage file mới.
+Bản hướng dẫn có thể in tại [Hướng dẫn sử dụng VietRoute](01-bat-dau/Huong_dan_su_dung_VietRoute.docx). [Từ điển bảng và cột](02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#từ-điển-bảng-và-cột) có tên tiếng Việt và diễn giải đủ22 bảng/338 cột, đồng bộ với Phụ lục A trong báo cáo Word.
+
+Bộ tài liệu giữ 13 file Markdown trong sáu cụm. Version thư viện tra pom.xml, payload tra controller/Swagger đúng bản, account/key theo CHAY_LOCAL và ngoại lệ .env.example; bằng chứng ở tiến độ/PR. Mẫu Word gốc trong05-ke-hoach/mau giữ nguyên byte; báo cáo sản phẩm ở thư mục bao-cao. Khi chuyển/gộp/xóa phải sửa link/prompt/điểm đọc AI và chạy check:docs sau khi stage file mới.

@@ -1,6 +1,6 @@
 # Chạy local và tài khoản dùng thử
 
-Đọc [tổng quan](TONG_QUAN_HE_THONG.md), làm theo các bước dưới rồi vào [phần tên mình](../05-ke-hoach/PHAN_CONG.md). Không ghi giá trị mật khẩu vào tài liệu/ảnh; .env.example có password/key được chủ dự án cho phép, riêng mật khẩu DB lấy qua kênh riêng.
+Đọc [tổng quan](TONG_QUAN_HE_THONG.md), làm theo các bước dưới rồi vào [phần tên mình](../05-ke-hoach/PHAN_CONG.md). Khi ứng dụng đã chạy, người dùng làm theo [hướng dẫn A–Z](HUONG_DAN_SU_DUNG.md) để thực hành theo vai trò. Không ghi giá trị mật khẩu vào tài liệu/ảnh; .env.example có password/key được chủ dự án cho phép, riêng mật khẩu DB lấy qua kênh riêng.
 
 ## Nút Run/Debug trong IntelliJ
 

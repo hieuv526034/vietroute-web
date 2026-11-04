@@ -22,7 +22,7 @@ Dữ liệu nền được tạo cho việc học và trình bày, gồm7 nhà x
 
 Mã việc CATALOGTABS01, người thực hiện hieuv526034, nhánh hieuv526034/category01-danh-muc-chung, [PR166](https://github.com/hieuv526034/vietroute-web/pull/166). Phạm vi nghiệm thu gồm native Repo/projection, chống ghi chỗ/tiền lặp, giao diện tab/cây và bộ tài liệu Word.
 
-Các kiểm tra bao gồm format/rules/docs, Node, Java/H2/PostgreSQL, tìm cây và quyền, rollback JPA/JDBC,8 request đồng thời cho đặt/xác nhận/hủy/thu/hoàn. Môi trường kiểm là PostgreSQL loopback15462/vietroute_business_test, không đọc root .env. Maven verify đạt220/220 Java, gồm83 PostgreSQL,0 lỗi/skip. Node77/77 đạt. npm ci/format/format:check/rules/docs và diff-check đạt. Edge headless kiểm34 nút gốc, mở cha tải con, tìm xã kèm tỉnh, xóa tìm, chuyển tab, modal và viewport390px;0 lỗi JavaScript. Exporter sinh182 SQL,100 ví dụ chỉ đọc chạy/rollback trên PostgreSQL preview. Word81 trang, đã xem các trang thay ảnh/nội dung; ZIP70 SVG/PNG được kiểm.
+Các kiểm tra bao gồm format/rules/docs, Node, Java/H2/PostgreSQL, tìm cây và quyền, rollback JPA/JDBC,8 request đồng thời cho đặt/xác nhận/hủy/thu/hoàn. Môi trường kiểm là PostgreSQL loopback15462/vietroute_business_test, không đọc root .env. Maven verify đạt220/220 Java, gồm83 PostgreSQL,0 lỗi/skip. Node77/77 đạt. npm ci/format/format:check/rules/docs và diff-check đạt. Edge headless kiểm34 nút gốc, mở cha tải con, tìm xã kèm tỉnh, xóa tìm, chuyển tab, modal và viewport390px;0 lỗi JavaScript. Exporter sinh182 SQL,100 ví dụ chỉ đọc chạy/rollback trên PostgreSQL preview. Báo cáo và hướng dẫn sử dụng có kết quả kiểm riêng tại mục Tài liệu sử dụng và từ điển dữ liệu. ZIP70 SVG/PNG được kiểm.
 
 ## Trạng thái tích hợp và phát hành
 
@@ -34,6 +34,16 @@ DB hieuboy/vietroute đã chuyển Category sau khi dừng node, sao lưu mới 
 
 Deployment Singapore được kích hoạt sau khi resume và sau toàn bộ main CI thành công. Node Virginia hiện tạm dừng để code cũ không dùng schema Category. Hostname vietroute-web.onrender.com vẫn thuộc service Virginia; chưa có xác nhận chuyển hostname sang Singapore. Địa chỉ đang nghiệm thu là vietroute-web-sg.onrender.com.
 
+Ngày 04/11/2026, địa chỉ Virginia trả HTTP 503 và địa chỉ Singapore trả HTTP 200. Render Support đã nhận câu hỏi về khả năng cấp lại hostname cũ. Chủ dự án chốt dùng địa chỉ Singapore để nghiệm thu. [Mở VietRoute tại Singapore](https://vietroute-web-sg.onrender.com/).
+
 Thu/hoàn là ghi nhận thủ công, chưa kết nối ngân hàng hoặc ví. Tiến độ tài xế là xác nhận thao tác. Bản đồ dùng Leaflet/OpenStreetMap cần mạng và không xác minh ranh giới hành chính. PostgreSQL hiện hành chưa có TLS, đã được chủ dự án chấp thuận. Journal có thể mất bản ghi khi pool/DB lỗi, có counter để theo dõi.
 
 Regression đồng thời chứng minh các bất biến trong ca kiểm, chưa là benchmark tải production. Kiểm không thay dữ liệu thật để thử build. Mật khẩu xem cấu hình local được cấp riêng, không ghi trong báo cáo hoặc ảnh. Hostname Render và trạng thái release tra [Vận hành](../04-van-hanh/VAN_HANH.md) cùng PR phát hành thực tế.
+
+## Tài liệu sử dụng và từ điển dữ liệu
+
+DOCS04 do hieuv526034 thực hiện trên nhánh hieuv526034/docs04-tu-dien-va-huong-dan. Báo cáo Word có tên tiếng Việt, mục đích và thành phần quản lý cho22 bảng,338 cột có tên diễn giải, kiểu, NULL, PK/FK và mô tả nghiệp vụ. Cột DB sinh chỉ đọc, cột @Transient không đưa vào schema vật lý. Từ điển đồng bộ tại [Schema và phân quyền](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#từ-điển-bảng-và-cột). Metadata chỉ đọc trên PostgreSQL test loopback15462/vietroute_catalogtabs_maintenance, đối chiếu entity và migration.
+
+[Hướng dẫn A–Z](../01-bat-dau/HUONG_DAN_SU_DUNG.md) có18 mục cho khách, điều hành, tài xế và quản trị, bao gồm tìm/đặt, xác nhận/hủy, thu/hoàn, danh mục cây/bản đồ, nguồn/tuyến/chuyến, báo cáo, quyền, hỗ trợ và bài thực hành. Có [bản Word hướng dẫn](../01-bat-dau/Huong_dan_su_dung_VietRoute.docx) để in hoặc chia sẻ. Hướng dẫn thao tác theo contract/UI source, không ghi mật khẩu và không ghi giao dịch thử lên production.
+
+Báo cáo97 trang, hướng dẫn9 trang đã xuất bằng Word, cập nhật mục lục và số trang, kiểm ảnh toàn bộ106 trang và đọc các trang bảng chi tiết. Đối chiếu đủ22 bảng/338 cột giữa metadata, entity, Markdown và Word, không ô mô tả trống. npm ci/format/format:check/rules/docs và diff-check đạt,221 liên kết trong23 tài liệu được kiểm. Không chạy lại Java/Node vì chỉ sửa tài liệu. Phạm vi DOCS04 gồm tài liệu. Bản ứng dụng nghiệm thu đối chiếu theo deployment Render Singapore ở trên. Ô danh tính bìa giữ để nhóm điền.
