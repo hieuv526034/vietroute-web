@@ -51,7 +51,7 @@ Envelope có success/code/messageKey/message/data/errors/timestamp/path/traceId/
 
 Mỗi API có @Operation; field Request/DTO/Search có @Schema và validation theo operation. Principal/HttpServletRequest là server-injected, không là query/body. Paging page từ 0, size tối đa 100; count/page phải lọc cùng scope, sort/identifier whitelist phía server. Giá trị bind parameter qua JPA; PreparedStatement dành cho batch/hạ tầng, không nối giá trị client vào SQL. Swagger/OpenAPI lấy từ MVC; inventory quyền cũng lấy MVC nhưng không dùng JSON Swagger làm nguồn cấp grant.
 
-Đọc payload chi tiết tại API source của khối mình hoặc Swagger đúng bản đang chạy. Trạng thái yêu cầu Swagger chỉ quản trị nằm tại [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md); không hứa bản chưa merge đã được triển khai.
+Đọc payload chi tiết tại API source của khối mình hoặc Swagger đúng bản đang chạy. Swagger được bảo vệ bằng grant quản trị cho page và API tài liệu. Trạng thái bản chạy ở [tiến độ](../05-ke-hoach/TIEN_DO_VA_KE_HOACH_NHOM.md).
 
 ## JPA và JDBC chung transaction
 
