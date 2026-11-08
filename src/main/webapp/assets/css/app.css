@@ -3691,6 +3691,10 @@ fieldset:disabled .button[type='submit']::before,
     margin-bottom: 14px;
     line-height: 1.2;
 }
+
+.overview-admin-hero {
+    display: block;
+}
 .overview-hero .eyebrow {
     color: #23694f;
     letter-spacing: 0.13em;
