@@ -116,24 +116,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     UsernamePasswordAuthenticationToken.authenticated(
                         principal,
                         null,
-                        user.isMustChangePassword() || user.getEmailVerifiedAt() == null ? List.of() : authorities
+                        user.isMustChangePassword() ? List.of() : authorities
                     )
                 );
                 SecurityContextHolder.setContext(context);
                 request.setAttribute(Http.VERIFIED_USER_ATTRIBUTE, user.getId());
                 request.setAttribute(Http.JOURNAL_USER_ATTRIBUTE, user.getId());
                 // Phiên chưa hoàn tất thiết lập chỉ được tự phục vụ; không miễn xác thực theo role hay username.
-                // Bootstrap đã được cấp sẵn email xác minh trong DB khi init/sync, vẫn đi qua cùng guard này.
-                if (
-                    (user.isMustChangePassword() || user.getEmailVerifiedAt() == null) &&
-                    !accountSetupRoute(path, request.getMethod())
-                ) {
+                if (user.isMustChangePassword() && !accountSetupRoute(path, request.getMethod())) {
                     if (path.startsWith(Routes.API_ROOT)) errors.write(
                         request,
                         response,
-                        user.isMustChangePassword()
-                            ? ErrorCode.PASSWORD_CHANGE_REQUIRED
-                            : ErrorCode.EMAIL_VERIFICATION_REQUIRED
+                        ErrorCode.PASSWORD_CHANGE_REQUIRED
                     );
                     else response.sendRedirect(request.getContextPath() + Routes.ACCOUNT);
                     return;

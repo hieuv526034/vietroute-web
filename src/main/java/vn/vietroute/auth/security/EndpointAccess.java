@@ -141,13 +141,11 @@ public class EndpointAccess implements HandlerInterceptor, ApplicationListener<C
         ) throw new BusinessException(ErrorCode.TOKEN_INVALID);
         if (!selfService && !target.equals("POST " + Routes.AUTH_LOGOUT)) {
             if (user.isMustChangePassword()) throw new BusinessException(ErrorCode.PASSWORD_CHANGE_REQUIRED);
-            if (user.getEmailVerifiedAt() == null) throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_REQUIRED);
             if (!user.getTargets().contains(target)) throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }
-        List<SimpleGrantedAuthority> authorities =
-            user.isMustChangePassword() || user.getEmailVerifiedAt() == null
-                ? List.of()
-                : user.getTargets().stream().map(SimpleGrantedAuthority::new).toList();
+        List<SimpleGrantedAuthority> authorities = user.isMustChangePassword()
+            ? List.of()
+            : user.getTargets().stream().map(SimpleGrantedAuthority::new).toList();
         return UsernamePasswordAuthenticationToken.authenticated(new UserPrincipal(user, target), null, authorities);
     }
 }

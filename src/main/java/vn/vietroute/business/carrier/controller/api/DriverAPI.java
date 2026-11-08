@@ -53,7 +53,7 @@ public class DriverAPI extends BaseController {
     @PostMapping(Routes.ADMIN_DRIVERS + Routes.DRIVER_ACCOUNT)
     @Operation(
         summary = "Cấp tài khoản DRIVER cho hồ sơ chưa liên kết",
-        description = "DRIVER_ASSIGN scoped, version bắt buộc. Tạo account/membership/link/history nguyên tử; hồ sơ tạm ngừng, account phải đổi mật khẩu và xác minh email. Không nhận role/scope hoặc sửa account có sẵn."
+        description = "DRIVER_ASSIGN scoped, version bắt buộc. Tạo account/membership/link/history nguyên tử; hồ sơ tạm ngừng, account phải đổi mật khẩu tạm. Không nhận role/scope hoặc sửa account có sẵn."
     )
     public ApiResult<UserDTO> provision(
         @Parameter(description = "ID hồ sơ dương") @PathVariable @Min(

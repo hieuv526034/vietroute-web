@@ -6,9 +6,9 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -44,10 +44,23 @@ public class JourneySearch extends PageRequest {
     @Schema(description = "ID xã/phường trả; lọc thêm trong tỉnh đã chọn")
     private Long toWardId;
 
-    @NotNull(message = "{validation.required}")
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-    @Schema(description = "Ngày đón Việt Nam yyyy-MM-dd")
+    @Schema(description = "Ngày đón Việt Nam yyyy-MM-dd; bỏ trống để xem chuyến sắp tới")
     private LocalDate date;
+
+    @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
+    @Schema(description = "Giờ đón Việt Nam từ HH:mm, bao gồm cận")
+    private LocalTime fromTime;
+
+    @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
+    @Schema(description = "Giờ đón Việt Nam đến HH:mm, bao gồm cận")
+    private LocalTime toTime;
+
+    @AssertTrue(message = "{validation.invalid}")
+    @Schema(hidden = true)
+    public boolean isTimeRangeValid() {
+        return fromTime == null || toTime == null || !fromTime.isAfter(toTime);
+    }
 
     @Min(value = 1, message = "{validation.invalid}")
     @Max(value = 200, message = "{validation.invalid}")
@@ -80,7 +93,7 @@ public class JourneySearch extends PageRequest {
 
     @AssertTrue(message = "{validation.invalid}")
     @Schema(hidden = true)
-    public boolean isRouteDefined() {
-        return (fromLocationId != null || fromProvinceId != null) && (toLocationId != null || toProvinceId != null);
+    public boolean isWardFilterValid() {
+        return (fromWardId == null || fromProvinceId != null) && (toWardId == null || toProvinceId != null);
     }
 }

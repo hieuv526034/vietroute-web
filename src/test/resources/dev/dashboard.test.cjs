@@ -182,7 +182,7 @@ test('Bấm làm mới liên tiếp không nhân đôi lượt đọc đang ch�
 });
 
 test('Danh sách có dữ liệu dựng đúng mã, chặng, giờ và link có locale', async () => {
-    const f = fixture([cap('MY_BOOKING', 'GET /api/v1/my-bookings')], async () => ({
+    const f = fixture([cap('MY_BOOKING', 'GET /api/v1/my-bookings'), cap('MY_BOOKING', 'GET /my-bookings')], async () => ({
         totalElements: 1,
         content: [
             {

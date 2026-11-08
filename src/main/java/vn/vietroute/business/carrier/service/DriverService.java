@@ -92,7 +92,7 @@ public class DriverService {
         return DriverResponse.from(carriers.driver(id, false));
     }
 
-    /** Tạo hồ sơ chưa liên kết không cấp account hay bỏ bước xác minh email; scope lấy từ nhà xe server đã kiểm. */
+    /** Tạo hồ sơ chưa liên kết không cấp account; scope lấy từ nhà xe server đã kiểm. */
     @Transactional
     public DriverResponse create(DriverRequest body, UserPrincipal actor) {
         UserPrincipal.requireCurrent(actor);

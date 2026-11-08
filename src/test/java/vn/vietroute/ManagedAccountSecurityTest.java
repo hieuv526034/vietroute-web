@@ -164,10 +164,10 @@ class ManagedAccountSecurityTest {
     }
 
     @Test
-    void assignedAdminStillMustVerifyEmailAndCannotUsePrivateFunctions() throws Exception {
+    void assignedAdminCanUseGrantedFunctionsWithoutVerifiedEmail() throws Exception {
         ready(false, false, Set.of("GET /api/v1/admin/accounts"));
         assertEquals(
-            403,
+            200,
             mvc
                 .perform(get("/api/v1/admin/accounts").with(authentication(actor())))
                 .andReturn()

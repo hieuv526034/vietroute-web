@@ -55,7 +55,7 @@ Tiền hiện là ghi nhận thu/hoàn thủ công đã thực hiện bên ngoà
 
 Login chỉ username/password. UserService khóa dòng account, so BCrypt12, ghi bộ đếm sai trước trả lỗi;5 lần sai khóa 15 phút. Không ném lỗi password trong callback để rollback bộ đếm. Thành công cấp JWT30 phút; cookie HttpOnly/SameSite=Lax, Secure ở production. Không lưu token/password vào localStorage.
 
-JWT kiểm HS256/issuer/audience/exp/iat/jti và đọc account/tokenVersion/grant từ DB; role trong token không là nguồn cấp quyền. Logout/đổi password/thu hồi liên quan tăng tokenVersion theo luồng. Account inactive/deleted/pending, chưa xác minh hoặc mật khẩu tạm bị chặn private phù hợp lifecycle.
+JWT kiểm HS256/issuer/audience/exp/iat/jti và đọc account/tokenVersion/grant từ DB. Logout, đổi mật khẩu và thu hồi liên quan tăng tokenVersion theo luồng. Tài khoản inactive, deleted, pending hoặc dùng mật khẩu tạm bị chặn theo vòng đời. Email là thông tin liên hệ, không tham gia kiểm quyền hoặc xét khách/tài xế đủ điều kiện.
 
 EndpointAccess thu thập MVC sau servlet refresh. Target ví dụ GET /api/v1/admin/accounts/{id}; HEAD chuẩn hóa thành GET. Public/self-service chỉ WebRoutePolicy trong source quyết định; DB/client không được biến một endpoint thành public. Inventory mới không tự cấp grant; endpoint chưa gán default deny, kể cả token mang ADMIN. Sync chủ động mới gán bộ bootstrap vào DB.
 
@@ -161,7 +161,7 @@ Nguồn hành chính giữ trong `bootstrap/administrative-divisions.json`, khô
 
 ## Từ điển bảng và cột
 
-Schema vật lý có 22 bảng và 338 cột. Tên tiếng Việt diễn giải nghiệp vụ, tên kỹ thuật giữ nguyên để đối chiếu SQL. Phần này mô tả cấu trúc sau 10 bước migration. Các thuộc tính @Transient chỉ phục vụ projection và không phải cột vật lý.
+Schema vật lý có 22 bảng và 340 cột sau 11 bước migration. Bước `trip/002_daily_service.sql` thêm hai cột cho lịch hằng ngày. Các thuộc tính `@Transient` phục vụ projection và không phải cột vật lý.
 
 PK là khóa chính, FK là khóa ngoại. Khóa ghép cần đủ các thành phần. NULL là chưa có giá trị; dữ liệu rỗng và số 0 có ý nghĩa khác. TIMESTAMPTZ lưu mốc thời gian, giao diện hiển thị theo giờ Việt Nam. Giá và tiền dùng VND. Cột do DB sinh chỉ đọc, cột audit do server xác định với system ID 0 cho tác vụ hệ thống.
 
@@ -395,7 +395,7 @@ Bảng `auth_users`. Lưu định danh đăng nhập username, hồ sơ liên h�
 | updated_by<br>Người sửa gần nhất | bigint<br>Bắt buộc<br>Có mặc định tại DB<br>FK → auth_users(id) | ID người sửa gần nhất, tác vụ hệ thống dùng system (0). |
 | version<br>Phiên bản bản ghi | bigint<br>Bắt buộc<br>Có mặc định tại DB | Phiên bản khóa lạc quan, từ chối cập nhật từ dữ liệu đã cũ. |
 | email<br>Email liên hệ | character varying(254)<br>Cho phép NULL | Email liên hệ, không dùng làm định danh đăng nhập. |
-| email_verified_at<br>Thời điểm xác minh email | timestamp with time zone<br>Cho phép NULL | Mốc ghi nhận đã xác minh của tài khoản. Tài khoản khởi tạo/quản trị được gán theo quy trình hiện hành, không hàm ý có chức năng gửi email. |
+| email_verified_at<br>Mốc xác minh email cũ | timestamp with time zone<br>Cho phép NULL | Dữ liệu tương thích. Việc đăng nhập và cấp quyền không dựa vào cột này. |
 | activation_pending<br>Chờ kích hoạt | boolean<br>Bắt buộc<br>Có mặc định tại DB | Tài khoản đang chờ kích hoạt, chưa được đăng nhập. |
 | deleted<br>Đã xóa mềm | boolean<br>Bắt buộc<br>Có mặc định tại DB | Đánh dấu xóa mềm, không xóa lịch sử liên quan. |
 | previous_password_hash_1<br>Hash mật khẩu trước gần nhất | character varying(100)<br>Cho phép NULL | Hash mật khẩu trước gần nhất để chống sử dụng lại. |
@@ -559,6 +559,8 @@ Bảng `carrier_trips`. Lưu một lần chạy theo thời gian, xe, tài xế,
 | end_at<br>Giờ kết thúc dự kiến | timestamp with time zone<br>Bắt buộc | Giờ kết thúc dự kiến ở điểm cuối, lưu UTC. |
 | capacity<br>Sức chứa thực tế | integer<br>Bắt buộc | Snapshot số chỗ của chuyến, không đổi theo xe sau đó. |
 | status<br>Trạng thái nghiệp vụ | character varying(20)<br>Bắt buộc<br>Có mặc định tại DB | Vòng đời DRAFT, OPEN, IN_PROGRESS, COMPLETED hoặc CANCELLED. |
+| daily_service<br>Lịch chạy hằng ngày | boolean<br>Bắt buộc<br>Mặc định false | Bật trên chuyến nguồn đủ điều kiện để sinh các lượt sau theo giờ Việt Nam. |
+| service_source_id<br>Chuyến nguồn lịch lặp | bigint<br>Cho phép NULL<br>FK → carrier_trips(id, carrier_id, scope_id) | ID chuyến nguồn của lượt sinh. Duy nhất theo cặp nguồn và giờ khởi hành. |
 | operation_note<br>Ghi chú vận hành | character varying(2000)<br>Bắt buộc<br>Có mặc định tại DB | Ghi chú điều hành hoặc lý do thay đổi trạng thái chuyến. |
 | created_at<br>Thời điểm tạo | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm tạo, lưu theo UTC. |
 | updated_at<br>Thời điểm sửa gần nhất | timestamp with time zone<br>Bắt buộc<br>Có mặc định tại DB | Thời điểm cập nhật gần nhất, lưu theo UTC. |

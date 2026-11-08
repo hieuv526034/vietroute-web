@@ -13,7 +13,8 @@
     let busy = false,
         selected = null,
         selectedMatch = null,
-        criteria = null,
+        availableMatch = false,
+        criteria = { seats: 1 },
         mayBook = false;
     const modal = window.VietRouteUI.modal('journey-dialog', { busy: () => busy }),
         tabs = window.VietRouteUI.tabs(node('journey-tabs')),
@@ -112,10 +113,6 @@
         picker.ready = true;
     };
     const load = async (query = pager.query) => {
-        if (!criteria) {
-            empty(labels.empty);
-            return;
-        }
         const page = await tables.readPage(
             async (paging) =>
                 (await api.get('/api/v1/trips', { params: { ...criteria, ...paging }, timeout: 10000 })).data.data,
@@ -131,7 +128,7 @@
                 date(item.pickupAt),
                 date(item.dropoffAt),
                 money(item.unitPrice),
-                item.availableSeats,
+                `${item.availableSeats} · ${labels.available}`,
             ])
                 row.append(text('td', value));
             const cell = text('td', '');
@@ -192,16 +189,37 @@
             node('journey-stop-list').append(section);
         }
         const book = node('journey-book');
-        book.hidden = (!mayBook && labels.authenticated === 'true') || !['OPEN', 'IN_PROGRESS'].includes(item.status);
+        book.hidden = (!mayBook && labels.authenticated === 'true') || !availableMatch;
+        node('journey-availability').textContent = availableMatch ? labels.available : labels.unavailable;
         book.textContent = labels.authenticated === 'true' ? labels.book : labels.login;
         book.href =
             labels.authenticated === 'true'
                 ? `${base}/my-bookings?${new URLSearchParams({ lang: document.documentElement.lang, tripId: item.id, ...(selectedMatch ? { pickupStopId: selectedMatch.pickupStopId, dropoffStopId: selectedMatch.dropoffStopId, seats: criteria?.seats || 1 } : {}) })}`
                 : `${base}/login?lang=${document.documentElement.lang}`;
     };
+    const findTripMatch = () => {
+        const pickup = selected.stops.find((stop) => stop.pickupAllowed && !stop.actualDepartureAt);
+        const dropoff =
+            pickup && selected.stops.findLast((stop) => stop.dropoffAllowed && stop.stopOrder > pickup.stopOrder);
+        return dropoff ? { pickupStopId: pickup.id, dropoffStopId: dropoff.id } : null;
+    };
+    const checkAvailability = async () => {
+        availableMatch = false;
+        node('journey-book').hidden = true;
+        const match = selectedMatch;
+        if (!match) return;
+        const quote = (
+            await api.get(`/api/v1/trips/${selected.id}/quote`, {
+                params: { pickupStopId: match.pickupStopId, dropoffStopId: match.dropoffStopId, seats: criteria.seats },
+                timeout: 10000,
+            })
+        ).data.data;
+        availableMatch = quote.accepting;
+    };
     const open = async (id, trigger, match = null) => {
         selected = (await api.get(`/api/v1/trips/${id}`, { timeout: 10000 })).data.data;
-        selectedMatch = match;
+        selectedMatch = match || findTripMatch();
+        await checkAvailability();
         detail();
         modal.open(trigger);
         requestAnimationFrame(() => {
@@ -217,11 +235,12 @@
     form.addEventListener('submit', (event) => {
         event.preventDefault();
         if (busy || !window.VietRouteForms.validate(form)) return;
-        criteria = { date: form.elements.date.value, seats: form.elements.seats.value };
-        for (const name of ['carrierId', 'vehicleTypeId', 'minPrice', 'maxPrice'])
+        criteria = { seats: form.elements.seats.value };
+        if (form.elements.date.value) criteria.date = form.elements.date.value;
+        for (const name of ['carrierId', 'vehicleTypeId', 'minPrice', 'maxPrice', 'fromTime', 'toTime'])
             if (form.elements[name].value) criteria[name] = form.elements[name].value;
         for (const picker of pickers) {
-            criteria[picker.side + 'ProvinceId'] = picker.province.value;
+            if (picker.province.value) criteria[picker.side + 'ProvinceId'] = picker.province.value;
             if (picker.ward.value) criteria[picker.side + 'WardId'] = picker.ward.value;
             if (picker.select.value) criteria[picker.side + 'LocationId'] = picker.select.value;
         }
@@ -234,21 +253,11 @@
     node('journey-refresh').addEventListener('click', () =>
         perform(async () => {
             selected = (await api.get(`/api/v1/trips/${selected.id}`, { timeout: 10000 })).data.data;
+            await checkAvailability();
             detail();
         }),
     );
     void perform(async () => {
-        const parts = Object.fromEntries(
-            new Intl.DateTimeFormat('en-CA', {
-                timeZone: 'Asia/Ho_Chi_Minh',
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-            })
-                .formatToParts(new Date())
-                .map((part) => [part.type, part.value]),
-        );
-        form.elements.date.value = `${parts.year}-${parts.month}-${parts.day}`;
         const provinces = await choices('/api/v1/categories', { refType: 'PROVINCE' });
         for (const picker of pickers) {
             picker.province.replaceChildren(
@@ -271,7 +280,8 @@
             select.value = String(carrierId);
             form.querySelector('.journey-filters').open = true;
         }
-        empty(labels.empty);
+        if (carrierId > 0) criteria.carrierId = carrierId;
+        await load();
         if (labels.authenticated === 'true') {
             const access = await window.VietRouteAccess.load('MY_BOOKING');
             mayBook =

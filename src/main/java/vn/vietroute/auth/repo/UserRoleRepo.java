@@ -41,7 +41,6 @@ public interface UserRoleRepo extends JpaRepository<UserRole, Long> {
         WHERE su.id = :viewerId AND su.token_version = :viewerVersion AND su.active AND NOT su.deleted
             AND NOT su.activation_pending
             AND NOT su.must_change_password
-            AND su.email_verified_at IS NOT NULL
             AND EXISTS (
             SELECT 1
             FROM {h-schema}auth_user_roles global_role
@@ -500,7 +499,6 @@ public interface UserRoleRepo extends JpaRepository<UserRole, Long> {
             JOIN {h-schema}auth_users u ON u.id = ur.user_id AND u.active AND NOT u.deleted
                 AND NOT u.activation_pending
                 AND NOT u.must_change_password
-                AND u.email_verified_at IS NOT NULL
             WHERE ur.user_id = :user AND ur.scope_id = c.scope_id AND ur.active
         )
         ORDER BY c.scope_code
@@ -538,7 +536,6 @@ public interface UserRoleRepo extends JpaRepository<UserRole, Long> {
         WHERE u.id = :user AND u.token_version = :tokenVersion AND u.active AND NOT u.deleted
             AND NOT u.activation_pending
             AND NOT u.must_change_password
-            AND u.email_verified_at IS NOT NULL
         """,
         nativeQuery = true
     )
@@ -565,7 +562,6 @@ public interface UserRoleRepo extends JpaRepository<UserRole, Long> {
             WHERE su.id = :viewerId AND su.token_version = :viewerVersion AND su.active AND NOT su.deleted
                 AND NOT su.activation_pending
                 AND NOT su.must_change_password
-                AND su.email_verified_at IS NOT NULL
                 AND EXISTS (
                 SELECT 1
                 FROM {h-schema}auth_user_roles global_role
@@ -611,7 +607,6 @@ public interface UserRoleRepo extends JpaRepository<UserRole, Long> {
             WHERE u.id = :viewerId AND u.token_version = :viewerVersion AND u.active AND NOT u.deleted
                 AND NOT u.activation_pending
                 AND NOT u.must_change_password
-                AND u.email_verified_at IS NOT NULL
                 AND fr.target = :viewTarget
         )
         """,

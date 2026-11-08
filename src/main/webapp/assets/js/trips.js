@@ -76,6 +76,13 @@
                 !picker.ready ||
                 (picker.kind !== 'CARRIER' && !form.elements.carrierId.value);
         }
+        node('trip-schedule').hidden =
+            !selected ||
+            selected.serviceSourceId != null ||
+            !can('PUT', '/{id}/schedule') ||
+            (!selected.dailyService && ['DRAFT', 'CANCELLED'].includes(selected.status));
+        node('trip-schedule').disabled = busy;
+        node('trip-schedule').textContent = selected?.dailyService ? labels.dailyStop : labels.dailyStart;
         node('trip-save').hidden = !editable();
         node('trip-save').disabled =
             busy ||
@@ -135,7 +142,7 @@
                 item.code,
                 english ? item.nameEn : item.nameVi,
                 item.carrierName,
-                date(item.departureAt),
+                date(item.departureAt) + (item.dailyService ? ' · ' + labels.daily : ''),
                 item.plateNumber,
                 item.capacity,
                 state(item.status),
@@ -309,6 +316,18 @@
             ),
         );
     };
+    node('trip-schedule').addEventListener('click', () => {
+        if (busy || !selected || !can('PUT', '/{id}/schedule')) return;
+        void perform(async () =>
+            saved(
+                await mutate(
+                    `${path}/${selected.id}/schedule`,
+                    { version: selected.version, dailyService: !selected.dailyService },
+                    'put',
+                ),
+            ),
+        );
+    });
     node('trip-open').addEventListener('click', () => transition('OPEN'));
     node('trip-cancel').addEventListener('click', () => transition('CANCELLED'));
     node('trip-notice').addEventListener('click', () => {

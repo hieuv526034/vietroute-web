@@ -3672,3 +3672,185 @@ fieldset:disabled .button[type='submit']::before,
     white-space: normal;
     overflow-wrap: anywhere;
 }
+
+/* Hai trang tổng quan dùng cùng nhịp bố cục và giữ menu theo quyền từ server. */
+.overview-page {
+    padding-top: 28px;
+}
+.overview-hero {
+    position: relative;
+    padding: clamp(24px, 4vw, 46px);
+    border: 1px solid #cce3da;
+    border-radius: 24px;
+    background: linear-gradient(120deg, #edf7f1 0%, #f7fbf9 65%, #e4f0f8 100%);
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+.overview-hero h1 {
+    max-width: 820px;
+    margin-bottom: 14px;
+    line-height: 1.2;
+}
+
+.overview-admin-hero {
+    display: block;
+}
+.overview-hero .eyebrow {
+    color: #23694f;
+    letter-spacing: 0.13em;
+}
+.overview-hero .help-guide {
+    margin-bottom: 18px;
+}
+.overview-hero-actions,
+.overview-intro-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 20px 0;
+}
+.overview-hero-actions .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+.overview-hero-actions svg {
+    width: 20px;
+    height: 20px;
+}
+.overview-refresh {
+    flex: 0 0 auto;
+    background: #fff;
+}
+.overview-hero .dashboard-roles {
+    margin-top: 20px;
+}
+.overview-section-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px 24px;
+    margin: 28px 0 12px;
+}
+.overview-section-title h2 {
+    font-size: 23px;
+}
+.overview-section-title p {
+    font-size: 14px;
+}
+.overview-modules {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 20px;
+}
+.overview-module {
+    padding: 24px;
+    border: 1px solid #dce8e1;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 4px 18px #123a2610;
+}
+.overview-module-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 22px;
+}
+.overview-module-heading h2,
+.overview-module-heading h3 {
+    flex: 1;
+    font-size: 20px;
+    margin: 0;
+}
+.overview-module-heading > svg {
+    width: 18px;
+    height: 18px;
+    color: #64756d;
+}
+.overview-module-number {
+    display: grid;
+    place-items: center;
+    flex: 0 0 38px;
+    height: 38px;
+    background: #e8f4ee;
+    color: #216447;
+    border-radius: 12px;
+    font-weight: 700;
+}
+.overview-module .dashboard-links {
+    gap: 8px;
+}
+.overview-module .dashboard-links a {
+    padding: 13px 14px;
+    background: #f5f8f6;
+    border: 1px solid transparent;
+    border-radius: 10px;
+}
+.overview-module .dashboard-links a:hover {
+    background: #e8f4ee;
+    border-color: #cce3da;
+}
+.overview-module .dashboard-links a:focus-visible {
+    outline: 3px solid #287b54;
+    outline-offset: 2px;
+}
+.overview-module .dashboard-links svg {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+}
+.overview-page .dashboard-metric {
+    border-top: 4px solid #2a8158;
+    border-radius: 16px;
+    box-shadow: 0 4px 18px #123a260a;
+}
+.overview-page .dashboard-metric strong {
+    font-variant-numeric: tabular-nums;
+}
+.overview-page .dashboard-task {
+    border-radius: 18px;
+}
+.overview-page .dashboard-records li {
+    padding: 14px;
+    border: 1px solid #e4ece7;
+    border-radius: 12px;
+    background: #fafcfb;
+}
+.overview-page .dashboard-records li p {
+    margin-top: 9px;
+    margin-bottom: 0;
+    font-size: 14px;
+    color: var(--muted);
+}
+.overview-page .dashboard-public-links {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+    margin-bottom: 28px;
+}
+.overview-page .dashboard-shortcuts {
+    padding: 24px;
+    border-radius: 18px;
+}
+.overview-empty {
+    text-align: center;
+    padding: 36px;
+}
+@media (max-width: 600px) {
+    .overview-hero {
+        border-radius: 18px;
+        padding: 24px 20px;
+    }
+    .overview-module {
+        padding: 20px;
+    }
+    .overview-hero-actions {
+        width: 100%;
+    }
+    .overview-hero-actions .button {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+    .overview-refresh {
+        align-self: flex-start;
+    }
+}

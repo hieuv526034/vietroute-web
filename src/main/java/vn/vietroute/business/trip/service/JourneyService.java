@@ -22,15 +22,16 @@ import vn.vietroute.common.validation.BusinessRules;
 
 /** Public chỉ dùng projection đã whitelist; không gọi staff service hoặc bỏ guard qua DB public flags. */
 @Service
-@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class JourneyService {
 
     private final JourneyRepo journeys;
+    private final DailyTripService daily;
     private final BookingRepo bookings;
     private final TripSegmentRepo capacity;
 
     /** Báo giá/chỗ server cùng chính sách khi tạo/xác nhận; đây không phải thao tác giữ chỗ. */
+    @Transactional(readOnly = true)
     public JourneyQuoteResponse quote(long id, JourneyQuoteSearch body) {
         journeys.find(id);
         Trip trip = bookings.trip(id, false);
@@ -58,17 +59,19 @@ public class JourneyService {
     /** Count/page đúng pickup local date và remaining theo chặng, không tính lại tại JS. */
     public PageResponse<JourneyMatchResponse> search(JourneySearch body) {
         BusinessRules.require(
-            body.getDate() != null &&
-                body.isRouteDefined() &&
+            body.isWardFilterValid() &&
+                body.isTimeRangeValid() &&
                 body.isPriceRangeValid() &&
                 body.getSeats() > 0 &&
                 body.getSeats() <= 200,
             ErrorCode.INVALID_REQUEST
         );
+        daily.ensure(body.getDate());
         return journeys.search(body);
     }
 
     /** Chỉ công bố trip đã từng mở, không chứa dữ liệu hành khách hoặc tài xế. */
+    @Transactional(readOnly = true)
     public JourneyResponse find(long id) {
         return journeys.find(id);
     }

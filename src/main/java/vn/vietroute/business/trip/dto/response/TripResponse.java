@@ -91,6 +91,12 @@ public class TripResponse {
     @Schema(description = "Trạng thái chuyến")
     private TripStatus status;
 
+    @Schema(description = "Chuyến nguồn đang sinh lịch chạy hằng ngày")
+    private boolean dailyService;
+
+    @Schema(description = "ID chuyến nguồn nếu sinh theo lịch cố định")
+    private Long serviceSourceId;
+
     @Schema(description = "Thông báo vận hành")
     private String operationNote;
 
@@ -135,6 +141,8 @@ public class TripResponse {
             instantValue(row.get("end_at")),
             intValue(row.get("capacity")),
             TripStatus.valueOf(stringValue(row.get("status"))),
+            booleanValue(row.get("daily_service")),
+            row.get("service_source_id") == null ? null : longValue(row.get("service_source_id")),
             stringValue(row.get("operation_note")),
             longValue(row.get("version")),
             booleanValue(row.get("can_update")),

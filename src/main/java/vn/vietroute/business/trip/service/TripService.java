@@ -192,6 +192,7 @@ public class TripService {
             );
             future(start);
             Instant end = start.plus(Duration.between(trip.getDepartureAt(), trip.getEndAt()));
+            BusinessRules.require(!trip.isDailyService(), ErrorCode.TRIP_STATE_CONFLICT);
             Assets assets = trips.assets(
                 trip.getCarrierId(),
                 trip.getScopeId(),

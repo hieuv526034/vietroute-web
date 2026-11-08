@@ -57,7 +57,7 @@ public interface TripRepo extends Repository<Trip, Long> {
         t.id, t.carrier_id, t.scope_id, owner.name AS carrier_name, owner.phone AS carrier_phone, t.route_id,
         t.code, t.name_vi, t.name_en, t.vehicle_id, t.plate_number, t.vehicle_type_id, t.vehicle_type_name_vi,
         t.vehicle_type_name_en, t.driver_id, t.driver_user_id, t.driver_name, t.driver_phone, t.departure_at,
-        t.end_at, t.capacity, t.status, t.operation_note, t.version, (
+        t.end_at, t.capacity, t.status, t.daily_service, t.service_source_id, t.operation_note, t.version, (
         """ +
         UserRoleRepo.UPDATE_VISIBLE +
         ") AS can_update ";
@@ -858,7 +858,6 @@ public interface TripRepo extends Repository<Trip, Long> {
             AND du.active
             AND NOT du.activation_pending
             AND NOT du.must_change_password
-            AND du.email_verified_at IS NOT NULL
             AND EXISTS (
             SELECT 1
             FROM (

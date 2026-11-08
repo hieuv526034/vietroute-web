@@ -2,6 +2,8 @@ package vn.vietroute.business.trip.repo;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
 import org.springframework.data.jpa.repository.Query;
@@ -53,11 +55,13 @@ public interface JourneyRepo extends Repository<Trip, Long> {
         AND (t.status = 'IN_PROGRESS' OR (t.status = 'OPEN' AND t.departure_at > CURRENT_TIMESTAMP))
         AND pick.scheduled_departure_at >= :fromAt
         AND pick.scheduled_departure_at < :toAt
+        AND (CAST(:fromTime AS TIME) IS NULL OR (pick.scheduled_departure_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::TIME >= :fromTime)
+        AND (CAST(:toTime AS TIME) IS NULL OR (pick.scheduled_departure_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::TIME <= :toTime)
         AND ((CAST(:fromLocationId AS BIGINT) IS NOT NULL AND pick.location_id = :fromLocationId) OR
-        (CAST(:fromLocationId AS BIGINT) IS NULL AND pick.province_id = :fromProvinceId))
+        (CAST(:fromLocationId AS BIGINT) IS NULL AND (CAST(:fromProvinceId AS BIGINT) IS NULL OR pick.province_id = :fromProvinceId)))
         AND ((CAST(:toLocationId AS BIGINT) IS NOT NULL AND dropoff.location_id = :toLocationId) OR
             (CAST(:toLocationId AS BIGINT) IS NULL AND
-            dropoff.province_id = :toProvinceId))
+            (CAST(:toProvinceId AS BIGINT) IS NULL OR dropoff.province_id = :toProvinceId)))
         AND (CAST(:carrierId AS BIGINT) IS NULL OR c.id = :carrierId)
         AND (CAST(:vehicleTypeId AS BIGINT) IS NULL OR t.vehicle_type_id = :vehicleTypeId)
         AND avail.remaining >= :seats
@@ -77,6 +81,8 @@ public interface JourneyRepo extends Repository<Trip, Long> {
     long searchCount(
         Instant fromAt,
         Instant toAt,
+        LocalTime fromTime,
+        LocalTime toTime,
         Long fromLocationId,
         Long fromProvinceId,
         Long toLocationId,
@@ -111,6 +117,8 @@ public interface JourneyRepo extends Repository<Trip, Long> {
     List<JourneyProjection> searchRows(
         Instant fromAt,
         Instant toAt,
+        LocalTime fromTime,
+        LocalTime toTime,
         Long fromLocationId,
         Long fromProvinceId,
         Long toLocationId,
@@ -129,11 +137,17 @@ public interface JourneyRepo extends Repository<Trip, Long> {
     @Transactional(readOnly = true)
     default PageResponse<JourneyMatchResponse> search(JourneySearch body) {
         ZoneId zone = ZoneId.of(Business.TIME_ZONE);
-        Instant from = body.getDate().atStartOfDay(zone).toInstant();
-        Instant to = body.getDate().plusDays(1).atStartOfDay(zone).toInstant();
+        LocalDate date = body.getDate() == null ? LocalDate.now(zone) : body.getDate();
+        Instant from = date.atStartOfDay(zone).toInstant();
+        Instant to = date
+            .plusDays(body.getDate() == null ? 31 : 1)
+            .atStartOfDay(zone)
+            .toInstant();
         long total = searchCount(
             from,
             to,
+            body.getFromTime(),
+            body.getToTime(),
             body.getFromLocationId(),
             body.getFromProvinceId(),
             body.getToLocationId(),
@@ -149,6 +163,8 @@ public interface JourneyRepo extends Repository<Trip, Long> {
         List<JourneyMatchResponse> rows = searchRows(
             from,
             to,
+            body.getFromTime(),
+            body.getToTime(),
             body.getFromLocationId(),
             body.getFromProvinceId(),
             body.getToLocationId(),

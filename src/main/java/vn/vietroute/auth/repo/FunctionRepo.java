@@ -80,7 +80,7 @@ public interface FunctionRepo extends JpaRepository<Function, String> {
         JOIN {h-schema}auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
         JOIN {h-schema}auth_function_resources fr ON fr.function_code = f.code
         WHERE u.id = :userId AND u.active AND NOT u.deleted AND NOT u.activation_pending
-            AND NOT u.must_change_password AND u.email_verified_at IS NOT NULL
+            AND NOT u.must_change_password
         ORDER BY f.code, fr.target
         """,
         nativeQuery = true
@@ -120,7 +120,7 @@ public interface FunctionRepo extends JpaRepository<Function, String> {
         JOIN {h-schema}auth_functions f ON f.code = rf.function_code AND f.active AND NOT f.deleted
         JOIN {h-schema}auth_function_resources fr ON fr.function_code = f.code
         WHERE u.id = :userId AND u.active AND NOT u.deleted AND NOT u.activation_pending
-            AND NOT u.must_change_password AND u.email_verified_at IS NOT NULL
+            AND NOT u.must_change_password
             AND fr.kind = 'MENU' AND fr.http_method = 'GET'
         ORDER BY fr.target, f.sort_order, fr.sort_order, f.code
         """,

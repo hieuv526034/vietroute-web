@@ -43,15 +43,15 @@ Phiên bản chính xác đọc [pom.xml](../../pom.xml) và [package.json](../.
 |---|---:|---:|---|
 | auth | 46 | 8 | User/role/function/menu/API, scope, lifecycle và history |
 | business/catalog | 11 | 1 | Danh mục chung, cây tỉnh/xã và điểm đón trả |
-| business/carrier | 23 | 3 | Nhà xe, xe, hồ sơ tài xế |
-| business/trip | 45 | 6 | Tuyến/chuyến, snapshot, chặng, tiến độ và tìm chuyến |
-| business/booking | 15 | 2 | Đơn và sự kiện trạng thái/thu–hoàn |
+| business/carrier | 24 | 3 | Nhà xe, xe, hồ sơ tài xế |
+| business/trip | 56 | 6 | Tuyến/chuyến, lịch hằng ngày, snapshot, chặng, tiến độ và tìm chuyến |
+| business/booking | 19 | 2 | Đơn và sự kiện trạng thái/thu–hoàn |
 | business/report | 10 | 0 | Báo cáo và dashboard đọc dữ liệu nghiệp vụ |
 | business/bootstrap | 7 | 0 | Khởi tạo nền có cờ bật rõ ràng |
 | common | 58 | 1 | Nền MVC/DB, response/lỗi và api_request_journal |
 | History migration | — | 1 | vietroute_schema_history |
 
-Source có 229 file Java trong ba khối chính, gồm14 interface projection được chấp thuận bổ sung và 22 bảng sau migration Category, gồm history. Xem tên bảng và quan hệ tại [schema](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md). Số file là mốc source, không phải bằng chứng một thành viên đã viết toàn bộ khối được phân công.
+Source có 231 file Java trong ba khối chính, gồm14 interface projection được chấp thuận bổ sung và 22 bảng sau migration Category, gồm history. Xem tên bảng và quan hệ tại [schema](../02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md). Số file là mốc source, không phải bằng chứng một thành viên đã viết toàn bộ khối được phân công.
 
 ## Một request đi qua đâu
 

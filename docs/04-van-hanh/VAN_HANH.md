@@ -44,6 +44,8 @@ Khi sửa Environment có trường secret tải bất đồng bộ: mở/chờ 
 
 ## Database, backup và rollback
 
+Đợt lịch chạy hằng ngày cần áp dụng `trip/002_daily_service.sql` qua `DatabaseInitializer` trên PostgreSQL đã sao lưu và thử phục hồi. Migration chuyển bốn khung giờ giả lập Duy Long hiện hữu nếu tìm đúng mã nguồn đã công bố. Với DB dựng mới, bộ init đầy đủ tạo bốn nguồn khi seed. Khi cập nhật DB hiện hữu, giữ cờ seed tài khoản/nghiệp vụ tắt và thực hiện migration đúng môi trường. Kiểm tra `/health`, tìm hai chiều Hà Nội–Hải Phòng theo ngày/giờ và báo giá công khai. Grant `PUT /api/v1/admin/trips/{id}/schedule` cần được quản trị cấp cho chức năng điều hành đúng phạm vi nếu DB đã có cấu hình quyền riêng.
+
 Không sửa tám SQL/checksum đã áp dụng; bước mới thêm số liên tiếp trong cụm và manifest. Runtime khóa/checksum/transaction, từ chối history lạ. Database hiện hữu muốn rebaseline: ủy quyền đúng đích → backup mã hóa/kiểm phục hồi → dừng mọi node → scripts/development/rebaseline-database.py --check → --apply --confirm-stopped nếu cấu trúc khớp. Chỉ đổi history, không DROP bảng hoặc đổi hash/ID/sequence/audit.
 
 Backup bằng pg_dump phải phục hồi vào DB riêng để kiểm bảng/dữ liệu/sequence, không chỉ kiểm file tồn tại. Với --schema, chuẩn bị extension phụ thuộc như pg_trgm đúng namespace; so digest dữ liệu Linux/Windows phải cùng timezone UTC và thứ tự COLLATE C. Bản DPAPI CurrentUser local gắn với tài khoản Windows, không là backup di động, PITR hoặc kế hoạch RPO/RTO. Trạng thái đã kiểm của từng môi trường nằm ở tiến độ; không hứa khả năng phục hồi chưa thử.

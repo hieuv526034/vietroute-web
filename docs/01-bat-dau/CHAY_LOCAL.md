@@ -136,6 +136,6 @@ DB mới có tổng646 chuyến/3866 đơn theo snapshot đã kiểm. DB đang c
 
 ### Chọn chuyến đúng ngày
 
-Ngày seed neo lần tạo đầu:7 ngày trước đến14 ngày sau, tuyến dài cách 4 ngày. VRINIT1R01D07 của driver01 được tạo OPEN khoảng 10 phút sau init đầu tiên; đừng mặc định mã đó luôn tương lai khi demo ngày khác. Khi hết cửa sổ cần điều hành tạo/mở chuyến mới bằng luồng hợp lệ, không dịch clock hoặc xóa/reset DB.
+Các chuyến mẫu một lần giữ ngày của lần init đầu. Bốn khung giờ Duy Long có lịch lặp mỗi ngày. Mở Tìm chuyến, chọn Hà Nội → Hải Phòng hoặc Hải Phòng → Hà Nội và thử ngày mai. Lọc 09:30 hoặc 15:30 chiều đi, 05:00 hoặc 12:00 chiều về theo giờ Việt Nam. Lịch lặp tạo từng chuyến mới với tồn chỗ riêng khi bổ sung cửa sổ bán hoặc khi khách tìm ngày cụ thể.
 
 Nguồn account ở [default-access.json](../../src/main/resources/auth/default-access.json), nền/profile ở [bootstrap](../../src/main/resources/bootstrap). Nút /operations/demo và POST /api/v1/admin/demo chỉ thêm bộ nền21 bản ghi, không tạo account/membership hoặc hàng nghìn chuyến/đơn qua HTTP. Luồng tập chung và tài khoản từng người nằm trong [phân công](../05-ke-hoach/PHAN_CONG.md) và [kịch bản demo](../05-ke-hoach/DEMO_VA_HOI_DAP.md).

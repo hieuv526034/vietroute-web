@@ -10,7 +10,7 @@
         <main
             id="trip-workspace"
             class="container-xl workspace-page"
-            th:attr="data-loading=#{ui.loading},data-empty=#{ui.empty},data-no-read=#{ui.accessTree.noRead},data-view=#{ui.route.view},data-edit=#{ui.location.edit},data-choose=#{ui.trip.choose},data-draft=#{ui.trip.DRAFT},data-open=#{ui.trip.OPEN},data-in-progress=#{ui.trip.IN_PROGRESS},data-completed=#{ui.trip.COMPLETED},data-cancelled=#{ui.trip.CANCELLED},data-arrival=#{ui.trip.arrival},data-departure=#{ui.trip.departure},data-pickup=#{ui.route.pickup},data-dropoff=#{ui.route.dropoff},data-fare=#{ui.route.fare},data-note-required=#{ui.trip.noteRequired},data-created=#{ui.trip.CREATED},data-opened=#{ui.trip.OPENED},data-assigned=#{ui.trip.ASSIGNED},data-started=#{ui.trip.STARTED},data-arrived=#{ui.trip.ARRIVED},data-departed=#{ui.trip.DEPARTED},data-notice=#{ui.trip.NOTICE}"
+            th:attr="data-daily=#{ui.trip.daily},data-daily-start=#{ui.trip.dailyStart},data-daily-stop=#{ui.trip.dailyStop},data-loading=#{ui.loading},data-empty=#{ui.empty},data-no-read=#{ui.accessTree.noRead},data-view=#{ui.route.view},data-edit=#{ui.location.edit},data-choose=#{ui.trip.choose},data-draft=#{ui.trip.DRAFT},data-open=#{ui.trip.OPEN},data-in-progress=#{ui.trip.IN_PROGRESS},data-completed=#{ui.trip.COMPLETED},data-cancelled=#{ui.trip.CANCELLED},data-arrival=#{ui.trip.arrival},data-departure=#{ui.trip.departure},data-pickup=#{ui.route.pickup},data-dropoff=#{ui.route.dropoff},data-fare=#{ui.route.fare},data-note-required=#{ui.trip.noteRequired},data-created=#{ui.trip.CREATED},data-opened=#{ui.trip.OPENED},data-assigned=#{ui.trip.ASSIGNED},data-started=#{ui.trip.STARTED},data-arrived=#{ui.trip.ARRIVED},data-departed=#{ui.trip.DEPARTED},data-notice=#{ui.trip.NOTICE}"
         >
             <div class="page-heading">
                 <p
@@ -331,6 +331,13 @@
                                 class="button button-outline"
                                 data-dialog-close
                                 th:text="#{ui.ops.close}"
+                            ></button>
+                            <button
+                                id="trip-schedule"
+                                type="button"
+                                class="button button-outline"
+                                hidden
+                                th:text="#{ui.trip.dailyStart}"
                             ></button>
                             <button
                                 id="trip-notice"
