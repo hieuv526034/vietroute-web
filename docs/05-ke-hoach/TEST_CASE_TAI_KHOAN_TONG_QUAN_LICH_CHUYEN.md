@@ -20,3 +20,20 @@ Chạy trên PostgreSQL test riêng đã áp dụng migration `trip/002_daily_se
 | LC-07 | Hủy một chuyến con rồi tìm lại ngày đó. Tắt lịch nguồn rồi tìm một ngày chưa sinh | Chuyến đã hủy không xuất hiện lại. Tắt lịch không tạo ngày mới và các chuyến đã công bố vẫn có lịch sử riêng |
 | LC-08 | Xác nhận một đơn trên chuyến ngày A, rồi kiểm cùng giờ ngày B | Tồn chỗ giảm đúng các đoạn của chuyến A. Chuyến B không bị trừ chỗ |
 | LC-09 | Khởi tạo lại bộ dữ liệu mẫu, kiểm bốn lịch Duy Long và tìm chuyến theo giờ | Chỉ có một nguồn cho mỗi khung giờ 05:00, 09:30, 12:00, 15:30. Không tạo lặp chuyến, đơn hoặc cấp lại quyền đã thu hồi |
+
+## Kết quả đã đối chiếu ngày 09/11/2026
+
+Source phát hành `93883c0`, Render Singapore deployment `dep-dboautvavr4c73b853o0`. Các ca thay đổi dữ liệu dùng PostgreSQL riêng hoặc bản phục hồi, không tạo đơn/thu/hoàn thử trên production. Bộ 16 ca phía trên là kịch bản nghiệm thu, không mặc nhiên là 16 ca thủ công đã đạt.
+
+| Phần đã kiểm | Kết quả thực tế | Phạm vi |
+|---|---|---|
+| TK-02 và grant độc lập | `assignedAdminCanUseGrantedFunctionsWithoutVerifiedEmail` cùng nhóm security đạt | JUnit/MVC, cả hai Spring context |
+| TQ-01, TQ-02, phần bố cục TQ-03 | Khách đăng nhập thấy 2 đơn, quản trị có các nhóm tác vụ; hai màn ở desktop/390 px không cuộn ngang | Trình duyệt vi trên DB phục hồi, khách đăng nhập lại trên production |
+| LC-01 | Trang tự tải, API trả 574 chặng còn nhận đặt tại thời điểm kiểm | Production, không chọn tuyến/ngày |
+| LC-02 | Hà Nội → Hải Phòng ngày 10/11, 09:00–10:00 có `DLG1R26D20261110` lúc 09:30, còn 13 chỗ; quote `accepting=true` | Trình duyệt và API production |
+| LC-03 | Khung 10:00–11:00 trả 0; chiều Hải Phòng → Hà Nội ngày 10/11 có lượt 12:00, còn 13 chỗ và quote khả dụng | Trình duyệt/API production |
+| LC-04, phần tìm và chống tạo lặp khi gửi lại | Ngày 24/12 sau 45 ngày có `D1559T20261224` lúc 09:30, còn 16 chỗ; gửi lại tìm giữ ID, quote khả dụng | Trình duyệt/API production; ca tạo đơn trên DB test |
+| Nâng cấp DB cũ và init | Regression nâng cấp giữ số chuyến/đơn, nhận đủ 4 nguồn. Bổ sung 24 lượt ở production sau backup; trên phục hồi chạy lại thêm 0 | PostgreSQL riêng, sau đó thao tác nâng cấp đã được chủ dự án cho phép |
+| Dữ liệu các nhóm màn | Admin, điều hành, tài xế, khách đều đọc được dữ liệu đúng vai trò; các API đã rà trả HTTP 200 | Số lượng và kỳ báo cáo ở [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md#tài-khoản-tổng-quan-và-lịch-hằng-ngày) |
+
+Các ca còn lại cần người nghiệm thu ghi thao tác, mã dữ liệu và kết quả riêng, đặc biệt bàn phím, đầy đủ vai trò/tiếng Anh, xung đột lịch, tắt lịch và nhánh hủy chuyến con. Regression Java hiện có kiểm quyền, rollback, trạng thái, tồn chỗ và đồng thời không thay thế việc ký nghiệm thu thủ công từng ca. Tài khoản `customduylong` đang có một WEB PENDING cũ; muốn tạo yêu cầu mới phải xử lý/hủy đơn cũ theo luồng của ứng dụng. Đây là quy tắc một đơn WEB active, không phải kết quả tìm chuyến bị sai giờ. Không sửa SQL hoặc tự hủy đơn production để vượt quy tắc.

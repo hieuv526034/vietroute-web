@@ -4,13 +4,15 @@ Học theo [phần từng thành viên](PHAN_CONG.md), [tổng quan](../01-bat-d
 
 Đọc nhanh: [Lời thoại hai dev](#lời-thoại-trình-bày-của-hai-dev) → [chuẩn bị luồng](#chuẩn-bị-một-luồng-xuyên-suốt) → [hỏi sâu Q46–Q55](#phản-biện-theo-phần-của-hai-dev--q46-đến-q55). Q01–Q45 là bộ nền; phần cuối vẫn giữ yêu cầu báo cáo Word.
 
+[PowerPoint bảo vệ sản phẩm](bao-cao/Thuyet_trinh_VietRoute.pptx) có 28 slide, ảnh ứng dụng thật và Notes cho người nói. Điền thông tin sinh viên/giảng viên ở hai slide đầu trước buổi bảo vệ. Khi có khoảng 15 phút, tập nói ngắn các bảng kỹ thuật và dành thời gian cho luồng demo; phần hỏi sâu tra nguồn trong Notes và bộ câu hỏi bên dưới. Bốn lịch Duy Long lặp hằng ngày cho Hà Nội–Hải Phòng hỗ trợ chọn ngày còn nhận đặt; vẫn chuẩn bị DB demo riêng cho thao tác ghi.
+
 ## Kiểm tra trước buổi demo
 
 1. Chốt đúng nhánh/commit/môi trường với [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md). Đối chiếu commit đang chạy trước khi khẳng định menu/select và Swagger private đã có trên Render.
 2. Dùng DB demo riêng đã được phép; không thao tác thu–hoàn/khóa account/đổi grant/xóa/reset DB thật để thử. Nếu không có môi trường riêng thì chỉ trình bày đọc, muốn ghi phải có phạm vi được chủ dự án cho phép.
 3. Chạy app, kiểm /health rồi login/me và API có DB. /health200 không chứng minh DB/quyền/seed tốt. Render Free có thể cold start hơn3 phút, chuẩn bị thời gian và phương án local.
 4. Kiểm username admin/operator01/operator02/driver01/driver02/custom01 và key mật khẩu ở [local](../01-bat-dau/CHAY_LOCAL.md#tài-khoản-và-dữ-liệu-khởi-tạo). Không đưa mật khẩu/JWT lên slide, ảnh hoặc terminal đang chia sẻ.
-5. Chọn tuyến/chuyến còn hợp lệ ngày demo, xe/tài xế không chồng lịch. Ngày seed neo lần tạo đầu, restart không dịch lịch; nếu hết cửa sổ thì tạo/mở chuyến mới, không reset seed.
+5. Chọn tuyến/chuyến còn hợp lệ ngày demo, xe/tài xế không chồng lịch. Ngày seed neo lần tạo đầu, restart không dịch lịch. Lịch hằng ngày tự bổ sung các lượt được duyệt; với tuyến chưa bật lịch lặp thì tạo/mở chuyến mới khi hết cửa sổ, không reset seed.
 6. Chuẩn bị chuyến khởi hành khoảng 10 phút tới để còn nhận đặt và START được trong cửa sổ30 phút sớm; chỉ trên DB demo. Ghi ID/code nhà xe/tuyến/chuyến/đơn vào ghi chú không chứa liên hệ cá nhân.
 7. custom01 có thể đang có WEB active. Xử lý đơn đó hợp lệ trong DB demo trước khi tạo đơn mới; mỗi khách chỉ một WEB PENDING/CONFIRMED. Chuẩn bị đơn khác cho nhánh hủy/hoàn.
 8. Dùng browser profile/phiên riêng theo tác nhân để tránh nhầm cookie. Mỗi người biết cách quay về luồng đọc khi lỗi, giữ traceId; không bấm lại mutation liên tục.
