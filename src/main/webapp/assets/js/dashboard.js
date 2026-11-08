@@ -8,13 +8,13 @@
     }
 })(() => {
     'use strict';
-    const permitted = (capabilities, feature, target) => capabilities.some((row) => row.targets.includes(target));
+    const permitted = (capabilities, target) => capabilities.some((row) => row.targets.includes(target));
     const plan = (capabilities) => {
         const result = [];
-        if (permitted(capabilities, 'MY_BOOKING', 'GET /api/v1/my-bookings')) result.push('customer');
-        if (permitted(capabilities, 'DRIVER_TRIP', 'GET /api/v1/driver/trips')) result.push('driver');
-        if (permitted(capabilities, 'REPORT', 'GET /api/v1/admin/reports')) result.push('report');
-        if (permitted(capabilities, 'BOOKING', 'GET /api/v1/admin/bookings')) result.push('staff');
+        if (permitted(capabilities, 'GET /api/v1/my-bookings')) result.push('customer');
+        if (permitted(capabilities, 'GET /api/v1/driver/trips')) result.push('driver');
+        if (permitted(capabilities, 'GET /api/v1/admin/reports')) result.push('report');
+        if (permitted(capabilities, 'GET /api/v1/admin/bookings')) result.push('staff');
         return result;
     };
     const dateRange = (now = new Date()) => {
@@ -119,14 +119,14 @@
             document.getElementById('dashboard-status').textContent = labels.loading;
             try {
                 const user = await get('/api/v1/auth/me');
-                if (user.mustChangePassword || user.emailVerificationRequired) {
+                if (user.mustChangePassword) {
                     window.location.assign(route('/account'));
                     return;
                 }
                 const capabilities = await get('/api/v1/auth/capabilities');
                 // CUSTOMER/DRIVER là điều kiện nghiệp vụ owner/phân công, không được suy từ ADMIN có đủ permission.
-                const sections = plan(capabilities, user.roles);
-                const views = (feature) => capabilities.some((row) => row.view);
+                const sections = plan(capabilities);
+                const views = (path) => permitted(capabilities, `GET ${path}`);
                 const range = dateRange();
                 document.getElementById('dashboard-range').textContent = sections.includes('report')
                     ? labels.range + ' ' + range.fromDate + ' — ' + range.toDate
@@ -146,7 +146,11 @@
                         } else if (kind === 'staff') {
                             const pending = await get('/api/v1/admin/bookings', { status: 'PENDING', size: 5 });
                             metric(labels.pending, number(pending.totalElements), labels.scope);
-                            const card = section(labels.toProcess, '/operations/bookings', views('BOOKING'));
+                            const card = section(
+                                labels.toProcess,
+                                '/operations/bookings',
+                                views('/operations/bookings'),
+                            );
                             rows(card, pending.content, 'booking');
                         } else if (kind === 'driver') {
                             const active = await get('/api/v1/driver/trips', { status: 'IN_PROGRESS', size: 5 });
@@ -156,12 +160,16 @@
                             metric(labels.today, number(today.totalElements), range.today);
                             metric(labels.upcoming, number(open.totalElements), labels.assigned);
                             rows(
-                                section(labels.running, '/driver/trips', views('DRIVER_TRIP')),
+                                section(labels.running, '/driver/trips', views('/driver/trips')),
                                 active.content,
                                 'trip',
                             );
-                            rows(section(labels.today, '/driver/trips', views('DRIVER_TRIP')), today.content, 'trip');
-                            rows(section(labels.upcoming, '/driver/trips', views('DRIVER_TRIP')), open.content, 'trip');
+                            rows(section(labels.today, '/driver/trips', views('/driver/trips')), today.content, 'trip');
+                            rows(
+                                section(labels.upcoming, '/driver/trips', views('/driver/trips')),
+                                open.content,
+                                'trip',
+                            );
                         } else {
                             const pending = await get('/api/v1/my-bookings', { status: 'PENDING', size: 1 });
                             const confirmed = await get('/api/v1/my-bookings', { status: 'CONFIRMED', size: 1 });
@@ -170,7 +178,7 @@
                             metric(labels.pending, number(pending.totalElements), labels.owner);
                             metric(labels.confirmed, number(confirmed.totalElements), labels.owner);
                             rows(
-                                section(labels.recent, '/my-bookings', views('MY_BOOKING')),
+                                section(labels.recent, '/my-bookings', views('/my-bookings')),
                                 recent.content,
                                 'booking',
                             );

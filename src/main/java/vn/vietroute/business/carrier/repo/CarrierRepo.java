@@ -541,7 +541,6 @@ public interface CarrierRepo extends JpaRepository<Carrier, Long> {
             AND sr.user_id = sm.user_id
             AND sr.role_code = ur.role_code
         WHERE u.id = :id AND u.active AND NOT u.activation_pending AND NOT u.must_change_password
-            AND u.email_verified_at IS NOT NULL
         FOR SHARE OF u
         """,
         nativeQuery = true

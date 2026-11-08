@@ -17,6 +17,8 @@ Tên và file thực tế ở [assets/js](../../src/main/webapp/assets/js) và [
 
 ## Page, bảng, tab và modal
 
+Dashboard và tổng quan quản trị dùng thẻ nhóm chức năng theo `functionNavigation`. Dashboard đọc số liệu và việc cần xử lý theo grant. Trang tìm chuyến tải danh sách ngay khi mở, với ngày, giờ và hai đầu tuyến là bộ lọc tùy chọn. Modal chi tiết gọi báo giá để hiện nút đặt khi chặng còn đủ điều kiện.
+
 Page có heading/hướng dẫn ngắn, vùng feedback, bộ lọc, bảng trong vùng cuộn và pager. Toolbar/footer bên phải; cột icon thao tác một hàng/tự giãn, có aria-label/title. Giữ nhãn vi/en, focus-visible và trạng thái aria-busy. Mobile320/390px không làm toàn trang tràn ngang; bảng cuộn trong vùng riêng.
 
 CRUD/gán dùng modal; nhiều nhóm nội dung dùng tab. Mở modal xóa dữ liệu đối tượng cũ, khóa controls đến khi các snapshot cần thiết tải xong. Lỗi tải/validation/409 giữ modal và draft, chỉ bỏ dữ liệu không còn hợp lệ do đổi cha. Không tự đóng hoặc gửi lại mutation; không cho đóng khi đang gửi. Đóng trả focus về nút mở; Enter/Tab/Escape có hành vi rõ ràng.

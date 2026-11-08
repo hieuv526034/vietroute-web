@@ -163,7 +163,7 @@ public class UserAPI extends BaseController {
     @PostMapping(Routes.ACCOUNTS)
     @Operation(
         summary = "Tạo tài khoản",
-        description = "username/displayName/password/roles bắt buộc; danh tính do quản trị xác minh, bắt đổi mật khẩu khi đăng nhập"
+        description = "username/displayName/password/roles bắt buộc; email chỉ dùng liên hệ; bắt đổi mật khẩu khi đăng nhập lần đầu"
     )
     public ApiResult<UserDTO> create(
         @Valid @RequestBody UserRequest body,

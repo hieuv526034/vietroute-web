@@ -345,7 +345,6 @@ public class UserService {
         value.setDisplayName(body.getDisplayName().strip());
         value.setEmail(email);
         value.setPasswordHash(hash);
-        value.setEmailVerifiedAt(Instant.now(clock));
         value.setActive(true);
         value.setMustChangePassword(true);
         value.setCreatedAt(Instant.now(clock));

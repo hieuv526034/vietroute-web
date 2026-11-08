@@ -127,9 +127,7 @@
         button.textContent = button.dataset.redirecting;
         button.setAttribute('data-request-loading', 'true');
         feedback(form.dataset.redirecting, true);
-        window.location.assign(
-            route(user.mustChangePassword || user.emailVerificationRequired ? '/account' : '/dashboard'),
-        );
+        window.location.assign(route(user.mustChangePassword ? '/account' : '/dashboard'));
     });
 
     const loginForm = document.getElementById('login-form');
@@ -165,17 +163,14 @@
             document.getElementById('account-username').textContent = user.username;
             document.getElementById('account-roles').textContent = user.roles.join(', ');
             document.getElementById('account-email').textContent = user.email || '—';
-            const emailStatus = document.getElementById('account-email-status');
-            emailStatus.textContent = user.emailVerifiedAt
-                ? emailStatus.dataset.verified
-                : emailStatus.dataset.unverified;
-            document.getElementById('account-created').textContent = new Intl.DateTimeFormat(
-                locale === 'vi' ? 'vi-VN' : 'en-GB',
-                { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh' },
-            ).format(new Date(user.createdAt));
+            document.getElementById('account-created').textContent = user.createdAt
+                ? new Intl.DateTimeFormat(locale === 'vi' ? 'vi-VN' : 'en-GB', {
+                      dateStyle: 'medium',
+                      timeStyle: 'short',
+                      timeZone: 'Asia/Ho_Chi_Minh',
+                  }).format(new Date(user.createdAt))
+                : '—';
             document.getElementById('initial-password').hidden = !user.mustChangePassword;
-            const emailNotice = document.getElementById('initial-email');
-            if (emailNotice) emailNotice.hidden = !user.emailVerificationRequired;
             // Query chỉ giữ thông báo qua lần tải trang; trạng thái mật khẩu/quyền vẫn phải đọc từ server.
             if (!user.mustChangePassword && passwordChangedNotice) {
                 feedback(document.getElementById('form-feedback').dataset.passwordChanged, true);

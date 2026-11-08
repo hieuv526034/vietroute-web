@@ -56,12 +56,19 @@ public class TripRequest {
             RequestGroups.State.class,
             RequestGroups.Notice.class,
             RequestGroups.Progress.class,
+            RequestGroups.Schedule.class,
         }
     )
     @Min(
         value = 0,
         message = "{validation.invalid}",
-        groups = { Default.class, RequestGroups.State.class, RequestGroups.Notice.class, RequestGroups.Progress.class }
+        groups = {
+            Default.class,
+            RequestGroups.State.class,
+            RequestGroups.Notice.class,
+            RequestGroups.Progress.class,
+            RequestGroups.Schedule.class,
+        }
     )
     @Schema(description = "Version đã đọc")
     private Long version;
@@ -78,6 +85,10 @@ public class TripRequest {
     )
     @Schema(description = "Lý do đổi phân công")
     private String note;
+
+    @NotNull(message = "{validation.required}", groups = { RequestGroups.Schedule.class })
+    @Schema(description = "Bật/tắt lịch chạy hằng ngày trên chuyến nguồn đã mở bán; chỉ dùng API schedule")
+    private Boolean dailyService;
 
     @NotNull(message = "{validation.required}", groups = { RequestGroups.State.class })
     @Schema(description = "OPEN hoặc CANCELLED; các trạng thái khác không nhận từ staff API")

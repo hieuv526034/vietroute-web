@@ -26,6 +26,7 @@ import vn.vietroute.common.base.BaseEntity;
         @Index(name = "idx_trips_driver_user", columnList = "driver_user_id, status, departure_at"),
         @Index(name = "idx_trips_report_departure", columnList = "departure_at, carrier_id, id, scope_id, status"),
         @Index(name = "idx_trips_report_carrier_date", columnList = "carrier_id, departure_at, id, scope_id, status"),
+        @Index(name = "idx_trips_service_departure", columnList = "service_source_id, departure_at", unique = true),
         @Index(name = "idx_trips_route", columnList = "route_id"),
         @Index(name = "idx_trips_created_by", columnList = "created_by"),
         @Index(name = "idx_trips_updated_by", columnList = "updated_by"),
@@ -117,6 +118,14 @@ public class Trip extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private TripStatus status;
+
+    // Lịch chạy hằng ngày chỉ bật trên chuyến nguồn đã công bố.
+    @Column(name = "daily_service", nullable = false)
+    private boolean dailyService;
+
+    // Chuyến nguồn của bản sinh tự động; dữ liệu cũ giữ NULL.
+    @Column(name = "service_source_id")
+    private Long serviceSourceId;
 
     // Ghi chú điều hành hoặc lý do thay đổi trạng thái chuyến.
     @Column(name = "operation_note", nullable = false, length = 2000)

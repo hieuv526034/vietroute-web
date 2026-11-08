@@ -9,10 +9,10 @@
         <nav th:replace="~{fragments/layout :: breadcrumbs}"></nav>
         <main
             id="business-dashboard"
-            class="container-xl workspace-page"
+            class="container-xl workspace-page overview-page"
             th:attr="data-loading=#{ui.loading},data-open=#{ui.dashboard.open},data-empty=#{ui.dashboard.empty},data-range=#{ui.dashboard.range},data-cohort=#{ui.dashboard.cohort},data-scope=#{ui.dashboard.scope},data-owner=#{ui.dashboard.owner},data-assigned=#{ui.dashboard.assigned},data-actual-money=#{ui.dashboard.actualMoney},data-trips=#{ui.dashboard.trips},data-orders=#{ui.dashboard.orders},data-collected=#{ui.dashboard.collected},data-refund-due=#{ui.dashboard.refundDue},data-pending=#{ui.booking.PENDING},data-confirmed=#{ui.booking.CONFIRMED},data-running=#{ui.dashboard.running},data-today=#{ui.dashboard.today},data-upcoming=#{ui.dashboard.openTrips},data-recent=#{ui.dashboard.recent},data-my-orders=#{ui.dashboard.myOrders},data-to-process=#{ui.dashboard.toProcess},data-partial=#{ui.dashboard.partial},data-no-data=#{ui.dashboard.noData},data-updated=#{ui.dashboard.updated},data-open-status=#{ui.trip.OPEN},data-in-progress=#{ui.trip.IN_PROGRESS},data-completed=#{ui.booking.COMPLETED},data-cancelled=#{ui.booking.CANCELLED},data-rejected=#{ui.booking.REJECTED}"
         >
-            <div class="page-heading dashboard-heading">
+            <div class="page-heading dashboard-heading overview-hero">
                 <div>
                     <p
                         class="eyebrow"
@@ -25,6 +25,20 @@
                     <div
                         th:replace="~{fragments/help :: guide('dashboard-guide', #{ui.dashboard.title}, ${ {'ui.help.dashboard.use', 'ui.dashboard.intro'} })}"
                     ></div>
+                    <div class="overview-hero-actions">
+                        <a
+                            class="button"
+                            th:href="@{/journeys(lang=${currentLocale})}"
+                        >
+                            <svg th:replace="~{fragments/layout :: icon('search')}"></svg>
+                            <span th:text="#{ui.journey.search}"></span>
+                        </a>
+                        <a
+                            class="button button-outline"
+                            th:href="@{/account(lang=${currentLocale})}"
+                            th:text="#{ui.account}"
+                        ></a>
+                    </div>
                     <div class="dashboard-roles">
                         <span
                             class="status-chip"
@@ -36,7 +50,7 @@
                 <button
                     type="button"
                     id="dashboard-refresh"
-                    class="button button-outline"
+                    class="button button-outline overview-refresh"
                     th:text="#{ui.ops.refresh}"
                 ></button>
             </div>
@@ -83,9 +97,19 @@
                         th:text="#{ui.account}"
                     ></a>
                 </div>
-                <div class="summary-grid dashboard-module-links">
-                    <section th:each="group : ${functionNavigation}">
-                        <h3 th:text="${group.name}"></h3>
+                <div class="summary-grid dashboard-module-links overview-modules">
+                    <section
+                        class="panel overview-module"
+                        th:each="group, item : ${functionNavigation}"
+                    >
+                        <div class="overview-module-heading">
+                            <span
+                                class="overview-module-number"
+                                th:text="${item.count}"
+                            ></span>
+                            <h3 th:text="${group.name}"></h3>
+                            <svg th:replace="~{fragments/layout :: icon('menu')}"></svg>
+                        </div>
                         <div class="dashboard-links">
                             <a
                                 th:if="${group.path != null}"

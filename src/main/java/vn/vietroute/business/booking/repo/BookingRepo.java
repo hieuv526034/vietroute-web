@@ -244,7 +244,6 @@ public interface BookingRepo extends Repository<Booking, Long> {
         FROM {h-schema}auth_users u
         WHERE u.id = :user AND u.token_version = :tokenVersion AND u.active AND NOT u.activation_pending
             AND NOT u.must_change_password
-            AND u.email_verified_at IS NOT NULL
             AND NOT u.deleted
         """,
         nativeQuery = true
@@ -257,7 +256,6 @@ public interface BookingRepo extends Repository<Booking, Long> {
         FROM {h-schema}auth_users u
         WHERE u.id = :user AND u.token_version = :tokenVersion AND u.active AND NOT u.activation_pending
             AND NOT u.must_change_password
-            AND u.email_verified_at IS NOT NULL
             AND NOT u.deleted
         FOR UPDATE OF u
         """,

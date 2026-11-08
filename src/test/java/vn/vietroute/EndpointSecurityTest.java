@@ -117,7 +117,7 @@ class EndpointSecurityTest {
     }
 
     @Test
-    void temporaryAndUnverifiedAccountsCanCompleteSetupButHaveNoPrivateAuthority() {
+    void onlyTemporaryPasswordBlocksPrivateAuthority() {
         states.value = snapshot(true, false, true, true, 2, Set.of(LIST));
         assertEquals(
             ErrorCode.PASSWORD_CHANGE_REQUIRED,
@@ -125,11 +125,7 @@ class EndpointSecurityTest {
         );
         assertTrue(service.authorize(login(), "POST /api/v1/auth/password", true).getAuthorities().isEmpty());
         states.value = snapshot(true, false, false, false, 2, Set.of(LIST));
-        assertEquals(
-            ErrorCode.EMAIL_VERIFICATION_REQUIRED,
-            assertThrows(BusinessException.class, () -> service.authorize(login(), LIST, false)).getErrorCode()
-        );
-        assertTrue(service.authorize(login(), "GET /api/v1/auth/me", true).getAuthorities().isEmpty());
+        assertFalse(service.authorize(login(), LIST, false).getAuthorities().isEmpty());
     }
 
     @Test

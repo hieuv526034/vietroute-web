@@ -20,7 +20,7 @@ Danh sách đủ tài khoản, tên nhà xe và key cấu hình khởi tạo ở
 
 ## 2. Đăng nhập và quản lý phiên
 
-1. Bấm Đăng nhập hoặc mở `/login`. Nhập username và mật khẩu. Email là thông tin liên hệ của tài khoản, màn đăng nhập sử dụng username.
+1. Bấm Đăng nhập hoặc mở `/login`. Nhập username và mật khẩu. Các form tài khoản vẫn nhận email liên hệ và không có bước xác minh email.
 2. Bấm nút đăng nhập một lần và chờ phản hồi. Khi thành công, ứng dụng mở trang phù hợp với quyền của bạn. Kiểm tên hiển thị ở góc trên trước khi thao tác.
 3. Nếu ứng dụng yêu cầu đổi mật khẩu, hoàn thành ở trang tài khoản trước khi tiếp tục. Nhập mật khẩu hiện tại, mật khẩu mới và phần xác nhận theo form. Đọc quy tắc ngay trên màn hình, đặt mật khẩu mới khác mật khẩu cũ.
 4. Khi không dùng nữa, mở menu tài khoản và chọn Đăng xuất. Trên máy dùng chung, đóng tab sau khi đăng xuất. Để minh họa hai vai trò cùng lúc, dùng hai profile trình duyệt hoặc cửa sổ riêng tư riêng biệt.
@@ -29,7 +29,7 @@ Nhập sai liên tiếp 5 lần có thể làm tài khoản bị khóa 15 phút.
 
 ## 3. Cách dùng menu, bảng và form
 
-1. Bấm Menu ở header để mở các nhóm chức năng. Chỉ những menu đã được cấp mới xuất hiện. Chọn một mục để vào workspace, dùng breadcrumb để biết mình đang ở đâu.
+1. Dashboard `/dashboard` hiển thị lối tắt, số liệu và việc cần xử lý theo quyền. Tổng quan quản trị `/admin` gom các chức năng đã được cấp thành từng nhóm. Bạn cũng có thể mở các nhóm bằng Menu trên thanh điều hướng.
 2. Với màn có tab, chọn tab đúng tài nguyên trước. Ô tìm kiếm/bộ lọc chỉ áp dụng khi bấm nút tìm của màn đó. Bảng kết quả thông thường có phân trang ở phần bảng, dùng số trang hoặc điều hướng khi có nhiều trang.
 3. Bấm Thêm mới để mở form. Biểu tượng bút dùng sửa, biểu tượng ngừng/xóa dùng thao tác được nhãn nút xác nhận. Có thể rê chuột lên biểu tượng để xem tên. Đọc hộp xác nhận trước khi đồng ý.
 4. Các trường có danh sách phải chọn giá trị. Chọn nhà xe/tỉnh trước rồi chọn tuyến, xe, tài xế hoặc xã/phường phía sau. Khi đổi cha, lựa chọn con có thể bị xóa và cần chọn lại.
@@ -40,14 +40,14 @@ Quyền menu và quyền thao tác được kiểm riêng. Thấy màn danh sác
 
 ## 4. Khách hàng tìm chuyến
 
-1. Mở Tìm chuyến tại `/journeys`. Chọn tỉnh/thành đi và tỉnh/thành đến khác nhau.
+1. Mở Tìm chuyến tại `/journeys`. Danh sách tự tải các chặng còn nhận đặt trong 31 ngày, tính cả hôm nay theo giờ Việt Nam. Chọn tỉnh/thành đi hoặc đến nếu muốn lọc.
 2. Nếu biết điểm cụ thể, chọn xã/phường rồi điểm đón/trả sau khi danh sách con tải xong. Có thể tìm rộng theo tỉnh khi chưa chọn địa điểm chi tiết.
-3. Chọn ngày đón tại điểm của bạn và số chỗ. Ngày đón có thể khác ngày xuất phát từ đầu tuyến với hành trình qua đêm.
-4. Chọn thêm nhà xe, loại xe hoặc khoảng giá nếu màn hình cung cấp và bạn muốn thu hẹp kết quả. Bấm Tìm kiếm một lần.
+3. Chọn ngày đón và số chỗ nếu cần. Ngày đón có thể khác ngày xuất phát từ đầu tuyến với hành trình qua đêm. Bạn có thể tìm một ngày trong phạm vi đặt trước dưới 730 ngày.
+4. Mở bộ lọc để chọn khoảng giờ đón, nhà xe, loại xe hoặc khoảng giá. Ví dụ chọn Hà Nội → Hải Phòng, ngày mai, từ 09:00 đến 10:00 để thấy lượt Duy Long 09:30 khi còn chỗ. Bấm Tìm chuyến.
 5. Đọc từng kết quả gồm nhà xe, giờ đón/trả, giá chặng và chỗ còn. Các trang kết quả dùng cùng bộ lọc đã áp dụng. Đổi lựa chọn trên form rồi bấm tìm để áp tiêu chí mới.
 6. Mở chi tiết chuyến hoặc báo giá. Kiểm lại đúng hai điểm và số chỗ trước khi đặt. Giá/chỗ được server kiểm lại ở bước đặt và xác nhận, có thể thay đổi khi người khác đặt cùng lúc.
 
-Không thấy chuyến thì kiểm chiều đi, ngày còn lịch, số chỗ, bộ lọc nhà xe và địa điểm con. Thử tìm theo tỉnh trước rồi thu hẹp. Chuyến phải còn trạng thái bán phù hợp và chưa rời điểm đón. Khởi động lại ứng dụng không tự dịch các chuyến seed sang ngày mới.
+Nếu chưa thấy chuyến, thử bỏ khoảng giờ và địa điểm con rồi kiểm chiều đi và số chỗ. Khi mở chi tiết, ứng dụng kiểm lại chỗ và tình trạng đón để hiện nút đặt. Chuyến mở bán phải chưa tới giờ xuất phát. Chuyến đang chạy chỉ nhận đặt ở điểm chưa rời theo tiến độ tài xế.
 
 ## 5. Khách đặt chỗ và theo dõi đơn
 
@@ -120,8 +120,9 @@ Ví dụ để học chiều đi Hải Phòng→Hà Nội lúc 05:00–09:00, đ
 4. Khi đủ điều kiện, bấm Mở bán để chuyển `OPEN`. Chuyến nháp chưa xuất hiện trong kết quả tìm chuyến công khai.
 5. Nếu sửa giờ, thực hiện khi chuyến còn nháp. Chuyến mở bán có thể đổi phân công/số chỗ trong điều kiện hệ thống cho phép, phải bảo đảm lịch và số chỗ đã xác nhận.
 6. Khi cần hủy chuyến trước lúc chạy, nhập lý do và kiểm ảnh hưởng tới đơn theo phản hồi của hệ thống. Đối chiếu đơn liên quan và khoản cần hoàn riêng.
+7. Với chuyến cố định, mở chi tiết chuyến nguồn đã mở bán và chọn **Bật lịch chạy hằng ngày**. Hệ thống tạo từng chuyến ở cùng giờ Việt Nam, mỗi chuyến có chỗ và đơn riêng. Nếu đổi xe hoặc tài xế của chuyến nguồn, dừng lịch trước khi đổi phân công. Dừng lịch chỉ ngừng tạo ngày mới. Hủy từng chuyến đã công bố theo quy trình ở bước 6.
 
-Mỗi dòng là một chuyến một chiều. Lịch 05:00–09:00 chiều đi, một lượt quay về và hai lượt chiều là bốn chuyến riêng. Với một xe/tài xế, giờ quay đầu phải nối được với điểm cuối và không chồng lịch. Khi lỗi, sửa đúng dữ liệu phân công thay vì bỏ qua cảnh báo.
+Mỗi dòng là một chuyến một chiều. Duy Long chạy Hải Phòng → Hà Nội lúc 05:00 và 12:00, Hà Nội → Hải Phòng lúc 09:30 và 15:30 trong dữ liệu khởi tạo. Với một xe và tài xế, giờ quay đầu phải nối được với điểm cuối và không chồng lịch.
 
 ## 12. Tài xế thực hiện chuyến
 

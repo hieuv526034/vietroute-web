@@ -27,11 +27,11 @@ Mỗi nội dung có một nơi chính. Thành viên không cần đọc hết d
 | 02 — Backend/DB | [Quy ước, request/API/transaction/audit](02-phat-trien/QUY_UOC_PHAT_TRIEN.md); [schema/quyền/migration](02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md) |
 | 03 — Giao diện | [UI: bảng, tab, modal, draft và paging](03-giao-dien/QUY_UOC_UI.md) |
 | 04 — Vận hành | [Quản trị, journal/cURL/Postman, backup và Render](04-van-hanh/VAN_HANH.md) |
-| 05 — Làm nhóm/demo | Phân công, demo–hỏi đáp và tiến độ ở bước3–5; [yêu cầu báo cáo Word](05-ke-hoach/DEMO_VA_HOI_DAP.md#báo-cáo-sản-phẩm-theo-mẫu-công-nghệ-java) |
+| 05 — Làm nhóm/demo | Phân công, demo–hỏi đáp, tiến độ, [yêu cầu báo cáo Word](05-ke-hoach/DEMO_VA_HOI_DAP.md#báo-cáo-sản-phẩm-theo-mẫu-công-nghệ-java) và [test case tài khoản, tổng quan, lịch chuyến](05-ke-hoach/TEST_CASE_TAI_KHOAN_TONG_QUAN_LICH_CHUYEN.md) |
 | 06 — AI/bàn giao | [Cách tiếp tục khi đổi máy/người](06-ai-va-ban-giao/AI_VA_BAN_GIAO.md), [AGENTS](../AGENTS.md), [Git/PR](../CONTRIBUTING.md) |
 
 Bản nộp: [Báo cáo Word VietRoute Nhóm10](05-ke-hoach/bao-cao/Bao_cao_VietRoute_Nhom_10.docx), kèm [sơ đồ SVG và ảnh gốc](05-ke-hoach/bao-cao/Tu_lieu_VietRoute_Nhom_10.zip). Điền các ô [[GIANG_VIEN]], [[LOP]], [[KHOA_HOC]], [[HO_TEN_1]]… và [[MSSV_1]]… trên hai trang bìa; cập nhật field khi sửa nội dung. Phạm vi sản phẩm, kết quả kiểm và trạng thái phát hành xem tiến độ.
 
-Bản hướng dẫn có thể in tại [Hướng dẫn sử dụng VietRoute](01-bat-dau/Huong_dan_su_dung_VietRoute.docx). [Từ điển bảng và cột](02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#từ-điển-bảng-và-cột) có tên tiếng Việt và diễn giải đủ22 bảng/338 cột, đồng bộ với Phụ lục A trong báo cáo Word.
+Bản hướng dẫn có thể in tại [Hướng dẫn sử dụng VietRoute](01-bat-dau/Huong_dan_su_dung_VietRoute.docx). Bản Markdown cập nhật theo source hiện tại. [Từ điển bảng và cột](02-phat-trien/SCHEMA_VA_PHAN_QUYEN.md#từ-điển-bảng-và-cột) mô tả 22 bảng và 340 cột. Bản Word nghiệm thu trước đợt lịch hằng ngày ghi cấu trúc 338 cột.
 
-Bộ tài liệu giữ 13 file Markdown trong sáu cụm. Version thư viện tra pom.xml, payload tra controller/Swagger đúng bản, account/key theo CHAY_LOCAL và ngoại lệ .env.example; bằng chứng ở tiến độ/PR. Mẫu Word gốc trong05-ke-hoach/mau giữ nguyên byte; báo cáo sản phẩm ở thư mục bao-cao. Khi chuyển/gộp/xóa phải sửa link/prompt/điểm đọc AI và chạy check:docs sau khi stage file mới.
+Bộ tài liệu Markdown nằm trong sáu cụm. Tra version thư viện ở `pom.xml`, payload ở controller/Swagger và account/key theo hướng dẫn chạy local. Bằng chứng kiểm tra nằm ở tiến độ/PR. Mẫu Word gốc nằm trong `05-ke-hoach/mau` và báo cáo sản phẩm ở thư mục `bao-cao`. Khi chuyển, gộp hoặc xóa file, cập nhật liên kết và chạy `check:docs` sau khi stage file mới.

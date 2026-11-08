@@ -22,6 +22,7 @@ import vn.vietroute.business.trip.dto.response.TripChoiceResponse;
 import vn.vietroute.business.trip.dto.response.TripResponse;
 import vn.vietroute.business.trip.dto.search.TripChoiceSearch;
 import vn.vietroute.business.trip.dto.search.TripSearch;
+import vn.vietroute.business.trip.service.DailyTripService;
 import vn.vietroute.business.trip.service.TripService;
 import vn.vietroute.common.base.BaseController;
 import vn.vietroute.common.base.PageResponse;
@@ -37,10 +38,26 @@ import vn.vietroute.common.web.response.ApiResult;
 public class TripAPI extends BaseController {
 
     private final TripService service;
+    private final DailyTripService daily;
 
-    public TripAPI(TripService service, ApiResponses responses, ApiExceptionMapper errors) {
+    public TripAPI(TripService service, DailyTripService daily, ApiResponses responses, ApiExceptionMapper errors) {
         super(responses, errors);
         this.service = service;
+        this.daily = daily;
+    }
+
+    @PutMapping(Routes.ADMIN_TRIPS + Routes.TRIP_SCHEDULE)
+    @Operation(
+        summary = "Bật hoặc dừng lịch chạy hằng ngày",
+        description = "Chỉ chuyến nguồn đã công bố, version và dailyService bắt buộc. Không sửa hoặc hủy các chuyến đã sinh."
+    )
+    public ApiResult<TripResponse> schedule(
+        @PathVariable @Min(1) long id,
+        @Validated(RequestGroups.Schedule.class) @RequestBody TripRequest body,
+        @AuthenticationPrincipal UserPrincipal actor,
+        HttpServletRequest request
+    ) {
+        return execute(SuccessCode.OK, request, () -> daily.configure(id, body, actor));
     }
 
     @PutMapping(Routes.ADMIN_TRIPS + Routes.TRIP_NOTICE)

@@ -10,7 +10,7 @@
         <main
             id="journey-workspace"
             class="container-xl workspace-page"
-            th:attr="data-authenticated=${currentUser != null},data-loading=#{ui.loading},data-empty=#{ui.empty},data-choose=#{ui.trip.choose},data-all=#{ui.ops.all},data-detail=#{ui.route.view},data-book=#{ui.journey.book},data-login=#{ui.journey.login},data-pending=#{ui.driverTrip.pending},data-planned=#{ui.driverTrip.planned},data-actual=#{ui.driverTrip.actual},data-confirmed-stop=#{ui.journey.confirmedStop},data-open=#{ui.trip.OPEN},data-in-progress=#{ui.trip.IN_PROGRESS},data-completed=#{ui.trip.COMPLETED},data-cancelled=#{ui.trip.CANCELLED},data-map=#{ui.journey.map},data-pickup=#{ui.route.pickup},data-dropoff=#{ui.route.dropoff}"
+            th:attr="data-authenticated=${currentUser != null},data-available=#{ui.journey.available},data-unavailable=#{ui.journey.unavailable},data-loading=#{ui.loading},data-empty=#{ui.empty},data-choose=#{ui.trip.choose},data-all=#{ui.ops.all},data-detail=#{ui.route.view},data-book=#{ui.journey.book},data-login=#{ui.journey.login},data-pending=#{ui.driverTrip.pending},data-planned=#{ui.driverTrip.planned},data-actual=#{ui.driverTrip.actual},data-confirmed-stop=#{ui.journey.confirmedStop},data-open=#{ui.trip.OPEN},data-in-progress=#{ui.trip.IN_PROGRESS},data-completed=#{ui.trip.COMPLETED},data-cancelled=#{ui.trip.CANCELLED},data-map=#{ui.journey.map},data-pickup=#{ui.route.pickup},data-dropoff=#{ui.route.dropoff}"
         >
             <div class="page-heading">
                 <p
@@ -54,7 +54,6 @@
                                     <span th:text="#{ui.location.province}"></span>
                                     <select
                                         data-place-province
-                                        required
                                         class="form-select"
                                     ></select>
                                 </label>
@@ -84,7 +83,6 @@
                                 <input
                                     name="date"
                                     type="date"
-                                    required
                                     class="form-control"
                                 />
                             </label>
@@ -104,6 +102,24 @@
                         </div>
                         <details class="journey-filters">
                             <summary th:text="#{ui.journey.filters}"></summary>
+                            <div class="form-grid">
+                                <label>
+                                    <span th:text="#{ui.journey.fromTime}"></span>
+                                    <input
+                                        type="time"
+                                        name="fromTime"
+                                        class="form-control"
+                                    />
+                                </label>
+                                <label>
+                                    <span th:text="#{ui.journey.toTime}"></span>
+                                    <input
+                                        type="time"
+                                        name="toTime"
+                                        class="form-control"
+                                    />
+                                </label>
+                            </div>
                             <div class="dialog-form-grid">
                                 <div
                                     class="journey-filter-picker"
@@ -247,6 +263,11 @@
                                 id="journey-summary"
                                 class="route-stop-list"
                             ></div>
+                            <p
+                                id="journey-availability"
+                                role="status"
+                                class="muted"
+                            ></p>
                         </section>
                         <section
                             id="journey-stops"

@@ -154,7 +154,7 @@ test('Điểm đến giữ rào thiết lập; các role sẵn sàng đều vào
         ui.state.resolve(response(user));
         await pending;
         assert.deepEqual(ui.state.navigation, [
-            user.mustChangePassword || user.emailVerificationRequired
+            user.mustChangePassword
                 ? '/demo/account?lang=en'
                 : '/demo/dashboard?lang=en',
         ]);

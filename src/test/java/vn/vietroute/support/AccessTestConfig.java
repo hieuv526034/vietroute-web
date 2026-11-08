@@ -103,7 +103,7 @@ public class AccessTestConfig {
                     !Set.of("capabilities", "navigation").contains(method.getName())
                 ) throw new UnsupportedOperationException(method.getName());
                 User user = state.load((Long) args[0]);
-                if (user == null || user.isMustChangePassword() || user.getEmailVerifiedAt() == null) return List.of();
+                if (user == null || user.isMustChangePassword()) return List.of();
                 if ("capabilities".equals(method.getName())) {
                     FunctionDTO dto = new FunctionDTO();
                     dto.setFunction("TEST_FUNCTION");
