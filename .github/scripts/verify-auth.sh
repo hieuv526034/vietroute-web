@@ -42,7 +42,7 @@ for port in 18080 18081; do
 done
 sql() { docker exec -e PGOPTIONS=-csearch_path=vietroute vietroute-db-ci psql -U vietroute_ci -d vietroute_ci -v ON_ERROR_STOP=1 -Atc "$1"; }
 [[ "$(sql "SELECT count(*) FROM auth_users WHERE username='admin'")" == 1 ]]
-[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 10 ]]
+[[ "$(sql 'SELECT count(*) FROM vietroute_schema_history')" == 11 ]]
 [[ "$(sql "SELECT count(*) FROM category WHERE value_ref IN ('VEHICLE_TYPE','BOOKING_SOURCE')")" == 5 ]]
 [[ "$(sql "SELECT count(*) FROM category WHERE value_ref='PROVINCE'")" == 34 ]]
 [[ "$(sql "SELECT count(*) FROM category WHERE value_ref='WARD'")" == 3321 ]]
