@@ -7,21 +7,50 @@
     <body>
         <header th:replace="~{fragments/layout :: header}"></header>
         <nav th:replace="~{fragments/layout :: breadcrumbs}"></nav>
-        <main class="container-xl workspace-page">
-            <div class="page-heading">
-                <p class="eyebrow">VIETROUTE / WORKSPACE</p>
+        <main class="container-xl workspace-page overview-page">
+            <div class="page-heading dashboard-heading overview-hero">
+                <p
+                    class="eyebrow"
+                    th:text="#{ui.overview.workspace}"
+                ></p>
                 <h1 th:text="#{ui.workspace.overview}"></h1>
                 <p
                     class="muted"
                     th:text="#{ui.dashboard.description}"
                 ></p>
             </div>
-            <div class="summary-grid">
+            <div class="overview-intro-actions">
+                <a
+                    class="button"
+                    th:href="@{/dashboard(lang=${currentLocale})}"
+                    th:text="#{ui.dashboard.title}"
+                ></a>
+                <a
+                    class="button button-outline"
+                    th:href="@{/journeys(lang=${currentLocale})}"
+                    th:text="#{ui.journey.search}"
+                ></a>
+            </div>
+            <div class="overview-section-title">
+                <h2 th:text="#{ui.overview.modules}"></h2>
+                <p
+                    class="muted"
+                    th:text="#{ui.overview.permissionNote}"
+                ></p>
+            </div>
+            <div class="summary-grid overview-modules">
                 <section
-                    class="panel"
-                    th:each="group : ${functionNavigation}"
+                    class="panel overview-module"
+                    th:each="group, item : ${functionNavigation}"
                 >
-                    <h2 th:text="${group.name}"></h2>
+                    <div class="overview-module-heading">
+                        <span
+                            class="overview-module-number"
+                            th:text="${item.count}"
+                        ></span>
+                        <h2 th:text="${group.name}"></h2>
+                        <svg th:replace="~{fragments/layout :: icon('menu')}"></svg>
+                    </div>
                     <div class="dashboard-links">
                         <a
                             th:if="${group.path != null}"
@@ -32,6 +61,17 @@
                     </div>
                 </section>
             </div>
+            <section
+                class="panel overview-empty"
+                th:if="${functionNavigation.isEmpty()}"
+            >
+                <h2 th:text="#{ui.overview.emptyTitle}"></h2>
+                <p th:text="#{ui.overview.emptyNote}"></p>
+                <a
+                    th:href="@{/journeys(lang=${currentLocale})}"
+                    th:text="#{ui.journey.search}"
+                ></a>
+            </section>
         </main>
         <footer th:replace="~{fragments/layout :: footer}"></footer>
         <th:block th:replace="~{fragments/layout :: scripts}"></th:block>

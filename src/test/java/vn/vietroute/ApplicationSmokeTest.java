@@ -63,7 +63,12 @@ class ApplicationSmokeTest {
                 UsernamePasswordAuthenticationToken.authenticated(
                     new UserPrincipal(7L, "contractadmin", Set.of("ADMIN"), 0),
                     null,
-                    List.of(new SimpleGrantedAuthority("GET /docs"), new SimpleGrantedAuthority("GET /v3/api-docs"))
+                    List.of(
+                        new SimpleGrantedAuthority("GET /docs"),
+                        new SimpleGrantedAuthority("GET /v3/api-docs"),
+                        new SimpleGrantedAuthority("GET /dashboard"),
+                        new SimpleGrantedAuthority("GET /admin")
+                    )
                 )
             );
             MvcResult docs = mvc.perform(get("/v3/api-docs")).andReturn();
@@ -88,6 +93,12 @@ class ApplicationSmokeTest {
             assertTrue(spec.contains("PageResponseCategoryLookupResponse"));
 
             assertEquals(200, mvc.perform(get("/docs")).andReturn().getResponse().getStatus());
+            for (String path : List.of("/dashboard", "/admin")) {
+                var overview = mvc.perform(get(path).param("lang", "en")).andReturn().getResponse();
+                assertEquals(200, overview.getStatus(), path);
+                assertTrue(overview.getContentAsString().contains("overview-hero"), path);
+                assertTrue(overview.getContentAsString().contains("overview-module"), path);
+            }
             SecurityContextHolder.clearContext();
             assertEquals(200, mvc.perform(get("/login")).andReturn().getResponse().getStatus());
             assertEquals(

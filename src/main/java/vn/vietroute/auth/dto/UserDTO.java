@@ -36,10 +36,10 @@ public class UserDTO {
     @Schema(description = "Không còn luồng kích hoạt email tự phục vụ")
     private boolean activationPending;
 
-    @Schema(description = "Cần người quản trị xác minh tài khoản")
+    @Schema(description = "Trường tương thích, luôn false vì email không yêu cầu xác minh")
     private boolean emailVerificationRequired;
 
-    @Schema(description = "Thời điểm xác minh email")
+    @Schema(description = "Mốc xác minh email cũ, nếu có")
     private Instant emailVerifiedAt;
 
     @Schema(description = "Role hiện hành")
@@ -50,6 +50,9 @@ public class UserDTO {
 
     @Schema(description = "Version cập nhật")
     private long version;
+
+    @Schema(description = "Thời điểm tạo tài khoản UTC")
+    private Instant createdAt;
 
     @Schema(description = "Audit UTC")
     private Instant updatedAt;
@@ -82,10 +85,11 @@ public class UserDTO {
         dto.mustChangePassword = value.isMustChangePassword();
         dto.activationPending = value.isActivationPending();
         dto.emailVerifiedAt = value.getEmailVerifiedAt();
-        dto.emailVerificationRequired = value.getEmailVerifiedAt() == null;
+        dto.emailVerificationRequired = false;
         dto.roles = value.getRoles();
         dto.targets = value.getTargets();
         dto.version = value.getVersion();
+        dto.createdAt = value.getCreatedAt();
         dto.updatedAt = value.getUpdatedAt();
         dto.updatedBy = value.getUpdatedBy();
         return dto;

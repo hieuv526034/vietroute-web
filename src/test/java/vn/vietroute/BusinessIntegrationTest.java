@@ -201,7 +201,7 @@ class BusinessIntegrationTest {
                     "SELECT count(*) FROM (SELECT DISTINCT rf.role_code,op AS permission_code FROM auth_role_functions rf CROSS JOIN LATERAL unnest(rf.operation_codes) op)"
                 )
             );
-            assertEquals("10", sql("SELECT count(*) FROM vietroute_schema_history"));
+            assertEquals("11", sql("SELECT count(*) FROM vietroute_schema_history"));
             try (
                 var connection = root.getBean(JdbcConnectionFactory.class).open();
                 var query = connection.prepareStatement("SHOW search_path");
@@ -1364,7 +1364,7 @@ class BusinessIntegrationTest {
         assertThrows(IllegalStateException.class, () -> root.getBean(DatabaseInitializer.class).afterPropertiesSet());
         assertEquals(password, sql("SELECT password_hash FROM auth_users WHERE id=1"));
         assertEquals(carriers, sql("SELECT count(*) FROM carriers"));
-        assertEquals("10", sql("SELECT count(*) FROM vietroute_schema_history"));
+        assertEquals("11", sql("SELECT count(*) FROM vietroute_schema_history"));
     }
 
     /** Runtime không tự nhận baseline lạ; bảo trì history chỉ chạy bằng công cụ ngoài ứng dụng. */
@@ -1376,7 +1376,7 @@ class BusinessIntegrationTest {
         );
         assertThrows(IllegalStateException.class, () -> root.getBean(DatabaseInitializer.class).afterPropertiesSet());
         assertEquals(password, sql("SELECT password_hash FROM auth_users WHERE id=1"));
-        assertEquals("11", sql("SELECT count(*) FROM vietroute_schema_history"));
+        assertEquals("12", sql("SELECT count(*) FROM vietroute_schema_history"));
         assertEquals("22", sql("SELECT count(*) FROM pg_tables WHERE schemaname=current_schema()"));
     }
 
@@ -1448,7 +1448,7 @@ class BusinessIntegrationTest {
                 "SELECT md5(string_agg(version||checksum||installed_at::text,',' ORDER BY version)) FROM vietroute_schema_history"
             )
         );
-        assertEquals("10", sql("SELECT count(*) FROM vietroute_schema_history"));
+        assertEquals("11", sql("SELECT count(*) FROM vietroute_schema_history"));
         assertEquals("22", sql("SELECT count(*) FROM pg_tables WHERE schemaname=current_schema()"));
         assertEquals(
             "8",
@@ -2455,7 +2455,7 @@ class BusinessIntegrationTest {
                 .matches("TestOnly!2026Aa", sql("SELECT password_hash FROM auth_users WHERE id=" + user))
         );
         assertEquals(
-            "true:true:false:false",
+            "true:true:false:true",
             sql(
                 "SELECT active||':'||must_change_password||':'||activation_pending||':'||(email_verified_at IS NULL) FROM auth_users WHERE id=" +
                     user
@@ -3739,6 +3739,55 @@ class BusinessIntegrationTest {
     }
 
     @Test
+    void dailyHanoiHaiPhongIsDiscoverableAndBookableBeyondTheInitialWindow() throws Exception {
+        initializeOperationalData();
+        assertEquals("4", sql("SELECT count(*) FROM carrier_trips WHERE daily_service"));
+        String originalTrips = sql("SELECT count(*) FROM carrier_trips");
+        String originalBookings = sql("SELECT count(*) FROM bookings");
+        // Mô phỏng DB có dữ liệu Duy Long từ trước bước 11, chỉ trong schema test ngẫu nhiên.
+        sql(
+            "ALTER TABLE carrier_trips DROP COLUMN service_source_id, DROP COLUMN daily_service; " +
+                "DELETE FROM vietroute_schema_history WHERE version='trip/002_daily_service.sql'"
+        );
+        root.getBean(DatabaseInitializer.class).afterPropertiesSet();
+        assertEquals(originalTrips, sql("SELECT count(*) FROM carrier_trips"));
+        assertEquals(originalBookings, sql("SELECT count(*) FROM bookings"));
+        assertEquals("4", sql("SELECT count(*) FROM carrier_trips WHERE daily_service"));
+        long from = categoryId("PROVINCE", "HANOI");
+        long to = categoryId("PROVINCE", "HAIPHONG");
+        String date = LocalDate.now(ZoneId.of(Business.TIME_ZONE)).plusDays(45).toString();
+        String search = "/api/v1/trips?fromProvinceId=" + from + "&toProvinceId=" + to + "&date=" + date;
+        assertTrue(call(200, "GET", "/api/v1/trips", null, admin).path("totalElements").asLong() > 0);
+        assertEquals(
+            0,
+            call(200, "GET", search + "&fromTime=10:00&toTime=11:00", null, admin)
+                .path("totalElements")
+                .asLong()
+        );
+        String morning = search + "&fromTime=09:30&toTime=09:30";
+        JsonNode found = call(200, "GET", morning, null, admin);
+        assertEquals(1, found.path("totalElements").asInt());
+        JsonNode item = found.at("/content/0");
+        long trip = item.path("tripId").asLong();
+        long pickup = item.path("pickupStopId").asLong();
+        long dropoff = item.path("dropoffStopId").asLong();
+        assertTrue(trip > 0 && pickup > 0 && dropoff > 0);
+        assertEquals(trip, call(200, "GET", morning, null, admin).at("/content/0/tripId").asLong());
+        String quote =
+            "/api/v1/trips/" + trip + "/quote?pickupStopId=" + pickup + "&dropoffStopId=" + dropoff + "&seats=1";
+        assertTrue(call(200, "GET", quote, null, admin).path("accepting").asBoolean());
+        String body =
+            "{\"tripId\":%d,\"pickupStopId\":%d,\"dropoffStopId\":%d,\"seats\":1,\"requestKey\":\"%s\",\"contactName\":\"Khách thử lịch\",\"contactPhone\":\"0901234567\"}".formatted(
+                trip,
+                pickup,
+                dropoff,
+                UUID.randomUUID()
+            );
+        assertEquals("PENDING", call(201, "POST", "/api/v1/admin/bookings", body, admin).path("status").asText());
+        assertEquals("4", sql("SELECT count(*) FROM carrier_trips WHERE daily_service"));
+    }
+
+    @Test
     void publicSearchUsesPickupLocalDateDirectionAndRemainingSegmentsWithoutPrivateFields() throws Exception {
         seed();
         var fixture = tripFixture(false);
@@ -3851,7 +3900,11 @@ class BusinessIntegrationTest {
                 .path("totalElements")
                 .asInt()
         );
-        call(400, "GET", "/api/v1/trips?date=" + pickupDate, null, admin);
+        assertTrue(
+            call(200, "GET", "/api/v1/trips?date=" + pickupDate, null, admin)
+                .path("totalElements")
+                .asLong() > 0
+        );
         var detail = call(200, "GET", "/api/v1/trips/" + trip, null, admin);
         assertFalse(detail.has("driverUserId"));
         assertFalse(detail.has("driverPhone"));

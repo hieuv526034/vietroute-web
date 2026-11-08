@@ -309,7 +309,7 @@ public class BusinessDataCustomRepo {
                 INSERT INTO carrier_trips(carrier_id, scope_id, route_id, vehicle_id, driver_id, driver_user_id,
                     code, name_vi, name_en, plate_number, vehicle_type_id, vehicle_type_name_vi,
                     vehicle_type_name_en, driver_name, driver_phone, departure_at, end_at, capacity, status,
-                    operation_note, created_at, updated_at)
+                    operation_note, created_at, updated_at, daily_service)
                 SELECT c.id, c.scope_id, r.id, v.id, drv.id, u.id,
                     x.profile|| 'R' ||lpad(x.slot::TEXT, 2, '0')|| 'D' ||
                     CASE WHEN x. "departureTime" IS NOT NULL
@@ -330,13 +330,14 @@ public class BusinessDataCustomRepo {
                     WHEN x.day=0 AND x.slot%4=2 THEN 'Đã khởi hành, đang phục vụ hành khách'
                     ELSE 'Có mặt tại điểm đón trước giờ khởi hành 20 phút' END,
                     LEAST(t.departure-INTERVAL '3 days', CURRENT_TIMESTAMP-INTERVAL '1 day'),
-                    LEAST(t.departure-INTERVAL '2 days', CURRENT_TIMESTAMP-INTERVAL '12 hours')
+                    LEAST(t.departure-INTERVAL '2 days', CURRENT_TIMESTAMP-INTERVAL '12 hours'),
+                    c.code = 'DUYLONG' AND x."departureTime" IS NOT NULL AND x.day = -x."pastDays"
                 FROM input x JOIN carriers c ON c.code=x. "carrierCode" AND c.active AND c.scope_active
                 JOIN carrier_routes r ON r.carrier_id=c.id AND r.code=x.code AND r.active
                 JOIN carrier_vehicles v ON v.carrier_id=c.id AND v.code=x. "vehicleCode" AND v.active
                 JOIN carrier_drivers drv ON drv.carrier_id=c.id AND drv.code=x. "driverCode" AND drv.active
                 JOIN auth_users u ON u.id=drv.user_id AND u.username=x. "driverUsername" AND u.active
-                    AND NOT u.deleted AND NOT u.must_change_password AND u.email_verified_at IS NOT NULL
+                    AND NOT u.deleted AND NOT u.must_change_password
                 JOIN category kind ON kind.id=v.vehicle_type_id AND kind.ref_type= 'VEHICLE_TYPE' AND kind.type= 'VALUE' AND
                     kind.active
                 CROSS JOIN LATERAL (SELECT MAX(departure_offset_minutes) minutes,

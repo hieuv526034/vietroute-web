@@ -350,7 +350,7 @@ public interface UserRepo extends JpaRepository<User, Long> {
         value = """
         SELECT u.id, u.username, u.display_name, u.email, u.email_verified_at, u.updated_by, u.active,
             u.activation_pending,
-            u.must_change_password, (u.email_verified_at IS NULL) AS email_verification_required, u.locked_until,
+            u.must_change_password, FALSE AS email_verification_required, u.locked_until,
             u.version, u.created_at, u.updated_at, COALESCE((
                 SELECT STRING_AGG(role_code, ','
                     ORDER BY role_code)
@@ -573,7 +573,8 @@ public interface UserRepo extends JpaRepository<User, Long> {
         dto.setMustChangePassword(booleanValue(row.get("must_change_password")));
         dto.setActivationPending(booleanValue(row.get("activation_pending")));
         dto.setEmailVerifiedAt(instantValue(row.get("email_verified_at")));
-        dto.setEmailVerificationRequired(row.get("email_verified_at") == null);
+        dto.setEmailVerificationRequired(false);
+        dto.setCreatedAt(instantValue(row.get("created_at")));
         String roles = stringValue(row.get("roles"));
         dto.setRoles(roles.isEmpty() ? Set.of() : Set.copyOf(Arrays.asList(roles.split(","))));
         dto.setVersion(longValue(row.get("version")));

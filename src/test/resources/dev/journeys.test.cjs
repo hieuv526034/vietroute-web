@@ -6,7 +6,7 @@ const tables = require('../../../main/webapp/assets/js/table.js');
 const requests = require('../../../main/webapp/assets/js/request-state.js');
 
 // Chạy client thật: đổi danh mục chỉ tải lựa chọn phụ thuộc, chưa gửi truy vấn chuyến.
-function fixture(access = null) {
+function fixture(access = null, accepting = true) {
     const nodes = new Map(), state = { calls: [], errors: [] };
     const node = (id) => {
         if (nodes.has(id)) return nodes.get(id);
@@ -24,7 +24,7 @@ function fixture(access = null) {
     const root = node('journey-workspace');
     root.dataset = { authenticated: access ? 'true' : 'false', loading: 'Loading', choose: 'Choose', all: 'All', empty: 'Empty' };
     const form = node('journey-form');
-    form.elements = Object.fromEntries(['date', 'seats', 'carrierId', 'vehicleTypeId', 'minPrice', 'maxPrice'].map((name) => [name, node(name)]));
+    form.elements = Object.fromEntries(['date', 'seats', 'carrierId', 'vehicleTypeId', 'minPrice', 'maxPrice', 'fromTime', 'toTime'].map((name) => [name, node(name)]));
     form.elements.seats.value = '1';
     const pickers = ['from', 'to'].map((side) => {
         const item = node(side);
@@ -40,9 +40,12 @@ function fixture(access = null) {
     });
     form.querySelectorAll = (selector) => selector === '.journey-picker' ? pickers : filters;
     const api = {
-        async get(path, { params }) {
+        async get(path, { params } = {}) {
             state.calls.push({ path, params });
-            if (path === '/api/v1/trips/1') return { data: { data: { id: 1, code: 'TRIP01', status: 'OPEN', stops: [] } } };
+            if (path === '/api/v1/trips/1') return { data: { data: { id: 1, code: 'TRIP01', status: 'OPEN', stops: [
+                { id: 2, stopOrder: 1, pickupAllowed: true }, { id: 3, stopOrder: 2, dropoffAllowed: true },
+            ] } } };
+            if (path === '/api/v1/trips/1/quote') return { data: { data: { accepting } } };
             if (path === '/api/v1/categories' && params.refType === 'LOCATION' && state.failLocation) throw new Error('Unavailable');
             const content = path === '/api/v1/categories' && params.refType === 'PROVINCE'
                 ? [{ id: params.page + 1, name: 'Province ' + (params.page + 1) }]
@@ -79,7 +82,7 @@ function fixture(access = null) {
     return { state, node, form, province, ward, place, change, chooseWard, idle };
 }
 
-test('Chọn tỉnh tải đúng địa điểm, đổi tỉnh xóa địa điểm cũ; chỉ submit mới tìm chuyến', async () => {
+test('Tự tải danh sách, đổi tỉnh chỉ tải lựa chọn và áp bộ lọc khi gửi form', async () => {
     const ui = fixture();
     await ui.idle();
     assert.equal(ui.province('from').children.length, 3); // placeholder và đủ hai trang tỉnh
@@ -99,15 +102,27 @@ test('Chọn tỉnh tải đúng địa điểm, đổi tỉnh xóa địa đi�
     await ui.change('to', '1');
     await ui.chooseWard('to','10');
     ui.place('to').value = '100';
-    assert.equal(ui.state.calls.some((call) => call.path === '/api/v1/trips'), false);
+    const first = ui.state.calls.filter((call) => call.path === '/api/v1/trips');
+    assert.equal(first.length, 1);
+    assert.equal(first[0].params.date, undefined);
+    assert.equal(first[0].params.fromProvinceId, undefined);
+    ui.form.elements.fromTime.value = '09:00';
     ui.form.handlers.submit({ preventDefault() {} });
     await ui.idle();
-    const search = ui.state.calls.find((call) => call.path === '/api/v1/trips').params;
+    const search = ui.state.calls.findLast((call) => call.path === '/api/v1/trips').params;
+    assert.equal(search.fromTime, '09:00');
     assert.equal(search.fromProvinceId, '2');
     assert.equal(search.toLocationId, '100');
     assert.equal(search.toWardId,'10');
     assert.equal(search.fromLocationId, undefined);
     assert.equal(ui.state.errors.length, 0);
+});
+
+test('Báo giá từ chối nhận đặt thì ẩn nút dù chuyến có trạng thái OPEN và tài khoản đủ quyền', async () => {
+    const ui = fixture({ targets: ['GET /my-bookings', 'POST /api/v1/my-bookings'] }, false);
+    await ui.idle();
+    assert.equal(ui.state.errors.length, 0);
+    assert.equal(ui.node('journey-book').hidden, true);
 });
 
 test('Trang tìm chuyến công khai cho đặt khi có cả quyền trang đơn và API tạo, không cần grant trang công khai', async () => {

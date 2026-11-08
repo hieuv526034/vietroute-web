@@ -53,7 +53,7 @@ public class TripSearchAPI extends BaseController {
     @GetMapping(Routes.PUBLIC_TRIPS)
     @Operation(
         summary = "Tìm chặng chuyến công khai",
-        description = "Ngày tại pickup Việt Nam, hướng tăng, chưa rời điểm đón, MIN chỗ toàn range. OPEN chưa quá giờ hoặc IN_PROGRESS, nhà xe/scope active"
+        description = "Ngày và khoảng giờ đón theo giờ Việt Nam, lọc tuyến tùy chọn. Bỏ ngày để xem 31 ngày tới. Chỉ trả chặng chưa rời điểm đón và đủ chỗ."
     )
     public ApiResult<PageResponse<JourneyMatchResponse>> search(
         @Valid @ModelAttribute JourneySearch query,

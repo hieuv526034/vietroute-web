@@ -258,6 +258,14 @@
         },
         {
           "kind": "ENDPOINT",
+          "target": "PUT /api/v1/admin/trips/{id}/schedule",
+          "nameVi": "Bật hoặc dừng lịch chạy hằng ngày",
+          "nameEn": "Manage daily trip schedule",
+          "icon": "menu",
+          "sortOrder": 44
+        },
+        {
+          "kind": "ENDPOINT",
           "target": "PUT /api/v1/admin/trips/{id}/state",
           "nameVi": "Mở bán hoặc hủy chuyến trước khi chạy",
           "nameEn": "Mở bán hoặc hủy chuyến trước khi chạy",
@@ -1050,6 +1058,14 @@
           "nameEn": "Đăng thông báo vận hành chuyến",
           "icon": "menu",
           "sortOrder": 117
+        },
+        {
+          "kind": "ENDPOINT",
+          "target": "PUT /api/v1/admin/trips/{id}/schedule",
+          "nameVi": "Bật hoặc dừng lịch chạy hằng ngày",
+          "nameEn": "Manage daily trip schedule",
+          "icon": "menu",
+          "sortOrder": 44
         },
         {
           "kind": "ENDPOINT",

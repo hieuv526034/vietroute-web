@@ -20,4 +20,6 @@ public final class RequestGroups {
     public interface Notice {}
 
     public interface Progress {}
+
+    public interface Schedule {}
 }

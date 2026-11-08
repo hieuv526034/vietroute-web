@@ -31,10 +31,8 @@ function fixture({ base = '/demo', locale = 'en', changed = false, temporary = t
         'account-username',
         'account-roles',
         'account-email',
-        'account-email-status',
         'account-created',
         'initial-password',
-        'initial-email',
         'form-feedback',
         'password-feedback',
         'password-open',
@@ -59,6 +57,7 @@ function fixture({ base = '/demo', locale = 'en', changed = false, temporary = t
         displayName: 'Fixture',
         username: 'fixture',
         roles: ['ADMIN'],
+        email: 'fixture@example.invalid',
         createdAt: '2026-10-24T00:00:00Z',
         mustChangePassword: temporary,
         emailVerificationRequired: !verified,
@@ -153,11 +152,11 @@ function fixture({ base = '/demo', locale = 'en', changed = false, temporary = t
 
 const settle = () => new Promise((resolve) => setImmediate(resolve));
 
-test('email setup notice follows server readiness independently of assigned ADMIN role', async () => {
+test('Email liên hệ luôn hiển thị dù dữ liệu tương thích còn cờ xác minh cũ', async () => {
     for (const verified of [true, false]) {
         const ui = fixture({ temporary: false, verified });
         await settle();
-        assert.equal(ui.nodes.get('initial-email').hidden, verified);
+        assert.equal(ui.nodes.get('account-email').textContent, 'fixture@example.invalid');
         assert.equal(ui.nodes.get('initial-password').hidden, true);
         assert.equal(ui.state.navigation.length, 0);
     }

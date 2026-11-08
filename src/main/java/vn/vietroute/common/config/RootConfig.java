@@ -15,6 +15,7 @@ import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import vn.vietroute.auth.config.SecurityConfig;
@@ -26,6 +27,7 @@ import vn.vietroute.common.web.locale.SupportedLocaleResolver;
 
 /** Root context quản lý service/repository và hạ tầng; không quét controller để tránh tạo bean hai lần. */
 @Configuration
+@EnableScheduling
 @ComponentScan(
     basePackages = { "vn.vietroute.common", "vn.vietroute.auth", "vn.vietroute.business" },
     excludeFilters = @ComponentScan.Filter(
