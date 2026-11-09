@@ -20,6 +20,7 @@ Chạy trên PostgreSQL test riêng đã áp dụng migration `trip/002_daily_se
 | LC-07 | Hủy một chuyến con rồi tìm lại ngày đó. Tắt lịch nguồn rồi tìm một ngày chưa sinh | Chuyến đã hủy không xuất hiện lại. Tắt lịch không tạo ngày mới và các chuyến đã công bố vẫn có lịch sử riêng |
 | LC-08 | Xác nhận một đơn trên chuyến ngày A, rồi kiểm cùng giờ ngày B | Tồn chỗ giảm đúng các đoạn của chuyến A. Chuyến B không bị trừ chỗ |
 | LC-09 | Khởi tạo lại bộ dữ liệu mẫu, kiểm bốn lịch Duy Long và tìm chuyến theo giờ | Chỉ có một nguồn cho mỗi khung giờ 05:00, 09:30, 12:00, 15:30. Không tạo lặp chuyến, đơn hoặc cấp lại quyền đã thu hồi |
+| LC-10 | Trên DB mới có bộ init đầy đủ, tìm lần lượt bảy ngày từ ngày thứ 60, rồi tìm lại từng ngày | Mỗi ngày có 26 lượt cố định thuộc đủ bảy nhà xe. Tìm lại giữ ID. Mở báo giá một lượt của từng nhà xe và kiểm còn chỗ, nhận đặt. Hai mẫu tuyến 34 giờ cần ca xe/tài xế luân phiên |
 
 ## Liên hệ tài xế từ đơn của khách
 
@@ -48,5 +49,6 @@ Source phát hành `93883c0`, Render Singapore deployment `dep-dboautvavr4c73b85
 | Dữ liệu các nhóm màn | Admin, điều hành, tài xế, khách đều đọc được dữ liệu đúng vai trò; các API đã rà trả HTTP 200 | Số lượng và kỳ báo cáo ở [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md#tài-khoản-tổng-quan-và-lịch-hằng-ngày) |
 | LH-01/LH-04, phần hiển thị và dọn modal | Đơn CONFIRMED có tên, điện thoại, biển số minh họa và link `tel:` đúng. Mở tiếp đơn COMPLETED không còn liên hệ từ đơn trước | Trình duyệt Codex vi/en, desktop và 390 px, DB phục hồi riêng; không gọi điện |
 | LH-01 đến LH-04, regression API | Kiểm owner/khách khác, trạng thái đơn/chuyến, đổi phân công, không lộ liên hệ mới qua danh sách/public/staff | PostgreSQL test riêng trong bộ 221 ca Java; hai ca client thuộc bộ 80 test Node. Không thay thế nghiệm thu thủ công toàn bộ |
+| LC-10 | Từng ngày 08/01–14/01/2027 có đủ 26 lượt cố định thuộc bảy nhà xe. Báo giá một lượt của từng nhà xe ngày 08/01 đều nhận đặt | PostgreSQL test riêng, diễn tập trên bản phục hồi và API công khai Render sau khi bật lịch mẫu |
 
 Các ca còn lại cần người nghiệm thu ghi thao tác, mã dữ liệu và kết quả riêng, đặc biệt bàn phím, đầy đủ vai trò/tiếng Anh, xung đột lịch, tắt lịch và nhánh hủy chuyến con. Regression Java hiện có kiểm quyền, rollback, trạng thái, tồn chỗ và đồng thời không thay thế việc ký nghiệm thu thủ công từng ca. Tài khoản `customduylong` đang có một WEB PENDING cũ; muốn tạo yêu cầu mới phải xử lý/hủy đơn cũ theo luồng của ứng dụng. Đây là quy tắc một đơn WEB active, không phải kết quả tìm chuyến bị sai giờ. Không sửa SQL hoặc tự hủy đơn production để vượt quy tắc.
