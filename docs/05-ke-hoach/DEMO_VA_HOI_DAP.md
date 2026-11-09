@@ -137,6 +137,8 @@ Ghi mã đơn A, kiểm số chỗ/tổng/trạng thái. Nếu trước đó kh�
 
 So sánh tồn trước/sau bằng số thực tế đã ghi. Ví dụ5/3 chỉ để minh họa nếu dữ liệu không đúng các số đó; không nói thành kết quả vừa quan sát. **Bản ngắn:** xác nhận một đơn, chỉ trạng thái và số chỗ thay đổi.
 
+Quay lại phiên khách, mở chi tiết đơn A trong Đơn của tôi. Khi đơn CONFIRMED và chuyến OPEN/IN_PROGRESS, chỉ tên tài xế, điện thoại, biển số và link Gọi tài xế. Chỉ giới thiệu link, không gọi số thật. Đơn PENDING chưa có liên hệ; đổi phân công thì đóng và mở lại chi tiết để đọc thông tin hiện hành. Không dùng đơn của khách khác hoặc tìm kiếm công khai để xem liên hệ này.
+
 **B6 — Ghi thu và giải thích nhánh hủy/hoàn.**
 
 > Đây là ghi nhận thu tiền thủ công, chưa phải thanh toán ngân hàng. Với đơn360.000đ đã xác nhận, em ghi thu200.000đ rồi chỉ số đã thu và phần còn lại. Mỗi thao tác thu/hoàn có requestKey để lần gửi lặp cùng nội dung không cộng tiền thêm lần nữa; thao tác mới còn kiểm version hiện hành.
@@ -152,6 +154,8 @@ So sánh tồn trước/sau bằng số thực tế đã ghi. Ví dụ5/3 chỉ 
 > Thứ tự được kiểm trên server, kèm version và thời điểm server. START không được sớm hơn30 phút trước lịch; không thể bấm hoàn tất một điểm cuối chưa đến. Đây là xác nhận tiến độ thủ công, không phải bản đồ GPS hoặc bằng chứng tọa độ thực. Khi đến điểm trả, các đơn đã xác nhận phù hợp được hoàn tất theo luồng.
 
 Chỉ bấm bước được phép; nhánh hai điểm dùng START → ARRIVE cuối → COMPLETE. Nếu chưa vào cửa sổ START thì xem lịch sử chuyến hoàn tất hoặc chuyển sang chuyến dự phòng hợp lệ, không sửa clock. **Bản ngắn:** chỉ một thao tác START hợp lệ và lịch sử tiến độ đã có, nói rõ phần nào là dữ liệu lịch sử.
+
+Trong danh sách khách đón/trả của chuyến được giao, chỉ tên và số điện thoại khách ở đơn CONFIRMED/COMPLETED. Giải thích hai phía dùng liên hệ để phối hợp đón khách; không cần phát triển thêm luồng khách vãng lai hoặc tăng chỗ ngoài sức chứa cho buổi demo. Đối chiếu [LH-01 đến LH-04](TEST_CASE_TAI_KHOAN_TONG_QUAN_LICH_CHUYEN.md#liên-hệ-tài-xế-từ-đơn-của-khách) khi được hỏi về chủ đơn và việc ẩn thông tin.
 
 **B8 — Chuyển lời bằng ID và số liệu.**
 
