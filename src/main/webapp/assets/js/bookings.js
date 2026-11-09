@@ -254,6 +254,19 @@
             ),
             text('p', row.refundDue ? labels.refundDue : ''),
         );
+        if (customer && row.status === 'CONFIRMED' && row.driverName) {
+            const contact = text('p', `${labels.driverContact}: ${row.driverName}`);
+            if (row.driverPhone) {
+                const number = row.driverPhone.replace(/[^+0-9]/g, '');
+                if (/^\+?[0-9]{6,30}$/.test(number)) {
+                    const call = text('a', `${labels.callDriver}: ${row.driverPhone}`);
+                    call.href = `tel:${number}`;
+                    contact.append(text('span', ' · '), call);
+                } else contact.append(text('span', ` · ${row.driverPhone}`));
+            }
+            node('booking-summary').append(contact);
+            if (row.plateNumber) node('booking-summary').append(text('p', `${labels.plate}: ${row.plateNumber}`));
+        }
         node('booking-journey-link').href =
             `${base}/journeys?lang=${document.documentElement.lang}&tripId=${row.tripId}`;
         node('booking-event-list').replaceChildren();

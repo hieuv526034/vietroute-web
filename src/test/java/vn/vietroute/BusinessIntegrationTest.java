@@ -3950,6 +3950,8 @@ class BusinessIntegrationTest {
         long id = created.path("id").asLong();
         assertEquals("WEB", created.path("source").asText());
         assertEquals("PENDING", created.path("status").asText());
+        assertFalse(created.has("driverName"));
+        assertFalse(call(200, "GET", "/api/v1/my-bookings/" + id, null, owner).has("driverPhone"));
         assertEquals(750000, created.path("totalPrice").asInt());
         assertEquals(id, call(201, "POST", "/api/v1/my-bookings", body, owner).path("id").asLong());
         assertEquals("0", sql("SELECT sum(reserved_seats) FROM trip_segments WHERE trip_id=" + trip));
@@ -3983,12 +3985,57 @@ class BusinessIntegrationTest {
             "{\"status\":\"CONFIRMED\",\"version\":0,\"note\":\"\"}",
             admin
         );
+        var confirmed = call(200, "GET", "/api/v1/my-bookings/" + id, null, owner);
+        assertEquals(750000, confirmed.path("totalPrice").asInt());
         assertEquals(
-            750000,
-            call(200, "GET", "/api/v1/my-bookings/" + id, null, owner)
-                .path("totalPrice")
-                .asInt()
+            sql("SELECT driver_name FROM carrier_trips WHERE id=" + trip),
+            confirmed.path("driverName").asText()
         );
+        assertEquals(
+            sql("SELECT driver_phone FROM carrier_trips WHERE id=" + trip),
+            confirmed.path("driverPhone").asText()
+        );
+        assertEquals(
+            sql("SELECT plate_number FROM carrier_trips WHERE id=" + trip),
+            confirmed.path("plateNumber").asText()
+        );
+        assertFalse(call(200, "GET", "/api/v1/my-bookings", null, owner).at("/content/0").has("driverPhone"));
+        assertFalse(call(200, "GET", "/api/v1/admin/bookings/" + id, null, admin).has("driverPhone"));
+        assertFalse(call(200, "GET", "/api/v1/trips/" + trip, null, owner).has("driverPhone"));
+        call(404, "GET", "/api/v1/my-bookings/" + id, null, stranger);
+        sql("UPDATE carrier_drivers SET name='Tài xế cập nhật',phone='0901234567' WHERE id=" + fixture.driver());
+        call(
+            200,
+            "PUT",
+            "/api/v1/admin/trips/" + trip + "/assignment",
+            "{\"vehicleId\":" +
+                fixture.vehicle() +
+                ",\"driverId\":" +
+                fixture.driver() +
+                ",\"capacity\":10,\"version\":1,\"note\":\"Cập nhật phân công\"}",
+            admin
+        );
+        var reassigned = call(200, "GET", "/api/v1/my-bookings/" + id, null, owner);
+        assertEquals("Tài xế cập nhật", reassigned.path("driverName").asText());
+        assertEquals("0901234567", reassigned.path("driverPhone").asText());
+        // Chỉ đổi trạng thái fixture để kiểm projection từng vòng đời, không chạy tiến độ chuyến giả.
+        sql("UPDATE carrier_trips SET status='IN_PROGRESS' WHERE id=" + trip);
+        assertEquals(
+            "0901234567",
+            call(200, "GET", "/api/v1/my-bookings/" + id, null, owner)
+                .path("driverPhone")
+                .asText()
+        );
+        for (String tripState : List.of("COMPLETED", "CANCELLED")) {
+            sql("UPDATE carrier_trips SET status='" + tripState + "' WHERE id=" + trip);
+            assertFalse(call(200, "GET", "/api/v1/my-bookings/" + id, null, owner).has("driverPhone"));
+        }
+        sql("UPDATE carrier_trips SET status='OPEN' WHERE id=" + trip);
+        for (String bookingState : List.of("REJECTED", "COMPLETED")) {
+            sql("UPDATE bookings SET status='" + bookingState + "' WHERE id=" + id);
+            assertFalse(call(200, "GET", "/api/v1/my-bookings/" + id, null, owner).has("driverPhone"));
+        }
+        sql("UPDATE bookings SET status='CONFIRMED' WHERE id=" + id);
         call(
             200,
             "PUT",
@@ -4004,6 +4051,7 @@ class BusinessIntegrationTest {
             owner
         );
         assertEquals("0", sql("SELECT sum(reserved_seats) FROM trip_segments WHERE trip_id=" + trip));
+        assertFalse(call(200, "GET", "/api/v1/my-bookings/" + id, null, owner).has("driverPhone"));
         call(201, "POST", "/api/v1/my-bookings", bookingBody(trip, 1, 2, 1, UUID.randomUUID()), owner);
         call(200, "GET", "/my-bookings?lang=vi", null, owner);
         call(200, "GET", "/my-bookings?lang=en", null, owner);

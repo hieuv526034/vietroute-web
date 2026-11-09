@@ -21,6 +21,17 @@ Chạy trên PostgreSQL test riêng đã áp dụng migration `trip/002_daily_se
 | LC-08 | Xác nhận một đơn trên chuyến ngày A, rồi kiểm cùng giờ ngày B | Tồn chỗ giảm đúng các đoạn của chuyến A. Chuyến B không bị trừ chỗ |
 | LC-09 | Khởi tạo lại bộ dữ liệu mẫu, kiểm bốn lịch Duy Long và tìm chuyến theo giờ | Chỉ có một nguồn cho mỗi khung giờ 05:00, 09:30, 12:00, 15:30. Không tạo lặp chuyến, đơn hoặc cấp lại quyền đã thu hồi |
 
+## Liên hệ tài xế từ đơn của khách
+
+| Mã | Thao tác | Kết quả mong đợi |
+|---|---|---|
+| LH-01 | Chủ đơn mở chi tiết WEB PENDING rồi điều hành xác nhận trên chuyến OPEN | PENDING không có liên hệ tài xế. Sau xác nhận, chi tiết có tên, SĐT và biển số, bấm Gọi tài xế dùng `tel:` |
+| LH-02 | Khách khác truy cập ID đơn đã xác nhận; kiểm API danh sách và tìm chuyến công khai | Ngoài chủ đơn trả 404; danh sách/tìm công khai không trả liên hệ tài xế |
+| LH-03 | Điều hành cập nhật phân công của chuyến rồi chủ đơn đóng/mở lại chi tiết | Liên hệ lấy từ snapshot phân công hiện hành, không giữ dữ liệu cũ trên modal |
+| LH-04 | Hủy/từ chối/hoàn tất đơn hoặc kết thúc/hủy chuyến rồi đọc lại | Không trả liên hệ tài xế. SĐT nhà xe vẫn dùng để hỗ trợ |
+
+Các ca LH thuộc BOOKINGCONTACT01, trạng thái kiểm/tích hợp theo [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md). Bộ DAILY01 trước đó có 16 ca, không cộng các ca mới vào kết quả nghiệm thu cũ.
+
 ## Kết quả đã đối chiếu ngày 09/11/2026
 
 Source phát hành `93883c0`, Render Singapore deployment `dep-dboautvavr4c73b853o0`. Các ca thay đổi dữ liệu dùng PostgreSQL riêng hoặc bản phục hồi, không tạo đơn/thu/hoàn thử trên production. Bộ 16 ca phía trên là kịch bản nghiệm thu, không mặc nhiên là 16 ca thủ công đã đạt.

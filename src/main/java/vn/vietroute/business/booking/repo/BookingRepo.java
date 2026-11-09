@@ -124,6 +124,19 @@ public interface BookingRepo extends Repository<Booking, Long> {
     pick.scheduled_departure_at AS pickup_at, dropoff.scheduled_arrival_at AS dropoff_at
     """;
 
+    String CONTACT_ALLOWED = """
+    b.customer_id = :customerId AND b.status = 'CONFIRMED' AND t.status IN ('OPEN', 'IN_PROGRESS')
+    """;
+
+    String CONTACT_COLUMNS =
+        ", CASE WHEN " +
+        CONTACT_ALLOWED +
+        " THEN t.driver_name END AS driver_name, CASE WHEN " +
+        CONTACT_ALLOWED +
+        " THEN t.driver_phone END AS driver_phone, CASE WHEN " +
+        CONTACT_ALLOWED +
+        " THEN t.plate_number END AS plate_number ";
+
     String PERMISSION =
         "((CAST(:customerId AS BIGINT) IS NULL AND " +
         UserRoleRepo.VISIBLE +
@@ -369,6 +382,7 @@ public interface BookingRepo extends Repository<Booking, Long> {
     @Query(
         value = "SELECT " +
             COLUMNS +
+            CONTACT_COLUMNS +
             ", ( " +
             CAN_UPDATE +
             ") AS can_update " +
@@ -836,7 +850,10 @@ public interface BookingRepo extends Repository<Booking, Long> {
             longValue(r.get("version")),
             booleanValue(r.get("can_update")),
             instantValue(r.get("created_at")),
-            events
+            events,
+            stringValue(r.get("driver_name")),
+            stringValue(r.get("driver_phone")),
+            stringValue(r.get("plate_number"))
         );
         return new Row(
             response,

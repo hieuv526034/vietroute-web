@@ -55,7 +55,7 @@ Nếu chưa thấy chuyến, thử bỏ khoảng giờ và địa điểm con r�
 2. Kiểm nhà xe, ngày/giờ đón, điểm đón, điểm trả, số chỗ, đơn giá và tổng tiền. Nhập tên và điện thoại liên hệ chính xác.
 3. Gửi yêu cầu một lần. Khi thành công, ghi lại mã đơn và mở Đơn của tôi tại `/my-bookings`.
 4. Đơn mới có trạng thái Chờ xử lý (`PENDING`). Liên hệ nhà xe nếu cần xác nhận sớm. Chỗ chỉ được giữ sau khi điều hành xác nhận thành `CONFIRMED`.
-5. Mở chi tiết để xem trạng thái và lịch sử, số tiền đã thu/hoàn. Tìm lại bằng mã đơn khi cần hỗ trợ.
+5. Mở chi tiết để xem trạng thái và lịch sử, số tiền đã thu/hoàn. Khi đơn đã xác nhận và chuyến còn mở bán/đang chạy, chủ đơn thấy tên, số điện thoại tài xế, biển số xe và nút **Gọi tài xế**. Đóng rồi mở lại chi tiết để lấy phân công mới nếu nhà xe đổi tài xế/xe. Đơn chờ, từ chối, hủy hoặc hoàn tất không hiển thị liên hệ tài xế; khi cần hỗ trợ vẫn liên hệ nhà xe. Tìm lại bằng mã đơn khi cần hỗ trợ.
 6. Nếu cần hủy, mở đúng đơn, chọn Hủy khi còn được phép, nhập lý do và xác nhận. Nếu điểm đón đã rời hoặc trạng thái không phù hợp, hệ thống từ chối và bạn cần liên hệ điều hành.
 
 Đơn WEB tuân theo giới hạn đơn đang hoạt động của khách. Khi bị báo đã có đơn hoạt động, xử lý hoặc xem đơn hiện có trước khi đặt thêm. Hủy đơn đã xác nhận trả lại chỗ, còn tiền hoàn được điều hành ghi nhận riêng. Hệ thống hiện ghi nhận thu/hoàn thủ công, cần thực hiện thanh toán với nhà xe theo thỏa thuận.
