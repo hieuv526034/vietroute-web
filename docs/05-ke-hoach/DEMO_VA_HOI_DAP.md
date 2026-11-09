@@ -4,7 +4,7 @@ Học theo [phần từng thành viên](PHAN_CONG.md), [tổng quan](../01-bat-d
 
 Đọc nhanh: [Lời thoại hai dev](#lời-thoại-trình-bày-của-hai-dev) → [chuẩn bị luồng](#chuẩn-bị-một-luồng-xuyên-suốt) → [hỏi sâu Q46–Q55](#phản-biện-theo-phần-của-hai-dev--q46-đến-q55). Q01–Q45 là bộ nền; phần cuối vẫn giữ yêu cầu báo cáo Word.
 
-[PowerPoint bảo vệ sản phẩm](bao-cao/Thuyet_trinh_VietRoute.pptx) có 28 slide, ảnh ứng dụng thật và Notes cho người nói. Điền thông tin sinh viên/giảng viên ở hai slide đầu trước buổi bảo vệ. Khi có khoảng 15 phút, tập nói ngắn các bảng kỹ thuật và dành thời gian cho luồng demo; phần hỏi sâu tra nguồn trong Notes và bộ câu hỏi bên dưới. Bốn lịch Duy Long lặp hằng ngày cho Hà Nội–Hải Phòng hỗ trợ chọn ngày còn nhận đặt; vẫn chuẩn bị DB demo riêng cho thao tác ghi.
+[PowerPoint bảo vệ sản phẩm](bao-cao/Thuyet_trinh_VietRoute.pptx) có 28 slide, ảnh ứng dụng thật và Notes cho người nói. Điền thông tin sinh viên/giảng viên ở hai slide đầu trước buổi bảo vệ. Khi có khoảng 15 phút, tập nói ngắn các bảng kỹ thuật và dành thời gian cho luồng demo. Phần hỏi sâu tra nguồn trong Notes và bộ câu hỏi bên dưới. Bộ mẫu có 26 lịch cố định lặp đủ bảy ngày, thuộc bảy nhà xe. Có thể chọn tuyến Hà Nội–Hải Phòng của Duy Long để minh họa lọc giờ và kiểm chỗ. Chuẩn bị DB demo riêng cho thao tác ghi.
 
 ## Kiểm tra trước buổi demo
 

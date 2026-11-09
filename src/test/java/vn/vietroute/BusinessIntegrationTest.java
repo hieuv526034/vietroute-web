@@ -3741,7 +3741,7 @@ class BusinessIntegrationTest {
     @Test
     void dailyHanoiHaiPhongIsDiscoverableAndBookableBeyondTheInitialWindow() throws Exception {
         initializeOperationalData();
-        assertEquals("4", sql("SELECT count(*) FROM carrier_trips WHERE daily_service"));
+        assertEquals("26", sql("SELECT count(*) FROM carrier_trips WHERE daily_service"));
         String originalTrips = sql("SELECT count(*) FROM carrier_trips");
         String originalBookings = sql("SELECT count(*) FROM bookings");
         // Mô phỏng DB có dữ liệu Duy Long từ trước bước 11, chỉ trong schema test ngẫu nhiên.
@@ -3785,6 +3785,30 @@ class BusinessIntegrationTest {
             );
         assertEquals("PENDING", call(201, "POST", "/api/v1/admin/bookings", body, admin).path("status").asText());
         assertEquals("4", sql("SELECT count(*) FROM carrier_trips WHERE daily_service"));
+    }
+
+    /** Ngoài cửa sổ seed, tìm được lịch của cả bảy nhà xe trong từng ngày và không sinh trùng khi tìm lại. */
+    @Test
+    void initialDailyTimetablesCoverAllCarriersAcrossSevenDays() throws Exception {
+        initializeOperationalData();
+        assertEquals("7", sql("SELECT COUNT(DISTINCT carrier_id) FROM carrier_trips WHERE daily_service"));
+        LocalDate first = LocalDate.now(ZoneId.of(Business.TIME_ZONE)).plusDays(60);
+        for (int offset = 0; offset < 7; offset++) {
+            String day = first.plusDays(offset).toString();
+            String path = "/api/v1/trips?date=" + day + "&size=1";
+            JsonNode found = call(200, "GET", path, null, admin);
+            assertTrue(found.path("totalElements").asInt() >= 26);
+            assertEquals(found.at("/content/0/tripId"), call(200, "GET", path, null, admin).at("/content/0/tripId"));
+            assertEquals(
+                "26|7",
+                sql(
+                    """
+                    SELECT COUNT(*) || '|' || COUNT(DISTINCT carrier_id) FROM carrier_trips
+                    WHERE service_source_id IS NOT NULL AND (departure_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE = '%s'
+                    """.formatted(day)
+                )
+            );
+        }
     }
 
     @Test

@@ -44,7 +44,9 @@ Khi sửa Environment có trường secret tải bất đồng bộ: mở/chờ 
 
 ## Database, backup và rollback
 
-Đợt lịch chạy hằng ngày cần áp dụng `trip/002_daily_service.sql` qua `DatabaseInitializer` trên PostgreSQL đã sao lưu và thử phục hồi. Migration chuyển bốn khung giờ giả lập Duy Long hiện hữu nếu tìm đúng mã nguồn đã công bố. Với DB dựng mới, bộ init đầy đủ tạo bốn nguồn khi seed. Khi cập nhật DB hiện hữu, giữ cờ seed tài khoản/nghiệp vụ tắt và thực hiện migration đúng môi trường. Kiểm tra `/health`, tìm hai chiều Hà Nội–Hải Phòng theo ngày/giờ và báo giá công khai. Grant `PUT /api/v1/admin/trips/{id}/schedule` cần được quản trị cấp cho chức năng điều hành đúng phạm vi nếu DB đã có cấu hình quyền riêng.
+Đợt lịch chạy hằng ngày cần áp dụng `trip/002_daily_service.sql` qua `DatabaseInitializer` trên PostgreSQL đã sao lưu và thử phục hồi. Migration chuyển bốn khung giờ giả lập Duy Long hiện hữu nếu tìm đúng mã nguồn đã công bố. Với DB dựng mới, bộ init đầy đủ tạo 26 nguồn cố định dưới 24 giờ, phủ bảy nhà xe. Kiểm tra `/health`, tìm hai chiều Hà Nội–Hải Phòng theo ngày/giờ và báo giá công khai.
+
+Trên DB hiện hữu, giữ cờ seed tài khoản/nghiệp vụ tắt. Với từng lịch cố định chưa bật, điều hành vào **Chuyến**, mở lượt đã công bố có giờ, tuyến, xe và tài xế đúng lịch thực tế, rồi chọn **Bật lịch chạy hằng ngày**. Mỗi lịch chỉ cần một chuyến nguồn. API tương ứng là `PUT /api/v1/admin/trips/{id}/schedule`, cần grant và scope đúng. Xử lý xung đột lịch ở xe hoặc tài xế trước khi bật. Tìm một ngày ngoài cửa sổ seed và đối chiếu giờ khởi hành, báo giá, số chỗ. Hai tuyến mẫu dài 34 giờ cần nhiều ca xe/tài xế để có lượt mỗi ngày.
 
 Không sửa tám SQL/checksum đã áp dụng; bước mới thêm số liên tiếp trong cụm và manifest. Runtime khóa/checksum/transaction, từ chối history lạ. Database hiện hữu muốn rebaseline: ủy quyền đúng đích → backup mã hóa/kiểm phục hồi → dừng mọi node → scripts/development/rebaseline-database.py --check → --apply --confirm-stopped nếu cấu trúc khớp. Chỉ đổi history, không DROP bảng hoặc đổi hash/ID/sequence/audit.
 
