@@ -144,7 +144,7 @@ public class BookingAPI extends BaseController {
     @GetMapping(Routes.MY_BOOKINGS + Routes.BY_ID)
     @Operation(
         summary = "Chi tiết đơn và lịch sử",
-        description = "ID ngoài owner trả 404; GET dữ liệu độc lập GET menu"
+        description = "ID ngoài owner trả 404; đơn CONFIRMED trên chuyến OPEN/IN_PROGRESS có liên hệ tài xế và biển số theo phân công hiện hành; GET dữ liệu độc lập GET menu"
     )
     public ApiResult<BookingResponse> customerFind(
         @Parameter(description = "ID đơn dương") @PathVariable @Min(
