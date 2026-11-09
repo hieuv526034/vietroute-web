@@ -69,6 +69,8 @@ scope_id 0 là role toàn cục; scope_id>0 là role trong nhà xe. Scoped role 
 
 all_scopes chỉ mở dữ liệu cho endpoint **do chính role đó cấp**; không ghép endpoint roleA với all_scopes roleB. Khách vẫn owner của booking; tài xế phải có hồ sơ và driver_user_id được phân công. Role DRIVER hoặc cùng nhà xe không tự cho xem mọi chuyến tài xế khác. Ngoài scope/owner thường404; thiếu endpoint403.
 
+`GET /api/v1/my-bookings/{id}` chỉ trả `driverName`, `driverPhone`, `plateNumber` khi chủ đơn đọc đơn CONFIRMED và chuyến OPEN/IN_PROGRESS. SQL đọc snapshot phân công hiện hành của chuyến, không join hồ sơ để ghi đè snapshot; đổi phân công bằng API chuyến làm cập nhật thông tin cho lần đọc tiếp theo. Danh sách đơn, API chi tiết staff, đơn không đủ trạng thái và tìm chuyến công khai không nhận các field liên hệ mới. Tài xế vẫn đọc tên/SĐT khách CONFIRMED/COMPLETED trên chính chuyến được giao. Không bổ sung endpoint/grant hoặc cột DB cho luồng liên hệ này.
+
 canUpdate/canAssign kiểm mutation target riêng, không lấy quyền GET của bảng để suy quyền sửa/gán. Mọi grant định cấp phải nằm trong tập actor hiện hành; kiểm cả role/function inactive để tránh bật lại lách quyền. Protected role/system/self/bootstrap có giới hạn riêng, không gán/sửa tùy ý qua CRUD thường.
 
 Thay global role giữ mapping không đổi, thu hồi scoped mapping không còn hợp lệ và tăng mốc membership/token/history theo batch cùng transaction. scope_membership_versions giữ version kể cả khi xóa hết rồi gán lại. Startup ordinary init một lần, không khôi phục grant/membership đã thu hồi.

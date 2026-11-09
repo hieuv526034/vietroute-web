@@ -1,5 +1,6 @@
 package vn.vietroute.business.booking.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -114,4 +115,16 @@ public class BookingResponse {
 
     @Schema(description = "Lịch sử khi đọc chi tiết, tối đa 100 mới nhất")
     private List<BookingEventResponse> events;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Schema(description = "Tên tài xế đang phân công; chỉ chi tiết đơn CONFIRMED của chủ đơn trên chuyến còn hoạt động")
+    private String driverName;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Schema(description = "Điện thoại tài xế để chủ đơn đã xác nhận liên hệ đón trả")
+    private String driverPhone;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Schema(description = "Biển số theo phân công chuyến hiện hành; cùng điều kiện công bố liên hệ tài xế")
+    private String plateNumber;
 }
