@@ -296,6 +296,7 @@ public class BusinessDataCustomRepo {
             CREATE TEMP TABLE vr_init_trips ON COMMIT DROP AS
             WITH config AS (SELECT ?::JSONB data), input AS (
                 SELECT x.*, d.day, COALESCE(x. "codePrefix", config.data-> 'profile' ->> 'version') profile,
+                    COALESCE(x. "pastDays", (config.data-> 'profile' ->> 'pastDays')::INTEGER) past_days,
                     DATE_TRUNC('minute', CURRENT_TIMESTAMP)+INTERVAL '10 minutes' anchor
                 FROM config CROSS JOIN LATERAL JSONB_TO_RECORDSET(config.data-> 'routes')
                 x("carrierCode" TEXT, code TEXT, "vehicleCode" TEXT, "driverCode" TEXT,
@@ -331,7 +332,8 @@ public class BusinessDataCustomRepo {
                     ELSE 'Có mặt tại điểm đón trước giờ khởi hành 20 phút' END,
                     LEAST(t.departure-INTERVAL '3 days', CURRENT_TIMESTAMP-INTERVAL '1 day'),
                     LEAST(t.departure-INTERVAL '2 days', CURRENT_TIMESTAMP-INTERVAL '12 hours'),
-                    c.code = 'DUYLONG' AND x."departureTime" IS NOT NULL AND x.day = -x."pastDays"
+                    x. "intervalDays" = 1 AND duration.minutes < 1440 AND x.day = -x.past_days
+                        AND (x. "departureTime" IS NOT NULL OR x.day % 5 <> 0)
                 FROM input x JOIN carriers c ON c.code=x. "carrierCode" AND c.active AND c.scope_active
                 JOIN carrier_routes r ON r.carrier_id=c.id AND r.code=x.code AND r.active
                 JOIN carrier_vehicles v ON v.carrier_id=c.id AND v.code=x. "vehicleCode" AND v.active

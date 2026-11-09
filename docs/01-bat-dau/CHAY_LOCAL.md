@@ -136,6 +136,8 @@ DB mới có tổng646 chuyến/3866 đơn theo snapshot đã kiểm. DB đang c
 
 ### Chọn chuyến đúng ngày
 
-Các chuyến mẫu một lần giữ ngày của lần init đầu. Bốn khung giờ Duy Long có lịch lặp mỗi ngày. Mở Tìm chuyến, chọn Hà Nội → Hải Phòng hoặc Hải Phòng → Hà Nội và thử ngày mai. Lọc 09:30 hoặc 15:30 chiều đi, 05:00 hoặc 12:00 chiều về theo giờ Việt Nam. Lịch lặp tạo từng chuyến mới với tồn chỗ riêng khi bổ sung cửa sổ bán hoặc khi khách tìm ngày cụ thể.
+Trên DB mới, bộ init bật 26 lịch cố định dưới 24 giờ, phủ đủ bảy nhà xe. Bốn khung giờ Duy Long nằm trong số này. Hai mẫu tuyến TP.HCM–Hà Nội và Hà Nội–TP.HCM kéo dài 34 giờ, mỗi tuyến hiện chỉ có một xe và một tài xế trong dữ liệu mẫu. Muốn có lượt khởi hành mỗi ngày trên hai tuyến đó cần phân công luân phiên. Các chuyến mẫu vẫn giữ ngày của lần init đầu. Lịch lặp tạo từng chuyến mới với tồn chỗ riêng khi bổ sung cửa sổ bán hoặc khi khách tìm ngày cụ thể.
+
+Mở Tìm chuyến, chọn Hà Nội → Hải Phòng hoặc Hải Phòng → Hà Nội và thử ngày mai. Với Duy Long, lọc 09:30 hoặc 15:30 chiều đi, 05:00 hoặc 12:00 chiều về theo giờ Việt Nam. Khi bỏ bộ lọc giờ, xem tất cả lượt phù hợp với ngày, chặng và số chỗ. Khi mở chi tiết, trạng thái nhận đặt được kiểm lại trước khi khách gửi yêu cầu.
 
 Nguồn account ở [default-access.json](../../src/main/resources/auth/default-access.json), nền/profile ở [bootstrap](../../src/main/resources/bootstrap). Nút /operations/demo và POST /api/v1/admin/demo chỉ thêm bộ nền21 bản ghi, không tạo account/membership hoặc hàng nghìn chuyến/đơn qua HTTP. Luồng tập chung và tài khoản từng người nằm trong [phân công](../05-ke-hoach/PHAN_CONG.md) và [kịch bản demo](../05-ke-hoach/DEMO_VA_HOI_DAP.md).
