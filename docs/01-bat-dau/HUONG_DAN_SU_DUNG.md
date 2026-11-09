@@ -2,6 +2,8 @@
 
 Tài liệu dành cho người lần đầu sử dụng VietRoute, từ đăng nhập đến hoàn tất một hành trình và đối soát kết quả. Người dùng làm theo phần dành cho vai trò được cấp. Khi thực hành tạo, xác nhận, hủy đơn hoặc ghi tiền, dùng môi trường học đã được quản trị chuẩn bị vì các nút Lưu có tác động đến dữ liệu.
 
+Bản hướng dẫn cập nhật ngày 09/11/2026 cho DAILY02 và BOOKINGCONTACT01. Khi chuẩn bị thi, dùng các bước hiện hành ở đây, đối chiếu [test case](../05-ke-hoach/TEST_CASE_TAI_KHOAN_TONG_QUAN_LICH_CHUYEN.md) và [kịch bản thuyết trình](../05-ke-hoach/DEMO_VA_HOI_DAP.md) trước khi thực hành. Mốc của [bản Word để in](Huong_dan_su_dung_VietRoute.docx) ghi tại [mục lục tài liệu](../README.md).
+
 ## 1. Chuẩn bị và mở ứng dụng
 
 1. Nhận địa chỉ ứng dụng, username, mật khẩu và tên nhà xe/phạm vi được cấp từ quản trị. Địa chỉ nghiệm thu là [VietRoute Singapore](https://vietroute-web-sg.onrender.com/journeys?lang=vi). Người chạy source làm theo [Chạy local](CHAY_LOCAL.md) trước, rồi mở địa chỉ local được launcher thông báo.
@@ -49,6 +51,8 @@ Quyền menu và quyền thao tác được kiểm riêng. Thấy màn danh sác
 
 Nếu chưa thấy chuyến, thử bỏ khoảng giờ và địa điểm con rồi kiểm chiều đi và số chỗ. Khi mở chi tiết, ứng dụng kiểm lại chỗ và tình trạng đón để hiện nút đặt. Chuyến mở bán phải chưa tới giờ xuất phát. Chuyến đang chạy chỉ nhận đặt ở điểm chưa rời theo tiến độ tài xế.
 
+Lịch cố định đã bật chạy đủ bảy ngày trong tuần, giữ giờ Việt Nam đã khai báo. Bộ mẫu có 26 lịch thuộc bảy nhà xe. Mỗi ngày có chuyến và tồn chỗ riêng. Hai mẫu tuyến Bắc–Nam dài 34 giờ cần bố trí ca xe/tài xế luân phiên để có lượt mỗi ngày. Nhãn **Còn chỗ** cho biết khả dụng tại lần đọc gần nhất. Bước xác nhận đơn kiểm lại tồn chỗ và điều kiện nhận khách.
+
 ## 5. Khách đặt chỗ và theo dõi đơn
 
 1. Đăng nhập bằng tài khoản khách. Chọn kết quả phù hợp và mở báo giá/đặt chỗ.
@@ -59,6 +63,8 @@ Nếu chưa thấy chuyến, thử bỏ khoảng giờ và địa điểm con r�
 6. Nếu cần hủy, mở đúng đơn, chọn Hủy khi còn được phép, nhập lý do và xác nhận. Nếu điểm đón đã rời hoặc trạng thái không phù hợp, hệ thống từ chối và bạn cần liên hệ điều hành.
 
 Đơn WEB tuân theo giới hạn đơn đang hoạt động của khách. Khi bị báo đã có đơn hoạt động, xử lý hoặc xem đơn hiện có trước khi đặt thêm. Hủy đơn đã xác nhận trả lại chỗ, còn tiền hoàn được điều hành ghi nhận riêng. Hệ thống hiện ghi nhận thu/hoàn thủ công, cần thực hiện thanh toán với nhà xe theo thỏa thuận.
+
+Trên điện thoại, nút Gọi tài xế mở ứng dụng gọi bằng liên kết `tel:`. Người dùng quyết định thực hiện cuộc gọi. Trên máy tính cần ứng dụng hỗ trợ liên kết này. Khi nhà xe đổi phân công, đóng và mở lại chi tiết đơn để đọc thông tin hiện hành.
 
 ## 6. Điều hành nhận và xử lý đơn
 
@@ -128,6 +134,7 @@ Mỗi dòng là một chuyến một chiều. Duy Long chạy Hải Phòng → H
 
 1. Đăng nhập tài khoản tài xế và mở Chuyến được giao tại `/driver/trips`. Chọn ngày/trạng thái theo màn để tìm chuyến của mình.
 2. Mở chuyến, kiểm ngày giờ, xe, các điểm và danh sách hành khách đón/trả. Nếu không thấy chuyến, liên hệ điều hành kiểm liên kết account với hồ sơ và phân công của chuyến.
+   Danh sách khách của chuyến được giao có tên, số điện thoại liên hệ, số chỗ và điểm đón/trả cho đơn CONFIRMED/COMPLETED. Dùng liên hệ để phối hợp đón khách. Khi đổi phân công, tải lại danh sách chuyến và chi tiết.
 3. Khi thực tế bắt đầu, chọn Xuất phát theo nút được gợi ý. Chuyến chuyển từ mở bán sang đang chạy.
 4. Đến từng điểm theo thứ tự, xác nhận Đến điểm rồi Rời điểm khi thực tế đã thực hiện. Kiểm khách cần đón/trả và thông tin liên hệ theo quyền được cấp.
 5. Ở điểm cuối, thực hiện bước hoàn thành theo nút hiển thị. Kiểm trạng thái chuyến đã hoàn thành và lịch sử có mốc cuối.

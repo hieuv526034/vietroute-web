@@ -6,7 +6,22 @@ Học theo [phần từng thành viên](PHAN_CONG.md), [tổng quan](../01-bat-d
 
 [PowerPoint bảo vệ sản phẩm](bao-cao/Thuyet_trinh_VietRoute.pptx) có 28 slide, ảnh ứng dụng thật và Notes cho người nói. Điền thông tin sinh viên/giảng viên ở hai slide đầu trước buổi bảo vệ. Khi có khoảng 15 phút, tập nói ngắn các bảng kỹ thuật và dành thời gian cho luồng demo. Phần hỏi sâu tra nguồn trong Notes và bộ câu hỏi bên dưới. Bộ mẫu có 26 lịch cố định lặp đủ bảy ngày, thuộc bảy nhà xe. Có thể chọn tuyến Hà Nội–Hải Phòng của Duy Long để minh họa lọc giờ và kiểm chỗ. Chuẩn bị DB demo riêng cho thao tác ghi.
 
+Bộ [40 test case nghiệm thu](TEST_CASE_TAI_KHOAN_TONG_QUAN_LICH_CHUYEN.md) cung cấp điều kiện, bước kiểm và ô ghi kết quả. Kết quả tự động gần nhất là 222 Java, gồm 85 PostgreSQL, và 80 Node. Khi trình bày, gọi đúng tên bộ kiểm và môi trường. Với liên hệ tài xế, mở đơn CONFIRMED trên chuyến OPEN/IN_PROGRESS, sau đó đổi sang phiên tài xế xem khách đúng assignment.
+
 ## Kiểm tra trước buổi demo
+
+| Việc chốt trước buổi thi | Cách đối chiếu |
+|---|---|
+| Danh tính bìa | Điền trường/lớp/sinh viên/mã số/giảng viên ở hai slide đầu theo thông tin nhóm xác nhận |
+| Phiên bản sản phẩm | Đối chiếu tiến độ và PR phát hành, ghi rõ đang dùng local/demo hay Render |
+| Lịch và tài nguyên | Chọn ngày còn nhận đặt, đúng nhà xe, xe và tài xế; lịch dưới 24 giờ chạy cả tuần khi được bật |
+| Khách và đơn | Chuẩn bị khách không có WEB active, một đơn cho luồng phục vụ và một đơn khác cho hủy/hoàn |
+| Liên hệ hai phía | Sau xác nhận, chủ đơn mở lại chi tiết; tài xế xem danh sách khách trên đúng chuyến được giao |
+| Tiền và báo cáo | Ghi số liệu nền, giá server và cùng kỳ ngày khởi hành để đối soát thu/hoàn |
+| Bằng chứng kiểm | Chỉ nêu ca đã có kết quả, dùng bộ 40 kịch bản để ghi thêm nghiệm thu thủ công |
+| Dự phòng khi mất mạng | Chuẩn bị local và ảnh có ghi mốc kiểm, xem Notes thay cho phụ thuộc vào Render Free |
+
+Hai bản Word đang ở mốc DOCS04 và chờ kiểm bố cục sau đợt đồng bộ mới. Trước khi nộp Word, hoàn tất mục lục, số trang và từ điển 340 cột. Phần Markdown/PowerPoint ở đây mô tả chức năng hiện hành.
 
 1. Chốt đúng nhánh/commit/môi trường với [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md). Đối chiếu commit đang chạy trước khi khẳng định menu/select và Swagger private đã có trên Render.
 2. Dùng DB demo riêng đã được phép; không thao tác thu–hoàn/khóa account/đổi grant/xóa/reset DB thật để thử. Nếu không có môi trường riêng thì chỉ trình bày đọc, muốn ghi phải có phạm vi được chủ dự án cho phép.
@@ -383,21 +398,21 @@ Journal có pool/commit riêng, timeout/backoff và failedWrites; lỗi ghi khô
 
 401 là vấn đề xác thực/phiên;403 là thiếu grant hoặc CSRF/quyền tương ứng, xem code/messageKey;404 có thể là ngoài scope/owner;409 là version/trạng thái/requestKey xung đột. UI giữ draft và không tự gửi lại mutation. Thay ID trên URL không được dùng để dò dữ liệu nhà xe khác.
 
-### Q38. Vì sao migration có 8 file và không sửa file cũ để thêm cột?
+### Q38. Vì sao giữ tám file nền và thêm migration mới?
 
-Đây là baseline theo 6 cụm schema + system + FK, manifest giữ thứ tự phụ thuộc và checksum byte gốc. DB đã áp có history; sửa file cũ phá đối chiếu. Thay schema tiếp theo thêm bước theo cụm. Rebaseline là bảo trì được cho phép, backup/kiểm phục hồi/dừng node/kiểm cấu trúc trước đổi history, không tự reset DB khi startup lỗi.
+Tám file nền gồm sáu schema, system account và references. Manifest hiện có 11 bước sau Category, địa điểm và lịch hằng ngày. Giữ thứ tự phụ thuộc và checksum byte gốc. DB đã áp có history nên thay schema tiếp theo thêm bước mới trong cụm. Rebaseline cần phạm vi bảo trì được phép, backup/kiểm phục hồi, dừng node và kiểm cấu trúc trước khi đổi history.
 
 ### Q39. Dữ liệu này có thật không, restart có tự tạo lại hoặc đổi password không?
 
-Đây là bộ giả lập vận hành có quan hệ/giá/chỗ/tiền/history, không dữ liệu thương mại được xác minh. DB mới đủ 4 cờ có 46 account/7 nhà xe/646 chuyến/3866 đơn. Mã/ngày neo lần đầu, seed chỉ thêm thiếu và giữ hash/quyền/trạng thái đã sửa hoặc thu hồi; restart không biến demo thành ngày hôm nay. Email giả lập không là inbox đã gửi thư.
+Đây là bộ giả lập phục vụ học và demo. DB mới đủ bốn cờ có 46 account, 7 nhà xe, 646 chuyến và 3.866 đơn ban đầu. DAILY02 bật 26 nguồn lịch dưới 24 giờ thuộc đủ bảy nhà xe. Các lượt mới có ngày, chỗ và đơn riêng nên tổng chuyến tăng khi sinh lịch. Mã/ngày seed neo lần đầu, init giữ hash, quyền và trạng thái đã sửa hoặc thu hồi. Email chỉ là thông tin liên hệ, không có bước xác minh.
 
 ### Q40. Kiểm thử được gì, H2 thay PostgreSQL thật được không?
 
-H2 kiểm phần portable, model và một số repo; PostgreSQL riêng kiểm dialect/array/JSONB/lock/FK/migration/transaction/concurrent. Unit/MVC kiểm validation/security/context và Node/browser kiểm UI. Số test phải gắn commit/môi trường và số skipped; CI xanh không là SLA/tải thật/Oracle đã chạy. Mốc199 Java/66 Node thuộc UI02, không tự gán vào mọi nhánh.
+H2 kiểm phần portable, model và một số repo. PostgreSQL riêng kiểm dialect, array/JSONB, khóa, FK, migration, transaction và cạnh tranh. Unit/MVC kiểm validation/security/context, Node và trình duyệt kiểm các nhánh UI. Lần DAILY02 đạt 222 Java, gồm 85 PostgreSQL, không skip, và 80 Node. Có 40 kịch bản thủ công để ghi biên bản. Chỉ phần có kết quả thực tế mới trình bày là đã kiểm.
 
 ### Q41. Swagger và tìm chuyến mới đã có trên Render chưa?
 
-Đã có bằng chứng nghiệm thu tại [PR157](https://github.com/hieuv526034/vietroute-web/pull/157) và [PR161 chuyển Singapore](https://github.com/hieuv526034/vietroute-web/pull/161). Lượt Singapore main7ef6025 kiểm admin docs/OpenAPI200, tài khoản thường403 và bộ chọn tỉnh→địa điểm/nhà xe với một nút tìm. Trước mỗi lần demo vẫn đối chiếu SHA Live/tiến độ/PR và môi trường thực, không lấy preview hoặc kết quả của một phiên cũ làm bằng chứng cho phiên mới.
+DAILY02 phát hành qua [PR186](https://github.com/hieuv526034/vietroute-web/pull/186) tại `2d87633`, tài liệu nghiệm thu qua [PR188](https://github.com/hieuv526034/vietroute-web/pull/188) tại `9c82e04`. Trên Render đã kiểm health, trợ giúp vi/en, tìm/báo giá và phiên khách mở form đặt chỗ. Swagger quản trị đọc được và có ba field liên hệ mới, tài khoản khách bị từ chối. SHA deployment chưa đọc trực tiếp từ bảng Render vì công cụ trình duyệt dừng. Khi thi dẫn đúng bằng chứng HTTP/API và [tiến độ](TIEN_DO_VA_KE_HOACH_NHOM.md).
 
 ### Q42. Local khác Render và bí mật cấu hình được giữ ở đâu?
 
