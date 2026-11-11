@@ -60,7 +60,7 @@ jobs:
           sh ./mvnw verify -Dbusiness.test.database=jdbc:postgresql://127.0.0.1:15439/vietroute_business_test
       - uses: docker/setup-buildx-action@v3
       - name: Build production image with cached Maven and Docker layers
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           load: true
