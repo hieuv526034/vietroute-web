@@ -11,7 +11,7 @@ RUN sh ./mvnw --batch-mode --no-transfer-progress -Pproduction dependency:go-off
 COPY src/main/ src/main/
 RUN sh ./mvnw --batch-mode --no-transfer-progress -Pproduction package
 
-FROM tomcat:10.1-jre21-temurin-jammy AS runtime
+FROM tomcat:11.0-jre21-temurin-jammy AS runtime
 ENV PORT=10000 \
     TZ=Asia/Ho_Chi_Minh \
     CATALINA_OPTS="-Xms64m -Xmx256m -XX:+UseSerialGC -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Ho_Chi_Minh"
